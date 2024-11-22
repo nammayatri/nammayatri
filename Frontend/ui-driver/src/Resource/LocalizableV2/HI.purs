@@ -1723,4 +1723,15 @@ getHi =
     , free_trial_ending_in_n_days: (\days -> "मुफ्त परीक्षण का समापन " <> days <> " दिनों में!")
     , n_free_rides_completed: (\n -> n <> " मुफ्त सवारियां पूरी हुईं")
     , n_more_free_rides_left: (\n -> n <> " और मुफ्त सवारियां बाकी हैं!")
+    , metro_warrior_mode : "मेट्रो योद्धा मोड"
+    , choose_metro_station : "ऐसा मेट्रो स्टेशन चुनें जिससे आपको उससे और उसके लिए प्राथमिकता वाले राइड अनुरोध मिलें।"
+    , primary_metro_station : "प्राथमिक मेट्रो स्टेशन"
+    , primary_station_info : "आप यहां अपना पसंदीदा मेट्रो स्टेशन सेट कर सकते हैं"
+    , nearby_stations : "नजदीकी स्टेशन"
+    , nearby_station_info : "आपके प्राथमिक स्टेशन के 4 सबसे नजदीकी स्टेशन। आप प्रत्येक को अपनी इच्छानुसार चालू या बंद कर सकते हैं"
+    , change : "बदलें"
+    , disable_metro_warriors_info : "गो टू मोड सक्षम करने से मेट्रो वॉरियर्स मोड अक्षम हो जाएगा।"
+    , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
+    , metro_warriors : "मेट्रो वॉरियर्स"
+    , search : "खोजें"  
     }

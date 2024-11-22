@@ -25,12 +25,12 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import RemoteConfig.Types
 import Data.String (null, toLower)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
 import Debug(spy)
-import Common.RemoteConfig (BundleLottieConfig)
+import Common.RemoteConfig (BundleLottieConfig, VariantLevelRemoteConfig)
 import RemoteConfig.Types as Types
 
 foreign import getSubsRemoteConfig :: String -> Foreign
@@ -245,3 +245,35 @@ fetchRideAssignedAudioConfig city =
     }
 
     
+metroWarriorsConfig :: String -> String -> MetroWarriorConfigEntity
+metroWarriorsConfig city variant = do
+  let remoteConfig = fetchRemoteConfigString "metro_warrior_config"
+      decodedConfig = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultMetroWarriorConfig
+  getVariantLevelConfig variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    getVariantLevelConfig variant config = case getConfigForVariant variant config of
+       Nothing -> fromMaybe defaultMetroWarriorConfigEntity $ getConfigForVariant "default" config
+       Just variantConfig -> variantConfig
+
+defaultMetroWarriorConfig :: VariantLevelRemoteConfig (Maybe MetroWarriorConfigEntity)
+defaultMetroWarriorConfig = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , deliveryBike: Nothing
+  , default: Nothing
+  }
+
+
+defaultMetroWarriorConfigEntity :: MetroWarriorConfigEntity
+defaultMetroWarriorConfigEntity = 
+  { videoUrl : "",
+    isMetroWarriorEnabled : false,
+    cacheInvalidateCounter : 0,
+    defaultSecondaryStations : [],
+    defaultPrimaryStation : ""
+  }

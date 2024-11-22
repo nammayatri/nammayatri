@@ -219,6 +219,7 @@ defaultSubscriptionsConfigVariantLevel =
   , taxi: Nothing
   , taxiPlus: Nothing
   , bookAny: Nothing
+  , deliveryBike : Nothing
   , default: Nothing
   }
 
@@ -306,3 +307,17 @@ defSubscriptionDues = {
     low_dues_warning_limit : 25.0,
     high_due_warning_limit : 75.0
 }
+
+getConfigForVariant :: forall a. String -> Types.VariantLevelRemoteConfig a -> a
+getConfigForVariant variant config = 
+  case variant of 
+    "SEDAN" -> config.sedan
+    "SUV" -> config.suv
+    "HATCHBACK" -> config.hatchback
+    "AUTO_RICKSHAW" -> config.autoRickshaw
+    "TAXI" -> config.taxi
+    "TAXI_PLUS" -> config.taxiPlus
+    "BOOK_ANY" -> config.bookAny
+    "DELIVERY_BIKE" -> config.deliveryBike
+    _ -> config.default
+      

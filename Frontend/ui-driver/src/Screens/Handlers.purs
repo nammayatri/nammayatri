@@ -68,3 +68,4 @@ import Screens.CancellationRateScreen.Handler (cancellationRateScreen) as UI
 import Screens.RideRequestScreen.Handler (rideRequestScreen) as UI
 import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ScheduledRideAcceptedScreen.Handler (scheduledRideAcceptedScreen) as UI
+import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI

@@ -2846,3 +2846,40 @@ selectPlansModalState state = SelectPlansModal.config
                   Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.plansState.plansList
                   Nothing -> state.data.plansState.plansList
   }
+
+  
+disableMetroWarriorWarningPopup :: ST.HomeScreenState-> PopUpModal.Config
+disableMetroWarriorWarningPopup _ = PopUpModal.config {
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    optionButtonOrientation = "VERTICAL",
+    gravity = CENTER,
+    margin = MarginHorizontal 20 20,
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    backgroundClickable = true,
+    dismissPopup = true,
+    primaryText{ 
+        text = getString DISABLE_METRO_WARRIORS_INFO,
+        margin = Margin 16 16 16 16
+    },
+    secondaryText{
+      text = getString GOTO_IS_APPLICABLE_FOR,
+      margin = MarginVertical 16 20,
+      color = Color.black600,
+      visibility = GONE},
+    option1 {
+      text = getString ENABLE_GOTO,
+      margin = MarginHorizontal 16 16,
+      color = Color.yellow900,
+      background = Color.black900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
+    },
+    option2 {
+      text = getString CANCEL,
+      margin = Margin 16 7 16 0,
+      color = Color.black650,
+      background = Color.white900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
+    }
+  }

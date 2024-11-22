@@ -175,6 +175,7 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , isSpecialLocWarrior : false
     }
   , props:
       { isFreeRide: false
@@ -269,6 +270,7 @@ initData =
       , showIntercityRateCard : false
       , intercityInfoPopUp : false
       , retryRideList : false
+      , showMetroWarriorWarningPopup : false
       }
   }
 

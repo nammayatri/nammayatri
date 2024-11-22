@@ -170,6 +170,8 @@ import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
+import Screens.MetroWarriorsScreen.Controller (getMetroWarriorFromLocationId, makeStationsData)
+import Data.Newtype (unwrap)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -426,7 +428,7 @@ enterOTPFlow = do
       if (getValueToLocalStore REFERRER_URL) == "__failed" then
         void $ pure $ JB.extractReferrerUrl unit
       else pure unit
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ UpdateDriverInfoReq $ mkUpdateDriverInfoReq ""
       void $ lift $ lift $ toggleLoader false
       getDriverInfoFlow Nothing Nothing Nothing true Nothing true
     RETRY updatedState -> do
@@ -514,7 +516,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                   onBoardingFlow
     getUpdateToken :: String -> FlowBT String Unit
     getUpdateToken token = 
-      let UpdateDriverInfoReq initialData = Remote.mkUpdateDriverInfoReq ""
+      let initialData = Remote.mkUpdateDriverInfoReq ""
           requiredData = initialData{deviceToken = Just token}
       in void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
 
@@ -932,7 +934,7 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
         Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
     if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit
       else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+      let initialData = mkUpdateDriverInfoReq ""
           requiredData = initialData{clientVersion = Just (Version clientVersion),bundleVersion = Just (Version bundleVersion)}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure unit
@@ -1531,7 +1533,7 @@ driverProfileFlow = do
                driverProfileFlow
     DRIVER_GENDER1 state -> do
       let genderSelected = state.data.driverGender
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+      let initialData = mkUpdateDriverInfoReq ""
           requiredData = initialData{gender = genderSelected}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure $ toast (getString GENDER_UPDATED)
@@ -1541,7 +1543,7 @@ driverProfileFlow = do
       setValueToLocalStore IS_BANNER_ACTIVE "False"
       driverProfileFlow
     UPDATE_LANGUAGES language -> do
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+      let initialData = mkUpdateDriverInfoReq ""
           requiredData = initialData{languagesSpoken = Just language}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
@@ -1667,7 +1669,7 @@ driverDetailsFlow = do
 
     DRIVER_GENDER state -> do
         let genderSelected = state.data.driverGender
-        let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+        let initialData = mkUpdateDriverInfoReq ""
             requiredData = initialData{gender = genderSelected}
         (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
         pure $ toast (getString GENDER_UPDATED)
@@ -1683,7 +1685,7 @@ vehicleDetailsFlow = do
   action <- UI.vehicleDetailsScreen
   case action of
     UPDATE_VEHICLE_INFO  updatedState -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ UpdateDriverInfoReq (mkUpdateDriverInfoReq "")
       vehicleDetailsFlow
 
 aboutUsFlow :: FlowBT String Unit
@@ -1785,7 +1787,7 @@ selectLanguageFlow = do
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE state -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ UpdateDriverInfoReq $ mkUpdateDriverInfoReq ""
       if state.props.fromOnboarding then onBoardingFlow else driverProfileFlow
     LANGUAGE_CONFIRMED state -> do
       setValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE state.props.selectedLanguage
@@ -1840,7 +1842,7 @@ bookingOptionsFlow = do
           canDowngradeToHatchback = isJust $ (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
           canDowngradeToTaxi = isJust $ (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
           
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+      let initialData = mkUpdateDriverInfoReq ""
           requiredData = initialData{canDowngradeToSedan = Just canDowngradeToSedan,canDowngradeToHatchback = Just canDowngradeToHatchback,canDowngradeToTaxi = Just canDowngradeToTaxi}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ data{ vehicleSelected = transformSelectedVehicles state.data.downgradeOptions} })
@@ -1851,7 +1853,7 @@ bookingOptionsFlow = do
       else
         driverProfileFlow
     ENABLE_RENTAL_INTERCITY_RIDE state -> do
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+      let initialData = mkUpdateDriverInfoReq ""
           requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity} })
@@ -2928,6 +2930,7 @@ homeScreenFlow = do
      rideSummaryScreenFlow
     GO_TO_RIDE_SUMMARY -> rideSummaryScreenFlow 
     ENABLE_GOTO_API state id currentLocation -> do
+      when state.data.isSpecialLocWarrior $ updateWarriorSettings false
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
       case activateResp of
@@ -3044,6 +3047,10 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       homeScreenFlow
+    UPDATE_METRO_WARRIOR state -> do
+      updateWarriorSettings $ not state.data.isSpecialLocWarrior
+      homeScreenFlow
+    GO_TO_METRO_WARRIOR state -> metroWarriorsScreenFlow
   homeScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
@@ -3512,14 +3519,12 @@ popUpScreenFlow entityPayload = do
 changeDriverStatus :: DriverStatus -> FlowBT String Unit 
 changeDriverStatus status = do
   globalState <- getState
-  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalState false
+  driverInfo@(GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalState false
   let API.DriverGoHomeInfo driverGoHomeInfo = getDriverInfoResp.driverGoHomeInfo
       qParam = toUpper $ show status
       isDriverActive = any ( _ == status) [Online, Silent]
   void $ Remote.driverActiveInactiveBT (show isDriverActive) qParam
-  when (driverGoHomeInfo.status == Just "ACTIVE" && status == Offline) do
-    void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
+  when (status == Offline) $ disableGoTo driverInfo -- disabling goto when driver is Offline
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = isDriverActive, driverStatusSet = status}})
   updateDriverStatusGlobal qParam isDriverActive
   void $ setValueToLocalStore DRIVER_STATUS if any ( _ == status) [Online, Silent] then "true" else "false"
@@ -3631,7 +3636,9 @@ updateDriverDataToStates = do
                             gotoEnabledForMerchant = getDriverInfoResp.isGoHomeEnabled,
                             goToPopUpType = case globalstate.globalProps.gotoPopupType of
                                             ST.REDUCED _ -> ST.REDUCED driverGoHomeInfo.cnt 
-                                            _ -> globalstate.globalProps.gotoPopupType }}, 
+                                            _ -> globalstate.globalProps.gotoPopupType }
+        , isSpecialLocWarrior = fromMaybe false getDriverInfoResp.isSpecialLocWarrior
+        }, 
                                             
     props {
       statusOnline = if (isJust getDriverInfoResp.mode) then any ( _ == updateDriverStatus getDriverInfoResp.active) [Online, Silent] else getDriverInfoResp.active
@@ -3717,7 +3724,7 @@ updateAvailableAppsAndGoToSubs = do
 getUpiApps :: FlowBT String Unit
 getUpiApps = do
   resp <- lift $ lift $ doAff $ makeAff (\cb -> (runEffectFn1 getAvailableUpiApps (cb <<< Right) ) $> nonCanceler)
-  let (UpdateDriverInfoReq req) = Remote.mkUpdateDriverInfoReq ""
+  let req = Remote.mkUpdateDriverInfoReq ""
   let appsSupportMandate = runFn1 stringifyJSON $ map _.appName $ filter (_.supportsMandate) resp
   let appsNotSupportMandate = runFn1 stringifyJSON $ map _.appName $ filter (not _.supportsMandate) resp
   pure $ setCleverTapUserProp [{key : "appsSupportMandate", value : unsafeToForeign appsSupportMandate},
@@ -4531,6 +4538,67 @@ rideAcceptScreenFlow = do
   case action of 
     GO_HOME_FROM_SCHEDULED_RIDE_ACCEPT_SCREEN -> homeScreenFlow
   rideAcceptScreenFlow
-   
-  
 
+metroWarriorsScreenFlow :: FlowBT String Unit
+metroWarriorsScreenFlow = do
+  let config = RC.metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+  modifyScreenState $ MetroWarriorsScreenStateType $ \metroWarriors -> metroWarriors{data{remoteConfigData = config }}
+  action <- UI.metroWarriorsScreen
+  case action of
+    TA.GO_TO_HOME_SCREEN_FROM_WARRIOR state -> homeScreenFlow
+    TA.UPDATE_WARRIOR_SETTINGS state req@(API.UpdateSpecialLocWarriorInfoReq request) -> do
+      globalState <- getState
+      getDriverInfoResp <- getDriverInfoDataFromCache globalState false
+      when (request.isSpecialLocWarrior) $ disableGoTo getDriverInfoResp
+      (response :: (Either ErrorResponse API.SpecialLocWarriorInfoRes)) <- lift $ lift $ HelpersAPI.callApi $ req
+      case response of
+        Right settings -> do
+          let warriorSettings = makeStationsData settings state.data.stationList state.data.remoteConfigData
+          modifyScreenState $ MetroWarriorsScreenStateType $ \metroWarriors -> state{data{stationData = warriorSettings }}
+          modifyScreenState $ HomeScreenStateType $ \homeScreen -> homeScreen{data {isSpecialLocWarrior = warriorSettings.isSpecialLocWarrior}}
+        Left err -> do
+          let errResp = err.response
+              codeMessage = HU.decodeErrorCode errResp.errorMessage
+          void $ pure $ toast $ if err.code == 500 then getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else codeMessage
+          pure unit
+      metroWarriorsScreenFlow
+    _ -> metroWarriorsScreenFlow
+
+disableGoTo :: GetDriverInfoResp -> FlowBT String Unit
+disableGoTo (GetDriverInfoResp getDriverInfoResp) = do
+  let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
+  when (driverGoHomeInfo.status == Just "ACTIVE") do
+    void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
+    updateDriverDataToStates
+
+updateWarriorSettings :: Boolean -> FlowBT String Unit
+updateWarriorSettings newSpecialLocationWarriorValue = do
+  globalState <- getState
+  getDriverInfoResp <- getDriverInfoDataFromCache globalState false
+  when (newSpecialLocationWarriorValue) $ disableGoTo getDriverInfoResp
+  let driverid = getValueToLocalStore DRIVER_ID
+  response <- lift $ lift $ HelpersAPI.callApi $ API.GetSpecialLocWarriorInfoReq driverid
+  case response of
+    Right (API.SpecialLocWarriorInfoRes settings) -> do
+      when (isNothing settings.preferredPrimarySpecialLoc) $ metroWarriorsScreenFlow
+      let req = API.UpdateSpecialLocWarriorInfoReq {
+        isSpecialLocWarrior : newSpecialLocationWarriorValue,
+        preferredPrimarySpecialLocId : maybe Nothing (\(API.SpecialLocationWarrior item) -> Just item.id) settings.preferredPrimarySpecialLoc,
+        preferredSecondarySpecialLocIds : settings.preferredSecondarySpecialLocIds,
+        driverId : driverid
+      }
+      (response :: (Either ErrorResponse API.SpecialLocWarriorInfoRes)) <- lift $ lift $ HelpersAPI.callApi req
+      case response of
+        Right settings -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{isSpecialLocWarrior = newSpecialLocationWarriorValue}})
+        Left err -> do
+          let errResp = err.response
+              codeMessage = HU.decodeErrorCode errResp.errorMessage
+          void $ pure $ toast $ if err.code == 500 then getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else codeMessage
+          pure unit
+    Left err -> do
+      let errResp = err.response
+          codeMessage = HU.decodeErrorCode errResp.errorMessage
+      void $ pure $ toast $ if err.code == 500 then getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else codeMessage
+      pure unit

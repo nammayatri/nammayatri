@@ -316,7 +316,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | SwitchPlan ST.PlanCardState ST.HomeScreenState
                     | GoToRideSummary ST.HomeScreenState
                     | GoToRideSummaryScreen  ST.HomeScreenState                 
-
+                    | UpdateToggleMetroWarriors ST.HomeScreenState
+                    | GoToMetroWarriors ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -464,6 +465,9 @@ data Action = NoAction
             | GetRideCount Int
             | UpdateRetryRideList Boolean
             | OnRideAssignedAudioCompleted String
+            | ToggleMetroWarriors
+            | ClickMetroWarriors
+            | MetroWarriorPopupAC PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -571,7 +575,11 @@ eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state {
 
 eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
 
-eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
+eval (EnableGotoTimerAC PrimaryButtonController.OnClick) state = do
+  if state.data.isSpecialLocWarrior then do
+    void $ pure $ toggleBtnLoader "EnableGoto" false
+    continue state {props { showMetroWarriorWarningPopup = true }}
+  else updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
 
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
@@ -1652,7 +1660,17 @@ eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
 
 eval (UpdateRetryRideList retry) state = continue state {props {retryRideList = retry}}
  
-eval _ state = update state
+eval ToggleMetroWarriors state = exit $ UpdateToggleMetroWarriors state
+
+eval ClickMetroWarriors state = exit $ GoToMetroWarriors state
+
+eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
+  let newState = state { props { showMetroWarriorWarningPopup = false }}
+  updateAndExit newState $ EnableGoto newState state.data.driverGotoState.selectedGoTo
+
+eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
+
+eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do

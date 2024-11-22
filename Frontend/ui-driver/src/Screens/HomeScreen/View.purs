@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData, metroWarriorsConfig)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -460,7 +460,8 @@ view push state =
         state.props.showReferralEarnedPopUp,
         state.props.showReferNowPopUp,
         state.props.showAddUPIPopUp,
-        state.props.showVerifyUPIPopUp
+        state.props.showVerifyUPIPopUp,
+        state.props.showMetroWarriorWarningPopup
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -622,6 +623,7 @@ driverMapsHeaderView push state =
               , background Color.transparent
               , gravity BOTTOM
               ] $ [addAadhaarOrOTPView state push]
+                <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
                 <> [specialPickupZone push state]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
                 <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW","BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
@@ -1003,7 +1005,7 @@ offlineView push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ linearLayout
-          [ height $ V if isBookingPreferenceVisible then 340 else 280
+          [ height $ V if isBookingPreferenceVisible  then 340 else 280
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
           ][ lottieAnimationView
@@ -1020,7 +1022,7 @@ offlineView push state =
         , width MATCH_PARENT
         , gravity BOTTOM
         ][ linearLayout
-            [ height $ V if isBookingPreferenceVisible then 205 else 140
+            [ height $ V if isBookingPreferenceVisible  then 205 else 140
             , width MATCH_PARENT
             , gravity BOTTOM
             , orientation VERTICAL
@@ -1077,6 +1079,7 @@ offlineView push state =
     isBookingPreferenceVisible = 
       not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
       && state.props.driverStatusSet == ST.Offline
+    metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =
@@ -2369,6 +2372,7 @@ popupModals push state =
           ST.ReferNow -> referNowConfig state
           ST.AddUPI -> addUPIConfig state 
           ST.VerifyUPI -> verifyUPI state
+          ST.MetroWarriorWarning -> disableMetroWarriorWarningPopup state
       ]
   where 
   
@@ -2383,6 +2387,7 @@ popupModals push state =
       else if state.props.showReferNowPopUp then ST.ReferNow
       else if state.props.showAddUPIPopUp then ST.AddUPI
       else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
+      else if state.props.showMetroWarriorWarningPopup then ST.MetroWarriorWarning
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2397,6 +2402,7 @@ popupModals push state =
           ST.ReferNow -> (ReferralPopUpAction popupType (Just REFER_NOW_LAST_SHOWN))
           ST.AddUPI -> (ReferralPopUpAction popupType (Just ADD_UPI_LAST_SHOWN))
           ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
+          ST.MetroWarriorWarning -> MetroWarriorPopupAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
@@ -2877,3 +2883,45 @@ checkRideCountAndTime tuple =
       let diff = runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (time)
       if diff <= fiveMinInSec then Just count else Nothing
       ) tuple
+    
+metroWarriorsToggleView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+metroWarriorsToggleView push state =
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , clipChildren false
+    , visibility $ boolToVisibility metroWarriors.isMetroWarriorEnabled
+    , margin $ Margin 16 12 16 12
+    ]
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER_VERTICAL
+      , onClick push $ const ClickMetroWarriors
+      , padding $ Padding 12 12 12 12
+      , background Color.white900
+      , rippleColor Color.rippleShade
+      , stroke $ "1," <> Color.grey900
+      , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+      , cornerRadius 8.0
+      ][ imageView
+        [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_metro_filled_blue"
+        , height $ V 20
+        , width $ V 20
+        , margin $ MarginRight 8
+        ]
+      , textView
+        $ [ textFromHtml $ "<u>" <> getString METRO_WARRIOR_MODE <> "</u>" 
+          , color Color.blue800
+          , weight 1.0
+          ] <> FontStyle.body1 TypoGraphy
+        , imageView
+          [ imageWithFallback $ HU.fetchImage HU.GLOBAL_COMMON_ASSET if state.data.isSpecialLocWarrior then "ny_ic_switch_filled_blue" else "ny_ic_switch_inactive"
+          , height $ V 20
+          , width $ V 36
+          , onClick push $ const ToggleMetroWarriors
+          ]
+      ]
+    ]
+  where
+    metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)

@@ -472,6 +472,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , totalRidesTaken :: Maybe Int
     , subscriptionEnabledForVehicleCategory :: Maybe Boolean
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
+    , isSpecialLocWarrior :: Maybe Boolean
     }
 
 
@@ -914,7 +915,10 @@ instance encodeOfferRideReq :: Encode OfferRideReq where encode = defaultEncode
 data UpdateDriverInfoRequest = UpdateDriverInfoRequest UpdateDriverInfoReq
 
 newtype UpdateDriverInfoReq
-  = UpdateDriverInfoReq
+  = UpdateDriverInfoReq UpdateDriverInfoReqEntity
+  
+
+type UpdateDriverInfoReqEntity = 
   { middleName :: Maybe String
   , firstName :: Maybe String
   , lastName :: Maybe String
@@ -932,6 +936,7 @@ newtype UpdateDriverInfoReq
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
+  , isSpecialLocWarrior :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -5211,3 +5216,95 @@ instance standardEncodeHVSdkCallLogResp :: StandardEncode HVSdkCallLogResp where
 instance showHVSdkCallLogResp :: Show HVSdkCallLogResp where show = genericShow
 instance decodeHVSdkCallLogResp:: Decode HVSdkCallLogResp where decode = defaultDecode
 instance encodeHVSdkCallLogResp  :: Encode HVSdkCallLogResp where encode = defaultEncode
+
+-------------- METRO WARRIOR 
+
+newtype UpdateSpecialLocWarriorInfoReq = UpdateSpecialLocWarriorInfoReq {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLocId :: Maybe String,
+  preferredSecondarySpecialLocIds :: Array String,
+  driverId :: String
+}
+
+newtype SpecialLocWarriorInfoRes = SpecialLocWarriorInfoRes {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLoc :: Maybe SpecialLocationWarrior,
+  preferredSecondarySpecialLocIds :: Array String
+}
+
+newtype SpecialLocationWarrior = SpecialLocationWarrior
+  { id :: String,
+    locationName :: String,
+    category :: String,
+    linkedLocations :: Array SpecialLocation
+  }
+
+newtype SpecialLocation = SpecialLocation
+  { id :: String,
+    locationName :: String,
+    category :: String
+  }
+
+derive instance genericUpdateSpecialLocWarriorInfoReq :: Generic UpdateSpecialLocWarriorInfoReq _
+derive instance newtypeUpdateSpecialLocWarriorInfoReq :: Newtype UpdateSpecialLocWarriorInfoReq _
+instance standardEncodeUpdateSpecialLocWarriorInfoReq :: StandardEncode UpdateSpecialLocWarriorInfoReq where standardEncode (UpdateSpecialLocWarriorInfoReq req) = standardEncode req
+instance showUpdateSpecialLocWarriorInfoReq :: Show UpdateSpecialLocWarriorInfoReq where show = genericShow
+instance decodeUpdateSpecialLocWarriorInfoReq :: Decode UpdateSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeUpdateSpecialLocWarriorInfoReq :: Encode UpdateSpecialLocWarriorInfoReq where encode = defaultEncode
+
+derive instance genericSpecialLocWarriorInfoRes :: Generic SpecialLocWarriorInfoRes _
+derive instance newtypeSpecialLocWarriorInfoRes :: Newtype SpecialLocWarriorInfoRes _
+instance standardEncodeSpecialLocWarriorInfoRes :: StandardEncode SpecialLocWarriorInfoRes where standardEncode (SpecialLocWarriorInfoRes req) = standardEncode req
+instance showSpecialLocWarriorInfoRes :: Show SpecialLocWarriorInfoRes where show = genericShow
+instance decodeSpecialLocWarriorInfoRes :: Decode SpecialLocWarriorInfoRes where decode = defaultDecode
+instance encodeSpecialLocWarriorInfoRes :: Encode SpecialLocWarriorInfoRes where encode = defaultEncode
+
+derive instance genericSpecialLocationWarrior :: Generic SpecialLocationWarrior _
+derive instance newtypeSpecialLocationWarrior :: Newtype SpecialLocationWarrior _
+instance standardEncodeSpecialLocationWarrior :: StandardEncode SpecialLocationWarrior where standardEncode (SpecialLocationWarrior req) = standardEncode req
+instance showSpecialLocationWarrior :: Show SpecialLocationWarrior where show = genericShow
+instance decodeSpecialLocationWarrior :: Decode SpecialLocationWarrior where decode = defaultDecode
+instance encodeSpecialLocationWarrior :: Encode SpecialLocationWarrior where encode = defaultEncode
+
+derive instance genericSpecialLocation :: Generic SpecialLocation _
+derive instance newtypeSpecialLocation :: Newtype SpecialLocation _
+instance standardEncodeSpecialLocation :: StandardEncode SpecialLocation where standardEncode (SpecialLocation res) = standardEncode res
+instance showSpecialLocation :: Show SpecialLocation where show = genericShow
+instance decodeSpecialLocation :: Decode SpecialLocation where decode = defaultDecode
+instance encodeSpecialLocation :: Encode SpecialLocation where encode = defaultEncode
+
+instance makeUpdateSpecialLocWarriorInfoReq  :: RestEndpoint UpdateSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(UpdateSpecialLocWarriorInfoReq req) headers = defaultMakeRequestWithoutLogs POST (EP.updateMetroWarriorInfo req.driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+instance makeGetSpecialLocWarriorInfoReq  :: RestEndpoint GetSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(GetSpecialLocWarriorInfoReq driverId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroWarriorInfo driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+data GetSpecialLocWarriorInfoReq = GetSpecialLocWarriorInfoReq String
+
+derive instance genericGetSpecialLocWarriorInfoReq :: Generic GetSpecialLocWarriorInfoReq _
+instance standardEncodeGetSpecialLocWarriorInfoReq :: StandardEncode GetSpecialLocWarriorInfoReq where standardEncode _ = standardEncode {}
+instance showGetSpecialLocWarriorInfoReq :: Show GetSpecialLocWarriorInfoReq where show = genericShow
+instance decodeGetSpecialLocWarriorInfoReq :: Decode GetSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeGetSpecialLocWarriorInfoReq :: Encode GetSpecialLocWarriorInfoReq where encode = defaultEncode
+
+data SpecialLocationListCategoryReq = SpecialLocationListCategoryReq String
+instance makeSpecialLocationListCategoryReq :: RestEndpoint SpecialLocationListCategoryReq where
+  makeRequest reqBody@(SpecialLocationListCategoryReq category) headers = defaultMakeRequestWithoutLogs GET (EP.specialLocationListCategory category) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericSpecialLocationListCategoryReq :: Generic SpecialLocationListCategoryReq _
+instance standardEncodeSpecialLocationListCategoryReq :: StandardEncode SpecialLocationListCategoryReq where standardEncode _ = standardEncode {}
+instance showSpecialLocationListCategoryReq :: Show SpecialLocationListCategoryReq where show = genericShow
+instance decodeSpecialLocationListCategoryReq :: Decode SpecialLocationListCategoryReq where decode = defaultDecode
+instance encodeSpecialLocationListCategoryReq  :: Encode SpecialLocationListCategoryReq where encode = defaultEncode
+
+newtype SpecialLocationListRes = SpecialLocationListRes (Array SpecialLocation)
+
+derive instance genericSpecialLocationListRes :: Generic SpecialLocationListRes _
+derive instance newtypeSpecialLocationListRes :: Newtype SpecialLocationListRes _
+instance standardEncodeSpecialLocationListRes :: StandardEncode SpecialLocationListRes where standardEncode (SpecialLocationListRes res) = standardEncode res
+instance showSpecialLocationListRes :: Show SpecialLocationListRes where show = genericShow
+instance decodeSpecialLocationListRes :: Decode SpecialLocationListRes where decode = defaultDecode
+instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where encode = defaultEncode
