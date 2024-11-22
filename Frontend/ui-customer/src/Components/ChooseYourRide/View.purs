@@ -230,7 +230,7 @@ tipsHorizontalView push state =
               , margin $ if index == 0 then Margin 0 12 0 0 else Margin 8 12 0 0
               , cornerRadius 7.0
               , gravity CENTER
-              , padding $ if index == 0 then PaddingHorizontal 8 8 else Padding 0 0 0 0
+              , padding $ if index == 0 then PaddingHorizontal 10 10 else Padding 0 0 0 0
               , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.green900 else Color.grey900)
               , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
               , accessibility ENABLE
