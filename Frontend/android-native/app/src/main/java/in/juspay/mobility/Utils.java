@@ -39,7 +39,9 @@ public class Utils {
                 String token = innerPayload.getString("param1");
                 String cbIdentifier = jsonObject.getString("action");
                 boolean installOnly = innerPayload.getString("param2").equals("true");
-                if (sharedPref != null && sharedPref.getBoolean("GLSDK_INSTALLED", false) && !installOnly){
+                if (sharedPref != null &&
+                        (sharedPref.getString("GLSDK_INSTALLED", "false").equals("true") || sharedPref.getBoolean("GLSDK_INSTALLED", false)) &&
+                        !installOnly){
                     Intent intent = new Intent();
                     intent.putExtra("token", token);
                     intent.putExtra("cbIdentifier", cbIdentifier);
@@ -141,7 +143,7 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
-                            if (sharedPref!= null) sharedPref.edit().putBoolean("GLSDK_INSTALLED", true).apply();
+                            if (sharedPref!= null) sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
                             if (!installOnly){
                                 Intent intent = new Intent();
                                 intent.putExtra("token", token);

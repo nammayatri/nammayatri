@@ -282,7 +282,8 @@ subscriptionsConfigVariantLevel city variant = do
 defaultGullakConfig :: GullakConfig
 defaultGullakConfig = 
   { image: "",
-    enabled : false
+    enabled : false,
+    videoUrl : Just "https://youtu.be/JRhT26ib2L0?si=Wtkmm-V2Kfj-Qr3k"
   }
   
 defaultStuckRideFilterConfig :: StuckRideFilterConfig
