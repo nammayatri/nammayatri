@@ -1742,8 +1742,17 @@ data STR = LETS_GET_STARTED
         | CAB
         | N_FREE_RIDES_COMPLETED String
         | N_MORE_FREE_RIDES String
-
-
+        | METRO_WARRIOR_MODE
+        | CHOOSE_METRO_STATION
+        | PRIMARY_METRO_STATION
+        | PRIMARY_STATION_INFO
+        | NEARBY_STATIONS
+        | NEARBY_STATION_INFO
+        | CHANGE
+        | DISABLE_METRO_WARRIORS_INFO
+        | CHOOSE_PREFERRED_METRO
+        | METRO_WARRIORS
+        | SEARCH
 
 -- instance showSTR :: Show STR
 --   show = case _ of

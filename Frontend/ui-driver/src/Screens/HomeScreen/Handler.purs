@@ -205,4 +205,9 @@ homeScreen = do
     GoToRideSummaryScreen  updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN  updatedState)
-       
+    UpdateToggleMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_METRO_WARRIOR updatedState)
+    GoToMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_WARRIOR updatedState)

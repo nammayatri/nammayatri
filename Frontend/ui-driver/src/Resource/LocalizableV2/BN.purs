@@ -1723,4 +1723,15 @@ getBn =
     , free_trial_ending_in_n_days : (\days -> "ফ্রি ট্রায়াল শেষ হচ্ছে " <> days <> " দিনে")
     , n_free_rides_completed : (\n -> n <> " ফ্রি রাইড সম্পন্ন")
     , n_more_free_rides_left: (\n -> n <> " আরও ফ্রি রাইড বাকি")
+    , metro_warrior_mode : "মেট্রো যোদ্ধা মোড"
+    , choose_metro_station : "মেট্রো স্টেশন নির্বাচন করুন যাতে সেখান থেকে এবং সেখান পর্যন্ত অগ্রাধিকার রাইড অনুরোধ পান"
+    , primary_metro_station : "প্রাথমিক মেট্রো স্টেশন"
+    , primary_station_info : "আপনার পছন্দের মেট্রো স্টেশনটি এখানে সেট করতে পারেন"
+    , nearby_stations : "নিকটস্থ স্টেশনগুলি"
+    , nearby_station_info : "আপনার প্রাথমিক স্টেশনের ৪টি কাছাকাছি স্টেশন। আপনি ইচ্ছা করলে প্রতিটি চালু বা বন্ধ করতে পারেন"
+    , change : "পরিবর্তন"
+    , disable_metro_warriors_info : "গো টু মোড সক্রিয় করা মেট্রো ওয়ারিয়র্স মোড নিষ্ক্রিয় করবে।"
+    , choose_preferred_metro : "পছন্দের মেট্রো নির্বাচন করুন"
+    , metro_warriors : "মেট্রো ওয়ারিয়র্স"
+    , search : "অনুসন্ধান করুন"  
     }

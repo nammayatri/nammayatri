@@ -1723,4 +1723,15 @@ getEn =
     , free_trial_ending_in_n_days: (\days -> "Free trial ending in " <> days <> " days!")
     , n_free_rides_completed: (\n -> n <> " free Rides Completed")
     , n_more_free_rides_left: (\n -> n <> " more free rides left!")
+    , metro_warrior_mode : "Metro Warrior Mode"
+    , choose_metro_station : "Choose a metro station to get priority ride requests from and to it"
+    , primary_metro_station : "Primary Metro Station"
+    , primary_station_info : "You can set your preferred metro station here"
+    , nearby_stations : "Nearby Stations"
+    , nearby_station_info : "4 closest stations to your primary station. You can turn each on or off as you wish"
+    , change : "Change"
+    , disable_metro_warriors_info : "Enabling Go To mode will disable Metro Warriors mode."
+    , choose_preferred_metro : "Choose preferred metro"
+    , metro_warriors : "Metro Warriors"
+    , search : "Search"
     }

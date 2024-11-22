@@ -1795,3 +1795,14 @@ getProxy str = case str of
   FREE_TRIAL_ENDING_IN_N_DAYS arg1 -> \a -> (a @~ free_trial_ending_in_n_days) arg1
   N_MORE_FREE_RIDES arg1 -> \a -> (a @~ n_more_free_rides_left) arg1
   N_FREE_RIDES_COMPLETED arg1 -> \a -> (a @~ n_free_rides_completed) arg1
+  METRO_WARRIOR_MODE -> \a -> a @~ metro_warrior_mode
+  CHOOSE_METRO_STATION -> \a -> a @~ choose_metro_station
+  PRIMARY_METRO_STATION -> \a -> a @~ primary_metro_station
+  PRIMARY_STATION_INFO -> \a -> a @~ primary_station_info
+  NEARBY_STATIONS -> \a -> a @~ nearby_stations
+  NEARBY_STATION_INFO -> \a -> a @~ nearby_station_info
+  CHANGE -> \a -> a @~ change
+  DISABLE_METRO_WARRIORS_INFO -> \a -> a @~ disable_metro_warriors_info
+  CHOOSE_PREFERRED_METRO -> \a -> a @~ choose_preferred_metro
+  METRO_WARRIORS -> \a -> a @~ metro_warriors
+  SEARCH -> \a -> a @~ search

@@ -1723,4 +1723,15 @@ getTe =
     , free_trial_ending_in_n_days: (\days -> "ఉచిత ప్రయత్నం " <> days <> " రోజుల్లో ముగిస్తుంది")
     , n_free_rides_completed : (\n -> n <> " ఉచిత రైడ్లను పూర్తిచేసారు")
     , n_more_free_rides_left : (\n -> n <> " మరిన్ని ఉచిత రైడ్లు ఉన్నాయి")
+    , metro_warrior_mode : "మెట్రో వారియర్ మోడ్"
+    , choose_metro_station : "ప్రాధాన్య రైడ్ అభ్యర్థనలను పొందడానికి మెట్రో స్టేషన్‌ను ఎంచుకోండి"
+    , primary_metro_station : "ప్రాధమిక మెట్రో స్టేషన్"
+    , primary_station_info : "మీ ప్రాధాన్యమైన మెట్రో స్టేషన్‌ను ఇక్కడ సెట్ చేయవచ్చు"
+    , nearby_stations : "సమీప స్టేషన్లు"
+    , nearby_station_info : "మీ ప్రాధమిక స్టేషన్‌కు దగ్గరలోని 4 స్టేషన్లు. మీకు ఇష్టమైన వాటిని ఆన్ లేదా ఆఫ్ చేయవచ్చు"
+    , change : "మార్చండి"
+    , disable_metro_warriors_info : "గో టు మోడ్‌ని ఎంచుకోవడం మెట్రో వారియర్ మోడ్‌ని డిసేబుల్ చేస్తుంది."
+    , choose_preferred_metro : "ప్రాధాన్యమైన మెట్రోను ఎంచుకోండి"
+    , metro_warriors : "మెట్రో వారియర్స్"
+    , search : "వెతకండి"  
     }

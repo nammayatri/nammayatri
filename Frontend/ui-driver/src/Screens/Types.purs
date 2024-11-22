@@ -1091,6 +1091,7 @@ type HomeScreenData =  {
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
 , scheduleRideCount :: Maybe (Tuple Int String)
+, isSpecialLocWarrior :: Boolean
 }
 
 type PlansState = {
@@ -1389,7 +1390,8 @@ type HomeScreenProps =  {
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
   intercityInfoPopUp :: Boolean,
-  retryRideList :: Boolean
+  retryRideList :: Boolean,
+  showMetroWarriorWarningPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -2595,7 +2597,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | MetroWarriorWarning
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3213,4 +3215,28 @@ type GullakSDKResp = {
   responseMessage :: String,
   responseCode :: Int,
   isNewUser :: Boolean
+}
+
+type MetroWarriorsScreenState = {
+  data :: MetroWarriorsScreenData,
+  props :: MetroWarriorsScreenProps
+}
+
+type MetroWarriorsScreenData = {
+  listItem :: Maybe ListItem,
+  stationList :: Array API.SpecialLocation,
+  searchString :: Maybe String,
+  stationData :: MetroWarriorData,
+  remoteConfigData :: RC.MetroWarriorConfigEntity
+}
+
+type MetroWarriorsScreenProps = {
+  showStationList :: Boolean,
+  showShimmer :: Boolean
+}
+
+type MetroWarriorData = {
+  primaryStation :: Maybe API.SpecialLocationWarrior,
+  secondaryStationsData :: Array String,
+  isSpecialLocWarrior :: Boolean
 }

@@ -170,3 +170,6 @@ insertArrayAtPosition pos value arr =
       after = DA.slice pos (DA.length arr) arr
     in
       DA.concat [before, value, after]
+
+layoutWithWeight :: forall w . PD.PrestoDOM (Effect Unit) w
+layoutWithWeight = PD.linearLayout [ PD.weight 1.0 ][]
