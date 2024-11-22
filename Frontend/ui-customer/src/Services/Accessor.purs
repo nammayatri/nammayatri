@@ -182,9 +182,6 @@ _visitDate = lens (unwrap >>> _.visitDate) (\oldRec newVal -> wrap ((unwrap oldR
 _services :: forall a b c. Newtype a { services :: b | c } => Lens' a b
 _services = lens (unwrap >>> _.services) (\oldRec newVal -> wrap ((unwrap oldRec) { services = newVal }))
 
-_payload :: forall a b c. Newtype a { payload :: b | c } => Lens' a b
-_payload = lens (unwrap >>> _.payload) (\oldRec newVal -> wrap ((unwrap oldRec) { payload = newVal }))
-
 _view_param :: forall a b c. Newtype a { view_param :: b | c } => Lens' a b
 _view_param = lens (unwrap >>> _.view_param) (\oldRec newVal -> wrap ((unwrap oldRec) { view_param = newVal }))
 
@@ -383,9 +380,3 @@ _end = lens (unwrap >>> _.end) (\oldRec newVal -> wrap ((unwrap oldRec) { end = 
 
 _requestorPartyRoles :: forall a b c. Newtype a { requestorPartyRoles :: b | c } => Lens' a b
 _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -> wrap ((unwrap oldRec) { requestorPartyRoles = newVal }))
-
-_fragmentViewGroups :: forall a b c. Newtype a { fragmentViewGroups :: b | c } => Lens' a b
-_fragmentViewGroups = lens (unwrap >>> _.fragmentViewGroups) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentViewGroups = newVal }))
-
-_main :: forall a b c. Newtype a { main :: b | c } => Lens' a b
-_main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main = newVal }))
