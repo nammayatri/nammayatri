@@ -388,7 +388,7 @@ window.getMerchantConfig = function () {
       "enableEditPickupLocation" : true,
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : false,
-      "enableHelpAndSupport" : false,
+      "enableHelpAndSupport" : true,
       "enableEditDestination" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
