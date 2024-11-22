@@ -1683,6 +1683,8 @@ getBn = Keymap {
 , confirm_contacts : "কনফার্ম কন্ট্যাক্টস"
 , tickets_for_delhi_metro : "দিল্লি মেট্রো টিকিট"
 , max_parcel_size : (\l b h -> "সর্বাধিক পার্সেল আকার: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "মেট্রো টিকিট"
+, offers : "অফিস"
 , boost_search_instantly : "অবিলম্বে আপনার অনুসন্ধান বুস্ট!"
 , add_a_tip : "একটি টিপ যোগ করুন"
 , updated_fare_str : "আপডেট করা ভাড়া"

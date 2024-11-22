@@ -1684,6 +1684,8 @@ getMl = Keymap {
 , confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
 , tickets_for_delhi_metro : "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
 , max_parcel_size : (\l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "മെട്രോ ടിക്കറ്റുകൾ"
+, offers : "ആഫ്സ്"
 , boost_search_instantly : "നിങ്ങളുടെ തിരയൽ തൽക്ഷണം വർദ്ധിപ്പിക്കുക!"
 , add_a_tip : "ഒരു നുറുങ്ങ് ചേർക്കുക"
 , updated_fare_str : "പുതുക്കിയ നിരക്ക്"

@@ -1683,6 +1683,8 @@ getKn = Keymap {
 , confirm_contacts : "ಸಂಪರ್ಕಗಳನ್ನು ದೃಢೀಕರಿಸಿ"
 , tickets_for_delhi_metro : "ದೆಹಲಿ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
 , max_parcel_size : (\l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
+, offers : "ಆಫ್ಸ್"
 , boost_search_instantly : "ನಿಮ್ಮ ಹುಡುಕಾಟವನ್ನು ತಕ್ಷಣವೇ ಹೆಚ್ಚಿಸಿ!"
 , add_a_tip : "ಸಲಹೆಯನ್ನು ಸೇರಿಸಿ"
 , updated_fare_str : "ನವೀಕರಿಸಿದ ದರ"

@@ -82,10 +82,12 @@ type Service = {
   name :: STR,
   image :: String,
   backgroundColor :: String,
-  preferredEstimateOrder :: Array String
+  preferredEstimateOrder :: Array String,
+  hasSecondaryPill :: Boolean,
+  secondaryPillColor :: String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq

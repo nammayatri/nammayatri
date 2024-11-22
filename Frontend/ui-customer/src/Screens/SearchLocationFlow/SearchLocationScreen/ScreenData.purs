@@ -28,6 +28,7 @@ import Prelude (negate)
 initData :: SearchLocationScreenState 
 initData = {
   data : { srcLoc : Nothing
+         , listItem : Nothing
          , destLoc : Nothing
          , route : Nothing
          , rideDetails : {

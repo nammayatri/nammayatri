@@ -1072,7 +1072,7 @@ getMetroConfigFromCity city fcResponse =
         Delhi ->
             mkCityBasedConfig
                 (getString TICKETS_FOR_DELHI_METRO)
-                ([ getString CHENNAI_METRO_TERM_2
+                ([ getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime
                 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
                 , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
                 ])
