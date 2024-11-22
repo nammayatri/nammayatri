@@ -576,7 +576,8 @@ eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state {
 eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
 
 eval (EnableGotoTimerAC PrimaryButtonController.OnClick) state = do
-  if state.data.isSpecialLocWarrior then do
+  let metroWarriorsConfig = RC.metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+  if state.data.isSpecialLocWarrior && metroWarriorsConfig.isMetroWarriorEnabled then do
     void $ pure $ toggleBtnLoader "EnableGoto" false
     continue state {props { showMetroWarriorWarningPopup = true }}
   else updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
