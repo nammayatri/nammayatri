@@ -58,9 +58,7 @@ eval SavedLocation state = exit $ GoToSavedLocation state
 
 eval GoToDriverProfile state = exit $ GoToFavDriverProfile state
 
-eval (GetFavouriteDriversTripsAPIResponseAction (FavouriteDriverTripsResp respList)) state = do 
-  _ <- pure $ EHU.toggleLoader false
-  continue state{data{details = getFavouriteDriverList(respList.list)}}
+eval (GetFavouriteDriversTripsAPIResponseAction (FavouriteDriverTripsResp respList)) state = continue state{data{details = getFavouriteDriverList(respList.list)}}
 
 eval (RemoveFav) state = do continueWithCmd state [do pure SavedLocation]
 
