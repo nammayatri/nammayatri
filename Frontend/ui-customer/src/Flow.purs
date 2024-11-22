@@ -7383,7 +7383,8 @@ busTicketBookingFlow = do
             metroMyTicketsFlow
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
-          busTrackingScreenFlow
+          pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+          busTicketBookingFlow
       --------------------------------
     BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
