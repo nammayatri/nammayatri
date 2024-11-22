@@ -244,7 +244,9 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    merchantId = ride.merchantId,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId
                   }
 
           QDS.create dailyStats -- create dstats for that date

@@ -196,6 +196,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                     updatedAt = now,
                     cancellationCharges = 0.0,
                     tipAmount = 0.0,
-                    totalRideTime = 0
+                    totalRideTime = 0,
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOperatingCity.id
                   }
           QDailyStats.create dailyStatsOfDriver

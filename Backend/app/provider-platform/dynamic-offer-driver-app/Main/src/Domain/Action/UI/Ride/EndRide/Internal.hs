@@ -285,7 +285,9 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
                     updatedAt = now,
                     cancellationCharges = 0.0,
                     tipAmount = 0.0,
-                    totalRideTime = 0
+                    totalRideTime = 0,
+                    merchantId = Ride.merchantId ride,
+                    merchantOperatingCityId = Just $ Ride.merchantOperatingCityId ride
                   }
           QDailyStats.create dailyStatsOfDriver'
 
