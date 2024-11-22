@@ -167,6 +167,7 @@ data DriverFeeStatus
   | REFUND_FAILED
   | REFUND_MANUAL_REVIEW_REQUIRED
   | ONE_TIME_SECURITY_ADJUSTED
+  | SETTLED
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

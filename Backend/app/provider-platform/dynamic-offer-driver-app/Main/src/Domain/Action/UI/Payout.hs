@@ -49,6 +49,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
+import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -139,21 +140,28 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               fork "Update Payout Status For DailyStats Via Dashboard" $ do
                 callPayoutService dailyStats.driverId payoutConfig payoutOrderId
           Just DPayment.DRIVER_FEE -> do
-            forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverFeeId -> do
-              driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
-              Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey driverFee.driverId.getId) 3 3 $ do
-                let dPayoutStatus = casPayoutOrderStatusToDFeeStatus payoutStatus
-                let refundData =
-                      DDF.RefundInfo
-                        { status = Just dPayoutStatus,
-                          refundEntityId = Nothing,
-                          refundedAmount = Nothing,
-                          refundedAt = Nothing,
-                          refundedBy = Nothing
-                        }
-                when (driverFee.status == DDF.REFUND_PENDING) $ QDF.updateRefundData (Id driverFeeId) refundData
-              fork "Update Payout Status and Transactions for DriverFee" $ do
-                callPayoutService driverFee.driverId payoutConfig payoutOrderId
+            let dPayoutStatus = casPayoutOrderStatusToDFeeStatus payoutStatus
+            driverIdsWithServiceName <- do
+              forM (fromMaybe [] payoutOrder.entityIds) $ \driverFeeId -> do
+                driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
+                Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey driverFee.driverId.getId) 3 3 $ do
+                  let refundData =
+                        DDF.RefundInfo
+                          { status = Just dPayoutStatus,
+                            refundEntityId = Nothing,
+                            refundedAmount = Nothing,
+                            refundedAt = Nothing,
+                            refundedBy = Nothing
+                          }
+                  when (driverFee.status == DDF.REFUND_PENDING) $ QDF.updateRefundData (Id driverFeeId) refundData
+                fork "Update Payout Status and Transactions for DriverFee" $ do
+                  callPayoutService driverFee.driverId payoutConfig payoutOrderId
+                return (driverFee.driverId, driverFee.serviceName)
+            let mbDriverIdAndServiceName = listToMaybe driverIdsWithServiceName
+            whenJust mbDriverIdAndServiceName $ \(driverId, serviceName) -> do
+              when (dPayoutStatus == DDF.REFUNDED) $ do
+                dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+                SLDriverFee.adjustDues dueDriverFees
           _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()

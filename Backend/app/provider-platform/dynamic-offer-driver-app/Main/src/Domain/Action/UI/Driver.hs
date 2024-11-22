@@ -2534,6 +2534,8 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     let mbVpa = refundByPayoutReq.payerVpa <|> driverInfo.payoutVpa <|> (mDriverPlan >>= (.payerVpa))
     unless (isJust mbVpa) $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
     whenJust mbVpa $ \vpa -> do
+      pendingDriverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] DDF.RECURRING_EXECUTION_INVOICE serviceName
+      unless (null pendingDriverFees) $ throwError (InternalError "some driver fee currently in auto pay execution")
       driverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH] driverFeeType serviceName
       dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
       let totalSecurityDeposit = sum $ map mapToAmount driverFees
@@ -2545,7 +2547,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
       uid <- generateGUID
-      let (driverFeeToPayout, _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
+      let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       phoneNo <- mapM decrypt person.mobileNumber
       let createPayoutOrderReq = mkPayoutReq driverFeeToPayout person vpa uid phoneNo
@@ -2554,22 +2556,28 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
-      when (createPayoutOrderReq.amount <= 0.0) $ throwError (InternalError "refund amount is less than or equal to 0")
-      void $ adjustDues dueDriverFees
-      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (Just $ cast opCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+      when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")
+      (_, mbPayoutOrder) <- do
+        if createPayoutOrderReq.amount > 0.0
+          then DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          else pure (Nothing, Nothing)
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation
         ET.trackRefundSegregation payoutOrder refundAmountSegregation (show serviceName)
-      forM_ driverFeeToPayout $ \refundFee -> do
-        let refundData =
-              DDF.RefundInfo
-                { refundedBy = refundFee.refundedBy,
-                  refundEntityId = refundFee.refundEntityId,
-                  refundedAt = refundFee.refundedAt,
-                  status = Just refundFee.status,
-                  refundedAmount = refundFee.refundedAmount
-                }
-        QDF.updateRefundData refundFee.id refundData
+      when (createPayoutOrderReq.amount >= 0.0) $ do
+        forM_ driverFeeToPayout $ \refundFee -> do
+          let refundData =
+                DDF.RefundInfo
+                  { refundedBy = refundFee.refundedBy,
+                    refundEntityId = refundFee.refundEntityId,
+                    refundedAt = refundFee.refundedAt,
+                    status = Just refundFee.status,
+                    refundedAmount = refundFee.refundedAmount
+                  }
+          QDF.updateRefundData refundFee.id refundData
+        forM_ driverFeeToSettle $ \settleFee -> do
+          QDF.updateStatus settleFee.status settleFee.id =<< getCurrentTime
+        when (createPayoutOrderReq.amount == 0.0) $ SLDriverFee.adjustDues dueDriverFees
   return Success
   where
     mapToAmount = \dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
@@ -2577,6 +2585,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       foldl'
         ( \acc dfee@DDF.DriverFee {serviceName = planServiceName, ..} -> do
             let amount = mapToAmount dfee
+            let driverFeesToAccumulate = fst acc
             if snd acc > 0.0
               then do
                 let dfee' =
@@ -2588,51 +2597,25 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
                           serviceName = planServiceName,
                           ..
                         }
-                (dfee' : fst acc, snd acc - fromMaybe 0.0 dfee'.refundedAmount)
-              else acc
+                ((dfee' : fst driverFeesToAccumulate, snd driverFeesToAccumulate), snd acc - fromMaybe 0.0 dfee'.refundedAmount)
+              else do
+                let dfee' = DDF.DriverFee {status = DDF.SETTLED, serviceName = planServiceName, ..}
+                ((fst driverFeesToAccumulate, dfee' : snd driverFeesToAccumulate), snd acc - fromMaybe 0.0 dfee'.refundedAmount)
         )
-        ([], refundAmount)
+        (([], []), refundAmount)
         driverFeeSorted
-    mkPayoutReq driverFeeToPayout person vpa uid phoneNo = do
-      let amount = foldl' (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout
-          remark = "Refund for security deposit"
-      DPayment.mkCreatePayoutOrderReq uid amount phoneNo person.email personId.getId remark (Just person.firstName) vpa "FULFILL_ONLY"
-    adjustDues dueDriverFees = do
-      now <- getCurrentTime
-      invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
-      let invoicesToBeUpdated = mergeSortAndRemoveDuplicate invoices
-      void $ mapM (\inv -> QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id) invoicesToBeUpdated
-      void $
-        mapM
-          ( \dFee -> do
-              invoice <- mkInvoice dFee
-              QDF.updateStatus DDF.ONE_TIME_SECURITY_ADJUSTED dFee.id now
-              QINV.create invoice
-          )
-          dueDriverFees
-    mkInvoice driverFee = do
-      id <- generateGUID
-      shortId <- generateShortId
-      now <- getCurrentTime
-      return $
-        INV.Invoice
-          { id = Id id,
-            invoiceShortId = shortId.getShortId,
-            driverFeeId = driverFee.id,
-            invoiceStatus = INV.SUCCESS,
-            driverId = driverFee.driverId,
-            maxMandateAmount = Nothing,
-            paymentMode = INV.ONE_TIME_SECURITY_ADJUSTED_INVOICE,
-            bankErrorCode = Nothing,
-            bankErrorMessage = Nothing,
-            bankErrorUpdatedAt = Nothing,
-            lastStatusCheckedAt = Nothing,
-            serviceName = driverFee.serviceName,
-            merchantId = Just driverFee.merchantId,
-            merchantOperatingCityId = driverFee.merchantOperatingCityId,
-            updatedAt = now,
-            createdAt = now
-          }
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo =
+      Juspay.CreatePayoutOrderReq
+        { orderId = uid,
+          amount = foldl (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout,
+          customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
+          customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
+          customerId = personId.getId,
+          orderType = "FULFILL_ONLY",
+          remark = "Refund for security deposit",
+          customerName = person.firstName,
+          customerVpa = vpa
+        }
 
 isPlanVehCategoryOrCityChanged :: Id DMOC.MerchantOperatingCity -> Maybe DPlan.DriverPlan -> Maybe Vehicle -> (Bool, Bool)
 isPlanVehCategoryOrCityChanged opCityId mbDPlan mbVehicle = do

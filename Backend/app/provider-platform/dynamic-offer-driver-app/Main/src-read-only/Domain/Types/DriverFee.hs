@@ -91,6 +91,7 @@ data DriverFeeStatus
   | REFUND_FAILED
   | REFUND_MANUAL_REVIEW_REQUIRED
   | ONE_TIME_SECURITY_ADJUSTED
+  | SETTLED
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType
