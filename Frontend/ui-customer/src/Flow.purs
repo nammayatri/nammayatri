@@ -612,8 +612,12 @@ hybridFlow flow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { source=(getString STR.CURRENT_LOCATION), rentalsInfo = Nothing}, props{isIntercityFlow = true,isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}})
       homeScreenFlow
     "favourites" -> savedLocationFlow HomeScreenFlow
-    "rideConfirmed" -> checkRideStatus true false
-    "rideCompleted" -> checkRideStatus false false
+    "rideConfirmed" -> do
+      checkRideStatus true false
+      homeScreenFlow
+    "rideCompleted" -> do
+      checkRideStatus false false
+      homeScreenFlow
     "tripDetail" -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
       tripDetailsScreenFlow
