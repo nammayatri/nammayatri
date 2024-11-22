@@ -926,30 +926,48 @@ helpAndSupportBtnView push showReportText =
 
 seeNearbyHotspots :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 seeNearbyHotspots state push =
-  linearLayout
+  let pillLayoutBounds = runFn1 JB.getLayoutBounds (getNewIDWithTag "goToHotspotsPill")
+  in
+  frameLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , margin $ MarginLeft 12
-  , cornerRadius 22.0
-  , onClick push $ const OpenHotspotScreen
-  , background Color.white900
-  , padding $ Padding 16 12 16 12
+  , margin $ MarginLeft 6
   , gravity CENTER
-  , stroke $ "1,"<> Color.grey900
-  , rippleColor Color.rippleShade
-  ][ imageView
-     [ width $ V 15
-     , height $ V 15
-     , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_hotspots"
-     ]
-   , textView $
-     [ weight 1.0
-     , text $ getString HOTSPOTS
-     , gravity CENTER
-     , margin $ MarginLeft 10
-     , color Color.black800
-     ] <> FontStyle.tags TypoGraphy
+  ]
+  [ lottieAnimationView
+    [ id (EHC.getNewIDWithTag "goToHotspotsLottie")
+    , height $ V $ pillLayoutBounds.height + 12
+    , width $ V $ pillLayoutBounds.width + 12
+    , afterRender (\_-> do
+                    void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "blue_pulse_animation.json", lottieId = (EHC.getNewIDWithTag "goToHotspotsLottie"), speed = 1.0, scaleType = "CENTER_CROP" }
+                  )(const NoAction)
+    ]
+  ,  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , cornerRadius 22.0
+    , onClick push $ const OpenHotspotScreen
+    , id (EHC.getNewIDWithTag "goToHotspotsPill")
+    , background Color.white900
+    , padding $ Padding 15 11 15 11
+    , gravity CENTER
+    , stroke $ "1,"<> Color.grey900
+    , rippleColor Color.rippleShade
+    , margin $ Margin 6 6 0 0
+    ][ imageView
+        [ width $ V 15
+        , height $ V 15
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_hotspots"
+        ]
+      , textView $
+        [ weight 1.0
+        , text $ getString HOTSPOTS
+        , gravity CENTER
+        , margin $ MarginLeft 10
+        , color Color.black800
+        ] <> FontStyle.tags TypoGraphy
+    ]
   ]
 
 recenterBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -1719,7 +1737,7 @@ pillView state push =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
-    , margin $ MarginLeft 12
+    , margin $ MarginLeft 6
     , cornerRadius 22.0
     , onClick push $ const RideRequestsList
     , clickable $ state.data.upcomingRide == Nothing 
