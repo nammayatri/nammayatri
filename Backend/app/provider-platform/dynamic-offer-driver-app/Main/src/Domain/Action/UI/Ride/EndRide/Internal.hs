@@ -39,7 +39,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
-import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -66,6 +65,7 @@ import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
@@ -596,8 +596,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           return 1
       fork "Updating vendor fees" $
         when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
-          let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
-          vendorSplitDetails <- QVSD.findAllByAreaCityAndCategory (fromMaybe Default booking.area) merchantOpCityId (Utils.castVehicleCategoryToDomain vehicleCategory)
+          let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
+          vendorSplitDetails <- QVSD.findAllByAreaCityAndVariant (fromMaybe Default booking.area) merchantOpCityId vehicleVariant
           let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
               vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
 
