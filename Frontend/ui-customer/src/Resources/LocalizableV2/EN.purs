@@ -1703,4 +1703,5 @@ getEn = Keymap {
 , bus_boarded_confirmation : "Please confirm if you are inside the bus?"
 , towards_station : (\s -> "Towards " <> s)
 , bus_no : (\s -> "Bus No: " <> s)
+, verified : "Verified"
 }

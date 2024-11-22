@@ -1703,4 +1703,5 @@ getTa = Keymap {
 , bus_boarded_confirmation : "தயவுசெய்து நீங்கள் பஸ்சில் உள்ளீர்களா என்பதை உறுதிசெய்க?"
 , towards_station : (\s -> s <> " நோக்கி")
 , bus_no : (\s -> "பஸ் எண்: " <> s)
+, verified : "சரிபார்க்கப்பட்டது"
 }

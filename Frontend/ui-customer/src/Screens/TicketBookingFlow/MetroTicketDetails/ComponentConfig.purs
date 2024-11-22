@@ -174,7 +174,7 @@ getStatusPillConfig state =
       Just ticket ->  case ticket.status of
            "ACTIVE" -> mkStatusPillConfig ticket.status (getString ACTIVE_STR) Color.green900
            "EXPIRED" -> mkStatusPillConfig ticket.status (getString  EXPIRED_STR) Color.red900
-           "USED" -> mkStatusPillConfig ticket.status (getString USED_STR) Color.greyDavy 
+           "USED" -> mkStatusPillConfig ticket.status (getString VERIFIED) Color.greyDavy 
            _ -> mkStatusPillConfig ticket.status ticket.status Color.grey900 
       Nothing -> mkStatusPillConfig "" "" Color.grey900 
   where

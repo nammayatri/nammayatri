@@ -1704,4 +1704,5 @@ getMl = Keymap {
 , bus_boarded_confirmation : "ദയവായി നിങ്ങൾ ബസിൽ ആണോ എന്ന് ഉറപ്പാക്കുക?"
 , towards_station : (\s -> s <> " ഭാഗത്തേക്ക്")
 , bus_no : (\s -> "ബസ് നമ്പർ: " <> s)
+, verified : "പരിശോധിച്ചു"
 }

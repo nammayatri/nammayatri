@@ -1703,4 +1703,5 @@ getBn = Keymap {
 , bus_boarded_confirmation : "আপনি কি বাসে উঠেছেন নিশ্চিত করুন?"
 , towards_station : (\s -> "দিকে " <> s)
 , bus_no : (\s -> "বাস নম্বর: " <> s)
+, verified : "যাচাই করা হয়েছে"
 }
