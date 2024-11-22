@@ -744,7 +744,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
   unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
-  activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
+  activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
   pure APISuccess.Success
   where
     checkIfGoToInDifferentGeometry :: DM.Merchant -> LatLong -> LatLong -> Flow Bool
