@@ -406,6 +406,7 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   REFUND_FAILED -> Common.REFUND_FAILED
   REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
+  SETTLED -> Common.SETTLED
 
 ---------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes

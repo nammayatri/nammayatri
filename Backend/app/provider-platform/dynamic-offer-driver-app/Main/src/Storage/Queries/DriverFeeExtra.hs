@@ -375,6 +375,7 @@ updateRefundData driverFeeId RefundInfo {..} = do
     ( [Se.Set BeamDF.refundedBy refundedBy | isJust refundedBy]
         <> [Se.Set BeamDF.refundEntityId refundEntityId | isJust refundEntityId]
         <> [Se.Set BeamDF.refundedAt refundedAt | isJust refundedAt]
+        <> [Se.Set BeamDF.status status' | Just status' <- [status]]
         <> [Se.Set BeamDF.refundedAmount refundedAmount | isJust refundedAmount]
     )
     [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]

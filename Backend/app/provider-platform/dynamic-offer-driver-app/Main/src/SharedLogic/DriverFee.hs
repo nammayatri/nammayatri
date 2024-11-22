@@ -248,3 +248,44 @@ getPaymentModeAndVehicleCategoryKey Plan.Plan {..} = show paymentMode <> "_" <> 
 
 jobDuplicationPreventionKey :: Text -> Text -> Text
 jobDuplicationPreventionKey jobHash jobType = "JobDuplicationPreventionKey:Jt:-" <> jobType <> ":ParentJobDataHashed:-" <> jobHash
+
+adjustDues :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DDF.DriverFee] -> m ()
+adjustDues dueDriverFees = do
+  now <- getCurrentTime
+  invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
+  let invoicesToBeUpdated = mergeSortAndRemoveDuplicate invoices
+  mapM_ (\inv -> QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id) invoicesToBeUpdated
+  mapM_
+    ( \dFee -> do
+        invoice <- mkInvoice dFee
+        QDF.updateStatus DDF.ONE_TIME_SECURITY_ADJUSTED dFee.id now
+        QINV.create invoice
+    )
+    dueDriverFees
+  where
+    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
+    mergeSortAndRemoveDuplicate invoices = do
+      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+      sortOn (Down . (.createdAt)) uniqueInvoices
+    mkInvoice driverFee = do
+      id <- generateGUID
+      shortId <- generateShortId
+      now <- getCurrentTime
+      return $
+        INV.Invoice
+          { id = Id id,
+            invoiceShortId = shortId.getShortId,
+            driverFeeId = driverFee.id,
+            invoiceStatus = INV.SUCCESS,
+            driverId = driverFee.driverId,
+            maxMandateAmount = Nothing,
+            paymentMode = INV.ONE_TIME_SECURITY_ADJUSTED_INVOICE,
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            bankErrorUpdatedAt = Nothing,
+            lastStatusCheckedAt = Nothing,
+            serviceName = driverFee.serviceName,
+            merchantOperatingCityId = driverFee.merchantOperatingCityId,
+            updatedAt = now,
+            createdAt = now
+          }
