@@ -19,6 +19,7 @@ import Services.API as API
 import Storage (getValueToLocalStore, KeyStore(..))
 import Data.Newtype (unwrap)
 import RemoteConfig as RU
+import Components.SwitchButtonView as SwitchButtonView
 
 instance showAction :: Show Action where
   show _ = ""
@@ -40,6 +41,7 @@ data Action
   | NoAction
   | OnStationClick Int
   | LearnMore
+  | SwitchButtonAction SwitchButtonView.Action
 
 data ScreenOutput
   = GoToHomeScreen ST.MetroWarriorsScreenState
@@ -72,8 +74,9 @@ eval (RefreshDataWithChanges toggle pStation secondaryStations) state = do
             Mb.Just primaryStation.id
         )
         pStation
+  void $ pure $ JB.hideKeyboardOnNavigation true
   exit
-    $ UpdateWarriorSettings state{props{showStationList = false}}
+    $ UpdateWarriorSettings state{props{showStationList = false}, data{searchString = Mb.Nothing}}
     $ API.UpdateSpecialLocWarriorInfoReq
         { isSpecialLocWarrior: toggle
         , preferredPrimarySpecialLocId: primaryStationId

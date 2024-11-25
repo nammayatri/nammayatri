@@ -135,6 +135,7 @@ import Data.Tuple(Tuple(..))
 import Data.String (Pattern(..), contains)
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Components.SwitchButtonView as SwitchButtonView
 
 instance showAction :: Show Action where
   show _ = ""
@@ -479,6 +480,7 @@ data Action = NoAction
             | ToggleMetroWarriors
             | ClickMetroWarriors
             | MetroWarriorPopupAC PopUpModal.Action
+            | MetroWarriorSwitchAction SwitchButtonView.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -593,7 +595,8 @@ eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state {
 eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
 
 eval (EnableGotoTimerAC PrimaryButtonController.OnClick) state = do
-  if state.data.isSpecialLocWarrior then do
+  let metroWarriorsConfig = RC.metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+  if state.data.isSpecialLocWarrior && metroWarriorsConfig.isMetroWarriorEnabled then do
     void $ pure $ toggleBtnLoader "EnableGoto" false
     continue state {props { showMetroWarriorWarningPopup = true }}
   else updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
@@ -1746,7 +1749,7 @@ eval (ParcelIntroductionPopup action) state = do
       void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
       continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
 
-eval ToggleMetroWarriors state = exit $ UpdateToggleMetroWarriors state
+eval (MetroWarriorSwitchAction SwitchButtonView.OnClick) state = exit $ UpdateToggleMetroWarriors state
 
 eval ClickMetroWarriors state = exit $ GoToMetroWarriors state
 
