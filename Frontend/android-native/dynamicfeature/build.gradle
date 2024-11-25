@@ -61,6 +61,12 @@ android {
         passCulturePartner {
             dimension "app"
         }
+        oyUser {
+            dimension "app"
+        }
+        oyDriver {
+            dimension "app"
+        }
     }
 
     compileOptions {
