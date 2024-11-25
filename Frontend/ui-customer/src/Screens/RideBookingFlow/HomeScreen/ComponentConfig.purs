@@ -1393,7 +1393,8 @@ quoteListModelViewState state =
   let
     vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-    tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
+    tipProps = if state.props.showBoostSearch then getTipViewProps state.props.tipViewProps state.data.boostSearchEstimate.vehicleVariant Nothing Nothing
+                  else getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     { source: state.data.source
     , destination: state.data.destination
