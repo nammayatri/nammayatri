@@ -4530,7 +4530,7 @@ rideRequestScreenFlow = do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, resp = RideRequestData.dummyResp}, props{shouldCall = true}})
       rideRequestScreenFlow
     TA.LOADER__OUTPUT state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 10}})
       rideRequestScreenFlow
     TA.GOTO_RIDE_SUMMARY state -> do
       modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{data {

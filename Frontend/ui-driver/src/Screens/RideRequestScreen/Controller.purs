@@ -111,24 +111,18 @@ eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
   continueWithCmd state { data { resp = updatedBookingResp, loadMoreDisabled =  false , refreshLoader  = false ,shimmerLoader = AnimatedIn }, props {receivedResponse = true } } [ pure $ FilterSelected ]
 
 
-eval (RideTypeSelected rideType idx  )state = continueWithCmd state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} } [pure $ FilterSelected]
+eval (RideTypeSelected rideType idx  )state = do
+  let
+    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} } 
+  exit $ GoBackToRideRequest newState
+  
+
 
 eval FilterSelected state = do
   let
     (ScheduledBookingListResponse resp) = state.data.resp
-    rideType = maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex)
-
-    filteredList =
-      filter
-        ( \(ScheduleBooking trip) ->
-            let
-              (BookingAPIEntity booking) = trip.bookingDetails
-              (CTA.TripCategory tripCategory) = booking.tripCategory
-            in
-              rideType == Nothing || Just tripCategory.tag == rideType
-        )
-        resp.bookings
-
+    rideType =  maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex) 
+    filteredList =resp.bookings    
     shimmerLoader =  ST.AnimatedOut
   continue state { data { filteredArr = filteredList, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
 
@@ -280,6 +274,7 @@ myRideListTransformerProp listres =
             HATCHBACK_TIER -> "ic_hatchback_ac"
             TAXI -> "ny_ic_non_ac"
             TAXI_PLUS -> "ny_ic_sedan_ac"
+            SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
             _ -> "ny_ic_ac_mini"
 
           

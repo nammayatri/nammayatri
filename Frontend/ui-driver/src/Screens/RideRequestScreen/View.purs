@@ -43,6 +43,10 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (FlowBT, GlobalState(..),defaultGlobalState)
 import Helpers.Utils as HU
+import Foreign.Class (encode)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON, setAnyInWindow, stringifyJSON, getFromWindowString)
+import Common.Types.App as CTA
+import Data.Array (mapWithIndex , (!!), length, null)
 
 
 screen :: RideRequestScreenState -> ListItem -> Screen Action RideRequestScreenState ScreenOutput
@@ -259,6 +263,7 @@ navpillView state config push idx =
     , onClick push $ const $ RideTypeSelected config.rideType idx
     , background if idx == state.data.activeRideIndex then config.activeColor else Color.white900
     , rippleColor Color.rippleShade
+    , clickable $ idx /= state.data.activeRideIndex  
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -282,6 +287,7 @@ daypillView state config push idx =
     , background if idx == state.data.activeDayIndex then config.activeColor else Color.white900
     , onClick push $ const $ SelectDay idx
     , rippleColor Color.rippleShade
+    , clickable $ idx /= state.data.activeDayIndex  
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -374,7 +380,9 @@ loadButtonView state push =
 getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList action push state = do
       when state.props.shouldCall $ do 
-        (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
+        let rideType  =   getRideType state
+            tripCategory =  if  rideType == "InterCity" then  rideType<>"_OneWayOnDemandStaticOffer" else if rideType == "Rental" then rideType<>"_OnDemandStaticOffer" else ""
+        (scheduledBookingListResponse) <- Remote.rideBooking "10" (show state.data.offset) (state.data.date) (state.data.date) (tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
         case scheduledBookingListResponse of
           Right (ScheduledBookingListResponse listResp) -> do
             doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"
@@ -415,3 +423,10 @@ shimmerData i =   {
     imageType : toPropValue "",
     estimatedDuration : toPropValue ""
 }
+
+getRideType :: RideRequestScreenState -> String
+getRideType state = do
+  let activeRideIndex =  state.data.activeRideIndex
+  case state.data.pillViewArray !! activeRideIndex of
+      Just pill -> maybe "" show pill.rideType
+      Nothing -> ""
