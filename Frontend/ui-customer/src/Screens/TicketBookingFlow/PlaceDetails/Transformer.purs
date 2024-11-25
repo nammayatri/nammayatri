@@ -165,8 +165,8 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
     generateOperationalDateData res = 
       case res of
         Just (API.OperationalDateResp resp) ->
-          Just { startDate : resp.eneDate,
-                 endDate : resp.startDate
+          Just { startDate : resp.startDate,
+                 endDate : resp.eneDate
                 }
         Nothing -> Nothing
     

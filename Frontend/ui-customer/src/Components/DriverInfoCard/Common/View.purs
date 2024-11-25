@@ -48,6 +48,7 @@ import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
 import Screens.Types as ST
+import Helpers.CommonView as HCV
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils as HU
 
@@ -586,12 +587,12 @@ senderReceiverNameAndNumberView details' textWidth =
           margin $ MarginTop 2
         ] <> FontStyle.tags TypoGraphy
       ]
-    Nothing -> linearLayout[][]
+    Nothing -> HCV.weightedLinearLayout
 
 senderReceiverAddrInstructionView :: forall w. Maybe PersonDeliveryDetails -> String -> Boolean -> PrestoDOM (Effect Unit) w
 senderReceiverAddrInstructionView details' address isSource =
   case details' of
-    Nothing -> linearLayout[][]
+    Nothing -> HCV.weightedLinearLayout
     Just details ->
       linearLayout
         [ height WRAP_CONTENT
