@@ -22,6 +22,7 @@ import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
+    activeBookings :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
@@ -73,6 +74,7 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    pendingFeedbacks :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

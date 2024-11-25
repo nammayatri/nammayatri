@@ -113,3 +113,14 @@ ALTER TABLE atlas_app.person ADD COLUMN customer_namma_tags text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN pending_feedbacks text[] ;
+ALTER TABLE atlas_app.person ADD COLUMN active_bookings text[] ;
+
+
+------- SQL updates -------
+

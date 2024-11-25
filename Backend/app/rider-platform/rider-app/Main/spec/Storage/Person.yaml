@@ -101,6 +101,8 @@ Person:
     informPoliceSos : Bool
     androidId: Maybe Text
     customerNammaTags: "Maybe [Text]"
+    activeBookings: "Maybe [Text]"
+    pendingFeedbacks: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -308,6 +310,16 @@ Person:
     updateCustomerTags:
       kvFunction: updateWithKV
       params: [customerNammaTags]
+      where: id
+
+    updateActiveBookings:
+      kvFunction: updateWithKV
+      params: [activeBookings]
+      where: id
+
+    updatePendingFeedbacks:
+      kvFunction: updateWithKV
+      params: [pendingFeedbacks]
       where: id
 
   extraOperations:

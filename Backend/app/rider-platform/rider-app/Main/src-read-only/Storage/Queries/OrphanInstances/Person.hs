@@ -27,6 +27,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
       Just
         Domain.Types.Person.Person
           { aadhaarVerified = aadhaarVerified,
+            activeBookings = activeBookings,
             androidId = androidId,
             backendAppVersion = backendAppVersion,
             blocked = blocked,
@@ -73,6 +74,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             nightSafetyChecks = nightSafetyChecks,
             notificationToken = notificationToken,
             passwordHash = passwordHash,
+            pendingFeedbacks = pendingFeedbacks,
             rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
             referralCode = referralCode,
             referredAt = referredAt,
@@ -96,6 +98,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
   toTType' (Domain.Types.Person.Person {..}) = do
     Beam.PersonT
       { Beam.aadhaarVerified = aadhaarVerified,
+        Beam.activeBookings = activeBookings,
         Beam.androidId = androidId,
         Beam.backendAppVersion = backendAppVersion,
         Beam.blocked = blocked,
@@ -147,6 +150,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.nightSafetyChecks = nightSafetyChecks,
         Beam.notificationToken = notificationToken,
         Beam.passwordHash = passwordHash,
+        Beam.pendingFeedbacks = pendingFeedbacks,
         Beam.referralCode = referralCode,
         Beam.referredAt = referredAt,
         Beam.referredByCustomer = referredByCustomer,

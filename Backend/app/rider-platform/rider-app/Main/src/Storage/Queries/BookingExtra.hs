@@ -34,6 +34,7 @@ import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Booking ()
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote ()
 
 createBooking' :: (MonadFlow m, EsqDBFlow m r) => Booking -> m ()
@@ -47,7 +48,11 @@ createBooking booking = do
       DRB.OneWayDetails detail -> return (Just detail.toLocation, detail.stops)
       DRB.RentalDetails detail -> return (detail.stopLocation, [])
       DRB.DriverOfferDetails detail -> return (Just detail.toLocation, detail.stops)
-      DRB.OneWaySpecialZoneDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.OneWaySpecialZoneDetails detail -> do
+        person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+        let updatedActiveBookings = Just $ booking.id.getId : fromMaybe [] person.activeBookings
+        void $ QP.updateActiveBookings updatedActiveBookings person.id
+        return (Just detail.toLocation, detail.stops)
       DRB.InterCityDetails detail -> return (Just detail.toLocation, [])
       DRB.AmbulanceDetails detail -> return (Just detail.toLocation, [])
       DRB.DeliveryDetails detail -> return (Just detail.toLocation, [])
