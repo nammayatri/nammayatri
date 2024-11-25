@@ -16,8 +16,32 @@ newtype Languages= Languages{
 , tamil :: Keymap
 , kannada :: Keymap
 , telugu :: Keymap
+, odia :: Keymap
 }
 
+bengali :: Proxy "bengali"
+bengali = a
+
+hindi :: Proxy "hindi"
+hindi = a
+
+kannada :: Proxy "kannada"
+kannada = a
+
+malayalam :: Proxy "malayalam"
+malayalam = a
+
+tamil :: Proxy "tamil"
+tamil = a
+
+telugu :: Proxy "telugu"
+telugu = a
+
+english :: Proxy "english"
+english = a
+
+odia :: Proxy "odia"
+odia = a
 
 newtype Keymap = Keymap {
   about :: String
@@ -6724,27 +6748,6 @@ explore = a
 
 delivered_in_just :: Proxy "delivered_in_just"
 delivered_in_just = a
-
-bengali :: Proxy "bengali"
-bengali = a
-
-hindi :: Proxy "hindi"
-hindi = a
-
-kannada :: Proxy "kannada"
-kannada = a
-
-malayalam :: Proxy "malayalam"
-malayalam = a
-
-tamil :: Proxy "tamil"
-tamil = a
-
-telugu :: Proxy "telugu"
-telugu = a
-
-english :: Proxy "english"
-english = a
 
 odisha :: Proxy "odisha"
 odisha = a
