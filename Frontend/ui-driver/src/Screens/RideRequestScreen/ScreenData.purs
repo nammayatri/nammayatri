@@ -159,7 +159,8 @@ dummyAPI = BookingAPIEntity{
 type RideRequestScreenProps= {
   cardHeight :: Int,
   receivedResponse :: Boolean,
-  shouldCall :: Boolean
+  shouldCall :: Boolean,
+  noLocationFlag :: Boolean
 }
 type PillViewConfig ={
   rideType ::  Maybe (CTA.TripCategoryTag),
@@ -196,6 +197,7 @@ initData _ = {
       cardHeight : 0
     ,receivedResponse: false
     , shouldCall : true
+    , noLocationFlag : false
     }
 }
 

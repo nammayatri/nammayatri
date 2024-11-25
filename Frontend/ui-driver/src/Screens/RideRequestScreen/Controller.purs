@@ -74,6 +74,7 @@ data Action
   | OnFadeComplete String
   | Notification String
   | UpdateCurrentLocation String String
+  | UpdateNoLocationFlag
 
 
 eval :: Action -> RideRequestScreenState -> Eval Action ScreenOutput RideRequestScreenState
@@ -108,7 +109,7 @@ eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
                                 in
                                 response1.id == response2.id) $ DA.union oldBookingsResp.bookings resp.bookings
       updatedBookingResp = ScheduledBookingListResponse { bookings : updatedBookings}
-  continueWithCmd state { data { resp = updatedBookingResp, loadMoreDisabled =  false , refreshLoader  = false ,shimmerLoader = AnimatedIn }, props {receivedResponse = true } } [ pure $ FilterSelected ]
+  continueWithCmd state { data { resp = updatedBookingResp, loadMoreDisabled =  false , refreshLoader  = false ,shimmerLoader = AnimatedIn }, props {receivedResponse = true} } [ pure $ FilterSelected ]
 
 
 eval (RideTypeSelected rideType idx  )state = do
@@ -188,6 +189,7 @@ eval (UpdateCurrentLocation lat lon) state = do
           state { data { driverLat = curr_lat, driverLong = curr_lon } }
   continue updatedState
 
+eval (UpdateNoLocationFlag) state = continue state{props{noLocationFlag = true}} 
 
 eval _ state = update state
 
