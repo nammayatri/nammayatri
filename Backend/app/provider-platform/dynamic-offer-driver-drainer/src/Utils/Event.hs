@@ -13,6 +13,11 @@ driver_peek_db_command_error =
   counter #driver_peek_db_command_error
     .& build
 
+driver_kv_config_decode_failure :: PromRep 'Counter "driver_kv_config_decode_failure" '[]
+driver_kv_config_decode_failure =
+  counter #driver_kv_config_decode_failure
+    .& build
+
 driver_drop_db_command_error :: PromRep 'Counter "driver_drop_db_command_error" '[]
 driver_drop_db_command_error =
   counter #driver_drop_db_command_error
