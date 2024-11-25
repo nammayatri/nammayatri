@@ -29,6 +29,7 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.Either.Extra (eitherToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -605,15 +606,16 @@ calculateFinalValuesForCorrectDistanceCalculations ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
-  let thresholdChecks = distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold
+  let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
+  shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff)
+  let thresholdChecks = distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
     when (thresholdConfig.toNotifyDriverForExtraKmsLimitExceed && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + maxUpwardBuffer
-  let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then
-      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms
+      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms && shouldRecompute
         then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig False tripEndPoint
         else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig False tripEndPoint
     else
@@ -662,6 +664,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
+      shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff)
       if distanceDiff < 0
         then do
           recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
@@ -670,7 +673,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             then do
               recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
             else do
-              if highPrecMetersToMeters distanceDiff < maxDistance
+              if highPrecMetersToMeters distanceDiff < maxDistance && shouldRecompute
                 then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
@@ -679,3 +682,13 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
     maxDistance = case (booking.estimatedDistance, thresholdConfig.upwardsRecomputeBufferPercentage) of
       (Just estDistance, Just percentage) -> Meters $ max (round $ (toRational estDistance.getMeters) * (toRational percentage / 100)) (round thresholdConfig.upwardsRecomputeBuffer.getHighPrecMeters)
       _ -> highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer
+
+shouldUpwardRecompute :: (MonadFlow m, MonadThrow m, Log m) => DTConf.TransporterConfig -> Meters -> Meters -> m Bool
+shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
+  let filteredThresholds = maybe [] (filter (\distanceThreshold -> distanceThreshold.estimatedDistanceUpper > estimatedDistance)) thresholdConfig.recomputeDistanceThresholds
+      recomputeDistanceThreshold = listToMaybe $ sortBy (comparing \distanceThreshold -> distanceThreshold.estimatedDistanceUpper - estimatedDistance) filteredThresholds
+  case recomputeDistanceThreshold of
+    Just distanceThreshold -> do
+      let shouldRecompute = distanceDiff < distanceThreshold.minThresholdDistance && distanceDiff.getMeters < (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
+      pure shouldRecompute
+    Nothing -> pure False

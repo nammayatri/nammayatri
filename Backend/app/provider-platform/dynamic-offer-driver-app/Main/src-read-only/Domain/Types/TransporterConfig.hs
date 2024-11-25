@@ -170,6 +170,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcLimit :: Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
+    recomputeDistanceThresholds :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.DistanceRecomputeConfigs],
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
@@ -276,6 +277,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     resultDurationMinutes :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 type TransporterConfig = TransporterConfigD 'Safe
 
