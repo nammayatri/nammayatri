@@ -811,7 +811,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
     bookAnyProps = getBookAnyProps (filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) selectedItem.selectedServices) config.quoteList)
     maximumPrice = if selectedItem.vehicleVariant == "BOOK_ANY" then Just bookAnyProps.maxPrice else selectedItem.maxPrice
     minimumPrice = if selectedItem.vehicleVariant == "BOOK_ANY" then bookAnyProps.minPrice else selectedItem.basePrice
-    priceRange = if isJust maximumPrice && maximumPrice /= Just selectedItem.basePrice  then currencySymbol <> show (minimumPrice + tip)  <> " - " <> currencySymbol <> show ((fromMaybe minimumPrice maximumPrice) + tip) else currencySymbol <> show (minimumPrice + tip)
+    priceRange = if isJust maximumPrice && maximumPrice /= Just minimumPrice  then currencySymbol <> show (minimumPrice + tip)  <> " - " <> currencySymbol <> show ((fromMaybe minimumPrice maximumPrice) + tip) else currencySymbol <> show (minimumPrice + tip)
     title = case config.fareProductType of
               RENTAL -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Rental" <> " " <> name )
               INTER_CITY -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Intercity" <> " " <> name )
