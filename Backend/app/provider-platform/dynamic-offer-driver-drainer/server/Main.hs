@@ -26,6 +26,7 @@ import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
 import Kernel.Streaming.Kafka.Producer.Types
+import Kernel.Types.Flow
 import Kernel.Utils.Dhall hiding (void)
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
@@ -59,7 +60,8 @@ main = do
 
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg
+          R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
