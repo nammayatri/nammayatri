@@ -365,6 +365,7 @@ sourceDestinationView push config =
         , stroke $ "1," <> Color.grey900
         , padding $ Padding 12 8 12 8
         , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted) && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow
+        , onClick push $ const config.editingPickupLocation
         , rippleColor Color.rippleShade
         , accessibility DISABLE
         ] <> FontStyle.body1 TypoGraphy
