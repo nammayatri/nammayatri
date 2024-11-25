@@ -331,3 +331,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recent_schedule
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_for_stop_fcm double precision  default 100;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recompute_distance_thresholds text[]  default Array ['DistanceRecomputeConfigs {estimatedDistanceUpper = 5000, minThresholdPercentage = 40, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper = 10000, minThresholdPercentage = 30, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper =15000, minThresholdPercentage = 20, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper = 9999999, minThresholdPercentage = 10, minThresholdDistance = 1000}'];

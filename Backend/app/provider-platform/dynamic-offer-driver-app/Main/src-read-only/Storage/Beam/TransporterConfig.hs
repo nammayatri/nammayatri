@@ -168,6 +168,7 @@ data TransporterConfigT f = TransporterConfigT
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
