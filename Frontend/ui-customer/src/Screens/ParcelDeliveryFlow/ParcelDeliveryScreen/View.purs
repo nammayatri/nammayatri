@@ -37,7 +37,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, scrollBarY, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii)
@@ -83,40 +83,28 @@ view push state =
     , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , onClick push $ const NoAction
     ]
-    [ linearLayout
-      [ height WRAP_CONTENT
+    [ linearLayout 
+      [ height MATCH_PARENT
       , width MATCH_PARENT
+      , background Color.white900
       , orientation VERTICAL
+      ][
+        GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        , linearLayout
+          [ height $ V 1 
+          , width MATCH_PARENT
+          , background Color.grey900
+          ] []
+        , linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          ][ deliveryDetailsView push state
+          , deliveryInstructionView push state
+          ]
       ]
-      [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-      , separatorView push state 
-      ]
-    , deliveryDetailsView push state
-    , deliveryInstructionView push state
     , separatorView push state
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity BOTTOM
-      , margin (MarginBottom 14)
-      , alignParentBottom "true,-1"
-      , stroke ("1,"<> Color.grey900)
-      , cornerRadii (Corners 16.0 true true false false)
-      ]
-      [ 
-        linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , visibility $ boolToVisibility $ state.data.currentStage /= ST.DELIVERY_INSTRUCTIONS
-        ][
-          ChooseVehicle.view (push <<< ChooseVehicleAC) $ chooseVehicleConfig state
-        , tipView push state
-        ]
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-      ],
-      (case state.data.currentStage of
+    , footerView push state
+    , (case state.data.currentStage of
         ST.SENDER_DETAILS -> deliveryDetailPopupView push state 
         ST.RECEIVER_DETAILS -> deliveryDetailPopupView push state 
         _ -> emptyTextView),
@@ -291,7 +279,7 @@ deliveryGuidelinesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ Margin 0 20 0 120
+  , margin $ Margin 0 20 0 160
   ]
   [ linearLayout
     [ width MATCH_PARENT
@@ -314,7 +302,7 @@ deliveryGuidelinesView push state =
       ]
       ( map (\item -> instructionItem item) instructionData)
     , textView $ 
-      [ text "View all Guidelines"
+      [ text $ getString VIEW_ALL_GUIDELINES
       , color Color.blue800
       , layoutGravity "center_horizontal"
       , margin $ Margin 16 16 16 0
@@ -324,6 +312,41 @@ deliveryGuidelinesView push state =
       <> FontStyle.body1 TypoGraphy
     ]
 ]
+
+footerView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+footerView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity BOTTOM
+    , background Color.transparent
+    ][ 
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ PaddingBottom 16
+        , orientation VERTICAL
+        , background Color.white900
+        ]
+        [ linearLayout  
+          [ height $ V 1
+          , width MATCH_PARENT
+          , margin $ MarginBottom 16
+          , background Color.grey900
+          ][],
+          linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , visibility $ boolToVisibility $ state.data.currentStage /= ST.DELIVERY_INSTRUCTIONS
+          ][
+            ChooseVehicle.view (push <<< ChooseVehicleAC) $ chooseVehicleConfig state
+          , tipView push state
+          ]
+        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+      ]
+    ]
+    
 
 instructionItem :: forall w. { title :: String, image :: String } -> PrestoDOM (Effect Unit) w
 instructionItem item =
@@ -443,15 +466,16 @@ tipView push state =
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 deliveryDetailsView push state = do
   scrollView
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
-    , margin $ Margin 16 60 16 100
+    , fillViewport true
     , visibility $ boolToVisibility $ state.data.currentStage /= ST.DELIVERY_INSTRUCTIONS
     ]
     [ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , margin $ Margin 16 16 16 100
       ]
       [ mapViewLayout push state
       , pickupView push state
@@ -464,14 +488,16 @@ deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDelive
 deliveryInstructionView push state = 
   let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in scrollView
-    [ width MATCH_PARENT
-    , margin $ Margin 16 80 16 100
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , fillViewport true
     , visibility $ boolToVisibility $ state.data.currentStage == ST.DELIVERY_INSTRUCTIONS
     ][ 
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ Margin 16 16 16 100
       ]
       [
         linearLayout

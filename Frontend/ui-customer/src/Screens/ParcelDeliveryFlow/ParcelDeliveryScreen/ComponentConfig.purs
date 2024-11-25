@@ -47,7 +47,7 @@ primaryButtonConfig state =
           , color = Color.yellow900
           , height = V 40
           }
-      , gravity = CENTER
+      -- , gravity = CENTER
       , margin = (Margin 16 10 16 10)
       , isClickable = state.data.currentStage == ST.FINAL_DETAILS || state.data.currentStage == ST.DELIVERY_INSTRUCTIONS
       , id = (getString $ if state.data.currentStage == ST.DELIVERY_INSTRUCTIONS then SEND_NOW else BOOK_FOR) <> "PrimaryButton"
@@ -193,12 +193,12 @@ deliveryPickupDetialsModalConfig state =
     personNameDetailsConfig details label = 
       let config = PopUpModal.dummyDeliveryPrimaryText
       in config
-        { editText { text = details.name, placeholder = "Name", pattern = Just "[A-Za-z ]*,30" }
+        { editText { text = details.name, placeholder = getString ENTER_A_NAME, pattern = Just "[A-Za-z ]*,30" }
         , topLabel { text = label }
         , textImage { visibility = VISIBLE }
         , margin = Margin 0 0 0 8
         , id = EHC.getNewIDWithTag "personName"
-        , errorLabel { text = "Please enter a valid name" }
+        , errorLabel { text = getString PLEASE_ENTER_A_VALID_NAME }
         }
 
     mobileNumberDetailsConfig :: ST.PersonDeliveryDetails -> String -> PrimaryEditTextController.Config
@@ -210,17 +210,17 @@ deliveryPickupDetialsModalConfig state =
         , textImage { visibility = VISIBLE }
         , id = EHC.getNewIDWithTag "mobileNumber"
         , type = "number"
-        , errorLabel { text = "Please enter a valid mobile number" }
+        , errorLabel { text = getString PLEASE_ENTER_A_VALID_MOBILE_NUMBER }
         }
 
     addressDetailsConfig :: ST.PersonDeliveryDetails -> String -> PrimaryEditTextController.Config
     addressDetailsConfig details label = 
       let config = PopUpModal.dummyDeliveryPrimaryText
       in config
-        { editText { text = details.extras, placeholder = "Apt #1, 1st Block, Locality", pattern = Just "[^\n]*,50" }
+        { editText { text = details.extras, placeholder = getString ENTER_A_ADDRESS, pattern = Just "[^\n]*,50" }
         , topLabel { text = label }
         , id = EHC.getNewIDWithTag "addressDetails"
-        , errorLabel { text = "Please enter a valid address" }
+        , errorLabel { text = getString PLEASE_ENTER_A_VALID_ADDRESS }
         }
 
     instructionDetailsConfig :: ST.PersonDeliveryDetails -> String -> PrimaryEditTextController.Config
@@ -229,7 +229,7 @@ deliveryPickupDetialsModalConfig state =
       in config
         { height = V 90
         , margin = MarginVertical 20 20
-        , editText { text = fromMaybe "" details.instructions, placeholder = "Instruction", singleLine = false, pattern = Just "[^\n]*,100" }
+        , editText { text = fromMaybe "" details.instructions, placeholder = getString OPTIONAL_INSTRUCTION, singleLine = false, pattern = Just "[^\n]*,100" }
         , topLabel { text = label }
         , id = EHC.getNewIDWithTag "instructionDetails"
         }
@@ -251,7 +251,7 @@ chooseVehicleConfig state =
       , isEnabled = true
       , index = selectedParcelEstimate.index
       , activeIndex = selectedParcelEstimate.activeIndex
-      , id = selectedParcelEstimate.id
+      , id = selectedParcelEstimate.id <> "_delivery"
       , maxPrice = selectedParcelEstimate.maxPrice
       , basePrice = selectedParcelEstimate.basePrice
       , showInfo = selectedParcelEstimate.showInfo
