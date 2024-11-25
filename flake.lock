@@ -697,11 +697,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1732264276,
-        "narHash": "sha256-UR1SHuNpmxAge9W9G0lcRWH9XlqOMG8J0f3xmVzbSXk=",
+        "lastModified": 1732689486,
+        "narHash": "sha256-geIUi3MO2l91Ww3lPwztyVdt3gYf4bvqUKopQYfeXxU=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "020aa2f9e04792287104aed907e612a13d267450",
+        "rev": "1d1f4490d5188d0fc07111d4a9be9e8bcb7dfc32",
         "type": "github"
       },
       "original": {
@@ -3802,11 +3802,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1732264584,
-        "narHash": "sha256-COq8P9ClZR09Sz0C1+5TP/QiBX2Yl7Ydtn09Zw3d2Cg=",
+        "lastModified": 1732696133,
+        "narHash": "sha256-1I9nHfx4fj7bmE+E+1MA9qxvD8jc5SSNgHDUIHdcOVU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "068b92b080a1033568d7e39776b53680a55cf2a8",
+        "rev": "0b24247069cca2fd05d8c7726888401c5a31c3ab",
         "type": "github"
       },
       "original": {
@@ -4030,15 +4030,16 @@
       "locked": {
         "lastModified": 1669960992,
         "narHash": "sha256-o0WEbygbbfIYPonyY6ui1HcbaJcFdngjBhnjWbe65zs=",
+        "owner": "arjunkathuria",
+        "repo": "tinylog",
         "rev": "08d3b6066cd2f883e183b7cd01809d1711092d33",
-        "revCount": 78,
-        "type": "git",
-        "url": "https://gitlab.com/arjunkathuria/tinylog.git"
+        "type": "gitlab"
       },
       "original": {
+        "owner": "arjunkathuria",
+        "repo": "tinylog",
         "rev": "08d3b6066cd2f883e183b7cd01809d1711092d33",
-        "type": "git",
-        "url": "https://gitlab.com/arjunkathuria/tinylog.git"
+        "type": "gitlab"
       }
     },
     "treefmt-nix": {

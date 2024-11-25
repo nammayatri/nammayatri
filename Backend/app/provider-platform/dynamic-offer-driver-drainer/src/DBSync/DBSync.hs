@@ -9,8 +9,12 @@ import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
+import Data.Pool (withResource)
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
+import Data.Time.Clock hiding (getCurrentTime)
+import Database.PostgreSQL.Simple as PG
+import Database.PostgreSQL.Simple.Types as PGS
 import qualified Database.Redis as R
 import qualified EulerHS.KVConnector.Compression as C
 import EulerHS.Language (runIO)
@@ -19,6 +23,10 @@ import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import Kafka.Producer as KafkaProd
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Utils.Text
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -265,6 +273,7 @@ startDBSync = do
             _history = C.emptyHistory
           }
   forever $ do
+    getAndSetKvConfigs
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
     -- EL.runIO $ when stopRequested shutDownHandler
     when stopRequested $ do
@@ -309,6 +318,34 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+getAndSetKvConfigs :: Flow ()
+getAndSetKvConfigs = do
+  now <- EL.runIO getCurrentTime
+  kvConfigLastUpdatedTime <- EL.getOption KBT.KvConfigLastUpdatedTime >>= maybe (EL.setOption KBT.KvConfigLastUpdatedTime now >> pure now) pure
+  kvConfigUpdateFrequency <- EL.getOption KBT.KvConfigUpdateFrequency >>= maybe (pure 10) pure
+  when (round (diffUTCTime now kvConfigLastUpdatedTime) > kvConfigUpdateFrequency) $ do
+    fetchAndSetKvConfigs
+    EL.setOption KBT.KvConfigLastUpdatedTime now
+  pure ()
+
+fetchAndSetKvConfigs :: Flow ()
+fetchAndSetKvConfigs = do
+  Env {..} <- ask
+  let kvConfigsQuery = "SELECT config_value FROM " <> _esqDBCfg.connectSchemaName <> ".system_configs WHERE id = 'kv_configs'" :: T.Text
+  res <- EL.runIO $ withResource _connectionPool $ \conn -> PG.query_ conn (PGS.Query $ DTE.encodeUtf8 kvConfigsQuery) :: IO [Only T.Text]
+  case res of
+    [Only kvConfigs] -> do
+      let decodedKVConfigs = decodeFromText' @Tables (Just kvConfigs)
+      case decodedKVConfigs of
+        Just decodedKVConfigs' -> EL.setOption KBT.Tables decodedKVConfigs'
+        Nothing -> do
+          EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to decode kv configs" :: Text)
+          publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+    err -> do
+      EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to fetch kv configs" <> show err :: Text)
+      publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+      EL.throwException (InternalError "Failed to fetch kv configs")
 
 flushKafkaProducerAndPublishMetrics :: Flow ()
 flushKafkaProducerAndPublishMetrics = do
