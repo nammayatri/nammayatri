@@ -886,6 +886,7 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               extras = Nothing
             },
         merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId,
         ..
       }
 

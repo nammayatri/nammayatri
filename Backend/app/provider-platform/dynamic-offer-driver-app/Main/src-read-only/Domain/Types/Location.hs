@@ -9,6 +9,7 @@ import Data.Aeson
 import qualified Data.OpenApi
 import Domain.Types.Extra.Location as ReExport
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -21,7 +22,8 @@ data Location = Location
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     updatedAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates, ToJSON, FromJSON, ToSchema)
 

@@ -124,8 +124,7 @@ Location:
         - instructions|B
         - extras|B
       where: id
-  excludedFields:
-    - merchantOperatingCityId
+
 
   extraOperations:
     - EXTRA_QUERY_FILE
