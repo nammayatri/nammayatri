@@ -31,7 +31,14 @@ fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsE
 fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory =
   Hedis.safeGet (makeCoinConfigKey eventType merchantOpCityId vehicleCategory) >>= \case
     Just a -> return a
-    Nothing -> cacheCoinConfig eventType merchantOpCityId vehicleCategory /=<< Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
+    Nothing -> do
+      result <- Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
+      result' <-
+        if null result
+          then Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing
+          else return result
+      void $ cacheCoinConfig eventType merchantOpCityId vehicleCategory result
+      return result'
 
 cacheCoinConfig :: CacheFlow m r => DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [CoinsConfig] -> m ()
 cacheCoinConfig eventType merchantOpCityId vehicleCategory coinsConfig = do
