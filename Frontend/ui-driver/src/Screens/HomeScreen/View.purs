@@ -119,6 +119,7 @@ import Services.API as APITypes
 import Helpers.SplashUtils as HS
 import Resource.Constants
 import RemoteConfig as RC
+import Components.SwitchButtonView as SwitchButtonView
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -3112,13 +3113,11 @@ metroWarriorsToggleView push state =
           , color Color.blue800
           , weight 1.0
           ] <> FontStyle.body1 TypoGraphy
-        , imageView
-          [ imageWithFallback $ HU.fetchImage HU.GLOBAL_COMMON_ASSET if state.data.isSpecialLocWarrior then "ny_ic_switch_filled_blue" else "ny_ic_switch_inactive"
-          , height $ V 20
-          , width $ V 36
-          , onClick push $ const ToggleMetroWarriors
-          ]
+      , switchButtonView push state.data.isSpecialLocWarrior
       ]
     ]
   where
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+
+    switchButtonView push isActive = 
+      SwitchButtonView.view (push <<< MetroWarriorSwitchAction) $ SwitchButtonView.config {isActive = isActive}

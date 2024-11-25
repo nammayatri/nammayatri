@@ -118,6 +118,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
                         android:layout_weight="1.0"
                         android:text="On my way, hold tight!"
                         android:id="@+id/suggestion1_text"
@@ -152,6 +153,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
                         android:layout_weight="1.0"
                         android:text="Traffic ahead, few mins delay"
                         android:id="@+id/suggestion2_text"
@@ -185,6 +187,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
                         android:layout_weight="1.0"
                         android:text="Struggling with location, one sec!"
                         android:id="@+id/suggestion3_text"
