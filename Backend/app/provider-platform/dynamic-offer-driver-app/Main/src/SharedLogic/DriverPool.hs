@@ -107,6 +107,7 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
+import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
@@ -579,7 +580,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       ( \specialLocWarriorDriver -> runMaybeT $ do
           driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
           specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
-          preferredLoc <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLoc
+          preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
+          preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
           preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
           let gHR =
                 DDGR.DriverGoHomeRequest
