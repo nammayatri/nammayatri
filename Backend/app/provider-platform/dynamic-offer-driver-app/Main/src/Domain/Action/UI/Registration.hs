@@ -272,7 +272,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             blockReasonFlag = Nothing,
             driverTripEndLocation = Nothing,
             onRideTripCategory = Nothing,
-            preferredPrimarySpecialLoc = Nothing,
+            preferredPrimarySpecialLocId = Nothing,
             preferredSecondarySpecialLocIds = [],
             isSpecialLocWarrior = False
           }

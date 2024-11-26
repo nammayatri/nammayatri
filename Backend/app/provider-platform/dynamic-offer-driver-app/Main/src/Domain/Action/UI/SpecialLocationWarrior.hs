@@ -53,6 +53,7 @@ getGetInfoSpecialLocWarrior ::
   )
 getGetInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId = do
   DI.DriverInformation {..} <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+  preferredPrimarySpecialLoc <- maybe (return Nothing) (\locId -> TDI.getPreferredPrimarySpecialLoc (Just locId.getId)) preferredPrimarySpecialLocId
   return $
     SpecialLocWarriorInfoRes
       { ..
@@ -70,20 +71,18 @@ postUpdateInfoSpecialLocWarrior ::
 postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId SpecialLocWarriorInfoReq {..} = do
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-  primarySpecialLocation <- runMaybeT $ do
-    preferredPrimarySpecialLocId' <- MaybeT $ pure preferredPrimarySpecialLocId
-    MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredPrimarySpecialLocId'.getId) -- >>= fromMaybeM (InvalidRequest $ "SpecialLocWarrior Loc not found with id : " <> preferredPrimarySpecialLocId'.getId)
-  let preferredPrimarySpecialLocation = primarySpecialLocation <|> driverInfo.preferredPrimarySpecialLoc
+  let preferredPrimarySpecialLocationId = preferredPrimarySpecialLocId <|> driverInfo.preferredPrimarySpecialLocId
+  preferredPrimarySpecialLocation <- maybe (return Nothing) (\locId -> TDI.getPreferredPrimarySpecialLoc (Just locId.getId)) preferredPrimarySpecialLocationId
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
   mbOlderDriverTag <- runMaybeT $ do
-    preferredPrimarySpecialLocation' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLoc
-    getDriverTag preferredPrimarySpecialLocation' driverInfo.preferredSecondarySpecialLocIds
+    preferredPrimarySpecialLocationId' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLocId
+    getDriverTag preferredPrimarySpecialLocationId' driverInfo.preferredSecondarySpecialLocIds
 
-  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocation preferredSecondarySpecialLocIds personId
+  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocationId preferredSecondarySpecialLocIds personId
 
   mbDriverTag <- runMaybeT $ do
-    preferredPrimarySpecialLocation' <- MaybeT $ pure preferredPrimarySpecialLocation
-    getDriverTag preferredPrimarySpecialLocation' preferredSecondarySpecialLocIds
+    preferredPrimarySpecialLocationId' <- MaybeT $ pure preferredPrimarySpecialLocationId
+    getDriverTag preferredPrimarySpecialLocationId' preferredSecondarySpecialLocIds
   whenJust mbDriverTag $ \driverTag -> do
     if isSpecialLocWarrior
       then unless (maybe False (elem driverTag) driver.driverTag) $ do
@@ -102,12 +101,12 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
         preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds
       }
   where
-    getDriverTag prefPrimarySpecialLocation prefSecondarySpecialLocIds =
+    getDriverTag prefPrimarySpecialLocationId prefSecondarySpecialLocIds =
       if notNull prefSecondarySpecialLocIds
         then do
           let secondaryLocTag = makeDriverTag (map (.getId) prefSecondarySpecialLocIds)
-          pure $ "MetroWarrior#" <> prefPrimarySpecialLocation.id.getId <> "&" <> secondaryLocTag
-        else pure $ "MetroWarrior#" <> prefPrimarySpecialLocation.id.getId
+          pure $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId <> "&" <> secondaryLocTag
+        else pure $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId
 
 makeDriverTag :: [Text] -> Text
 makeDriverTag = T.intercalate "&"

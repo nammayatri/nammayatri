@@ -54,7 +54,7 @@ DriverInformation:
     subscribed: Bool
     paymentPending: Bool
     isSpecialLocWarrior: Bool
-    preferredPrimarySpecialLoc: Maybe SpecialLocationWarrior
+    preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
     preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
@@ -126,8 +126,6 @@ DriverInformation:
     driverTripEndLocation:
       driverTripEndLocationLat: Maybe Double
       driverTripEndLocationLon: Maybe Double
-    preferredPrimarySpecialLoc:
-      preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
 
 
   beamType:
@@ -153,7 +151,6 @@ DriverInformation:
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
     driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
-    preferredPrimarySpecialLoc : Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
 
   toTType:
@@ -166,10 +163,9 @@ DriverInformation:
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
+    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
     driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
-    preferredPrimarySpecialLocId: (Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc|E
-    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -287,11 +283,12 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
       where: driverId
+    updateSpecialLocWarriorInfo:
+      kvFunction: updateOneWithKV
+      params: [isSpecialLocWarrior, preferredPrimarySpecialLocId, preferredSecondarySpecialLocIds]
+      where: driverId
     updateTripEndLocation:
       kvFunction: updateOneWithKV
       params: [driverTripEndLocation]
-    updateSpecialLocWarriorInfo:
-      kvFunction: updateOneWithKV
-      params: [isSpecialLocWarrior, preferredPrimarySpecialLoc, preferredSecondarySpecialLocIds]
       where: driverId
 
