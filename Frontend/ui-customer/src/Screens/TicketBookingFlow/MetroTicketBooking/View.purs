@@ -222,6 +222,7 @@ routeListView state push =
                   text $ (show routeTotalStops)<> " stops"
                 ,  gravity RIGHT
                 , color Color.darkCharcoal
+                , visibility GONE
                 , weight 0.0
                 ]
             ]
