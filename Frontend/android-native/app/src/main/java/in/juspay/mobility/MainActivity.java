@@ -134,11 +134,16 @@ import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 
 import in.org.npci.bbps.BBPSService;
 import in.org.npci.bbps.BBPSAgentInterface;
+import in.juspay.mobility.PaymentGateway;
+
+import android.content.Intent;
 
 public class MainActivity extends AppCompatActivity {
-
+    public static MainActivity appContext = new MainActivity();
+    public static String lastTxnRefId = "";
     private static final String LOG_TAG = "MAIN_ACTIVITY";
     private static final int REQUEST_CODE_UPDATE_APP = 587;
+//    protected static
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
@@ -767,7 +772,9 @@ public class MainActivity extends AppCompatActivity {
             // Initializing and Booting up the SDK to make it ready for all the operations
             bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
             // Payment Gateway is service you will call to do transaction.
-            //    PaymentGateway.setBBPSService(bbpsService);
+            PaymentGateway.setBBPSService(bbpsService);
+
+//            startMicroForSuccessTxn()
         }
         catch (Exception e) {
             Log.e("Error in initiating BBPS SDK", e.toString());
@@ -1392,14 +1399,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void doPayment(JSONObject billDetails) {
             //Trigger payment page
-//        Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
-//        MainActivity.this.startActivity(intent);
+            Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
+            MainActivity.this.startActivity(intent);
         }
 
         @Override
         public void setTxnStatus(JSONObject txnStatus) {
-//        Intent intent = new Intent("CLOSE_PAYMENT_ACTIVITY");
-//        sendBroadcast(intent);
+            Intent intent = new Intent("CLOSE_PAYMENT_ACTIVITY");
+            sendBroadcast(intent);
             // callback from SDK to Application
             // to store the transaction status
         }

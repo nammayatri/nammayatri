@@ -3401,7 +3401,7 @@ eval (ServicesOnClick service) state = do
       , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
       , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
       }}} [pure $ IntercityBusAC]
-    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.DELIVERY -> continueWithCmd state [pure $ StartBBPS] -- exit $ GoToParcelInstructions state
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
