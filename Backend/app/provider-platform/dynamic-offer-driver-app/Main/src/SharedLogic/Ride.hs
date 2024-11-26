@@ -89,7 +89,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- bool (QRide.getInProgressByDriverId driver.id) (pure Nothing) (booking.isScheduled)
+  previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
+  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just <$> (.onRide)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
@@ -104,7 +105,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
         QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
       QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
@@ -178,7 +179,7 @@ buildRide ::
   Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
-  Maybe DRide.Ride ->
+  Maybe DDI.DriverInformation ->
   UTCTime ->
   DVeh.Vehicle ->
   Bool ->
@@ -189,7 +190,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
   trackingUrl <- buildTrackingUrl guid
-  let previousRideToLocation = previousRide >>= (.toLocation)
+  let previousRideToLocation = previousRide >>= (.driverTripEndLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
   return
     DRide.Ride
