@@ -53,6 +53,13 @@ apis:
         endpoint: MessageAPI SendMessageEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+  - POST:
+      endpoint: /edit
+      request:
+        type: EditMessageRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
   - GET:
       endpoint: /list
       query:
@@ -176,6 +183,14 @@ types:
   MessageDeliveryStatus:
     - enum: "Failed, Success, Queued, Sending"
     - derive: "HttpInstance"
+  EditMessageRequest:
+    - messageId: Id Message
+    - title: Maybe Text
+    - description: Maybe Text
+    - shortDescription: Maybe Text
+    - label: Maybe Text
+    - messageTranslations: [MessageTranslation]
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
