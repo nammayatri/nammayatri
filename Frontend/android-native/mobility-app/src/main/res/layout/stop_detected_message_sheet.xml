@@ -137,6 +137,20 @@
                         android:padding="2dp">
                     </ImageView>
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion1_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
+
                 </LinearLayout>
 
                 <LinearLayout
@@ -171,6 +185,20 @@
                         android:padding="2dp">
                     </ImageView>
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion2_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
+
                 </LinearLayout>
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -203,6 +231,20 @@
                         android:clickable="false"
                         android:padding="2dp">
                     </ImageView>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sent"
+                        android:layout_marginHorizontal="2dp"
+                        android:textColor="@color/green900"
+                        android:layout_gravity="center_vertical"
+                        android:id="@+id/suggestion3_sent_text"
+                        android:textFontWeight="500"
+                        android:lineHeight="15dp"
+                        android:visibility="gone"
+                        android:textSize="12dp">
+                    </TextView>
 
                 </LinearLayout>
             </LinearLayout>
