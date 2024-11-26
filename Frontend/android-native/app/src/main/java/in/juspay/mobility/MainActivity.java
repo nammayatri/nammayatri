@@ -82,7 +82,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.sql.Time;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -135,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
+    private BBPSService bbpsService;
 
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
@@ -430,6 +438,7 @@ public class MainActivity extends AppCompatActivity {
 
         handleSplashScreen();
         initApp();
+        initBBPSSdk();
 
         WebView.setWebContentsDebuggingEnabled(true);
 
@@ -672,6 +681,99 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public static String createJwtToken(String agentId, String customerId, String deviceId, String timestamp, PrivateKey privateKey) throws Exception {
+        // Create the header
+        JSONObject header = new JSONObject();
+        header.put("typ", "jwt");
+        header.put("alg", "RS256");
+
+        // Create the payload
+        JSONObject payload = new JSONObject();
+        payload.put("agent_id", agentId);
+        payload.put("customer_id", customerId);
+        payload.put("device_id", deviceId);
+        payload.put("timestamp", timestamp);
+
+        // URL-safe Base64 encode header and payload
+        String encodedHeader = urlSafeBase64Encode(header.toString());
+        String encodedPayload = urlSafeBase64Encode(payload.toString());
+
+        // Create the signature input
+        String signatureInput = encodedHeader + "." + encodedPayload;
+
+        // Generate the signature using RSA SHA256
+        String signature = generateSignature(signatureInput, privateKey);
+
+        // Return the final JWT token
+        return signatureInput + "." + signature;
+    }
+
+    private static String urlSafeBase64Encode(String input) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return Base64.getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(input.getBytes(StandardCharsets.UTF_8));
+        }
+        return "";
+    }
+
+    private static String generateSignature(String input, PrivateKey privateKey) throws Exception {
+        // Initialize signature with SHA256 and RSA
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(privateKey);
+        signature.update(input.getBytes(StandardCharsets.UTF_8));
+
+        // Sign the input and encode as URL-safe Base64
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(signature.sign());
+        } else {
+            return "";
+        }
+    }
+
+    private static PrivateKey loadPrivateKey(String privateKeyString) throws Exception {
+        // Remove the PEM headers and decode the base64 key
+        String privateKeyPEM = privateKeyString.replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s+", "");
+        byte[] keyBytes = new byte[0];
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            keyBytes = Base64.getDecoder().decode(privateKeyPEM);
+        }
+
+        // Generate PrivateKey instance
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePrivate(keySpec);
+    }
+
+    private void initBBPSSdk() { // BBPS SDK Integration
+        try {
+            String appId = "1234";
+            String deviceId = "1234";
+            String agentId = "";
+            String privateKeyString = "";
+            PrivateKey privateKey = loadPrivateKey(privateKeyString);
+            String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
+            //initData.put("mobileNumber", mobileNumber);
+            JSONObject initData = new JSONObject();
+
+            // initData.put("email", email); // Optional
+            initData.put("appId", appId); // Dummy for now
+            initData.put("deviceId", deviceId); // Dummy for now
+            initData.put("agentId", agentId); // Dummy for now
+            initData.put("authToken", authToken); // Dummy for now
+
+            // Initializing and Booting up the SDK to make it ready for all the operations
+            bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
+            // Payment Gateway is service you will call to do transaction.
+            //    PaymentGateway.setBBPSService(bbpsService);
+        }
+        catch (Exception e) {
+            Log.e("Error in initiating BBPS SDK", e.toString());
+        }
+    }
+
     private void initApp() {
         long initiateTimeStamp = System.currentTimeMillis();
         Log.i("APP_PERF", "INIT_APP_START : " + System.currentTimeMillis());
@@ -823,7 +925,15 @@ public class MainActivity extends AppCompatActivity {
                         }
                         break;
                     case "launchBBPSSdk":
-//                        initBBPSSdk();
+                        try {
+                            View view = findViewById(Integer.parseInt(jsonObject.getString("viewId")));
+                            JSONObject bbpsPayload = new JSONObject();
+                            bbpsPayload.put("action", "MAIN");
+                            bbpsPayload.put("mobileNumber", "");
+                            bbpsService.process(MainActivity.this, bbpsPayload);
+                        } catch (Exception e) {
+                            Log.e("Error Occurred in launchBBPSSdk", e.toString());
+                        }
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
@@ -1296,26 +1406,4 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
-    
-   private void initBBPSSdk() { // BBPS SDK Integration
-       try {
-           //initData.put("mobileNumber", mobileNumber);
-           JSONObject initData = new JSONObject();
-           String authToken = "";
-           
-           // initData.put("email", email); // Optional
-           initData.put("appId", "1234"); // Dummy for now
-           initData.put("deviceId", "1234"); // Dummy for now
-           initData.put("agentId", "1234"); // Dummy for now
-           initData.put("authToken", authToken); // Dummy for now
-
-           // Initializing and Booting up the SDK to make it ready for all the operations
-           BBPSService bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
-           // Payment Gateway is service you will call to do transaction.
-        //    PaymentGateway.setBBPSService(bbpsService);
-       }
-       catch (Exception e) {
-           Log.e("Error in initiating BBPS SDK", e.toString());
-       }
-   }
 }
