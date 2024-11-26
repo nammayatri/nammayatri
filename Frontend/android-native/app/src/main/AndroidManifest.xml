@@ -115,6 +115,15 @@
                 <data android:scheme="geo"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name="in.juspay.mobility.PaymentGateway"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="in.juspay.mobility.PAYMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".FirebaseMessaging"
             android:exported="false">

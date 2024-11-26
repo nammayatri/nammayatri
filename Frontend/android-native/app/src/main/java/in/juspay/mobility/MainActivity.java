@@ -141,6 +141,7 @@ import android.content.Intent;
 public class MainActivity extends AppCompatActivity {
     public static MainActivity appContext = new MainActivity();
     public static String lastTxnRefId = "";
+    public static JSONObject bbpsBillDetail;
     private static final String LOG_TAG = "MAIN_ACTIVITY";
     private static final int REQUEST_CODE_UPDATE_APP = 587;
 //    protected static
@@ -760,7 +761,6 @@ public class MainActivity extends AppCompatActivity {
             String privateKeyString = "";
             PrivateKey privateKey = loadPrivateKey(privateKeyString);
             String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
-            //initData.put("mobileNumber", mobileNumber);
             JSONObject initData = new JSONObject();
 
             // initData.put("email", email); // Optional
@@ -941,6 +941,7 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             Log.e("Error Occurred in launchBBPSSdk", e.toString());
                         }
+                        break;
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
@@ -1398,6 +1399,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void doPayment(JSONObject billDetails) {
+            bbpsBillDetail = billDetails;
             //Trigger payment page
             Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
             MainActivity.this.startActivity(intent);

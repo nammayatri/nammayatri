@@ -79,12 +79,12 @@ public class PaymentGateway extends AppCompatActivity {
 
             data.put("response", "Success");
             data.put("note", "Sending Money");
-            data.put("bbpsTxnId", ""); // mainActivityContext.doPaymentResponse.getString("bbpsTxnid"));
+            data.put("bbpsTxnId", mainActivityContext.bbpsBillDetail.getString("bbpsTxnid"));
 
             JSONObject paymentDetails = new JSONObject();
             paymentDetails.put("payeeName", "Neha Jain");
-            paymentDetails.put("txnAmount", ""); // mainActivityContext.doPaymentResponse.getJSONObject("billdetails").getString("txnAmount"));
-            paymentDetails.put("txnRefId", mainActivityContext.lastTxnRefId);
+            paymentDetails.put("txnAmount", mainActivityContext.bbpsBillDetail.getJSONObject("billdetails").getString("txnAmount"));
+            paymentDetails.put("txnRefId", mainActivityContext.bbpsBillDetail);
             paymentDetails.put("paymentMode", "Debit_Card");
             paymentDetails.put("couCustConvFee", "10");
 
@@ -96,7 +96,7 @@ public class PaymentGateway extends AppCompatActivity {
             paymentDetails.put("paymentParams", paymentParams);
 
             data.put("paymentDetails", paymentDetails);
-            payload.put("mobileNumber", mainActivityContext.appContext);
+            payload.put("mobileNumber", mainActivityContext.bbpsBillDetail.getString("mobileNumber"));
             payload.put("action", "TRANSACTION_STATUS");
             payload.put("data", data.toString());
             Log.e("Testing101", payload.toString());
