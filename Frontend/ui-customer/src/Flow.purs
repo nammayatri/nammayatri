@@ -485,6 +485,10 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                 _ -> currentFlowStatus false
             _ -> pure unit
         "delivery" -> currentFlowStatus false
+        "bt" -> do
+          setValueToLocalStore SESSION_ID (generateSessionId unit)
+          modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
+          hideSplashAndCallFlow busTicketBookingFlow
         _ -> do
           case breakPrefixAndId screen of
             Just ( Tuple "metroBooking" bookingId )-> do
@@ -2625,7 +2629,6 @@ homeScreenFlow = do
       modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliveryScreen -> parcelDeliveryScreen { props { isEditModal = false}, data { tipForDriver = if updatedState.data.config.tipsEnabled && updatedState.props.customerTip.tipForDriver /= 0 then Just updatedState.props.customerTip.tipForDriver else Nothing, parcelQuoteList = updatedState.data.selectedEstimatesObject, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, rateCard = updatedState.data.rateCard}})
       parcelDeliveryFlow
     GO_TO_BUS_TICKET_BOOKING_SCREEN state -> do
-      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData)
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { props {srcLat =  state.props.sourceLat , srcLong = state.props.sourceLong}, data {ticketServiceType = BUS}})
       busTicketBookingFlow
     _ -> homeScreenFlow

@@ -1800,3 +1800,6 @@ getProxy str =
     TOWARDS_STATION arg1 -> \a -> (a @~ towards_station) arg1
     BUS_NO arg1 -> \a -> (a @~ bus_no) arg1
     VERIFIED -> \a -> a @~ verified
+    EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES arg1 -> \a -> (a @~ experience_our_pilot_launch_for_bus_ticketing_in_prime_routes) arg1
+    NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
+

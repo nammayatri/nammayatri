@@ -734,7 +734,7 @@ predictionsView push state globalProps = let
     case state.props.actionType of 
       MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
       BusStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
-      BusSearchSelectionAction -> (not  DA.null state.data.updatedRouteSearchedList) || (not $ DA.null state.data.updatedStopsSearchedList) || (not $ DA.null validDecodedStops)
+      BusSearchSelectionAction -> (not  DA.null state.data.updatedRouteSearchedList) || (not $ DA.null state.data.updatedStopsSearchedList) || (not $ DA.null validDecodedStops) || (not $ DA.null validDecodedRoutes)
       BusRouteSelectionAction -> not $ DA.null state.data.updatedStopsSearchedList
       BusStopSelectionAction -> not $ DA.null state.data.updatedStopsSearchedList
       _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)

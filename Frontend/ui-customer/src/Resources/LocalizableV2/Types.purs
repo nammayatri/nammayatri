@@ -1718,6 +1718,8 @@ newtype Keymap = Keymap {
 , towards_station :: String -> String
 , bus_no :: String -> String
 , verified :: String
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: String -> String
+, note_your_ticket_is_only_valid_for :: String -> String
 }
 
 
@@ -6843,3 +6845,9 @@ bus_no = a
 
 verified :: Proxy "verified"
 verified = a
+
+experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: Proxy "experience_our_pilot_launch_for_bus_ticketing_in_prime_routes"
+experience_our_pilot_launch_for_bus_ticketing_in_prime_routes = a
+
+note_your_ticket_is_only_valid_for :: Proxy "note_your_ticket_is_only_valid_for"
+note_your_ticket_is_only_valid_for = a

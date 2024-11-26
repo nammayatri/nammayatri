@@ -107,5 +107,7 @@ type MetroConfig = {
 
 type BusFlowConfig = {
   showBusTracking :: Boolean,
-  showPostBookingTracking :: Boolean
+  showPostBookingTracking :: Boolean,
+  liveRoutes :: Int,
+  ticketValidity :: String
 }
