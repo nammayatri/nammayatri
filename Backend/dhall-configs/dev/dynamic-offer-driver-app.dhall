@@ -170,7 +170,7 @@ let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 let driverLocationUpdateRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +1 }
 
-let cacheConfig = { configsExpTime = +86400 }
+let cacheConfig = { configsExpTime = +86400, farePolicyExpTime = +300 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
