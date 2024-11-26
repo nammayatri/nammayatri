@@ -14,6 +14,7 @@
     <string name="we_have_updated_your_app_kindly_relaunch">हमने आपका ऐप अपडेट कर दिया है, एप्लिकेशन अब फिर से लोड होगा।</string>
     <string name="okay_got_it">ठीक है समझ आ गया</string>
     <string name="okay_got_it_smallcase">ठीक है समझ आ गया</string>
+    <string name="sent">भेजा</string>
     <string name="upload_image">तस्विर अपलोड करें</string>
     <string name="not_interested">रुचि नहीं</string>
     <string name="too_far">बहुत दूर</string>
