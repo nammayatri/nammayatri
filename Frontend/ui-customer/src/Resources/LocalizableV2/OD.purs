@@ -1661,6 +1661,8 @@ getOd = Keymap {
 , rate_your_delivery_with: "ଆପଣଙ୍କ ଡିଲିଭରିର ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ"
 , delivery_completed: "ଡିଲିଭରି ସମ୍ପନ୍ନ"
 , estimated_arrival_by: "ଅନୁମାନିତ ପହଞ୍ଚିବା ସମୟ"
+, metro_tickets : "ମେଟ୍ରୋ ଟିକେଟ୍‌"
+, offers : "ଅଫରସ୍‌"
 , back: "ପଛକୁ"
 , photo_not_taken_yet: "ଏପର୍ଯ୍ୟନ୍ତ ଫଟୋ ନିଆଯାଇନାହିଁ"
 , please_refresh_once_driver_takes_photo: "ଡ୍ରାଇଭର ଫଟୋ ନେଲେ ପରେ ଫ୍ରେସ କରନ୍ତୁ"
