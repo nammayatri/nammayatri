@@ -14,7 +14,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
-import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
@@ -67,7 +66,7 @@ data DriverInformation = DriverInformation
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
-    preferredPrimarySpecialLoc :: Kernel.Prelude.Maybe Lib.Queries.SpecialLocation.SpecialLocationWarrior,
+    preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
     preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
