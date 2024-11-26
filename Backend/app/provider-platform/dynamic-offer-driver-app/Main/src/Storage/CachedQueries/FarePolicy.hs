@@ -48,7 +48,7 @@ findFarePolicyFromDB id = do
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   let idKey = makeIdKey fp.id
   Hedis.withCrossAppRedis $ do
     Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime

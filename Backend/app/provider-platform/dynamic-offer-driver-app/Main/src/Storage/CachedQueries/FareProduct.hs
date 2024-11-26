@@ -40,7 +40,7 @@ findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCatego
 
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area fareProducts = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area) fareProducts expTime
 
 makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> Text
@@ -56,7 +56,7 @@ findAllUnboundedFareProductForArea merchantOpCityId searchSources area =
 
 cacheAllUnboundedFareProductByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area fareProducts = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area) fareProducts expTime
 
 makeUnboundedFareProductByMerchantIdAndAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> Text
@@ -72,7 +72,7 @@ findAllFareProductByMerchantOpCityId merchantOpCityId =
 
 cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> [FareProduct] -> m ()
 cacheAllFareProductByMerchantOpCityId merchantOpCityId fareProducts = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdKey merchantOpCityId) fareProducts expTime
 
 makeFareProductByMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
@@ -88,7 +88,7 @@ findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory s
 
 cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> FareProduct -> m ()
 cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProduct = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) fareProduct expTime
 
 makeUnboundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text
@@ -104,7 +104,7 @@ findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory 
 
 cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
 cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProducts = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- fromIntegral <$> asks (.cacheConfig.farePolicyExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) fareProducts expTime
 
 makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Text

@@ -73,7 +73,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   consumerId <- G.generateGUIDTextIO
   let requestId = Nothing
       shouldLogRequestId = False
-  let cacheConfig = CacheConfig {configsExpTime = 0}
+  let cacheConfig = CacheConfig {configsExpTime = 0, farePolicyExpTime = 300}
   let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
