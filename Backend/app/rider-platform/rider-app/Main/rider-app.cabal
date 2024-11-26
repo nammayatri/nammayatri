@@ -286,6 +286,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
+      SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
