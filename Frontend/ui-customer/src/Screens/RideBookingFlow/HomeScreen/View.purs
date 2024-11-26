@@ -757,7 +757,7 @@ bottomNavBarView push state = let
 
               ]
             ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
-                -- , {text : "Bus" , image : "ny_ic_bus_black", id : BUS_}
+                , {text : "Bus" , image : "ny_ic_bus_black", id : BUS_}
                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length

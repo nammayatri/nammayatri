@@ -93,7 +93,7 @@ eval BackPressed state =
   exit GoBack
 
 eval ShareTicketClick state = do
-  _ <- pure $ shareImageMessage (getString HERE_IS_METRO_TICKET) (shareImageMessageConfig "")
+  _ <- pure $ shareImageMessage ( if state.data.vehicleType == "BUS" then getString HERE_IS_BUS_TICKET else  getString HERE_IS_METRO_TICKET) (shareImageMessageConfig "")
   continue state
 
 eval ViewPaymentInfoClick state = 
