@@ -59,6 +59,8 @@ import DecodeUtil as DU
 import Helpers.Pooling as HP
 import Data.Time.Duration (Milliseconds(..))
 import Helpers.FrfsUtils
+import RemoteConfig.Utils as RCU
+import Storage (getValueToLocalStore, KeyStore(..))
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -248,12 +250,14 @@ headerView push state =
 
 dummyIllustrationView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 dummyIllustrationView push state =
+  let busConfig = RCU.getBusFlowConfigs (getValueToLocalStore CUSTOMER_LOCATION)
+  in
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , layoutGravity "center_vertical"
-  , margin $ MarginTop 48
+  , margin $ Margin 24 48 24 0
   , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
   ]
   [ imageView
@@ -264,12 +268,18 @@ dummyIllustrationView push state =
     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
     ]
   , textView $
-    [ text $ getString EXPERIENCE_HASSLE_FREE_BUS_BOOKINGS_WITH <> appName
+    [ text $ getString $ EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES (show busConfig.liveRoutes)
     , color Color.black800
-    , margin $ MarginHorizontal 24 24
     , gravity CENTER_HORIZONTAL
-    , padding $ PaddingHorizontal 24 24
-    ] <> FontStyle.body25 TypoGraphy
+    , visibility $ boolToVisibility $ busConfig.liveRoutes > 0
+    ] <> FontStyle.subHeading3 TypoGraphy
+  , textView $
+    [ text $ getString $ NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR busConfig.ticketValidity
+    , color Color.black800
+    , margin $ MarginTop 12
+    , gravity CENTER_HORIZONTAL
+    , visibility $ boolToVisibility $ not $ DS.null busConfig.ticketValidity
+    ] <> FontStyle.body3 TypoGraphy
   ]
   where
     appName = fromMaybe "Namma Yatri" $ DFU.runFn3 DU.getAnyFromWindow "appName" Nothing Just

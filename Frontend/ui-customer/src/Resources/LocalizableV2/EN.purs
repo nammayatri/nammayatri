@@ -1704,4 +1704,6 @@ getEn = Keymap {
 , towards_station : (\s -> "Towards " <> s)
 , bus_no : (\s -> "Bus No: " <> s)
 , verified : "Verified"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More routes launching soon!")
+, note_your_ticket_is_only_valid_for : (\s -> "Note: Your ticket is only valid for " <> s <> " from booking. Timing of buses may change due to local conditions, so please be ready at the stop when you book")
 }
