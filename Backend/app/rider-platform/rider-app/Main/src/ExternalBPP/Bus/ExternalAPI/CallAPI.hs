@@ -8,6 +8,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.Bus.ExternalAPI.CUMTA.Order as CUMTAOrder
 import qualified ExternalBPP.Bus.ExternalAPI.CUMTA.Status as CUMTAStatus
+import qualified ExternalBPP.Bus.ExternalAPI.CUMTA.Verify as CUMTAVerify
 import qualified ExternalBPP.Bus.ExternalAPI.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.Bus.ExternalAPI.EBIX.Status as EBIXStatus
 import ExternalBPP.Bus.ExternalAPI.Types
@@ -34,4 +35,10 @@ getTicketStatus config booking = do
   case config of
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     CUMTA config' -> CUMTAStatus.getTicketStatus config' booking
+    _ -> error "Unimplemented!"
+
+verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Text -> m TicketPayload
+verifyTicket config encryptedQrData = do
+  case config of
+    CUMTA config' -> CUMTAVerify.verifyTicket config' encryptedQrData
     _ -> error "Unimplemented!"

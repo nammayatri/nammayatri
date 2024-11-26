@@ -198,7 +198,9 @@ mkTicket booking dTicket isTicketFree = do
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
         Ticket.id = ticketId,
+        Ticket.description = dTicket.description,
         Ticket.qrData = dTicket.qrData,
+        Ticket.qrRefreshAt = dTicket.qrRefreshAt,
         Ticket.riderId = booking.riderId,
         Ticket.status = status_,
         Ticket.ticketNumber = dTicket.ticketNumber,

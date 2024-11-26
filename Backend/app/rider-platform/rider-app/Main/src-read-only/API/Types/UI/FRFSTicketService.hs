@@ -169,7 +169,14 @@ data FRFSStationAPI = FRFSStationAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketAPI = FRFSTicketAPI {createdAt :: Kernel.Prelude.UTCTime, qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
+data FRFSTicketAPI = FRFSTicketAPI
+  { createdAt :: Kernel.Prelude.UTCTime,
+    description :: Data.Maybe.Maybe Data.Text.Text,
+    qrData :: Data.Text.Text,
+    status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
+    ticketNumber :: Data.Text.Text,
+    validTill :: Kernel.Prelude.UTCTime
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -193,6 +200,10 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

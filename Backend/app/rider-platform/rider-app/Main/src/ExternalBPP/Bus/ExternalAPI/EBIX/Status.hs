@@ -1,6 +1,7 @@
 module ExternalBPP.Bus.ExternalAPI.EBIX.Status where
 
 import Data.Aeson
+import qualified Domain.Types.FRFSTicket as Ticket
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
@@ -73,22 +74,30 @@ checkMobTicketsAPI = Proxy
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus config booking = do
   tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  mapM
-    ( \ticket -> do
-        token <- getAuthToken config
-        ticketStatus <-
-          callAPI config.networkHostUrl (ET.client checkMobTicketsAPI (Just token) $ CheckMobTicketsReq ticket.ticketNumber config.agentId) "createQR" checkMobTicketsAPI
-            >>= fromEitherM (ExternalAPICallError (Just "CREATE_QR_API") config.networkHostUrl)
-        let qrStatus = mkTicketStatus ticketStatus
-        return $
-          ProviderTicket
-            { ticketNumber = ticket.ticketNumber,
-              qrData = ticket.qrData,
-              qrStatus,
-              qrValidity = ticket.validTill
-            }
-    )
-    tickets
+  updatedTickets <-
+    mapM
+      ( \ticket -> do
+          if ticket.status == Ticket.ACTIVE
+            then do
+              token <- getAuthToken config
+              ticketStatus <-
+                callAPI config.networkHostUrl (ET.client checkMobTicketsAPI (Just token) $ CheckMobTicketsReq ticket.ticketNumber config.agentId) "createQR" checkMobTicketsAPI
+                  >>= fromEitherM (ExternalAPICallError (Just "CREATE_QR_API") config.networkHostUrl)
+              let qrStatus = mkTicketStatus ticketStatus
+              return $
+                Just $
+                  ProviderTicket
+                    { ticketNumber = ticket.ticketNumber,
+                      qrData = ticket.qrData,
+                      qrStatus,
+                      qrValidity = ticket.validTill,
+                      description = ticket.description,
+                      qrRefreshAt = ticket.qrRefreshAt
+                    }
+            else pure Nothing
+      )
+      tickets
+  return $ catMaybes updatedTickets
   where
     mkTicketStatus ticket =
       case (listToMaybe ticket._data.ticketDetails) >>= (.wbId) of

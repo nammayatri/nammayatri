@@ -153,7 +153,9 @@ confirm _merchant _merchantOperatingCity _frfsConfig config bapConfig (_mRiderNa
               bppFulfillmentId = "Metro Fulfillment",
               ticketNumber = ticketNumber,
               validTill = expiryTime,
-              status = "UNCLAIMED" -- TODO: Fix this
+              status = "UNCLAIMED", -- TODO: Fix this
+              description = Nothing,
+              qrRefreshAt = Nothing
             }
 
 status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
