@@ -156,6 +156,14 @@ postMessageAdd merchantShortId opCity Common.AddMessageRequest {..} = do
             createdAt = now
           }
 
+postMessageEdit :: ShortId DM.Merchant -> Context.City -> Common.EditMessageRequest -> Flow APISuccess
+postMessageEdit _ _ req@Common.EditMessageRequest {messageId} = do
+  _ <- B.runInReplica $ MQuery.findById (cast messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  result <- MQuery.updateMessage req
+  case result of
+    Left err -> throwError $ InvalidRequest err
+    Right _ -> return Success
+
 newtype CSVRow = CSVRow {driverId :: String}
 
 instance FromNamedRecord CSVRow where
