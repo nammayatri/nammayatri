@@ -46,9 +46,6 @@ jobs:
   build:
     needs: [process-labels]
     runs-on: x86_64-linux
-    if: |
-      needs.process-labels.outputs.has-backend == 'true' && 
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
@@ -68,19 +65,11 @@ jobs:
       
       - name: Docker tasks
         id: docker
-        if: |
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image tarball
-        if: |
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -89,9 +78,6 @@ jobs:
   push-docker:
     needs: [build, process-labels]
     runs-on: ubuntu-latest
-    if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
-      needs.process-labels.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4

@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/hedis-upgrade-test";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

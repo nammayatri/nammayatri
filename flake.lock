@@ -697,15 +697,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1732286426,
-        "narHash": "sha256-KEBqp4k7BIp8/secdfgUQslgou44AhZGEThTIR4OK0w=",
+        "lastModified": 1732612901,
+        "narHash": "sha256-rgm8Rbh0iNcnDS4xeg7UAteupRrPXBgCla+y+vG+Gzo=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "86653b9227f2ac160a744fd4f6f195a50ea6f506",
+        "rev": "9b8c52fc2edbdebc3ef91ba7af7210072a789a8c",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/hedis-upgrade-test",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -1652,16 +1653,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1730967537,
-        "narHash": "sha256-RDF/G/ptWazyFxCQOv+fTTQVV4hzDxTV630rnmhH3i4=",
+        "lastModified": 1715851947,
+        "narHash": "sha256-R1ykEbhpCXDJ3N309PccIIhAZysKWPS305ECZ7EoF6g=",
         "ref": "refs/heads/master",
-        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
-        "revCount": 741,
+        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
+        "revCount": 736,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
+        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -3802,15 +3803,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1732286539,
-        "narHash": "sha256-FFK8ZrIbbiI8H+9HCuNl91bM4zANte4odQiwi6S75tM=",
+        "lastModified": 1732612987,
+        "narHash": "sha256-8ItnBQAphpNT3z4yfBxNFRTURmafnMxsk8/4+Porl18=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "481b61877025f9700cee47c968df98c621e05813",
+        "rev": "0a0ee828f728441a980819698ab940ee5b7e83d3",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/hedis-upgrade-test",
         "repo": "shared-kernel",
         "type": "github"
       }
