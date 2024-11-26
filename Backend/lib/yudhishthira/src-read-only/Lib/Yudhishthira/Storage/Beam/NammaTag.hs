@@ -16,7 +16,8 @@ import qualified Lib.Yudhishthira.Types.NammaTag
 import Tools.Beam.UtilsTH
 
 data NammaTagT f = NammaTagT
-  { category :: B.C f Kernel.Prelude.Text,
+  { actionEngine :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    category :: B.C f Kernel.Prelude.Text,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chakra :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra),
     event :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent),

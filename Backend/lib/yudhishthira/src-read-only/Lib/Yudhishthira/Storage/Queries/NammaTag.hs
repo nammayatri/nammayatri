@@ -34,7 +34,8 @@ updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (
 updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTag.NammaTag {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.category category,
+    [ Se.Set Beam.actionEngine actionEngine,
+      Se.Set Beam.category category,
       Se.Set Beam.description description,
       Se.Set Beam.chakra (getChakra info),
       Se.Set Beam.event (getEvent info),
