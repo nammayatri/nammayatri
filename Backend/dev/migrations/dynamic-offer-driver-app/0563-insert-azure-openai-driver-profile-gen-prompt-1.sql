@@ -8,8 +8,8 @@ INSERT INTO atlas_driver_offer_bpp.llm_prompt (
 ) VALUES (
     'favorit0-0000-0000-0000-00000favorit',
     'favorit0-0000-0000-0000-00000000city',
-    'AzureOpenAI_DriverProfileGen_1',
-    'Write about me: \n\n-**Hometown**: I am from {#hometown#} , and growing up in this area has shaped my understanding of roads, safety, and community. \n- **Driving Experience**: I have been with Nammayatri for {#withNY#} months, learning valuable lessons along the way such as patience, focus, and safety. \n- **Driver Statistics**: {#driverStats#} \n- **Aspirations**: {#aspirations#} \n- **Pledge or Commitment**: My personal commitment as a driver is to always prioritize safety, respect other drivers, and maintain a calm and professional attitude on the road.',
+    'DriverProfileGen_1',
+    'I am a ride-hailing app. Create a maximum 2 sentence profile for a driver based on the following details. Ignore empty  or Nothing values. Make it relevant and formal to show to riders:\nName: {#driverName#}\nDriving Since: {#withNY#} months\nRating: {#rating#}\nVehicle Tags: {#vehicleTags#}\nApplication Name: {#merchant#}\nHomeTown: {#homeTown#}\nAspirations: {#aspiration#}\nPledges: {#pledge#}\nonPlatformSince: {#createdAt#}\nVehicle Tags: {#vehicleTags#}',
     'LLMChatCompletion_AzureOpenAI',
     'DriverProfileGen'
 );
