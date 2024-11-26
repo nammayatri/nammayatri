@@ -144,7 +144,9 @@ parseTicket fulfillment = do
         validTill,
         bppFulfillmentId = fId,
         ticketNumber,
-        status
+        status,
+        description = Nothing,
+        qrRefreshAt = Nothing
       }
 
 type TxnId = Text

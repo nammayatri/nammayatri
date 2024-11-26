@@ -362,12 +362,14 @@ FRFSTicket:
 
   fields:
     id: Id FRFSTicket
+    description: Maybe Text
     frfsTicketBookingId: Id FRFSTicketBooking
     riderId: Id Person
     status: FRFSTicketStatus
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    qrRefreshAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
@@ -392,6 +394,10 @@ FRFSTicket:
     findAllByTicketBookingId:
       kvFunction: findAllWithKV
       where: frfsTicketBookingId
+    findByTicketBookingIdTicketNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
     updateStatusByTBookingIdAndTicketNumber:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -402,6 +408,11 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId]
+    updateRefreshTicketQRByTBookingIdAndTicketNumber:
+      kvFunction: updateWithKV
+      params: [qrData, qrRefreshAt]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
 
 FRFSTicketBookingPayment:
   tableName: frfs_ticket_booking_payment
