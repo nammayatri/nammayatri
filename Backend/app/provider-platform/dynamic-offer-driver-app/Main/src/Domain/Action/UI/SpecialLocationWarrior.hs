@@ -91,12 +91,14 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
   logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
   let preferredPrimarySpecialLocation = primarySpecialLocation <|> driverInfo.preferredPrimarySpecialLoc
   logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
+  logDebug $ "Driver Tag primarySpecialLocationsssssss': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
 
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLoc
     getDriverTag preferredPrimarySpecialLocation' driverInfo.preferredSecondarySpecialLocIds
   logDebug $ "Driver Tag mbOlderDriverTag: ----------" <> personId.getId <> "  " <> show mbOlderDriverTag
+  logDebug $ "Driver Tag mbOlderDriverTagssssssssssssss: ----------" <> personId.getId <> "  " <> show mbOlderDriverTag
   QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocation preferredSecondarySpecialLocIds personId
 
   mbDriverTag <- runMaybeT $ do
