@@ -57,6 +57,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = tagRule,
                 description = description,
+                actionEngine = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -69,6 +70,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = tagRule,
                 description = description,
+                actionEngine,
                 createdAt = now,
                 updatedAt = now
               }
@@ -81,6 +83,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = Lib.Yudhishthira.Types.LLM "empty-context",
                 description = description,
+                actionEngine = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -102,6 +105,7 @@ postTagUpdate tagRequest = do
             possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
             rule = fromMaybe tag.rule tagRequest.tagRule,
             description = tagRequest.description <|> tag.description,
+            actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
             createdAt = tag.createdAt,
             updatedAt = now
           }
@@ -176,8 +180,8 @@ verifyTag fullTag = do
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 
 postRunKaalChakraJob ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Show action, Read action) =>
+  Handle m action ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   m Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postRunKaalChakraJob _h req =

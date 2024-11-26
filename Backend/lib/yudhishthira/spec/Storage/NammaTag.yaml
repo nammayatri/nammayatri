@@ -29,6 +29,7 @@ NammaTag:
     possibleValues: TagValues
     rule: TagRule
     info: TagInfo
+    actionEngine: Maybe Value
 
   constraints:
     name: PrimaryKey
@@ -70,6 +71,7 @@ NammaTag:
 
   sqlType:
     ruleEngine: json
+    actionEngine: json
 
   extraOperations:
     - EXTRA_QUERY_FILE
