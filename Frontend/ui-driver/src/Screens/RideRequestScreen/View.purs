@@ -166,17 +166,17 @@ listLayout push state listItm =
         $ linearLayout[
           height $ WRAP_CONTENT
           , width $ MATCH_PARENT
-          , gravity CENTER_HORIZONTAL
+          , gravity CENTER
           , background Color.grey700
           , orientation VERTICAL
-          , visibility  $ boolToVisibility $ (state.props.noLocationFlag )
+          , visibility  $ boolToVisibility $ (state.props.noLocationFlag ) && (DA.null state.data.filteredArr )
         ][
           
           textView $[
             width $ V 290
           , height $ V 20
           , gravity CENTER
-          , text $ getString CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE
+          , text $ getString WE_ARE_NOT_ABLE_TO_FETCH_YOUR_CURRENT_LOCATION
           , textSize FontSize.a_14
 
           ] <> FontStyle.h3 TypoGraphy

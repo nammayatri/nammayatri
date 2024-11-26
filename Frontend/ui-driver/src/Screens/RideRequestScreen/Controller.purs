@@ -84,7 +84,7 @@ eval (SelectDay index) state = do
   let
     now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")
     date  = if index == 0 then now else  (getFutureDate now 1)
-    newState = state { data { activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date } ,props{shouldCall = true}}
+    newState = state { data { activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date } ,props{shouldCall = true , noLocationFlag = false}}
 
   exit $ GoBackToRideRequest newState
 
@@ -92,10 +92,10 @@ eval (SelectDay index) state = do
 eval NoAction state = continue state
 
 eval Refresh state = 
-  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}} 
+  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}, props{noLocationFlag = false}} 
   in updateAndExit newState $ RefreshScreen newState
 
-eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}} $ LoaderOutput state
+eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}, props{noLocationFlag = false}} $ LoaderOutput state
 
 
 eval AfterRender state = continue state
@@ -114,7 +114,7 @@ eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
 
 eval (RideTypeSelected rideType idx  )state = do
   let
-    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} } 
+    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} , props{noLocationFlag = false} } 
   exit $ GoBackToRideRequest newState
   
 
@@ -189,7 +189,7 @@ eval (UpdateCurrentLocation lat lon) state = do
           state { data { driverLat = curr_lat, driverLong = curr_lon } }
   continue updatedState
 
-eval (UpdateNoLocationFlag) state = continue state{props{noLocationFlag = true}} 
+eval (UpdateNoLocationFlag) state = continue state{data{shimmerLoader = AnimatedOut },props{noLocationFlag = true}} 
 
 eval _ state = update state
 
