@@ -121,13 +121,20 @@ getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDurati
       fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
       getFarePolicyWithArea SL.Default fareProduct
     Just area -> do
+      logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and area : " <> show area
       mbFareProduct <- getFareProduct' area serviceTier
+      logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and mbFareProduct : " <> show mbFareProduct
       case mbFareProduct of
-        Just fareProduct ->
-          getFarePolicyWithArea area fareProduct
+        Just fareProduct -> do
+          fp <- getFarePolicyWithArea area fareProduct
+          logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFarePolicyWithArea : " <> show fp
+          return fp
         Nothing -> do
           fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
-          getFarePolicyWithArea SL.Default fareProduct
+          logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFareProduct' : " <> show fareProduct
+          fp <- getFarePolicyWithArea SL.Default fareProduct
+          logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFarePolicyWithArea Nothing' : " <> show fp
+          return fp
   where
     getFareProduct' areaName serviceTierName = do
       FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName
@@ -135,6 +142,7 @@ getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDurati
     searchSources = FareProduct.getSearchSources isDashboard
     getFarePolicyWithArea areaName fareProduct = do
       mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
+      logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and findByServiceTierTypeAndCityId : " <> show mbVehicleServiceTierItem
       (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <- case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR
@@ -143,8 +151,12 @@ getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDurati
                 =<< CQVST.findBaseServiceTierTypeByCategoryAndCityId (Just DVC.CAR) merchantOpCityId
             else return Nothing
         Nothing -> return Nothing
+      logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and mbBaseVariantCarFareProduct : " <> show mbBaseVariantCarFareProduct
       baseVariantFareAmountCar <- getBaseVariantFarePolicy merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion
-      getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar mbAppDynamicLogicVersion fareProduct
+      logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and baseVariantFareAmountCar : " <> show baseVariantFareAmountCar
+      fp <- getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar mbAppDynamicLogicVersion fareProduct
+      logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and getFullFarePolicy : " <> show fp
+      return fp
 
 getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory = do

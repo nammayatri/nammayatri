@@ -216,7 +216,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let maxEstimatedDist = maybe Nothing (\route -> route.distance) (Maps.getLongestRouteDistance routeResponse)
             estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
             (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
-            logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
+            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "pickedWaypoints: " <> show duration
             let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
             let mapsRouteReqInText = T.pack $ show Maps.GetRoutesReq {waypoints = pickedWaypoints, mode = Just Maps.CAR, calcPoints = True}
             let routeInfoInText = T.pack $ show routeInfo
@@ -225,6 +225,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory
             farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
+            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed =
                   maybe
