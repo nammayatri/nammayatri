@@ -24,7 +24,6 @@ import Domain.Types.PayoutConfig
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -167,18 +166,8 @@ callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRet
                   _ -> pure 0.0
               else pure 0.0
           let entityName = DLP.DRIVER_DAILY_STATS
-              createPayoutOrderReq =
-                Juspay.CreatePayoutOrderReq
-                  { orderId = uid,
-                    amount = referralEarnings + refundRegistrationAmt,
-                    customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-                    customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-                    customerId = driverId.getId,
-                    orderType = payoutConfig.orderType,
-                    remark = payoutConfig.remark,
-                    customerName = person.firstName,
-                    customerVpa = vpa
-                  }
+              amount = referralEarnings + refundRegistrationAmt
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid

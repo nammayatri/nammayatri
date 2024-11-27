@@ -74,6 +74,7 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

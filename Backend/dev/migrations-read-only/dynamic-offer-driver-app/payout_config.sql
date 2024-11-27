@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD PRIMARY KEY ( merchant_oper
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN expand text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN max_payout_referral_for_a_day integer ;

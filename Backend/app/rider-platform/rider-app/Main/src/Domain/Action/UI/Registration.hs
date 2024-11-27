@@ -450,7 +450,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
-        informPoliceSos = False
+        informPoliceSos = False,
+        payoutVpa = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -626,7 +627,14 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             referralCount = 0,
             createdAt = now,
             updatedAt = now,
-            ticketsBookedInEvent = Just 0
+            ticketsBookedInEvent = Just 0,
+            referralAmountPaid = 0,
+            referralEarnings = 0,
+            referredByEarnings = 0,
+            validActivations = 0,
+            referredByEarningsPayoutStatus = Nothing,
+            backlogPayoutStatus = Nothing,
+            backlogPayoutAmount = 0
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person

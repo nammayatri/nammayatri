@@ -50,6 +50,8 @@ data RiderConfig = RiderConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    payoutReferralProgram :: Kernel.Prelude.Bool,
+    payoutReferralStartDate :: Kernel.Prelude.UTCTime,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,

@@ -98,6 +98,9 @@ updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateReferralCodeAndReferredAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -176,6 +179,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
+      Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,

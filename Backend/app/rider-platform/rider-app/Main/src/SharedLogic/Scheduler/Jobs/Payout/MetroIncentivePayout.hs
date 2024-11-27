@@ -21,7 +21,6 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -121,18 +120,7 @@ callPayout merchantId _ booking payoutConfig statusForRetry = do
             emailId <- mapM decrypt person.email
             let amount = fromMaybe 0 booking.eventDiscountAmount
                 entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq =
-                  Juspay.CreatePayoutOrderReq
-                    { orderId = uid,
-                      customerPhone = fromMaybe "6666666666" phoneNo,
-                      customerEmail = fromMaybe "dummymail@gmail.com" emailId,
-                      customerId = person.id.getId,
-                      orderType = config.orderType,
-                      remark = config.remark,
-                      customerName = fromMaybe "Unknown Rider" person.firstName,
-                      customerVpa = payoutVpa,
-                      ..
-                    }
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName

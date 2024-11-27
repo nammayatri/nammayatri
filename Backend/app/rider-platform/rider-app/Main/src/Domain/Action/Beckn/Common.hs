@@ -31,29 +31,36 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as Payout
+import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
@@ -65,7 +72,9 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -76,6 +85,7 @@ import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import qualified Storage.Queries.RiderConfig as QRC
@@ -85,6 +95,7 @@ import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
+import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
@@ -177,7 +188,8 @@ data RideCompletedReq = RideCompletedReq
     tripEndLocation :: Maybe LatLong,
     endOdometerReading :: Maybe Centesimal,
     rideEndTime :: Maybe UTCTime,
-    paymentStatus :: Maybe DRB.PaymentStatus
+    paymentStatus :: Maybe DRB.PaymentStatus,
+    isValidRide :: Maybe Bool
   }
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
@@ -195,7 +207,8 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     booking :: DRB.Booking,
     ride :: DRide.Ride,
     person :: DPerson.Person,
-    paymentStatus :: Maybe DRB.PaymentStatus
+    paymentStatus :: Maybe DRB.PaymentStatus,
+    isValidRide :: Maybe Bool
   }
 
 data ValidatedFarePaidReq = ValidatedFarePaidReq
@@ -608,6 +621,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   fork "update first ride info" $ do
     mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
@@ -617,13 +631,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes $ Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
         personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
-        when (totalCount + 1 == 1) $ do
+        when (totalCount == 0) $ do
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
+          fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
+            customerReferralPayout ride isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
   -- we should create job for collecting money from customer
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   when onlinePayment $ do
     let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
-    riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
     maxShards <- asks (.maxShards)
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
@@ -647,7 +662,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
-
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
   --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -1017,3 +1031,94 @@ sendRideEndMessage bk = case bk.tripCategory of
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderSmsReq
       Sms.sendSMS bk.merchantId bk.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
   _ -> pure ()
+
+customerReferralPayout ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r
+  ) =>
+  DRide.Ride ->
+  Maybe Bool ->
+  DRC.RiderConfig ->
+  DPerson.Person ->
+  Id DMerchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
+  let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
+  logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategoryAndIsPayoutEnabled merchantOperatingCityId True vehicleCategory
+  case mbPayoutConfig of
+    Just payoutConfig -> do
+      let isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
+      when (isConsideredForPayout && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
+        whenJust person_.referredByCustomer $ \referredByCustomerId -> do
+          personStats <- getPersonStats person_.id
+          QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
+
+          referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
+          referredByPersonStats <- getPersonStats referredByPerson.id
+          handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD
+          handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE
+    Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
+  where
+    handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity = do
+      case person.payoutVpa of
+        Just vpa -> do
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey person.id.getId) 5 5 $ do
+            case isReferredByPerson of
+              True -> QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
+              False -> QPersonStats.updateReferredByEarningsPayoutStatus (Just DPS.Processing) person.id
+            phoneNo <- mapM decrypt person.mobileNumber
+            emailId <- mapM decrypt person.email
+            uid <- generateGUID
+            let entityName = entity
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType
+            logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
+            let serviceName = DEMSC.PayoutService PT.Juspay
+                createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
+            merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+        Nothing ->
+          when isReferredByPerson $ do
+            QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
+
+    getPersonStats personId = do
+      mbPersonStats <- QPersonStats.findByPersonId personId
+      case mbPersonStats of
+        Just personStats -> pure personStats
+        Nothing -> do
+          pStats <- mkPersonStats personId
+          QPersonStats.create pStats
+          pure pStats
+
+    mkPersonStats personId = do
+      now <- getCurrentTime
+      return
+        DPS.PersonStats
+          { personId = personId,
+            userCancelledRides = 0,
+            driverCancelledRides = 0,
+            completedRides = 0,
+            weekendRides = 0,
+            weekdayRides = 0,
+            offPeakRides = 0,
+            eveningPeakRides = 0,
+            morningPeakRides = 0,
+            weekendPeakRides = 0,
+            referralCount = 0,
+            createdAt = now,
+            updatedAt = now,
+            ticketsBookedInEvent = Just 0,
+            referralAmountPaid = 0,
+            referralEarnings = 0,
+            referredByEarnings = 0,
+            validActivations = 0,
+            referredByEarningsPayoutStatus = Nothing,
+            backlogPayoutStatus = Nothing,
+            backlogPayoutAmount = 0
+          }
+
+payoutProcessingLockKey :: Text -> Text
+payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId

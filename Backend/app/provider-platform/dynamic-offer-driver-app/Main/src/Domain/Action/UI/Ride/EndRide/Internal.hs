@@ -230,7 +230,7 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
               DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-          payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+          payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
           when (isNothing riderDetails.firstRideId && payoutConfig.isPayoutEnabled) $ do
             let mobileNumberHash = (.hash) riderDetails.mobileNumber
             localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

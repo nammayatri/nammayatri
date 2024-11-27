@@ -84,6 +84,7 @@ import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
+import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 
@@ -120,7 +121,11 @@ data ProfileRes = ProfileRes
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
     aadhaarVerified :: Bool,
-    hasTakenValidBusRide :: Bool
+    hasTakenValidBusRide :: Bool,
+    payoutVpa :: Maybe Text,
+    referralEarnings :: Maybe HighPrecMoney,
+    referredByEarnings :: Maybe HighPrecMoney,
+    referralAmountPaid :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -202,6 +207,7 @@ getPersonDetails ::
   m ProfileRes
 getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   let device = getDeviceFromText mbDevice
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
@@ -235,9 +241,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -258,6 +264,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
           hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
           isBlocked = blocked,
+          referralEarnings = Just personStats.referralEarnings,
+          referredByEarnings = Just personStats.referredByEarnings,
+          referralAmountPaid = Just personStats.referralAmountPaid,
           ..
         }
 

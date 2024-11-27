@@ -1522,6 +1522,7 @@ PayoutConfig:
     remark: Text
     orderType: Text
     expand: Maybe Expand
+    maxPayoutReferralForADay: Maybe Int
   beamType:
     timeDiff: Seconds
   toTType:

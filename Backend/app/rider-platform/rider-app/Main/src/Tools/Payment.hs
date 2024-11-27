@@ -31,6 +31,7 @@ module Tools.Payment
     deleteCard,
     getPaymentIntent,
     cancelPaymentIntent,
+    verifyVpa,
   )
 where
 
@@ -76,6 +77,9 @@ orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
 refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
+
+verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
+verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 
 ---- Ride Payment Related Functions (mostly stripe) ---
 createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateCustomerReq -> m CreateCustomerResp
