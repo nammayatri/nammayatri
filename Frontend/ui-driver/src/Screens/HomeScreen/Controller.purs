@@ -92,7 +92,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
-import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
+import Services.Accessor (_lat, _lon, _area, _extras, _instructions, _extraFareMitigationFlag)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -470,6 +470,8 @@ data Action = NoAction
             | DeliveryCall ST.DeliverCallType
             | NotifyReachedDestination
             | ParcelIntroductionPopup PopUpModal.Action
+            | AskedExtraFare PopUpModal.Action
+            | BlockedForNDays PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1370,7 +1372,7 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq, showAskedExtraFarePopUp = (activeRide ^. _extraFareMitigationFlag) == Just true}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
@@ -1729,6 +1731,16 @@ eval (ParcelIntroductionPopup action) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_parcel_introduction_clicked"
       void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
       continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
+
+eval (AskedExtraFare PopUpModal.OnButton1Click) state = 
+  continue state {props {showAskedExtraFarePopUp = false}}
+
+eval (BlockedForNDays PopUpModal.OnButton1Click) state = 
+  continue state {props {showBlockedForNDaysPopUp = false}}
+
+eval (BlockedForNDays PopUpModal.OnButton2Click) state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state {props {showBlockedForNDaysPopUp = false}}
 
 eval _ state = update state 
 

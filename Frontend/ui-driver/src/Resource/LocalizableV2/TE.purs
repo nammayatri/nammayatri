@@ -1753,4 +1753,7 @@ getTe =
     , no_plan_selected : "యొక్క యోజన ఎంచుకోలేదు"
     , a_new_way_to_earn_parcel: "కమాయికి కొత్త మార్గం - పార్సెల్ 2W"
     , seamless_earning_experience_click_below: "సునాయాసమైన సంపాదన అనుభవం కోసం, కింద క్లిక్ చేయండి"
+    , warning : "హెచ్చరిక!"
+    , you_have_been_blocked_for_n_days: "అదనపు చార్జీ పై పలు కస్టమర్ ఫిర్యాదుల కారణంగా మీరు రోజులకు బ్లాక్ చేయబడ్డారు."
+    , do_not_ask_customers_for_extra_payment: "కస్టమర్ దగ్గర అదనపు డబ్బు అడగవద్దు. ఇలా కొనసాగితే మీరు బ్లాక్ అవుతారు."
     }

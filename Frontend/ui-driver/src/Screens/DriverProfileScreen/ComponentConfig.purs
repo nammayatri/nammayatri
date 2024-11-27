@@ -509,6 +509,10 @@ deleteRcPopUpConfig state =
 
 driverBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
 driverBLockedPopup state = 
+  let blockDueToExtraFare = state.data.blockReason == Just "ExtraFareDaily" || state.data.blockReason == Just "ExtraFareWeekly"
+      blockedExpiryTime = EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A"
+      blockedExpiryDate = EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY"
+  in
   PopUpModal.config {
     gravity = CENTER,
     backgroundClickable = false,
@@ -520,7 +524,7 @@ driverBLockedPopup state =
     , textStyle = Heading2
     , margin = Margin 16 0 16 10},
     secondaryText{
-      text = getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
+      text = getString $ if blockDueToExtraFare then YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS else DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
     , textStyle = Body5
     , margin = Margin 16 0 16 15 },
     option1 {
@@ -548,7 +552,7 @@ driverBLockedPopup state =
   },
     cornerRadius = Corners 15.0 true true true true,
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
+      imageUrl = fetchImage FF_ASSET $ if blockDueToExtraFare then "ny_ic_account_blocked_for_n_days" else "ny_ic_account_blocked"
     , visibility = VISIBLE
     , margin = Margin 16 16 16 16
     , width = MATCH_PARENT

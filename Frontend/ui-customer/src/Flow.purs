@@ -6594,6 +6594,7 @@ fcmHandler notification state notificationBody= do
           finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
           estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
           parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
+          hasAskedToPayExtraIssue' =  (fromMaybe "" resp.vehicleServiceTierType) == "BIKE" && state.data.fareProductType /= FPT.DELIVERY
           
         updateScheduledRides true true
         modifyScreenState
@@ -6626,7 +6627,8 @@ fcmHandler notification state notificationBody= do
                           hasAccessibilityIssue = hasAccessibilityIssue'
                         , hasSafetyIssue = hasSafetyIssue'
                         , hasTollIssue = hasTollIssue'
-                        , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
+                        , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                         }
                         }
                        , toll {
@@ -6663,7 +6665,8 @@ fcmHandler notification state notificationBody= do
                           driverName =  state.data.driverInfoCardState.driverName,
                           fareProductType = state.data.fareProductType,
                           isAlreadyFav = state.data.driverInfoCardState.isAlreadyFav,
-                          favCount = state.data.driverInfoCardState.favCount
+                          favCount = state.data.driverInfoCardState.favCount,
+                          rideId = state.data.driverInfoCardState.rideId
                         }
                     , rideDuration = resp.duration 
                     , rentalRowDetails
@@ -6722,10 +6725,11 @@ fcmHandler notification state notificationBody= do
                         }
                       ]
                     , customerIssue = riderRideCompletedScreen.customerIssue
-                        { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                         , hasAccessibilityIssue = hasAccessibilityIssue'
                         , hasSafetyIssue = hasSafetyIssue'
                         , hasTollIssue = hasTollIssue'
+                        , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
                         }
                     , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                   }

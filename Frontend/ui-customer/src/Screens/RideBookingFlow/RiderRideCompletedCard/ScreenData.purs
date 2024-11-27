@@ -68,6 +68,7 @@ initData = let
     , hasAccessibilityIssue : false
     , hasTollIssue : false
     , hasSafetyIssue : false 
+    , hasAskedToPayExtraIssue : false
     , bannerComputedView : Nothing   
     , customerResponse : [
       {
@@ -80,6 +81,10 @@ initData = let
       }
     , {
         issueType : CT.Accessibility
+      , selectedYes : Nothing
+      }
+    , {
+        issueType : CT.AskedToPayExtra
       , selectedYes : Nothing
       }
     , {

@@ -389,7 +389,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                   finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
                   estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
                   parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
-
+                  hasAskedToPayExtraIssue' = (fromMaybe "" resp.vehicleServiceTierType) == "BIKE"
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -451,7 +451,8 @@ checkRideStatus rideAssigned prioritizeRating = do
                                 hasAccessibilityIssue = hasAccessibilityIssue'
                               , hasSafetyIssue = hasSafetyIssue'
                               , hasTollIssue = hasTollIssue'
-                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                              , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
+                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                               }
                             }
                           , toll {
@@ -484,7 +485,8 @@ checkRideStatus rideAssigned prioritizeRating = do
                                   driverName =  currRideListItem.driverName,
                                   isAlreadyFav = fromMaybe false resp.isAlreadyFav,
                                   fareProductType = fareProductType,
-                                  favCount = fromMaybe 0 resp.favCount
+                                  favCount = fromMaybe 0 resp.favCount,
+                                  rideId = currRideListItem.id
                                 }
                             , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                             , rideDuration = resp.duration
@@ -552,10 +554,11 @@ checkRideStatus rideAssigned prioritizeRating = do
                                 }
                               ]
                             , customerIssue = riderRideCompletedScreen.customerIssue
-                                { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                                { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                                 , hasAccessibilityIssue = hasAccessibilityIssue'
                                 , hasSafetyIssue = hasSafetyIssue'
                                 , hasTollIssue = hasTollIssue'
+                                , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
                                 }
                           }
                       )

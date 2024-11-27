@@ -291,11 +291,16 @@ driverActiveInactiveBT status status_n = do
         errorHandler (ErrorPayload errorResp) =  do
             let codeMessage = decodeErrorCode errorResp.response.errorMessage
                 accountBlocked = errorResp.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
-                noPlanSelectedForDriver = errorPayload.code == 400 && codeMessage == "NO_PLAN_SELECTED"
+                noPlanSelectedForDriver = errorResp.code == 400 && codeMessage == "NO_PLAN_SELECTED"
             (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
                 Just resp -> pure resp
                 _ -> pure dummyErrorResponseDriverActivity
-            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+            if accountBlocked then 
+                if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then 
+                    case errorPayload.blockReason of
+                        _ | errorPayload.blockReason `DA.elem` ["ExtraFareDaily", "ExtraFareWeekly"] -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime, blockReason = Just errorPayload.blockReason }, props { showBlockedForNDaysPopUp = true}})
+                        _ -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) 
+                else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
             pure if noPlanSelectedForDriver then 
                     toast $ (StringsV2.getStringV2 LT2.no_plan_selected)

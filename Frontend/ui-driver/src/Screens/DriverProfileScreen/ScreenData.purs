@@ -125,6 +125,7 @@ initData =
     , driverBlocked : false
     , blockedExpiryTime : ""
     , favCount : Nothing
+    , blockReason : Nothing
     },
 
   props: {
@@ -294,6 +295,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , totalRidesTaken : Nothing
     , subscriptionEnabledForVehicleCategory : Nothing
     , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , blockedReasonFlag : Nothing
 }
 
 organizationInfo :: OrganizationInfo

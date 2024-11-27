@@ -762,7 +762,8 @@ initialRideCompletedData = {
   , showIssueBanners : true
   , hasAccessibilityIssue : false
   , hasTollIssue : false
-  , hasSafetyIssue : false                    
+  , hasSafetyIssue : false
+  , hasAskedToPayExtraIssue : false                    
   , customerResponse : [
     {
       issueType : TollCharge
@@ -778,6 +779,10 @@ initialRideCompletedData = {
     }
   , {
       issueType : NoIssue
+    , selectedYes : Nothing
+    }
+  , {
+      issueType : AskedToPayExtra
     , selectedYes : Nothing
     }
   ]

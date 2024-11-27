@@ -482,6 +482,7 @@ type DriverProfileScreenData = {
   completingProfileRes :: CompletingProfileRes,
   driverBlocked :: Boolean,
   blockedExpiryTime :: String,
+  blockReason :: Maybe String,
   favCount :: Maybe Int
 }
 
@@ -1096,6 +1097,7 @@ type HomeScreenData =  {
 , onRideBannerTimer :: Int
 , blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
+, blockReason :: Maybe String
 }
 
 type PlansState = {
@@ -1404,7 +1406,9 @@ type HomeScreenProps =  {
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
   intercityInfoPopUp :: Boolean,
-  showParcelIntroductionPopup :: Boolean
+  showParcelIntroductionPopup :: Boolean,
+  showAskedExtraFarePopUp :: Boolean,
+  showBlockedForNDaysPopUp :: Boolean
  }
 
 type RideRequestPill = {
@@ -2619,7 +2623,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations | AskedExtraFare | BlockedForNDays
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3255,4 +3259,5 @@ type UploadParcelImageScreenProps = {
   showConfirmAndUploadButton :: Boolean,
   isStartRideActive :: Boolean,
   uploading :: Boolean
-} 
+}
+ 

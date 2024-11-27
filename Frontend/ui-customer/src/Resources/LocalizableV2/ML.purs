@@ -1682,4 +1682,7 @@ getMl = Keymap {
 , confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
 , tickets_for_delhi_metro : "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
 , max_parcel_size : (\l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "നിങ്ങളോട് കൂടുതൽ പണം നൽകാൻ പറഞ്ഞോ?"
+, were_you_asked_to_pay_extra_desc : "ഡ്രൈവർ/റൈഡർ മേൽ കാണിച്ചിരിക്കുന്ന അവസാന നിരക്കിൽ നിന്ന് കൂടുതൽ പണം ആവശ്യപ്പെട്ടാൽ, ഞങ്ങളോട് അറിയിക്കുക."
+, we_are_sorry_to_hear_this_please_click_on_need_help : "ഞങ്ങൾ അസൗകര്യത്തിനായി ഹൃദയപൂർവ്വം മാപ്പ് അഭ്യർത്ഥിക്കുന്നു"
 }

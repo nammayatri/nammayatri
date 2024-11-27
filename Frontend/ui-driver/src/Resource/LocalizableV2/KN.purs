@@ -1753,4 +1753,7 @@ getKn =
     , no_plan_selected : "ಯೋಜನೆ ಆಯ್ಕೆಯಾಗಿಲ್ಲ"
     , a_new_way_to_earn_parcel: "ಸಾಮಾನ್ಯ ಆಮದು ಮಾಡುವ ಹೊಸ ಮಾರ್ಗ - ಪಾರ್ಸೆಲ್ 2W"
     , seamless_earning_experience_click_below: "ನಿರ್ವಹಣೆಯಲ್ಲದ ಆದಾಯ ಅನುಭವಕ್ಕಾಗಿ, ಕೆಳಗೆ ಕ್ಲಿಕ್ ಮಾಡಿ"
+    , warning : "ಎಚ್ಚರಿಕೆ!"
+    , you_have_been_blocked_for_n_days: "ಹೆಚ್ಚಿನ ಬಾಡಿಗೆ ಬಗ್ಗೆ ಹಲವಾರು ಗ್ರಾಹಕರ ದೂರಿನ ಕಾರಣದಿಂದಾಗಿ ನಿಮಗೆ ದಿನಗಳ ಕಾಲ ನಿರ್ಬಂಧಿಸಲಾಗಿದ್ದುದು."
+    , do_not_ask_customers_for_extra_payment: "ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳಬೇಡಿ. ಹೀಗೆ ಮುಂದುವರೆಸಿದರೆ ನಿಮ್ಮ ಖಾತೆ ಬ್ಲಾಕ್ ಆಗಬಹುದು."
     }

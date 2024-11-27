@@ -2924,6 +2924,102 @@ verifyUPI state =
   in
     requestInfoCardConfig'
 
+askedExtraFareConfig :: ST.HomeScreenState -> PopUpModal.Config
+askedExtraFareConfig state = PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = MarginTop 0
+    , margin = MarginHorizontal 24 24
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "HORIZONTAL"
+    , primaryText {
+        text = StringsV2.getStringV2 LT2.warning 
+      , margin = MarginHorizontal 16 16
+      , color = Color.black800
+      , textStyle = Heading2
+    }
+    , secondaryText {
+      text = StringsV2.getStringV2 LT2.do_not_ask_customers_for_extra_payment
+      , margin = Margin 16 4 16 0
+      , color = Color.black700
+      , textStyle = SubHeading2
+    },
+    option1 {
+      text = StringsV2.getStringV2 LT2.okay_got_it
+    , color = Color.yellow900
+    , background = Color.black900
+    , visibility = true
+    , margin = MarginTop 24
+    , width = MATCH_PARENT
+    },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_asked_extra_fare"
+    , visibility = VISIBLE
+    , width = V (EHC.screenWidth unit - 20)
+    , height = V (EHC.screenWidth unit - 180)
+    , margin = MarginBottom 16
+    },
+    option2 { 
+      visibility = false
+    },
+    dismissPopup = false
+  }
+
+blockedForNDaysConfig :: ST.HomeScreenState -> PopUpModal.Config
+blockedForNDaysConfig state = 
+  let blockedExpiryTime = EHC.convertUTCtoISC state.data.blockExpiryTime "hh:mm A"
+      blockedExpiryDate = EHC.convertUTCtoISC state.data.blockExpiryTime "DD-MM-YYYY"
+  in
+  PopUpModal.config {
+    cornerRadius = PTD.Corners 22.0 true true true true
+    , buttonLayoutMargin = MarginTop 0
+    , margin = MarginHorizontal 24 24
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "VERTICAL"
+    , primaryText {
+        text = getString $ BLOCKED_TILL blockedExpiryTime blockedExpiryDate
+      , margin = MarginHorizontal 16 16
+      , color = Color.black800
+      , textStyle = Heading2
+    }
+    , secondaryText {
+      text = getString YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS
+    , textStyle = Body5
+    , margin = MarginHorizontal 16 16
+    },
+    option1 {
+      text = StringsV2.getStringV2 LT2.okay_got_it
+    , color = Color.yellow900
+    , background = Color.black900
+    , visibility = true
+    , margin = MarginTop 16
+    , width = MATCH_PARENT
+    },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked_for_n_days"
+    , visibility = VISIBLE
+    , width = V (EHC.screenWidth unit - 20)
+    , height = V (EHC.screenWidth unit - 180)
+    , margin = MarginBottom 16
+    },
+    option2 {
+    background = Color.white900, 
+    text = StringsV2.getStringV2 LT2.contact_support,
+    width = MATCH_PARENT, 
+    height = WRAP_CONTENT ,
+    color =  Color.black650,
+    strokeColor = Color.white900, 
+    padding = Padding 16 6 16 6, 
+    margin = Margin 0 8 0 0
+  }, 
+    dismissPopup = false
+  }
+
 selectPlansModalState :: ST.HomeScreenState -> SelectPlansModal.SelectPlansState
 selectPlansModalState state = SelectPlansModal.config
   {
