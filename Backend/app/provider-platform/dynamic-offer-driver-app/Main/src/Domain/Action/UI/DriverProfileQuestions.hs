@@ -113,23 +113,25 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     genAboutMeWithAI person driverStats now req' = do
       orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       prompt <-
-        SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.DriverProfileGen_1 >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+        SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.DriverProfileGen_1))
           >>= buildPrompt person driverStats now req' . (.promptTemplate)
       gccresp <- TC.getChatCompletion merchantId merchantOpCityId (buildChatCompletionReq prompt)
+      logDebug $ "generated - " <> gccresp.genMessage.genContent
       pure $ gccresp.genMessage.genContent
 
     buildPrompt person driverStats now req' promptTemplate = do
       merchant <- CQM.findById merchantId
       pure $
-        T.replace "{#hometown#}" (hometownDetails req'.hometown)
+        T.replace "{#homeTown#}" (hometownDetails req'.hometown)
           . T.replace "{#withNY#}" (withNY now person.createdAt)
           . T.replace "{#rating#}" (show driverStats.rating)
-          . T.replace "{#drivingSince#}" (maybe "" (show) req'.drivingSince)
+          . T.replace "{#drivingSince#}" (maybe "" show req'.drivingSince)
           . T.replace "{#aspirations#}" (T.intercalate ", " req'.aspirations)
           . T.replace "{#vehicleTags#}" (T.intercalate ", " req'.vehicleTags)
           . T.replace "{#pledge#}" (T.intercalate ", " req'.pledges)
           . T.replace "{#onPlatformSince#}" (show person.createdAt)
           . T.replace "{#merchant#}" (maybe "" (.name) merchant)
+          . T.replace "{#driverName#}" ((.firstName) person)
           $ promptTemplate
 
     buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
