@@ -35,13 +35,24 @@ createUpdateUserTagDataJob req eventId scheduledTime = do
     Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'QuarterlyUpdateTag scheduledTime maxShards jobData
 
 -- Moved here because of overlapping instances for HasSchemaName SchedulerJob between bpp and kaal-chakra
-kaalChakraHandle :: HandlerFlow m r => KaalChakra.Handle m
+kaalChakraHandle :: HandlerFlow m r => KaalChakra.Handle m Action
 kaalChakraHandle =
   KaalChakra.Handle
     { getUserTags = \userId -> do
         mbDriver <- QPerson.findById $ cast @Lib.Yudhishthira.Types.User @DPerson.Person userId
-        pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
-      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
+        pure $ mbDriver <&> (\driver -> Lib.Yudhishthira.Types.TagNameValue <$> fromMaybe [] driver.driverTag),
+      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just $ Lib.Yudhishthira.Types.getTagNameValue <$> driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
       createFetchUserDataJob,
-      createUpdateUserTagDataJob
+      createUpdateUserTagDataJob,
+      action = kaalChakraAction . cast @Lib.Yudhishthira.Types.User @DPerson.Person
     }
+
+kaalChakraAction :: HandlerFlow m r => Id DPerson.Person -> Action -> m ()
+kaalChakraAction driverId action = case action of
+  SAFE_TO_UNSAFE_COHORT -> do
+    logInfo $ "Kaal chakra action: " <> show action <> "; driverId: " <> show driverId
+  UNSAFE_TO_SAFE_COHORT -> do
+    logInfo $ "Kaal chakra action: " <> show action <> "; driverId: " <> show driverId
+
+data Action = SAFE_TO_UNSAFE_COHORT | UNSAFE_TO_SAFE_COHORT
+  deriving (Show, Read)

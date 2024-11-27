@@ -50,6 +50,9 @@ public class MessageOverlayService extends Service implements View.OnClickListen
     ImageView stopSuggestion1ImageView = null;
     ImageView stopSuggestion2ImageView = null;
     ImageView stopSuggestion3ImageView = null;
+    TextView suggestion1SentTextView = null;
+    TextView suggestion2SentTextView = null;
+    TextView suggestion3SentTextView = null;
     MaterialButton gotItButtonView = null;
     MaterialButton suggestion1View = null;
     MaterialButton suggestion2View = null;
@@ -213,6 +216,9 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 headerTextView = stopDetectedOverlayView.findViewById(R.id.HeaderTextView);
                 bodyTextView = stopDetectedOverlayView.findViewById(R.id.BodyTextView);
                 gotItButtonView = stopDetectedOverlayView.findViewById(R.id.got_it_button);
+                suggestion1SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion1_sent_text);
+                suggestion2SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion2_sent_text);
+                suggestion3SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion3_sent_text);
                 headerTextView.setText(R.string.customer_is_waiting);
                 bodyTextView.setText(R.string.please_start_moving_towards_the_pickup_location);
 
@@ -249,16 +255,16 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 if(suggestion3.equals("")) {
                     suggestion3 = getFallBackSuggestion(suggestions.s3, language);
                 }
-                if (stopDetectedSuggestion1View != null && stopSuggestion1TextView != null && stopSuggestion1ImageView != null && !suggestion1.equals("")) {
-                    setStopSuggestionImageAndText(stopDetectedSuggestion1View, stopSuggestion1TextView, stopSuggestion1ImageView, suggestion1, typeface);
+                if (stopDetectedSuggestion1View != null && stopSuggestion1TextView != null && stopSuggestion1ImageView != null && suggestion1SentTextView != null && !suggestion1.equals("")) {
+                    setStopSuggestionImageAndText(stopDetectedSuggestion1View, stopSuggestion1TextView, stopSuggestion1ImageView, suggestion1, typeface, suggestion1SentTextView);
                     setImageDimensions(stopSuggestion1ImageView, 84, 84);
                 }
-                if (stopDetectedSuggestion2View != null && stopSuggestion2TextView != null && stopSuggestion2ImageView != null && !suggestion2.equals("")) {
-                    setStopSuggestionImageAndText(stopDetectedSuggestion2View, stopSuggestion2TextView, stopSuggestion2ImageView, suggestion2, typeface);
+                if (stopDetectedSuggestion2View != null && stopSuggestion2TextView != null && stopSuggestion2ImageView != null && suggestion2SentTextView != null && !suggestion2.equals("")) {
+                    setStopSuggestionImageAndText(stopDetectedSuggestion2View, stopSuggestion2TextView, stopSuggestion2ImageView, suggestion2, typeface, suggestion2SentTextView);
                     setImageDimensions(stopSuggestion2ImageView, 84, 84);
                 }
-                if (stopDetectedSuggestion3View != null && stopSuggestion3TextView != null && stopSuggestion3ImageView != null && !suggestion3.equals("")) {
-                    setStopSuggestionImageAndText(stopDetectedSuggestion3View, stopSuggestion3TextView, stopSuggestion3ImageView, suggestion3, typeface);
+                if (stopDetectedSuggestion3View != null && stopSuggestion3TextView != null && stopSuggestion3ImageView != null && suggestion3SentTextView != null && !suggestion3.equals("")) {
+                    setStopSuggestionImageAndText(stopDetectedSuggestion3View, stopSuggestion3TextView, stopSuggestion3ImageView, suggestion3, typeface, suggestion3SentTextView);
                     setImageDimensions(stopSuggestion3ImageView, 84, 84);
                 }
             }
@@ -267,9 +273,10 @@ public class MessageOverlayService extends Service implements View.OnClickListen
         }
     }
 
-    private void setStopSuggestionImageAndText(LinearLayout parentView, TextView textView, ImageView imageView, String text, Typeface typeface) {
+    private void setStopSuggestionImageAndText(LinearLayout parentView, TextView textView, ImageView imageView, String text, Typeface typeface, TextView sentTextView) {
         textView.setText(text);
         imageView.setImageDrawable(getDrawable(R.drawable.ic_send_blue));
+        sentTextView.setVisibility(View.GONE);
         textView.setTypeface(typeface);
         parentView.setVisibility(View.VISIBLE);
         parentView.setOnClickListener(this);
@@ -324,18 +331,20 @@ public class MessageOverlayService extends Service implements View.OnClickListen
             gotItButtonView.setVisibility(View.VISIBLE);
             gotItButtonView.setOnClickListener(this);
         }
-        if (id == R.id.suggestion1 && stopSuggestion1ImageView != null) {
-            setSentSuggestionImage(stopDetectedSuggestion1View, R.drawable.ny_ic_sent_text , stopSuggestion1ImageView);
-        } else if (id == R.id.suggestion2 && stopSuggestion2ImageView != null) {
-            setSentSuggestionImage(stopDetectedSuggestion2View, R.drawable.ny_ic_sent_text , stopSuggestion2ImageView);
-        } else if (id == R.id.suggestion3 && stopSuggestion3ImageView != null) {
-            setSentSuggestionImage(stopDetectedSuggestion3View, R.drawable.ny_ic_sent_text , stopSuggestion3ImageView);
+        if (id == R.id.suggestion1 && stopSuggestion1ImageView != null && suggestion1SentTextView != null) {
+            setSentSuggestionImageAndText(stopDetectedSuggestion1View, R.drawable.ny_ic_check_green , stopSuggestion1ImageView, suggestion1SentTextView);
+        } else if (id == R.id.suggestion2 && stopSuggestion2ImageView != null && suggestion2SentTextView != null) {
+            setSentSuggestionImageAndText(stopDetectedSuggestion2View, R.drawable.ny_ic_check_green , stopSuggestion2ImageView, suggestion2SentTextView);
+        } else if (id == R.id.suggestion3 && stopSuggestion3ImageView != null && suggestion3SentTextView != null) {
+            setSentSuggestionImageAndText(stopDetectedSuggestion3View, R.drawable.ny_ic_check_green , stopSuggestion3ImageView, suggestion3SentTextView);
         }
     }
-    private void setSentSuggestionImage(LinearLayout parent, int drawableImage, ImageView imageView) {
+    private void setSentSuggestionImageAndText(LinearLayout parent, int drawableImage, ImageView imageView, TextView sentTextView) {
         parent.setVisibility(View.VISIBLE);
+        sentTextView.setVisibility(View.VISIBLE);
+        sentTextView.setText(R.string.sent);
         imageView.setImageDrawable(getDrawable(drawableImage));
-        setImageDimensions(imageView, 100, 200);
+        setImageDimensions(imageView, 50, 50);
     }
     private void setImageDimensions(ImageView imageView, int height, int width) {
         ViewGroup.LayoutParams params = imageView.getLayoutParams();
