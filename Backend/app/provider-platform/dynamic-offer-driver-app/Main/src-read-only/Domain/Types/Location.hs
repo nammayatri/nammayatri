@@ -27,6 +27,17 @@ data Location = Location
   }
   deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates, ToJSON, FromJSON, ToSchema)
 
+data Location' = Location'
+  { address :: Domain.Types.Location.LocationAddress,
+    createdAt :: Kernel.Prelude.UTCTime,
+    id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data LocationAPIEntity = LocationAPIEntity
   { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     areaCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -77,7 +77,7 @@ getBookingTypeFromTripCategory tripCategory =
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> DBBL.BookingLocation -> m DL.Location
-buildLocation merchantId  mbMerchantOperatingCityId DBBL.BookingLocation {..} =
+buildLocation merchantId mbMerchantOperatingCityId DBBL.BookingLocation {..} =
   return $
     DL.Location
       { id = cast id,
@@ -104,7 +104,7 @@ mkFullAddress DBBL.LocationAddress {..} = do
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
 
-upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity)-> Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
+upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
 upsertLocationForOldData merchantId mbMerchantOperatingCityId locationId bookingId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "Location Id Not Found in Booking Location Table")
   location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) (buildLocation merchantId mbMerchantOperatingCityId) loc

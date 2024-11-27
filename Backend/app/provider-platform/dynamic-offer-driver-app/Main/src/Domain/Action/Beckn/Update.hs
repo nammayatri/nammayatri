@@ -89,8 +89,8 @@ data PaymentCompletedReq = PaymentCompletedReq
 data EditLocationReq = EditLocationReq
   { bookingId :: Id DBooking.Booking,
     rideId :: Id DRide.Ride,
-    origin :: Maybe DL.Location,
-    destination :: Maybe DL.Location,
+    origin' :: Maybe DL.Location',
+    destination' :: Maybe DL.Location',
     status :: Enums.OrderStatus,
     bapBookingUpdateRequestId :: Text,
     transactionId :: Text
@@ -98,13 +98,16 @@ data EditLocationReq = EditLocationReq
 
 data AddStopReq = AddStopReq
   { bookingId :: Id DBooking.Booking,
-    stops :: [DL.Location]
+    stops' :: [DL.Location']
   }
 
 data EditStopReq = EditStopReq
   { bookingId :: Id DBooking.Booking,
-    stops :: [DL.Location]
+    stops' :: [DL.Location']
   }
+
+mkLocation :: Id DMOC.MerchantOperatingCity -> DL.Location' -> DL.Location
+mkLocation merchantOperatingCityId DL.Location' {..} = DL.Location {merchantOperatingCityId = Just merchantOperatingCityId, ..}
 
 getBookingId :: DUpdateReq -> Id DBooking.Booking
 getBookingId (UPaymentCompletedReq req) = req.bookingId
@@ -138,21 +141,25 @@ handler (UPaymentCompletedReq req@PaymentCompletedReq {}) = do
   logTagInfo "Payment completed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
 handler (UAddStopReq AddStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  let stops = mkLocation booking.merchantOperatingCityId <$> stops'
   case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc False
 handler (UEditStopReq EditStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  let stops = mkLocation booking.merchantOperatingCityId <$> stops'
   case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc True
 handler (UEditLocationReq EditLocationReq {..}) = do
-  when (isNothing origin && isNothing destination) $
+  when (isNothing origin' && isNothing destination') $
     throwError PickupOrDropLocationNotFound
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus ("Can't edit destination for completed/cancelled ride." <> Text.pack (show ride.status))
   let udf1 = if ride.status == DRide.INPROGRESS then "RIDE_INPROGRESS" else "RIDE_PICKUP"
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let origin = mkLocation person.merchantOperatingCityId <$> origin'
+  let destination = mkLocation person.merchantOperatingCityId <$> destination'
   whenJust origin $ \startLocation -> do
     QL.create startLocation
     pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just person.merchantId) (Just person.merchantOperatingCityId)

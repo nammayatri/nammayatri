@@ -23,7 +23,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
+-- import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude
@@ -31,7 +31,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+-- import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error (GenericError (InvalidRequest))
 
 buildUpdateReq ::
@@ -60,8 +60,8 @@ parseEvent merchantId reqMsg context = do
       & fromMaybeM (InvalidRequest "Event type is not present in UpdateReq.")
 
   -- Could not deduce (HasField "esqDBEnv" r0 Kernel.Storage.Esqueleto.Config.EsqDBEnv)
-  opCity <- Utils.getContextCity context
-  mbMerchantOpCity <- (DMOC.id <$>) <$> CQMOC.findByMerchantIdAndCity merchantId opCity -- >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
+  -- opCity <- Utils.getContextCity context
+  -- mbMerchantOpCity <- (DMOC.id <$>) <$> CQMOC.findByMerchantIdAndCity merchantId opCity -- >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
   -- arising from a use of ‘CQMOC.findByMerchantIdAndCity’
   case eventType of
     "PAYMENT_COMPLETED" -> do
@@ -78,37 +78,39 @@ parseEvent merchantId reqMsg context = do
             }
     "EDIT_LOCATION" -> do
       rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
-      parseEditLocationEvent bookingId fulfillment rideId mbMerchantOpCity
-    "ADD_STOP" -> parseAddStopEvent bookingId fulfillment mbMerchantOpCity
-    "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment mbMerchantOpCity
+      parseEditLocationEvent bookingId fulfillment rideId -- mbMerchantOpCity
+    "ADD_STOP" -> parseAddStopEvent bookingId fulfillment -- mbMerchantOpCity
+    "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment -- mbMerchantOpCity
     _ -> throwError (InvalidRequest "Invalid event type")
   where
-    parseAddStopEvent bookingId fulfillment mbMerchantOperatingCityId = do
+    parseAddStopEvent bookingId fulfillment = do
+      -- mbMerchantOperatingCityId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
-      stops <- mapM (Utils.buildLocation merchantId mbMerchantOperatingCityId) fulfillmentStops
+      stops' <- mapM (Utils.buildLocation' merchantId) fulfillmentStops -- mbMerchantOperatingCityId) fulfillmentStops
       pure $
         DUpdate.UAddStopReq $
           DUpdate.AddStopReq
             { bookingId,
-              stops
+              stops'
             }
 
-    parseEditStopEvent bookingId fulfillment mbMerchantOperatingCityId = do
+    parseEditStopEvent bookingId fulfillment = do
+      -- mbMerchantOperatingCityId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
-      stops <- mapM (Utils.buildLocation merchantId mbMerchantOperatingCityId) fulfillmentStops
+      stops' <- mapM (Utils.buildLocation' merchantId) fulfillmentStops -- mbMerchantOperatingCityId) fulfillmentStops
       pure $
         DUpdate.UEditStopReq $
           DUpdate.EditStopReq
             { bookingId,
-              stops
+              stops'
             }
 
-    parseEditLocationEvent bookingId fulfillment rideId mbMerchantOperatingCityId = do
+    parseEditLocationEvent bookingId fulfillment rideId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
       let originStop = Utils.getStartLocation fulfillmentStops
-      origin <- traverse (Utils.buildLocation merchantId mbMerchantOperatingCityId) originStop
+      origin' <- traverse (Utils.buildLocation' merchantId) originStop -- mbMerchantOperatingCityId) originStop
       let destinationStop = Utils.getDropLocation fulfillmentStops
-      destination <- traverse (Utils.buildLocation merchantId mbMerchantOperatingCityId) destinationStop
+      destination' <- traverse (Utils.buildLocation' merchantId) destinationStop -- mbMerchantOperatingCityId) destinationStop
       orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
       messageId <- Utils.getMessageId context
       status <- castOrderStatus orderStatus
@@ -118,8 +120,8 @@ parseEvent merchantId reqMsg context = do
           DUpdate.EditLocationReq
             { bookingId,
               rideId,
-              origin,
-              destination,
+              origin',
+              destination',
               status,
               bapBookingUpdateRequestId = messageId,
               transactionId

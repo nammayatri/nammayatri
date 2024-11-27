@@ -1695,23 +1695,23 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
             tags = if isValueAddNP then dTags else Nothing
           }
 
-buildLocation :: MonadFlow m => Id DM.Merchant -> Maybe (Id MOC.MerchantOperatingCity) -> Spec.Stop -> m DL.Location
-buildLocation merchantId mbMerchantOperatingCityId stop = do
+buildLocation' :: MonadFlow m => Id DM.Merchant -> Spec.Stop -> m DL.Location' -- -> Maybe (Id MOC.MerchantOperatingCity) -> Spec.Stop -> m DL.Location
+buildLocation' merchantId stop = do
+  -- mbMerchantOperatingCityId stop = do
   location <- stop.stopLocation & fromMaybeM (InvalidRequest "Location not present")
   guid <- generateGUID
   now <- getCurrentTime
   gps <- parseLatLong =<< (location.locationGps & fromMaybeM (InvalidRequest "Location GPS not present"))
   address <- parseAddress location >>= fromMaybeM (InvalidRequest "Location Address not present")
   return $
-    DL.Location
+    DL.Location'
       { DL.id = guid,
         createdAt = now,
         updatedAt = now,
         lat = gps.lat,
         lon = gps.lon,
         address,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = mbMerchantOperatingCityId
+        merchantId = Just merchantId
       }
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
