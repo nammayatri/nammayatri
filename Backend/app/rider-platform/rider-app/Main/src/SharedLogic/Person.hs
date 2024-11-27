@@ -50,18 +50,18 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (cancelledBookingIds, maxBookingTimeCancelled) <- CHB.findAllCancelledBookingIdsByRiderAndMaxTime personId person.createdAt
   (userCancelledRides, driverCancelledRides) <- CHBCR.countCancelledBookingsByBookingIdsByUserAndDriver cancelledBookingIds person.createdAt
-  completedBookings <- CHB.findByRiderIdAndStatus personId DB.COMPLETED person.createdAt
-  let maxBookingTimeCompleted = foldl' (\acc b -> max acc (b.createdAt)) person.createdAt completedBookings
+  completedBookingsCreatedAt <- CHB.findByRiderIdAndStatus personId DB.COMPLETED person.createdAt
+  let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
   Hedis.setExp (personRedisKey personId) maxBookingTime 43200
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityid >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
-  let completedRidesCnt = length completedBookings
-  let (weekendRides, weekdayRides) = countWeekdaysAndWeekendsRide completedBookings minuteDiffFromUTC
-      eveningPeakRides = getWeekdayEveningPeakRides completedBookings minuteDiffFromUTC
-      morningPeakRides = getWeekdayMorningPeakRides completedBookings minuteDiffFromUTC
-      weekendPeakRides = getWeekendPeakRides completedBookings minuteDiffFromUTC
+  let completedRidesCnt = length completedBookingsCreatedAt
+  let (weekendRides, weekdayRides) = countWeekdaysAndWeekendsRide completedBookingsCreatedAt minuteDiffFromUTC
+      eveningPeakRides = getWeekdayEveningPeakRides completedBookingsCreatedAt minuteDiffFromUTC
+      morningPeakRides = getWeekdayMorningPeakRides completedBookingsCreatedAt minuteDiffFromUTC
+      weekendPeakRides = getWeekendPeakRides completedBookingsCreatedAt minuteDiffFromUTC
       offPeakRides = completedRidesCnt - (morningPeakRides + eveningPeakRides + weekendPeakRides)
       personStatsValues =
         DPS.PersonStats
@@ -74,35 +74,35 @@ getBackfillPersonStatsData personId merchantOpCityid = do
           }
   return personStatsValues
 
-countWeekdaysAndWeekendsRide :: [CHB.Booking] -> Int -> (Int, Int)
-countWeekdaysAndWeekendsRide bookings minuteDiffFromUTC =
+countWeekdaysAndWeekendsRide :: [UTCTime] -> Int -> (Int, Int)
+countWeekdaysAndWeekendsRide bookingsCreatedAt minuteDiffFromUTC =
   let countWeekdaysAndWeekends' =
         foldl'
-          ( \(weekendCount, weekdayCount) booking ->
-              if isWeekend booking.createdAt minuteDiffFromUTC
+          ( \(weekendCount, weekdayCount) createdAt ->
+              if isWeekend createdAt minuteDiffFromUTC
                 then (weekendCount + 1, weekdayCount)
                 else (weekendCount, weekdayCount + 1)
           )
           (0, 0)
-   in countWeekdaysAndWeekends' bookings
+   in countWeekdaysAndWeekends' bookingsCreatedAt
 
-getWeekdayMorningPeakRides :: [CHB.Booking] -> Int -> Int
-getWeekdayMorningPeakRides bookings minuteDiffFromUTC =
-  let countRides = foldl' (\cnt booking -> if checkMorningPeakInWeekday booking.createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookings
+getWeekdayMorningPeakRides :: [UTCTime] -> Int -> Int
+getWeekdayMorningPeakRides bookingsCreatedAt minuteDiffFromUTC =
+  let countRides = foldl' (\cnt createdAt -> if checkMorningPeakInWeekday createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookingsCreatedAt
 
 checkMorningPeakInWeekday :: UTCTime -> Int -> Bool
 checkMorningPeakInWeekday utcTime minuteDiffFromUTC = not (isWeekend utcTime minuteDiffFromUTC) && within (convertTimeZone utcTime minuteDiffFromUTC) (TimeOfDay 8 0 0) (TimeOfDay 11 0 0)
 
-getWeekdayEveningPeakRides :: [CHB.Booking] -> Int -> Int
-getWeekdayEveningPeakRides bookings minuteDiffFromUTC =
-  let countRides = foldl' (\cnt booking -> if checkEveningPeakInWeekday booking.createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookings
+getWeekdayEveningPeakRides :: [UTCTime] -> Int -> Int
+getWeekdayEveningPeakRides bookingsCreatedAt minuteDiffFromUTC =
+  let countRides = foldl' (\cnt createdAt -> if checkEveningPeakInWeekday createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookingsCreatedAt
 
 checkEveningPeakInWeekday :: UTCTime -> Int -> Bool
 checkEveningPeakInWeekday utcTime minuteDiffFromUTC = not (isWeekend utcTime minuteDiffFromUTC) && within (convertTimeZone utcTime minuteDiffFromUTC) (TimeOfDay 16 0 0) (TimeOfDay 19 0 0)
 
-getWeekendPeakRides :: [CHB.Booking] -> Int -> Int
-getWeekendPeakRides bookings minuteDiffFromUTC =
-  let countRides = foldl' (\cnt booking -> if checkWeekendPeak booking.createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookings
+getWeekendPeakRides :: [UTCTime] -> Int -> Int
+getWeekendPeakRides bookingsCreatedAt minuteDiffFromUTC =
+  let countRides = foldl' (\cnt createdAt -> if checkWeekendPeak createdAt minuteDiffFromUTC then cnt + 1 else cnt) 0 in countRides bookingsCreatedAt
 
 checkWeekendPeak :: UTCTime -> Int -> Bool
 checkWeekendPeak utcTime minuteDiffFromUTC = isWeekend utcTime minuteDiffFromUTC && within (convertTimeZone utcTime minuteDiffFromUTC) (TimeOfDay 12 30 0) (TimeOfDay 19 30 0)
