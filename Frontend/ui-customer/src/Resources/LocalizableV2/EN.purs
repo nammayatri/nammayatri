@@ -1707,4 +1707,7 @@ getEn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
 , note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
 , here_is_bus_ticket : "Here is your bus ticket"
+, were_you_asked_to_pay_extra_q : "Were you asked to pay extra?"
+, were_you_asked_to_pay_extra_desc : "Let us know if the driver/rider demanded payment more than the final fare shown above."
+, we_are_sorry_to_hear_this_please_click_on_need_help : "We sincerely apologize for the inconvenience."
 }

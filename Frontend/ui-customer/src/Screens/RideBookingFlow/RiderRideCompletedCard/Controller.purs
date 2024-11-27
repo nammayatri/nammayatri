@@ -7,14 +7,20 @@ import Components.RideCompletedCard.Controller ( CustomerIssueCard(..))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Common.Types.App (FeedbackAnswer(..), CustomerIssueTypes(..))
+import Services.API (GetCategoriesRes(..), GetOptionsRes(..), PostIssueReqBody(..), Category(..), Option(..))
 import Data.Array (filter, any, length, elem, (!!), find, findIndex, updateAt)
 import Effect.Uncurried (runEffectFn1, runEffectFn7, runEffectFn3, runEffectFn5)
+import Engineering.Helpers.Utils (fetchLanguage)
+import Effect.Aff (launchAff)
+import Control.Monad.Except.Trans (runExceptT)
 import JBridge as JB
 import Timers(clearTimerWithId, waitingCountdownTimerV2)
+import Control.Transformers.Back.Trans (runBackT)
 import Components.RecordAudioModel as RecordAudioModel
 import Effect (Effect)
+import Services.Backend as Remote
 import Data.Maybe
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner)
 import Components.PrimaryButton as PrimaryButton
 import Types.EndPoint as EndPoint
 import Data.Function.Uncurried (runFn1, runFn2, runFn3)
@@ -33,6 +39,11 @@ import Components.BannerCarousel as BannerCarousel
 import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
 import Data.Int (fromString)
+import Types.App (defaultGlobalState, FlowBT)
+import Constants (languageKey)
+import Locale.Utils(getLanguageLocale)
+import Resources.LocalizableV2.Strings as StringsV2
+import Resources.LocalizableV2.Types as TypesV2
 
 data Action =
               RideDetails
@@ -112,16 +123,18 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
 
 eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
   let 
-    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.customerIssue.customerResponse
+    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just true) state.customerIssue.customerResponse
 
     hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
     hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
     hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
+    hasAskedToPayExtraIssue = any (\issueResp -> issueResp.issueType == CTP.AskedToPayExtra) negativeResp
 
-    priorityIssue = case hasSafetyIssue, hasTollIssue of
-      true, _ -> CTP.NightSafety
-      false, true -> CTP.TollCharge
-      _, _ -> CTP.NoIssue
+    priorityIssue = case hasSafetyIssue, hasTollIssue, hasAskedToPayExtraIssue of
+      true, _ , _ -> CTP.NightSafety
+      false, true, _ -> CTP.TollCharge
+      false, false, true -> CTP.AskedToPayExtra
+      _, _ , _-> CTP.NoIssue
 
     ratingUpdatedState = state {
       customerIssue {
@@ -132,10 +145,20 @@ eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
       nightSafety = Just $ not hasSafetyIssue
     }
     }
+  
+
 
   if priorityIssue == CTP.NoIssue then
     continue state {customerIssue {showIssueBanners = false}, ratingViewState{ nightSafety = Just true }}
-  else 
+  else if priorityIssue == CTP.AskedToPayExtra then do
+    void $ pure $ JB.toast $ StringsV2.getStringV2 TypesV2.we_are_sorry_to_hear_this_please_click_on_need_help
+    continueWithCmd state {customerIssue {showIssueBanners = false}, ratingViewState{ nightSafety = Just true }} [ do
+      void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+        $ do
+            reportExtraFareIssue state.driverInfoCardState.rideId
+      pure NoAction
+    ]
+  else
     exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
 
 eval (PrimaryBtnRentalTripDetailsAC PrimaryButton.OnClick) state = continue state {showRentalRideDetails = false}
@@ -347,6 +370,7 @@ issueReportBannerConfigs state =
     nightSafetyIssue = state.customerIssue.hasSafetyIssue
     accessibilityIssue =  state.customerIssue.hasAccessibilityIssue
     customerResposeArray = state.customerIssue.customerResponse
+    hasAskedToPayExtraIssue = state.customerIssue.hasAskedToPayExtraIssue
 
 
     (tollIssueConfig :: CustomerIssueCard) = { 
@@ -376,13 +400,44 @@ issueReportBannerConfigs state =
     , noText : getString NO
     }
 
+    (askedToPayExtraIssueConfig :: CustomerIssueCard) = {
+      issueType : AskedToPayExtra
+    , selectedYes : findYesNoState customerResposeArray AskedToPayExtra
+    , title : StringsV2.getStringV2 TypesV2.were_you_asked_to_pay_extra_q
+    , subTitle : StringsV2.getStringV2 TypesV2.were_you_asked_to_pay_extra_desc
+    , yesText : getString YES
+    , noText : getString NO
+    }
+
   in
-    if accessibilityIssue then [accessibilityIssueConfig] else
-      (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
-      <> (if tollIssue then [tollIssueConfig] else [])
+      (if accessibilityIssue then [accessibilityIssueConfig] else [])
+       <> (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
+       <> (if tollIssue then [tollIssueConfig] else [])
+       <> (if hasAskedToPayExtraIssue then [askedToPayExtraIssueConfig] else [])
 
   where 
     findYesNoState customerResp issueType = 
       case find (\x -> x.issueType == issueType) customerResp of 
         Just issue -> issue.selectedYes
         Nothing -> Nothing
+  
+reportExtraFareIssue :: String -> FlowBT String Unit
+reportExtraFareIssue rideId = do
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  (GetCategoriesRes response) <- Remote.getCategoriesBT language
+  let mbExtraFareCategory = find (\(Category category) -> category.label == "EXTRA_FARE_RELATED") response.categories
+  case mbExtraFareCategory of
+    Just (Category extraFareCategory) -> do
+      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language extraFareCategory.issueCategoryId "" "" ""
+      let issueOptionId = (\(Option options) -> options.issueOptionId) <$> (getOptionsRes.options !! 0) 
+      let postIssueReqBody = PostIssueReqBody {
+            mediaFiles : []
+          , categoryId : extraFareCategory.issueCategoryId
+          , optionId : issueOptionId
+          , description : "Took extra fare"
+          , rideId : Just rideId
+          , chats : []
+          , createTicket : false
+          }
+      void $ Remote.postIssueBT language postIssueReqBody
+    Nothing -> pure unit

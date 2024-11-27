@@ -1761,4 +1761,7 @@ getBn =
     , parcel_is_inappropriate : "পার্সেল অনুপযুক্ত"
     , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
+    , warning : "সতর্কতা!"
+    , you_have_been_blocked_for_n_days: "অতিরিক্ত ভাড়া নিয়ে একাধিক গ্রাহক অভিযোগের কারণে আপনাকে দিনের জন্য ব্লক করা হয়েছে।"
+    , do_not_ask_customers_for_extra_payment: "গ্রাহকদের কাছে অতিরিক্ত অর্থ চাইবেন না। এটি চালিয়ে গেলে আপনি ব্লক হতে পারেন।"
     }

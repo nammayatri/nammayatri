@@ -292,7 +292,12 @@ driverActiveInactiveBT status status_n = do
             (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
                 Just resp -> pure resp
                 _ -> pure dummyErrorResponseDriverActivity
-            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+            if accountBlocked then 
+                if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then 
+                    case errorPayload.blockReason of
+                        _ | errorPayload.blockReason `DA.elem` ["ExtraFareDaily", "ExtraFareWeekly"] -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime, blockReason = Just errorPayload.blockReason }, props { showBlockedForNDaysPopUp = true}})
+                        _ -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) 
+                else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
             pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
             void $ lift $ lift $ toggleLoader false

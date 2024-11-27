@@ -586,6 +586,7 @@ type CustomerIssueReportData = {
 , hasAccessibilityIssue :: Boolean
 , hasTollIssue :: Boolean
 , hasSafetyIssue :: Boolean
+, hasAskedToPayExtraIssue :: Boolean
 , customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
 , respondedValidIssues :: Boolean
 , bannerComputedView :: Maybe ListItem
@@ -952,7 +953,7 @@ type IssueReportData = {
 , hasSafetyIssue :: Boolean
 , customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
 , respondedValidIssues :: Boolean
-
+, hasAskedToPayExtraIssue :: Boolean
 }
 
 type DisabilityT = 

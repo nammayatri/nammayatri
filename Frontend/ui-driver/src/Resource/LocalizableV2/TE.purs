@@ -1761,4 +1761,7 @@ getTe =
     , parcel_is_inappropriate : "పార్సెల్ అననుకూలంగా ఉంది"
     , sender_asking_different_location : "పంపిణీదారు వేరే ప్రదేశానికి రావాలని అడుగుతున్నారు"
     , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
+    , warning : "హెచ్చరిక!"
+    , you_have_been_blocked_for_n_days: "అదనపు చార్జీ పై పలు కస్టమర్ ఫిర్యాదుల కారణంగా మీరు రోజులకు బ్లాక్ చేయబడ్డారు."
+    , do_not_ask_customers_for_extra_payment: "కస్టమర్ దగ్గర అదనపు డబ్బు అడగవద్దు. ఇలా కొనసాగితే మీరు బ్లాక్ అవుతారు."
     }

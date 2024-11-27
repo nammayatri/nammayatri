@@ -105,3 +105,6 @@ _extras = lens (unwrap >>> _.extras) (\oldRec newVal -> wrap ((unwrap oldRec) { 
 
 _instructions :: forall a b c. Newtype a { instructions :: b | c } => Lens' a b
 _instructions = lens (unwrap >>> _.instructions) (\oldRec newVal -> wrap ((unwrap oldRec) { instructions = newVal }))
+
+_extraFareMitigationFlag :: forall a b c. Newtype a { extraFareMitigationFlag :: b | c } => Lens' a b
+_extraFareMitigationFlag = lens (unwrap >>> _.extraFareMitigationFlag) (\oldRec newVal -> wrap ((unwrap oldRec) { extraFareMitigationFlag = newVal }))

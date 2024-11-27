@@ -176,6 +176,7 @@ initData =
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
       , blockExpiryTime : ""
+      , blockReason : Nothing
     }
   , props:
       { isFreeRide: false
@@ -273,6 +274,8 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , retryRideList : false
+      , showAskedExtraFarePopUp : false
+      , showBlockedForNDaysPopUp : false
       }
   }
 

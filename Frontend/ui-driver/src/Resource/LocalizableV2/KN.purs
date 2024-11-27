@@ -1761,4 +1761,7 @@ getKn =
     , parcel_is_inappropriate : "ಪಾರ್ಸೆಲ್ ಅನನುಕೂಲಕರವಾಗಿದೆ"
     , sender_asking_different_location : "ಕಳುಹಿಸುವವರು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಬರಲು ಕೇಳುತ್ತಿದ್ದಾರೆ"
     , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+    , warning : "ಎಚ್ಚರಿಕೆ!"
+    , you_have_been_blocked_for_n_days: "ಹೆಚ್ಚಿನ ಬಾಡಿಗೆ ಬಗ್ಗೆ ಹಲವಾರು ಗ್ರಾಹಕರ ದೂರಿನ ಕಾರಣದಿಂದಾಗಿ ನಿಮಗೆ ದಿನಗಳ ಕಾಲ ನಿರ್ಬಂಧಿಸಲಾಗಿದ್ದುದು."
+    , do_not_ask_customers_for_extra_payment: "ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳಬೇಡಿ. ಹೀಗೆ ಮುಂದುವರೆಸಿದರೆ ನಿಮ್ಮ ಖಾತೆ ಬ್ಲಾಕ್ ಆಗಬಹುದು."
     }

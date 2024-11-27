@@ -1830,4 +1830,4 @@ getProxy str = case str of
   UPLOAD_PARCEL_IMAGE -> \a -> a @~ upload_parcel_image
   PICKUP_INSTRUCTION -> \a -> a @~ pickup_instruction
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
-  
+  YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS -> \a -> a @~ you_have_been_blocked_for_n_days

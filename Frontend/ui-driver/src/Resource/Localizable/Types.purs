@@ -1776,6 +1776,7 @@ data STR = LETS_GET_STARTED
         | UPLOAD_PARCEL_IMAGE
         | PICKUP_INSTRUCTION
         | DROP_INSTRUCTION
+        | YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS
 
 -- instance showSTR :: Show STR
 --   show = case _ of

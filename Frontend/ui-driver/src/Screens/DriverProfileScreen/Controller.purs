@@ -397,7 +397,8 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       cancellationWindow = driverProfileResp.windowSize,
                                       favCount = driverProfileResp.favCount,
                                       driverBlocked = fromMaybe false driverProfileResp.blocked,
-                                      blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime
+                                      blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime,
+                                      blockReason = driverProfileResp.blockedReasonFlag
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 

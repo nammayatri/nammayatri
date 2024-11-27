@@ -342,6 +342,9 @@ removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
 
+createIssue :: String
+createIssue = (getBaseUrl "62") <> "/issue"
+
 busAutoComplete :: String -> String -> String -> Maybe String -> String -> Maybe String -> String
 busAutoComplete vehicleType city location input limit offset = 
   (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <> 

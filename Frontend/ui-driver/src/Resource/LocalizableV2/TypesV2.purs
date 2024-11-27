@@ -1775,6 +1775,9 @@ newtype Keymap
   , parcel_is_inappropriate :: String
   , sender_asking_different_location :: String
   , sender_unavailable_unreachable :: String
+  , warning :: String
+  , you_have_been_blocked_for_n_days :: String
+  , do_not_ask_customers_for_extra_payment :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7048,3 +7051,12 @@ sender_asking_different_location = a
 
 sender_unavailable_unreachable :: Proxy "sender_unavailable_unreachable"
 sender_unavailable_unreachable = a
+
+warning :: Proxy "warning"
+warning = a
+
+you_have_been_blocked_for_n_days :: Proxy "you_have_been_blocked_for_n_days"
+you_have_been_blocked_for_n_days = a
+
+do_not_ask_customers_for_extra_payment :: Proxy "do_not_ask_customers_for_extra_payment"
+do_not_ask_customers_for_extra_payment = a
