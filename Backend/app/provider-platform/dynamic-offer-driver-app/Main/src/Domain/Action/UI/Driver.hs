@@ -337,7 +337,8 @@ data DriverInformationRes = DriverInformationRes
     favCount :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool,
-    isSpecialLocWarrior :: Bool
+    isSpecialLocWarrior :: Bool,
+    blockedReasonFlag :: Maybe BlockReasonFlag
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -355,6 +356,7 @@ data DriverEntityRes = DriverEntityRes
     enabled :: Bool,
     blocked :: Bool,
     blockExpiryTime :: Maybe UTCTime,
+    blockedReasonFlag :: Maybe BlockReasonFlag,
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
@@ -902,6 +904,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
         blockExpiryTime = driverInfo.blockExpiryTime,
+        blockedReasonFlag = driverInfo.blockReasonFlag,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
         paymentPending = driverInfo.paymentPending,
