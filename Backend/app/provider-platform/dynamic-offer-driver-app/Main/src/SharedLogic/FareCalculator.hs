@@ -410,7 +410,8 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          extraHoursSpent = max 0 (fromIntegral (allowanceMins' - defaultWaitTimeAtDestination.getMinutes) / 60.0) :: Double
+          extraTimeSpent = max 0 ((diffUTCTime (fromMaybe params.rideTime params.returnTime) params.rideTime) - intToNominalDiffTime estimatedDuration) / 60
+          extraHoursSpent = max 0 (realToFrac extraTimeSpent - fromIntegral (defaultWaitTimeAtDestination.getMinutes)) / 60.0 :: Double
           fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
 
       let distPercent = case (actualDistance, estimatedDistance) of
@@ -706,16 +707,19 @@ timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 36
 utcToIst :: Minutes -> UTCTime -> LocalTime
 utcToIst timeZoneDiff = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) -- IST is UTC + 5:30
 
+minuteOfDay :: TimeOfDay -> Int
+minuteOfDay (TimeOfDay hour minute _) = hour * 60 + minute
+
 -- Calculates hours for a partial day
 hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
 hoursInDay startUtc endUtc start end day
   | startDay == endDay = if startDay == day then diffMins else 0
   | otherwise =
     if day == startDay
-      then 1440 - todMin startTod
+      then 1440 - minuteOfDay startTod
       else
         if day == endDay
-          then todMin endTod
+          then minuteOfDay endTod
           else 1440
   where
     startDay = localDay start
