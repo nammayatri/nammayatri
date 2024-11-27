@@ -20,6 +20,7 @@ import Domain.Types.RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import ExternalBPP.Bus.ExternalAPI.CallAPI as CallAPI
+import ExternalBPP.Bus.ExternalAPI.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -340,7 +341,9 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
                   bppFulfillmentId = "Buses Fulfillment",
                   ticketNumber = ticket.ticketNumber,
                   validTill = ticket.qrValidity,
-                  status = ticket.qrStatus
+                  status = ticket.qrStatus,
+                  description = ticket.description,
+                  qrRefreshAt = ticket.qrRefreshAt
                 }
           )
           order.tickets
@@ -369,7 +372,9 @@ status _merchantId _merchantOperatingCity config bapConfig booking = do
                   bppFulfillmentId = "Buses Fulfillment",
                   ticketNumber = ticket.ticketNumber,
                   validTill = ticket.qrValidity,
-                  status = ticket.qrStatus
+                  status = ticket.qrStatus,
+                  qrRefreshAt = ticket.qrRefreshAt,
+                  description = ticket.description
                 }
           )
           tickets'
@@ -385,3 +390,8 @@ status _merchantId _merchantOperatingCity config bapConfig booking = do
         messageId = booking.id.getId,
         tickets = tickets
       }
+
+verifyTicket :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> Text -> m DTicketPayload
+verifyTicket _merchantId _merchantOperatingCity config _bapConfig encryptedQrData = do
+  TicketPayload {..} <- CallAPI.verifyTicket config encryptedQrData
+  return DTicketPayload {..}

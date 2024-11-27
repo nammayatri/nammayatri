@@ -29,3 +29,13 @@ ALTER TABLE atlas_app.frfs_ticket ALTER COLUMN merchant_id SET NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket ADD COLUMN is_ticket_free boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN qr_refresh_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN description text ;

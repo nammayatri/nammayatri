@@ -259,6 +259,8 @@ library
       ExternalBPP.Bus.ExternalAPI.CallAPI
       ExternalBPP.Bus.ExternalAPI.CUMTA.Order
       ExternalBPP.Bus.ExternalAPI.CUMTA.Status
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Verify
       ExternalBPP.Bus.ExternalAPI.EBIX.Auth
       ExternalBPP.Bus.ExternalAPI.EBIX.Order
       ExternalBPP.Bus.ExternalAPI.EBIX.Payment

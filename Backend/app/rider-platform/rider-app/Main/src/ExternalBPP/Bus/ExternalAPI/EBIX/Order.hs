@@ -136,7 +136,9 @@ getTicketDetail config qrTtl booking routeStation = do
       { ticketNumber = ticketNumber,
         qrData,
         qrStatus = "UNCLAIMED",
-        qrValidity
+        qrValidity,
+        description = Nothing,
+        qrRefreshAt = Nothing
       }
 
 newtype Ticket = Ticket

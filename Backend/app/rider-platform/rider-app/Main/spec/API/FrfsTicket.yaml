@@ -112,6 +112,7 @@ types:
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    description: Maybe Text
     createdAt: UTCTime
     derive: "Show"
 
@@ -175,6 +176,9 @@ types:
   AutocompleteRes:
     routes: [FRFSRouteAPI]
     stops: [FRFSStationAPI]
+
+  FRFSTicketVerifyReq:
+    qrData: Text
 
 apis:
   # GET metro/bus routes for the merchant city
@@ -284,6 +288,8 @@ apis:
       auth: TokenAuth
       query:
         vehicleType: VehicleCategory
+        limit: Int
+        offset: Int
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
 
@@ -323,6 +329,17 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSCancelStatus
 
+  # Booking Ticket QR Verification
+  - POST:
+      endpoint: /frfs/ticket/verify
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   # Get FRFS Config
   - GET:
