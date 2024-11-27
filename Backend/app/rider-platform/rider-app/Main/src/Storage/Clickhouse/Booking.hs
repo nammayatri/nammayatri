@@ -139,7 +139,7 @@ findAllCancelledBookingIdsByRiderAndMaxTime ::
 findAllCancelledBookingIdsByRiderAndMaxTime riderId createdAt = do
   res <-
     CH.findAll $
-      CH.select $
+      CH.select_ (\booking -> CH.notGrouped (booking.id, booking.createdAt)) $
         CH.filter_
           ( \booking _ ->
               booking.status CH.==. DB.CANCELLED
@@ -147,7 +147,7 @@ findAllCancelledBookingIdsByRiderAndMaxTime riderId createdAt = do
                 CH.&&. booking.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  let (ids, maxTime) = foldr (\b (accIds, maxT) -> (b.id : accIds, max maxT (b.createdAt))) ([], createdAt) res
+  let (ids, maxTime) = foldr (\(id, createdTS) (accIds, maxT) -> (id : accIds, max maxT createdTS)) ([], createdAt) res
   pure (ids, maxTime)
 
 findByRiderIdAndStatus ::
@@ -155,11 +155,11 @@ findByRiderIdAndStatus ::
   Id DP.Person ->
   DB.BookingStatus ->
   UTCTime ->
-  m [Booking]
+  m [UTCTime]
 findByRiderIdAndStatus riderId status createdAt = do
   res <-
     CH.findAll $
-      CH.select $
+      CH.select_ (\booking -> CH.notGrouped booking.createdAt) $
         CH.filter_
           ( \booking _ ->
               booking.status CH.==. status
