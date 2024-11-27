@@ -31,6 +31,8 @@ imports:
   TripCategory: Domain.Types.Trip
   MultiModalService: Kernel.External.MultiModal.Types
   GatewayAndRegistryService: Domain.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  Expand: Kernel.External.Payout.Interface.Types
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -583,6 +585,7 @@ PayoutConfig:
   tableName : payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
+    id: Id PayoutConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     timeDiff: NominalDiffTime
@@ -592,12 +595,31 @@ PayoutConfig:
     remark: Text
     orderType: Text
     payoutEntity: PayoutEntity
+    expand: Maybe Expand
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+    referralRewardAmountPerRide: HighPrecMoney
+    thresholdPayoutAmountPerPerson: HighPrecMoney
+    referredByRewardAmount: HighPrecMoney
+    maxPayoutReferralForADay: Int
   beamType:
     timeDiff: Seconds
+    referralRewardAmountPerRide: Maybe HighPrecMoney
+    thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
+    referredByRewardAmount: Maybe HighPrecMoney
+    maxPayoutReferralForADay: Maybe Int
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    referralRewardAmountPerRide: Just referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson: Just thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount: Just referredByRewardAmount|E
+    maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    referralRewardAmountPerRide: fromMaybe 0 referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson:  fromMaybe 0 thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
+    maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
+
   default:
     timeDiff: "86400"
     isPayoutEnabled: "False"
@@ -605,13 +627,18 @@ PayoutConfig:
     maxRetryCount: "5"
     remark: "'Cashback for metro ticket booking with NammaYatri'"
     orderType: "'FULFILL_ONLY'"
+    payoutEntity: "'PAYOUT_AWARD'"
   constraints:
-    merchantOperatingCityId: PrimaryKey
+    id: PrimaryKey
   queries:
     findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
+    findByCityIdAndVehicleCategoryAndIsPayoutEnabled:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleCategory, isPayoutEnabled]
 
   beamInstance:
     - MakeTableInstances
@@ -619,6 +646,5 @@ PayoutConfig:
 
   types:
     PayoutEntity:
-      enum: "METRO_TICKET_CASHBACK"
-
+      enum: "METRO_TICKET_CASHBACK,PAYOUT_AWARD"
 

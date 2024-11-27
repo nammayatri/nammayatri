@@ -226,6 +226,7 @@ parseRideCompletedEvent order msgId = do
       traveledDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
       endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
       tollConfidence :: Maybe Confidence = readMaybe . T.unpack =<< getTagV2' Tag.TOLL_CONFIDENCE_INFO Tag.TOLL_CONFIDENCE tagGroups
+      isValidRide :: Maybe Bool = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DETAILS_INFO Tag.IS_VALID_RIDE tagGroups
   fareBreakupsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   let fareBreakups = mapMaybe mkDFareBreakup fareBreakupsQuotationBreakup
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)

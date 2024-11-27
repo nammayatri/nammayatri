@@ -994,6 +994,35 @@ mkTollConfidenceTagGroupV2 tollConfidence' =
         }
     ]
 
+mkRideDetailsTagGroup :: Maybe Bool -> Maybe [Spec.TagGroup]
+mkRideDetailsTagGroup rideDetails' =
+  rideDetails' <&> \rideDetails ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDE_DETAILS_INFO,
+                  descriptorName = Just "Ride Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.IS_VALID_RIDE,
+                            descriptorName = Just "Is Valid Ride",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show rideDetails
+                  }
+              ]
+        }
+    ]
+
 mkVehicleAgeTagGroupV2 :: Maybe Months -> Maybe [Spec.TagGroup]
 mkVehicleAgeTagGroupV2 vehicleAge' =
   vehicleAge' <&> \vehicleAge ->
