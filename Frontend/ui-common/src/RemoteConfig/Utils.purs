@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -252,6 +252,49 @@ defaultSubscriptionsConfigVariantLevel =
   }
 
 
+defaultLottieSubscriptionInfo :: LottieSubscriptionInfo
+defaultLottieSubscriptionInfo = {
+  freeTrialLottie : defaultFreeTrialLottie,
+  introductoryLottie : defaultIntroductoryLottie,
+  subscriptionPlanLottie: defaultSubscriptionPlanLottie
+}
+
+defaultFreeTrialLottie :: LanguageKeyValue
+defaultFreeTrialLottie = {
+  english: "lottie/ny_ic_subscription_info_01.json",
+  hindi: "lottie/ny_ic_subscription_info_hindi_01.json",
+  kannada: "lottie/ny_ic_subscription_info_kannada_01.json",
+  tamil: "lottie/ny_ic_subscription_info_tamil_01.json",
+  bengali: "lottie/ny_ic_subscription_info_bengali_01.json",
+  telugu: "lottie/ny_ic_subscription_info_01.json",
+  malayalam: "lottie/ny_ic_subscription_info_malayalam_01.json",
+  default: "lottie/ny_ic_subscription_info_01.json"
+}
+
+defaultIntroductoryLottie :: LanguageKeyValue
+defaultIntroductoryLottie = {
+  english: "lottie/ny_sub_intro_english_jan1.json",
+  hindi: "lottie/ny_sub_intro_hindi_jan1.json",
+  kannada: "lottie/ny_sub_intro_kannada_jan1.json",
+  tamil: "lottie/ny_sub_intro_tamil_jan1.json",
+  bengali: "lottie/ny_ic_subscription_info_bengali_03_2.json",
+  telugu: "lottie/ny_sub_intro_telugu_jan1.json",
+  malayalam: "lottie/ny_sub_intro_malayalam_jan1.json",
+  default: "lottie/ny_sub_intro_english_jan1.json"
+}
+
+defaultSubscriptionPlanLottie :: LanguageKeyValue
+defaultSubscriptionPlanLottie = {
+  english: "lottie/ny_ic_subscription_info_02.json",
+  hindi: "lottie/ny_ic_subscription_info_hindi_02.json",
+  kannada: "lottie/ny_ic_subscription_info_kannada_02.json",
+  tamil: "lottie/ny_ic_subscription_info_tamil_02.json",
+  bengali: "lottie/ny_ic_subscription_info_bengali_02.json",
+  telugu: "lottie/ny_ic_subscription_info_02.json",
+  malayalam: "lottie/ny_ic_subscription_info_malayalam_02.json",
+  default: "lottie/ny_ic_subscription_info_02.json"
+}
+
 defaultSubscriptionsConfigVariantLevelEntity :: SubscriptionConfigVariantLevelEntity
 defaultSubscriptionsConfigVariantLevelEntity = 
   { 
@@ -265,7 +308,8 @@ defaultSubscriptionsConfigVariantLevelEntity =
     enableSubsV2 : Just false,
     duesConfig : Just defSubscriptionDues,
     freeTrialPopupDaysList : Just [3,2,1],
-    freeTrialPopupOnRidesList : Just [5,2]
+    freeTrialPopupOnRidesList : Just [5,2],
+    lottieSubscriptionInfo : Just defaultLottieSubscriptionInfo
   }
 
 subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity

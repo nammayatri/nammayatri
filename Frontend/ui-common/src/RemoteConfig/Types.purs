@@ -199,7 +199,25 @@ type SubscriptionConfigVariantLevelEntity = {
    enableSubsV2 :: Maybe Boolean,
    duesConfig :: Maybe RCSubscriptionDues,
    freeTrialPopupDaysList :: Maybe (Array Int),
-   freeTrialPopupOnRidesList :: Maybe (Array Int)
+   freeTrialPopupOnRidesList :: Maybe (Array Int),
+   lottieSubscriptionInfo :: Maybe LottieSubscriptionInfo
+}
+
+type LottieSubscriptionInfo = {
+  freeTrialLottie :: LanguageKeyValue,
+  introductoryLottie :: LanguageKeyValue,
+  subscriptionPlanLottie :: LanguageKeyValue
+}
+
+type LanguageKeyValue = {
+  english :: String,
+  hindi :: String,
+  kannada :: String,
+  tamil :: String,
+  bengali :: String,
+  telugu :: String,
+  malayalam :: String,
+  default :: String
 }
 
 type OfferBanner = {
