@@ -17,6 +17,7 @@ newtype Languages= Languages{
 , kannada :: Keymap
 , telugu :: Keymap
 , odia :: Keymap
+, portuguese :: Keymap
 }
 
 bengali :: Proxy "bengali"
@@ -42,6 +43,9 @@ english = a
 
 odia :: Proxy "odia"
 odia = a
+
+portuguese :: Proxy "portuguese"
+portuguese = a 
 
 newtype Keymap = Keymap {
   about :: String

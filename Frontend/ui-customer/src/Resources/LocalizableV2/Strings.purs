@@ -17,6 +17,7 @@ import Resources.LocalizableV2.TE
 import Resources.LocalizableV2.BN
 import Resources.LocalizableV2.EN
 import Resources.LocalizableV2.OD
+import Resources.LocalizableV2.PT 
 import Locale.Utils
 
 stringsMap :: Languages
@@ -30,6 +31,7 @@ stringsMap =
     , kannada: getKn
     , telugu: getTe
     , odia: getOd
+    , portuguese : getPt
     }
 
 infixl 1 readFromNT as @~
@@ -62,6 +64,7 @@ getStringV2 key =
       "TA_IN" -> stringsMap @~ tamil @~ key
       "TE_IN" -> stringsMap @~ telugu @~ key
       "OD_IN" -> stringsMap @~ odia @~ key
+      "PT_BR" -> stringsMap @~ portuguese @~ key
       _ -> stringsMap @~ english @~ key
 
 getString :: String -> STR -> String
@@ -77,6 +80,7 @@ getString language str =
       "TA_IN" -> stringsMap @~ tamil
       "TE_IN" -> stringsMap @~ telugu
       "OD_IN" -> stringsMap @~ odia
+      "PT_BR" -> stringsMap @~ portuguese
       _ -> stringsMap @~ english
   in
     proxy $ langMap

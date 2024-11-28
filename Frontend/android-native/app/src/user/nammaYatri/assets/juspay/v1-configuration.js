@@ -62,7 +62,7 @@ const nammaYatriConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "R$",
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY", "FIREBASE", "CLEVERTAP"],
     "primaryButtonCornerRadius": 8.0,
@@ -187,6 +187,10 @@ const nammaYatriConfig = function () {
       "name": "తెలుగు",
       "value": "TE_IN",
       "subTitle": "Telugu"
+    }, {
+      "name": "português",
+      "value": "PT-BR",
+      "subTitle": "Portuguese"
     }
     ],
     "bannerConfig": {
@@ -400,7 +404,7 @@ const odishaYatriConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "currency": "₹",
+    "currency": "R$",
     "alertDialogPrimaryColor": "#2194FF",
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,

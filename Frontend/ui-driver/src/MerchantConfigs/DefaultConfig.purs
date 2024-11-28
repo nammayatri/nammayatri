@@ -17,6 +17,11 @@ config =
       , { name: "हिंदी", value: "HI_IN", subtitle: "Hindi" }
       , { name: "தமிழ்", value: "TA_IN", subtitle: "Tamil" }
       , { name : "తెలుగు", value: "TE_IN", subtitle : "Telugu"}
+      , {
+        name: "português",
+        value: "PT-BR",
+        subtitle: "Portuguese"
+      }
       ]
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
