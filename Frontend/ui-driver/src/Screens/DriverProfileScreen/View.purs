@@ -114,7 +114,6 @@ screen initialState =
                         liftFlow $ push $ DriverSummary summaryResp
                         liftFlow $ push $ GetDriverInfoResponse profileResp
                       _, _ -> liftFlow $ push $ BackPressed
-                    getProfileData ProfileDataAPIResponseAction push initialState
                     EHU.toggleLoader false
                     pure unit
             pure $ pure unit
@@ -128,15 +127,6 @@ screen initialState =
           _ = spy "DriverProfileScreen state " state
         eval action state
   }
-
-getProfileData :: forall action. (DriverProfileDataRes -> action) -> (action -> Effect Unit) -> ST.DriverProfileScreenState -> Flow GlobalState Unit
-getProfileData action push state = do
-  driverProfileResp <- Remote.fetchDriverProfile false
-  case driverProfileResp of
-      Right resp -> do
-        liftFlow $ push $ action resp
-      Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-  pure unit
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -554,10 +544,10 @@ completedProfile state push =
       cornerRadius 50.0,
       background Color.blue900,
       padding $ Padding 12 2 12 2,
-      visibility $ boolToVisibility $ ((state.data.completingProfileRes.completed*100)/4) /= 100
+      visibility $ boolToVisibility $ ((state.data.profileCompletedModules*100)/4) /= 100
     ][
       textView
-      $ [ text $ show((state.data.completingProfileRes.completed*100)/4)<> "%"
+      $ [ text $ show((state.data.profileCompletedModules*100)/4)<> "%"
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , color Color.white900
@@ -570,7 +560,7 @@ completedProfile state push =
   , linearLayout[
       height WRAP_CONTENT,
       width MATCH_PARENT,
-      margin $ if ((state.data.completingProfileRes.completed*100)/4) /= 100 then Margin 0 7 0 12 else Margin 0 20 0 12,
+      margin $ if ((state.data.profileCompletedModules*100)/4) /= 100 then Margin 0 7 0 12 else Margin 0 20 0 12,
       onClick push $ const CompleteProfile,
       gravity CENTER
     ][
@@ -578,10 +568,10 @@ completedProfile state push =
         [ width $ V 11
         , height $ V 11
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_pen"
-        , visibility $ boolToVisibility $ ((state.data.completingProfileRes.completed*100)/4) /= 100
+        , visibility $ boolToVisibility $ ((state.data.profileCompletedModules*100)/4) /= 100
         ]
     , textView
-        $ [ text $ getString $ if ((state.data.completingProfileRes.completed*100)/4) == 100 then EDIT_PROFILE else COMPLETE_PROFILE
+        $ [ text $ getString $ if ((state.data.profileCompletedModules*100)/4) == 100 then EDIT_PROFILE else COMPLETE_PROFILE
             , width WRAP_CONTENT
             , height WRAP_CONTENT
             , color Color.blue900
@@ -784,7 +774,7 @@ tabImageView state push =
       "MALE" | vc == ST.TruckCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
-    per = (state.data.completingProfileRes.completed*100)/4
+    per = (state.data.profileCompletedModules*100)/4
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -800,44 +790,44 @@ tabImageView state push =
           ]
           $ relativeLayout[
               height $ V 98
-            , width $ V 108
+            , width $ V 100
             ][
               linearLayout[
                 height $ V 98,
-                width $ V 108,
+                width $ V 100,
                 orientation VERTICAL, 
                 visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS && per < 100
             ][
                 linearLayout[
                   height $ V 49,
-                  width $ V 108
+                  width $ V 100
                 ][
                   linearLayout[
                     height $ V 49,
-                    width $ V 54,
+                    width $ V 50,
                     background if per == 100 then Color.white900 else if per >= 50 then Color.blue900 else Color.white900,
                     cornerRadii $ Corners 100.0 true false false false
                   ][]
                 , linearLayout[
                     height $ V 49,
-                    width $ V 54,
+                    width $ V 50,
                     background if per == 100 then Color.white900 else if per >= 75 then Color.blue900 else Color.white900,
                     cornerRadii $ Corners 100.0 false true false false
                   ][]
                 ]
                 , linearLayout[
                   height $ V 49,
-                  width $ V 108
+                  width $ V 100
                 ][
                   linearLayout[
                     height $ V 49,
-                    width $ V 54,
+                    width $ V 50,
                     background if per == 100 then Color.white900 else if per >= 25 then Color.blue900 else Color.white900,
                     cornerRadii $ Corners 80.0 false false false true
                   ][]
                 , linearLayout[
                     height $ V 49,
-                    width $ V 54,
+                    width $ V 50,
                     background if per == 100 then Color.white900 else if per >= 100 then Color.blue900 else Color.white900,
                     cornerRadii $ Corners 80.0 false false true false
                   ][]
@@ -847,7 +837,7 @@ tabImageView state push =
               [ height $ V 88
               , width $ V 88
               , cornerRadius 44.0
-              , margin $ Margin 10 6 0 0
+              , margin $ Margin 6 6 0 0
               , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
               , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
               ]

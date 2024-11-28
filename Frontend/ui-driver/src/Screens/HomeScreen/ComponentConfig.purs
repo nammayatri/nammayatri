@@ -48,14 +48,13 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
+import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
@@ -83,11 +82,12 @@ import DecodeUtil (getAnyFromWindow)
 import Resource.Constants as RC
 import ConfigProvider 
 import Data.Int 
-import Styles.Types (Color(..))
+import Styles.Types (Color(..), FontStyle(..))
 import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
 import RemoteConfig.Utils
 import Debug
+import Components.PopUpModal.Controller as PopUpModal
 import Control.Apply as CA
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
@@ -1771,6 +1771,84 @@ type TopPillConfig = {
   textColor :: String,
   background :: String,
   icon :: Maybe String
+}
+
+completeYourProfileConfig :: ST.HomeScreenState -> PopUpModal.Config
+completeYourProfileConfig state = PopUpModal.config 
+  { 
+    cornerRadius = (Corners 24.0 true true false false),
+    dismissPopup = true,
+    margin = Margin 0 0 0 0,
+    padding = Padding 16 20 16 0,
+    primaryText = PopUpModal.config.primaryText{
+      text = getString COMPLETE_PROFILE_MSG,
+      color = Color.black900,
+      gravity = CENTER,
+      isClickable = false,
+      padding = (Padding 0 0 0 0),
+      margin = (Margin 5 0 5 24),
+      visibility = VISIBLE,
+      textStyle = Heading3,
+      accessibilityHint = ""
+    },
+    secondaryText = PopUpModal.config.secondaryText {
+      visibility = GONE
+    },
+    option2 = PopUpModal.config.option2 {
+      text = getString COMPLETE_PROFILE,
+      margin = Margin 0 0 0 0
+    },
+    option1 = PopUpModal.config.option2 {
+      visibility = false
+    }
+  }
+
+favPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
+favPopUpConfig state = 
+  PopUpModal.config 
+  { cornerRadius = (Corners 15.0 true true true true),
+    margin = Margin 16 0 16 0,
+    padding = Padding 16 20 16 0,
+    gravity = CENTER,
+    dismissPopup = true,
+    topTitle = PopUpModal.config.topTitle {
+      text = state.data.favPopUp.title
+    , visibility = VISIBLE
+    , width = MATCH_PARENT
+    , height = WRAP_CONTENT
+    , margin = Margin 10 0 10 0
+    , color = Color.black800
+    , gravity = CENTER
+    , textStyle = Heading3
+    },
+    coverImageConfig = PopUpModal.config.coverImageConfig{
+      visibility = VISIBLE
+    , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_person_with_heart"
+    , height = V 138
+    , width = V 142
+    , margin = MarginTop 20
+    },
+    primaryText = PopUpModal.config.primaryText{
+      text = state.data.favPopUp.message,
+      color = Color.black800,
+      gravity = CENTER,
+      isClickable = false,
+      padding = (Padding 0 0 0 0),
+      margin = (MarginBottom 20),
+      visibility = VISIBLE,
+      textStyle = Body1,
+      accessibilityHint = ""
+    },
+    secondaryText = PopUpModal.config.secondaryText{
+      visibility = GONE
+    },
+    option2 = PopUpModal.config.option2 {
+      text = getString GOT_IT,
+      margin = MarginLeft 12 
+    },
+    option1 = PopUpModal.config.option2 {
+      visibility = false
+    }
 }
 
 constructTopPillConfig :: Boolean -> Boolean -> TopPillConfig

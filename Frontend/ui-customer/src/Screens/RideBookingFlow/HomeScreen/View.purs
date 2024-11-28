@@ -334,7 +334,6 @@ screen initialState =
               PickUpFarFromCurrentLocation ->
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 when
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown

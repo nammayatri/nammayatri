@@ -162,6 +162,7 @@ data KeyStore = USER_NAME
                 | EVENT_STORAGE
                 | LAST_PLAYED_RIDE_ID 
                 | GO_TO_PLANS_PAGE
+                | LAST_EXECUTED_TIME
                 | SHOW_PARCEL_INTRODUCTION_POPUP
                 | METRO_STATIONS_LIST
 

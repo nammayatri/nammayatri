@@ -1396,6 +1396,8 @@ getProxy str =
     WAS_TOLL_EXP_SMOOTH -> \a -> a @~ was_toll_exp_smooth
     WAS_TOLL_EXP_SMOOTH_DESC -> \a -> a @~ was_toll_exp_smooth_desc
     WAS_DRIVER_HELPFUL -> \a -> a @~ was_driver_helpful
+    Demand_Extra_Toll_Amount -> \a -> a @~ demand_extra_toll_amount
+    Driver_Demand_Extra -> \a -> a @~ driver_demand_extra
     WAS_RIDE_SAFE_DESC -> \a -> a @~ was_ride_safe_desc
     WAS_RIDE_SAFE -> \a -> a @~ was_ride_safe
     WAS_DRIVER_HELPFUL_DESC -> \a -> a @~ was_driver_helpful_desc
@@ -1785,6 +1787,7 @@ getProxy str =
     CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
     TICKETS_FOR_DELHI_METRO -> \a -> a @~ tickets_for_delhi_metro
     MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3
+    COMPLETE_PROFILE -> \a -> a @~ complete_profile
     METRO_TICKETS -> \a -> a @~ metro_tickets
     OFFERS -> \a -> a @~ offers
     TICKETS_FOR_CHENNAI_BUS -> \a -> a @~ tickets_for_chennai_bus

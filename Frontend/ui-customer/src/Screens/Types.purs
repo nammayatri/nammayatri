@@ -564,6 +564,7 @@ type RiderRideCompletedScreenState =
   , driverInfoCardState :: DriverInfoCard
   , needHelpText :: String
   , recordedView :: Boolean
+  , rideId :: String
   , timerId :: String
   , timerValue :: String
   , countDownValue :: String
@@ -580,14 +581,15 @@ type RiderRideCompletedScreenState =
   , customerIssue :: CustomerIssueReportData
   , showSafetyCenter :: Boolean
   , isKeyBoardOpen :: Boolean
+  , goToLastBanner :: Boolean
   }
 
 type CustomerIssueReportData = {
   currentPageIndex :: Int
 , showIssueBanners :: Boolean
 , hasAccessibilityIssue :: Boolean
-, hasTollIssue :: Boolean
 , hasSafetyIssue :: Boolean
+, demandExtraTollAmountIssue :: Boolean
 , customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
 , respondedValidIssues :: Boolean
 , bannerComputedView :: Maybe ListItem

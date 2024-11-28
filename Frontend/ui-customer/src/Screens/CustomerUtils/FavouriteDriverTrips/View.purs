@@ -150,7 +150,7 @@ view push state =
                     ] [ imageView
                         [ imageWithFallback $ fetchImage FF_ASSET "ic_vehicle_side" 
                         , width $ V 35
-                        , visibility VISIBLE
+                        , visibility GONE
                         , height $ V 35
                         ]
                       , linearLayout

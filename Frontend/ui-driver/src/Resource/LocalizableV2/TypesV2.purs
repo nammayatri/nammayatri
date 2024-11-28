@@ -1636,6 +1636,7 @@ newtype Keymap
   , add_your_photos :: String
   , add_photo_caption :: String
   , complete_profile :: String
+  , complete_profile_msg :: String
   , edit_profile :: String
   , save :: String
   , manage_vehicle :: String
@@ -6644,6 +6645,9 @@ add_photo_caption = a
 
 complete_profile :: Proxy "complete_profile"
 complete_profile = a
+
+complete_profile_msg :: Proxy "complete_profile_msg"
+complete_profile_msg = a
 
 edit_profile :: Proxy "edit_profile"
 edit_profile = a

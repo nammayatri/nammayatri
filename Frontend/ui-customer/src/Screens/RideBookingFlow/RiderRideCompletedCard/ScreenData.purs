@@ -27,6 +27,7 @@ initData = let
       fareUpdatedVisiblity : false,
       infoPill : fareUpdatePill
     }
+  , rideId : ""
   , favDriverInfoCard : false
   , isFreeRide : false 
   , accessibility : ENABLE
@@ -62,19 +63,16 @@ initData = let
   , rideDuration : Just 0
   , additionalCharges : []
   , showSafetyCenter : false
+  , goToLastBanner : true
   , customerIssue : {
       currentPageIndex : 0
     , showIssueBanners : true
     , hasAccessibilityIssue : false
-    , hasTollIssue : false
     , hasSafetyIssue : false 
+    , demandExtraTollAmountIssue : false
     , bannerComputedView : Nothing   
     , customerResponse : [
       {
-        issueType : CT.TollCharge
-      , selectedYes : Nothing
-      }
-    , {
         issueType : CT.NightSafety
       , selectedYes : Nothing
       }
@@ -82,6 +80,10 @@ initData = let
         issueType : CT.Accessibility
       , selectedYes : Nothing
       }
+    , {
+        issueType : CT.DemandExtraTollAmount
+      , selectedYes : Just false
+    }
     , {
         issueType : CT.NoIssue
       , selectedYes : Nothing

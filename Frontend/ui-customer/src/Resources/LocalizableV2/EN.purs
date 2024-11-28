@@ -1301,6 +1301,8 @@ getEn = Keymap {
 , was_ride_safe: "Did you have a safe journey?"
 , was_ride_safe_desc: "Was your ride satisfactorily safe and\nworry-free?"
 , was_driver_helpful: "Did the driver offer assistance?"
+, driver_demand_extra: "Did driver demand extra for Toll ?"
+, demand_extra_toll_amount: "Did your driver ask extra charges for toll, in-spite of it being added in the fare?"
 , was_driver_helpful_desc: "Was your driver understanding\nof your needs?"
 , collect_toll_sep: "Please pay it separately to the driver <b>only if a toll was crossed</b>"
 , final_fare_excludes_toll: "Final fare excludes toll charges"
@@ -1683,6 +1685,7 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, complete_profile: "Complete Profile"
 , metro_tickets : "Metro Tickets"
 , offers : "Offers"
 , boost_search_instantly : "Boost your search instantly!"

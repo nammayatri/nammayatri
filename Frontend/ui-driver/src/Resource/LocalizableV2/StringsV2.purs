@@ -1697,6 +1697,7 @@ getProxy str = case str of
   ADD_YOUR_PHOTOS -> \a -> a @~ add_your_photos
   ADD_PHOTO_CAPTION -> \a -> a @~ add_photo_caption
   COMPLETE_PROFILE -> \a -> a @~ complete_profile
+  COMPLETE_PROFILE_MSG -> \a -> a @~ complete_profile_msg
   EDIT_PROFILE -> \a -> a @~ edit_profile
   SAVE -> \a -> a @~ save
   MANAGE_VEHICLE -> \a -> a @~ manage_vehicle

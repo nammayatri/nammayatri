@@ -57,7 +57,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap, markPerformance, splitString)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (loaderText, toggleLoader, showToast, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode, (?))
+import Engineering.Helpers.Utils (compareDate, loaderText, toggleLoader, showToast, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode, (?))
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
@@ -65,7 +65,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig)
 import JBridge as JB
-import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute, breakPrefixAndId, editPickupCircleConfig)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute, breakPrefixAndId, editPickupCircleConfig)
 import Language.Strings (getString)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon, transformGeoJsonFeature, getSpecialTag, getZoneType, transformHotSpotInfo, mapSpecialZoneGates)
 import Language.Types (STR(..)) as STR
@@ -690,7 +690,7 @@ hybridFlow flow = do
       homeScreenFlow
     "favourites" -> savedLocationFlow HomeScreenFlow
     "rideConfirmed" -> do
-      checkRideStatus true false
+      checkRideStatus true false 
       homeScreenFlow
     "rideCompleted" -> do
       checkRideStatus false false
@@ -758,9 +758,9 @@ riderRideCompletedScreenFlow = do
     GO_TO_HELP_AND_SUPPORTS -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { fromScreen = "RideCompleted" } })
       flowRouter HelpAndSupportScreenFlow
-    HOME_SCREENS -> do
+    HOME_SCREENS rideId -> do
       void $ lift $ lift $ fork $ Remote.notifyFlowEvent $ Remote.makeNotifyFlowEventReq "RATE_DRIVER_SKIPPED"
-      setValueToLocalStore RATING_SKIPPED "true"
+      setValueToLocalStore RATING_SKIPPED rideId
       (GlobalState state) <- getState
       when (isLocalStageOn FindingQuotes)
         $ do
@@ -772,8 +772,9 @@ riderRideCompletedScreenFlow = do
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData)
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
-      currentFlowStatus false
+      currentFlowStatus false    
     GOTO_NAMMASAFETY _ triggerSos showtestDrill -> do
       (GlobalState state) <- getState
       updateSafetyScreenState state.homeScreen SafetyScreenData.defaultTimerValue showtestDrill triggerSos
@@ -804,10 +805,17 @@ riderRideCompletedScreenFlow = do
             _ -> "Ride related"
 
         (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.rideRatingState.rideId  ""
-        let
-          getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
-          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+        getOptionsResp <- if (issueType == CTA.DemandExtraTollAmount) then do
+            let getOptionsRes' = DA.find(\(Option x) -> x.label == "TOLL_RELATED_ISSUES" )getOptionsRes.options
+            (GetOptionsRes getOptionsRes'') <- case getOptionsRes' of 
+              Just (Option resp) -> Remote.getOptionsBT language  categoryId resp.issueOptionId updatedState.rideRatingState.rideId  ""
+              Nothing -> pure (GetOptionsRes getOptionsRes)
+            pure getOptionsRes''
+          else pure getOptionsRes
+        let 
+          getOptionsRes'' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsResp.options
+          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsResp.messages
+          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsResp.messages
 
         modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData {
           data {
@@ -824,11 +832,11 @@ riderRideCompletedScreenFlow = do
             , categoryType : "Category"
             , allowedRideStatuses : Nothing
           }
-          , options = getOptionsRes'
+          , options = getOptionsRes''
           , chatConfig {
               messages = messages'
             }
-          , selectedRide = Nothing
+          , selectedRide = Nothing 
           }
         })
         void $ pure $ toggleBtnLoader "" false
@@ -868,6 +876,7 @@ riderRideCompletedScreenFlow = do
       if (getSearchType unit) == "direct_search" then do
         void $ updateLocalStage SearchLocationModel
         checkAndUpdateLocations
+        modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = HomeScreen } })
         searchLocationFlow
       else
@@ -877,6 +886,7 @@ riderRideCompletedScreenFlow = do
         pure unit
       else
         pure unit
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData)
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
 
@@ -1060,7 +1070,6 @@ currentFlowStatus prioritizeRating = do
 
         secondsLeft = findingQuotesSearchExpired driverOfferedQuote true true
       if secondsLeft > 0 then do
-        setValueToLocalStore RATING_SKIPPED "true"
         let
           stage = if isLocalStageOn ReAllocated then ReAllocated else FindingQuotes
         updateLocalStage stage
@@ -2908,11 +2917,11 @@ findEstimates updatedState = do
       , isTripSchedulable = false
       }
       , data {
-         tripEstDuration = routeObj.estDuration
+        tripEstDuration = routeObj.estDuration
       , tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
-                      tripPickupData = Just HomeScreenData.dummyTripTypeData{
-                        tripDateReadableString = convertUTCtoISC currentUTC "D MMM, h:mm A" }
-                    }
+                tripPickupData = Just HomeScreenData.dummyTripTypeData{
+                tripDateReadableString = convertUTCtoISC currentUTC "D MMM, h:mm A" }
+              }
             }
       }
     )
@@ -7083,9 +7092,10 @@ fcmHandler notification state notificationBody= do
                                     safetyCheckEndTime = fromMaybe 0 settings.safetyCheckEndTime
                                 settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime settings.enablePostRideSafetyCheck
                               Nothing -> false
-          hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
-          finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+          finalFareHasToll = DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
           estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
+          hasTollIssue' = finalFareHasToll && not isBlindPerson
+          demandExtraTollAmountIssue' = estimateFareHasToll && (not finalFareHasToll)
           parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
 
         updateScheduledRides true true
@@ -7120,7 +7130,7 @@ fcmHandler notification state notificationBody= do
                         , hasSafetyIssue = hasSafetyIssue'
                         , hasTollIssue = hasTollIssue'
                         , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
-                        }
+                          }
                         }
                        , toll {
                           confidence = ride.tollConfidence
@@ -7158,6 +7168,7 @@ fcmHandler notification state notificationBody= do
                           isAlreadyFav = state.data.driverInfoCardState.isAlreadyFav,
                           favCount = state.data.driverInfoCardState.favCount
                         }
+                    , rideId = ride.id
                     , rideDuration = resp.duration
                     , rentalRowDetails
                       { rideTime = getString LT.RIDE_TIME
@@ -7215,10 +7226,10 @@ fcmHandler notification state notificationBody= do
                         }
                       ]
                     , customerIssue = riderRideCompletedScreen.customerIssue
-                        { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || demandExtraTollAmountIssue'
                         , hasAccessibilityIssue = hasAccessibilityIssue'
                         , hasSafetyIssue = hasSafetyIssue'
-                        , hasTollIssue = hasTollIssue'
+                        , demandExtraTollAmountIssue = demandExtraTollAmountIssue'
                         }
                     , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                   }

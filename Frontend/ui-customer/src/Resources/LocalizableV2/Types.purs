@@ -379,6 +379,7 @@ newtype Keymap = Keymap {
 , select_on_map :: String
 , select_your_drop :: String
 , select_your_gender :: String
+, complete_profile :: String
 , send_email :: String
 , service_charges :: String
 , set_location_on_map :: String
@@ -1332,6 +1333,8 @@ newtype Keymap = Keymap {
 , was_toll_exp_smooth :: String
 , was_toll_exp_smooth_desc :: String
 , was_driver_helpful :: String
+, driver_demand_extra :: String
+, demand_extra_toll_amount :: String
 , was_ride_safe_desc :: String
 , was_ride_safe :: String
 , was_driver_helpful_desc :: String
@@ -5629,6 +5632,12 @@ was_toll_exp_smooth_desc = a
 was_driver_helpful :: Proxy "was_driver_helpful"
 was_driver_helpful = a
 
+driver_demand_extra :: Proxy "driver_demand_extra"
+driver_demand_extra = a
+
+demand_extra_toll_amount :: Proxy "demand_extra_toll_amount"
+demand_extra_toll_amount = a
+
 was_ride_safe_desc :: Proxy "was_ride_safe_desc"
 was_ride_safe_desc = a
 
@@ -6795,6 +6804,9 @@ tickets_for_delhi_metro = a
 
 max_parcel_size :: Proxy "max_parcel_size"
 max_parcel_size = a
+
+complete_profile :: Proxy "complete_profile"
+complete_profile = a
 
 metro_tickets :: Proxy "metro_tickets"
 metro_tickets = a

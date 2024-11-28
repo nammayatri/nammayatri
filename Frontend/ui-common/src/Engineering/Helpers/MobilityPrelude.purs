@@ -26,6 +26,7 @@ import Data.Int (pow)
 import Data.Function.Uncurried (Fn3(..), runFn3)
 import Data.String as DS
 import Effect (Effect)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 
 foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
@@ -55,6 +56,9 @@ boolToInvisibility false = PD.INVISIBLE
 
 toggleVisibility :: PD.Visibility -> PD.Visibility
 toggleVisibility visibility = if visibility == PD.VISIBLE then PD.GONE else PD.VISIBLE
+
+reverseString :: String -> String
+reverseString = fromCharArray <<< DA.reverse <<< toCharArray
 
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 

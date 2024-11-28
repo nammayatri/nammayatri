@@ -5,7 +5,7 @@ import Prelude (void, class Show, discard, pure, unit, bind, ($), not, (+), (-),
 import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
-import Helpers.Utils (compareDate, getCurrentDate, generateQR)
+import Helpers.Utils (getCurrentDate, generateQR)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.GenericHeader as GenericHeader
@@ -15,6 +15,7 @@ import Debug (spy)
 import Data.Array (length, (!!), catMaybes)
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
+import Engineering.Helpers.Utils(compareDate)
 import JBridge (shareImageMessage, copyToClipboard)
 import Common.Types.App as Common
 import Language.Strings (getString)

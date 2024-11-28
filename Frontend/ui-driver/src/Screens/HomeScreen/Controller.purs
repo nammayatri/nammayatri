@@ -135,7 +135,11 @@ import Data.Tuple(Tuple(..))
 import Data.String (Pattern(..), contains)
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Components.PrimaryButton as PrimaryButton
+import Services.API (DriverProfileDataRes(..))
+import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
+import Mobility.Prelude (boolToInt)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -148,7 +152,7 @@ instance loggableAction :: Loggable Action where
     --   trackAppBackPress appId (getScreen HOME_SCREEN)
     --   trackAppEndScreen appId (getScreen HOME_SCREEN)
     -- ScreenClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "screen_click"
-    -- Notification _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "notification_page"
+    -- Notification _ _ -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "notification_page"
     -- ChangeStatus status -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "change_status"
     -- GoOffline status -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "go_offline"
     -- CancelGoOffline -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancell_go_offline"
@@ -283,7 +287,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus
                     | UpdatedState ST.HomeScreenState
                     | UpdateRoute ST.HomeScreenState
-                    | FcmNotification String ST.HomeScreenState
+                    | FcmNotification String ST.NotificationBody ST.HomeScreenState
                     | NotifyDriverArrived ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
                     | GoToNotifications ST.HomeScreenState
@@ -300,6 +304,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ClearPendingDues ST.HomeScreenState
                     | EnableGoto ST.HomeScreenState String
                     | LoadGotoLocations ST.HomeScreenState
+                    | GoToCompleteProfile ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
@@ -329,7 +334,7 @@ data Action = NoAction
             | BackPressed
             | ScreenClick
             | BookingOptions
-            | Notification String
+            | Notification String ST.NotificationBody
             | ChangeStatus Boolean
             | GoOffline Boolean
             | CancelGoOffline
@@ -471,11 +476,17 @@ data Action = NoAction
             | HomeScreenBannerCountDownTimer Int String String
             | OnRideBannerCountDownTimer Int String String
             | GetRideCount Int
+            | FavouritePopUpAction DropDownCard.Action
             | CloseDeliveryCallPopup
             | DeliveryCall ST.DeliverCallType
             | NotifyReachedDestination
             | UpdateRetryRideList Boolean
             | OnRideAssignedAudioCompleted String
+            | ProfileDataAPIResponseAction DriverProfileDataRes
+            | DropDownCardAC DropDownCard.Action
+            | UpdateLastExecutedTime
+            | FavPopUpAction PopUpModal.Action
+            | CompleteProfileAction PopUpModal.Action
             | ParcelIntroductionPopup PopUpModal.Action
             | ToggleMetroWarriors
             | ClickMetroWarriors
@@ -491,6 +502,20 @@ uploadFileConfig = Common.UploadFileConfig {
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
+eval (CompleteProfileAction (PopUpModal.OnButton2Click) ) state = do
+  let currentTime = HU.getCurrentUTC ""
+  void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
+  exit $ GoToCompleteProfile state
+
+eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
+  let currentTime = HU.getCurrentUTC ""
+  void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
+  continue state
+
+eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
+
+eval (FavPopUpAction PopUpModal.DismissPopup) state = continue state{data{favPopUp{visibility = false, title = "", message = ""}}}
+
 eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
   pure $ toggleBtnLoader "GotoClick" false
   if state.data.driverGotoState.isGotoEnabled then continue state { data { driverGotoState { confirmGotoCancel = true } }} 
@@ -498,6 +523,11 @@ eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
   else do
     pure $ toggleBtnLoader "GotoClick" true
     updateAndExit state{ data { driverGotoState { savedLocationsArray = []}}} $ LoadGotoLocations state{ data { driverGotoState { savedLocationsArray = []}}}
+
+eval (ProfileDataAPIResponseAction res) state = do 
+  let DriverProfileDataRes resp = res 
+  continue state{data{completingProfileRes{
+    completed = getValueBtwRange ((boolToInt $ not Array.null resp.pledges) + (boolToInt $ not Array.null resp.aspirations) + (boolToInt $ not isNothing resp.drivingSince) + (boolToInt $ not isNothing resp.hometown) + (boolToInt $ not Array.null resp.vehicleTags) + (boolToInt $ not Array.null resp.otherImageIds)) 0 6 0 4}}}
 
 eval ClickInfo state = continue state {data { driverGotoState {goToInfo = true}}}
 
@@ -718,7 +748,7 @@ eval (KeyboardCallback keyBoardState) state = do
   else
     continue state
 
-eval (Notification notificationType) state = do
+eval (Notification notificationType notificationBody) state = do
   _ <- pure $ printLog "notificationType" notificationType
   if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
     let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag, safetyAudioAutoPlay = false}}
@@ -726,8 +756,8 @@ eval (Notification notificationType) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
-  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
-    exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER]) then do
+    exit $ FcmNotification notificationType notificationBody state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
     let city = getValueToLocalStore DRIVER_LOCATION
         metroRideCoinConfig = RC.getMetroCoinsEvent city

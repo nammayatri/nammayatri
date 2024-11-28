@@ -129,6 +129,10 @@ type EventsConfig = {
   loggingIntervalInMs :: Number
 }
 
+type ProfileCompletionReminder = {
+  reminderDuration :: Int
+}
+
 type RideAssignedAudioConfig = {
   rideShare :: Maybe String 
 , intercity :: Maybe String

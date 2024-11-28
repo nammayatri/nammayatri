@@ -39,7 +39,7 @@ import Font.Size as FontSize
 import PrestoDOM.Properties (lineHeight, cornerRadii, ellipsize)
 import Font.Style (bold, semiBold, regular)
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
+import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight, textFromHtml)
 import Language.Types (STR(..))
 import Common.Resources.Constants (secondsInOneYear)
 import Data.Function.Uncurried (runFn2)
@@ -165,13 +165,12 @@ sfl height' radius' =
     ][]
   ]
 
-
 back :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 back push state =
     imageView [
       width $ V 22
     , height $ V 22
-    , margin $ Margin 15 20 0 12
+    , margin $ if DA.null state.data.displayImages then Margin 15 20 0 0 else  Margin 15 20 0 12
     , onClick push $ const GoBack
     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_bold"
     ]
@@ -190,13 +189,19 @@ driverProfile push state =
         , height $ V $ hgt
         , id $ getNewIDWithTag "add_image_component_images"
         ][]
-    ,   imageView [
-          width $ V $ 78
-        , height $ V $ 78
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
-        , visibility $ boolToVisibility $ DA.length state.data.displayImages == 0
-        , background Color.white900
-        , margin $ Margin 16 6 0 0
+    ,   linearLayout[
+            height WRAP_CONTENT,
+            width MATCH_PARENT,
+            gravity CENTER
+        ][
+            imageView [
+                width $ V $ 88
+                , height $ V $ 88
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+                , visibility $ boolToVisibility $ DA.null state.data.displayImages
+                , background Color.white900
+                , margin $ MarginLeft 16
+            ]
         ]
     ,   linearLayout[
             width MATCH_PARENT
@@ -235,7 +240,7 @@ driverProfileData push state =
         wid = screenWidth unit
         hgt = if DA.length state.data.displayImages > 0 then ((screenWidth unit)*4)/5 else ((screenWidth unit)*165)/373
         colour = if DA.length state.data.displayImages > 0 then Color.white900 else Color.black900
-        mrg = if DA.length state.data.displayImages > 0 then 0 else 10
+        mrg = if DA.length state.data.displayImages > 0 then 0 else 16
     in 
     linearLayout[
             width $ V $ wid
@@ -250,6 +255,7 @@ driverProfileData push state =
             , width MATCH_PARENT
             , padding $ Padding 15 0 0 15
             , orientation VERTICAL
+            , gravity $ if DA.null state.data.displayImages then CENTER else LEFT
             ][
                 textView $ 
                 [ width WRAP_CONTENT
@@ -495,6 +501,11 @@ driverStats push state =
 driverInfoCard :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 driverInfoCard push state =
     let drivingYears = (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") state.data.onboardedAt)
+        textForLanguages = "🌏     " <> getString I_SPEAK <> " " <> joinWith "" (DA.mapWithIndex(\index item -> do
+            if index == 0 then "<b>" <> item <> "</b>" 
+            else if index /= 0 && index /= (DA.length state.data.languages) - 1 then ", " <> "<b>" <> item <> "</b>"
+            else getString AND <> "<b>" <> item <> "</b>"
+            )state.data.languages)
     in
     linearLayout[
         height WRAP_CONTENT
@@ -520,9 +531,7 @@ driverInfoCard push state =
             textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ "🌏    " <> getString I_SPEAK <> " " <> joinWith "" (DA.mapWithIndex(\index item -> do
-                if index == 0 then item else if index /= 0 && index /= (DA.length state.data.languages) - 1 then ", " <> item else getString AND <> item
-                )state.data.languages)
+            , textFromHtml $ textForLanguages
             , color Color.black700
             ] <> FontStyle.body1 CT.TypoGraphy
         ]

@@ -100,31 +100,10 @@ initData =
     cancellationWindow : Nothing,
     missedEarnings : 0,
     driverInfoResponse : Nothing,
-    completingProfileRes : {
-      completed : 0
-    , pledge : []
-    , vehicalOffer : []
-    , languages : []
-    , aspirations : [] 
-    , homeTown : Nothing
-    , calendarState:
-      { calendarPopup: false
-      , endDate: Nothing
-      , selectedTimeSpan: dummyDateItem
-      , startDate: Just dummyDateItem
-      , weeks: []
-      }
-    , drivingSince : Nothing
-    , addImagesState: addImagesState'
-    , viewImageState: { image : "", imageName : Nothing}
-    , uploadedImagesIds: []
-    , addedImages: []
-    , datePickerState : datePickerState'
-    , inputTextState : inputTextState'
-      }
-    , driverBlocked : false
-    , blockedExpiryTime : ""
-    , favCount : Nothing
+    profileCompletedModules : 0,
+    driverBlocked : false,
+    blockedExpiryTime : "",
+    favCount : Nothing
     },
 
   props: {
@@ -191,9 +170,6 @@ addImagesState' = {
   isLoading: false,
   imageMediaIds: []
 }
-
-dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
-
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =

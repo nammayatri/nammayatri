@@ -1616,6 +1616,7 @@ getEn =
     , add_your_photos: "Add Your Photos"
     , add_photo_caption: "You can add your photos along with your family to show it to our customers! Be mindful of what you add."
     , complete_profile: "Complete Profile"
+    , complete_profile_msg: "Complete your profile so customers can learn more about you!"
     , edit_profile: "Edit Profile"
     , save: "Save"
     , additional_charges_will_be_applicable: "Additional charges may be applicable when driver is near pickup location.        "

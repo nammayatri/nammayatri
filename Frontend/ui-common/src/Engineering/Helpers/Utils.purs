@@ -160,6 +160,8 @@ mobileNumberMaxLength countryShortCode = case countryShortCode of
 -- Local Storage Utils
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
 
+foreign import compareDate :: EffectFn2 String String Boolean
+
 foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 
 saveToLocalStore' :: String -> String -> EffectFnAff Unit

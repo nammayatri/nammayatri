@@ -52,8 +52,8 @@ import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
 import Data.String (length, null) as STR
 import Data.String as DS
-import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
+import Data.String.CodeUnits (fromCharArray, toCharArray, splitAt)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
@@ -2475,8 +2475,9 @@ homeScreenFlow = do
   case action of             
     GO_TO_PROFILE_SCREEN updatedState -> do 
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
       driverProfileFlow
+    GO_TO_COMPLETE_PROFILE_SCREEN -> driverCompleteProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
       driverProfileFlow
@@ -2772,7 +2773,7 @@ homeScreenFlow = do
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       removeChatService ""
       homeScreenFlow
-    FCM_NOTIFICATION notificationType state -> do
+    FCM_NOTIFICATION notificationType state notificationBody -> do
       if (notificationType /= "EDIT_LOCATION") then void $ pure $ removeAllPolylines "" else pure unit
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
       case notificationType of
@@ -2813,6 +2814,9 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
             baseAppFlow false Nothing Nothing
           else pure unit
+        "USER_FAVOURITE_DRIVER" -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
+          homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
