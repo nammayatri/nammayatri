@@ -102,7 +102,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     when (not booking.isScheduled) $ do
       whenJust (booking.toLocation) $ \toLoc -> do
         QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
-      QDI.updateOnRide True (cast driver.id)
+      QDI.updateOnRideAndTripEndLocationByDriverId (cast driver.id) False Nothing
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
