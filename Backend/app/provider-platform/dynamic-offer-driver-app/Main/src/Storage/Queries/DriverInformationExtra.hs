@@ -350,3 +350,15 @@ updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLoca
            ]
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
+updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRide onRide]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
