@@ -21,7 +21,6 @@ apis:
         rideShortId: ShortId Ride
         customerPhoneNo: Text
         driverPhoneNo: Text
-        fareDiff: HighPrecMoney
         currency: Currency
         from: UTCTime
         to: UTCTime

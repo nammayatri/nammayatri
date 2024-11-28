@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -110,5 +111,7 @@ data PayoutFlagReason
   | MultipleDeviceIdExists
   | RideConstraintInvalid
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance CH.ClickhouseValue PayoutFlagReason
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFlagReason)
