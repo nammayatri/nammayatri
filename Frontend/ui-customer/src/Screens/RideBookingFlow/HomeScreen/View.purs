@@ -720,6 +720,7 @@ scheduledRideExistsPopUpView push state =
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let 
   viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
+  enableBusBooking = state.data.config.feature.enableBusBooking -- && isJust (Arr.find (\service -> service.type == RemoteConfig.BUS) (nammaServices FunctionCall))
   in
   linearLayout
     [ height MATCH_PARENT
@@ -756,9 +757,11 @@ bottomNavBarView push state = let
                     ] <> FontStyle.body9 TypoGraphy
 
               ]
-            ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
-                , {text : "Bus" , image : "ny_ic_bus_black", id : BUS_}
-                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
+            ) ([{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
+                <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
+                <> [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]
+              )
+            )
     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 

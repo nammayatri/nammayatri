@@ -96,7 +96,7 @@ screen initialState =
     if city == ST.Chennai then
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     else
-      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 10 4000.0 initialState push MetroPaymentStatusAction
+      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 40 1000.0 initialState push MetroPaymentStatusAction
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 -- Spy is required to debug the flow
@@ -429,7 +429,7 @@ paymentStatusHeader state push paymentStatus =
       ]
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 17 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 10 CENTER NoAction
-      , copyTransactionView
+      -- , copyTransactionView TODO : no need to show booking id for now
       , refreshStatusBtn
     ]
 

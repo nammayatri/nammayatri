@@ -389,7 +389,8 @@ window.getMerchantConfig = function () {
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : false,
       "enableHelpAndSupport" : true,
-      "enableEditDestination" : true
+      "enableEditDestination" : true,
+      "enableBusBooking" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,

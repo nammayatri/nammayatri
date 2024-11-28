@@ -3567,17 +3567,17 @@ instance encodeGetMetroBookingStatusResp  :: Encode GetMetroBookingStatusResp wh
 
  --------------------------------------------------- getMetroBookingList ----------------------------------------------------
 
-data GetMetroBookingListReq = GetMetroBookingListReq String
+data GetMetroBookingListReq = GetMetroBookingListReq String (Maybe String) (Maybe String)
 
 newtype GetMetroBookingListResp = GetMetroBookingListResp (Array FRFSTicketBookingStatusAPIRes)
 
 instance makeGetMetroBookingListReq :: RestEndpoint GetMetroBookingListReq  where
-    makeRequest reqBody@(GetMetroBookingListReq vehicleType)headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingList vehicleType) headers reqBody Nothing
+    makeRequest reqBody@(GetMetroBookingListReq vehicleType limit offset)headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingList vehicleType limit offset) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetMetroBookingListReq :: Generic GetMetroBookingListReq _
 instance showGetMetroBookingListReq     :: Show GetMetroBookingListReq where show     = genericShow
-instance standardGetMetroBookingListReq :: StandardEncode GetMetroBookingListReq where standardEncode (GetMetroBookingListReq _ ) = standardEncode {}
+instance standardGetMetroBookingListReq :: StandardEncode GetMetroBookingListReq where standardEncode (GetMetroBookingListReq _ _ _) = standardEncode {}
 instance decodeGetMetroBookingListReq   :: Decode GetMetroBookingListReq where decode = defaultDecode
 instance encodeGetMetroBookingListReq   :: Encode GetMetroBookingListReq where encode = defaultEncode
 

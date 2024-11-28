@@ -78,7 +78,7 @@ busTicketBookingScreen initialState =
     getTicketBookingListEvent push =
       if (isNothing initialState.data.ticketDetailsState) then do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType)
+          (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
           lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
         pure $ pure unit
       else pure $ pure unit
