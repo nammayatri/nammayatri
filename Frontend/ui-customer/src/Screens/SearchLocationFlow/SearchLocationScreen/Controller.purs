@@ -253,7 +253,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusSearchSelectionAction then do
-          if( DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList /= 0) || (DA.length validDecodedRoutes /= 0 && DA.length validDecodedStops /= 0) then do
+          if( DA.length state.data.routeSearchedList /= 0 || DA.length state.data.stopsSearchedList /= 0) || (DA.length validDecodedRoutes /= 0 || DA.length validDecodedStops /= 0) then do
               if state.data.rideType == ROUTES then do 
                   let busRouteSelected = item.tagName
                       busRouteName = item.title
