@@ -441,10 +441,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     fork "DriverRideCompletedCoin Event : " $ do
       expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
       let validRideTaken = isValidRide updRide
-          metroRide = checkSplLocation booking.specialLocationTag "SureMetro" || checkSplLocation booking.specialLocationTag "SureWarriorMetro"
+          metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
+      logDebug $ "MetroRideType : " <> show metroRideType
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRide) (Just ride.id.getId) ride.vehicleVariant
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
@@ -479,15 +480,26 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             _ -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
 
-checkSplLocation :: Maybe Text -> Text -> Bool
-checkSplLocation mbSplLocTag splLocation = do
+determineMetroRideType :: Maybe Text -> Text -> Text -> DCT.MetroRideType
+determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
   case mbSplLocTag of
     Just splLocTag ->
-      let tagArr = Text.splitOn "_" splLocTag
-          sourceTag = tagArr BODUC.!? 0
-          destTag = tagArr BODUC.!? 1
-       in (sourceTag == Just splLocation || destTag == Just splLocation)
-    Nothing -> False
+      case (fromMetro, toMetro, priorityTag) of
+        (True, True, Just "PriorityPickup") -> DCT.FromMetro
+        (True, True, Just "PriorityDrop") -> DCT.ToMetro
+        (True, _, Just "PriorityPickup") -> DCT.FromMetro
+        (_, True, Just "PriorityDrop") -> DCT.ToMetro
+        (True, _, _) -> DCT.FromMetro
+        (_, True, _) -> DCT.ToMetro
+        _ -> DCT.None
+      where
+        tagArr = Text.splitOn "_" splLocTag
+        sourceTag = tagArr BODUC.!? 0
+        destTag = tagArr BODUC.!? 1
+        priorityTag = tagArr BODUC.!? 2
+        fromMetro = sourceTag == Just sureMetro || sourceTag == Just sureWarriorMetro
+        toMetro = destTag == Just sureMetro || destTag == Just sureWarriorMetro
+    Nothing -> DCT.None
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
