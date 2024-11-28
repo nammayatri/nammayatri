@@ -84,7 +84,7 @@ public class PaymentGateway extends AppCompatActivity {
             JSONObject paymentDetails = new JSONObject();
             paymentDetails.put("payeeName", "Neha Jain");
             paymentDetails.put("txnAmount", mainActivityContext.bbpsBillDetail.getJSONObject("billdetails").getString("txnAmount"));
-            paymentDetails.put("txnRefId", mainActivityContext.bbpsBillDetail);
+            paymentDetails.put("txnRefId", mainActivityContext.lastTxnRefId);
             paymentDetails.put("paymentMode", "Debit_Card");
             paymentDetails.put("couCustConvFee", "10");
 
