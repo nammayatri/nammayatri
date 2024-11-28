@@ -1,4 +1,9 @@
 {
+  nixConfig = {
+    # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
+    max-call-depth = "1000000";
+  };
+
   inputs = {
     common.url = "github:nammayatri/common";
     nixpkgs.follows = "common/nixpkgs";
