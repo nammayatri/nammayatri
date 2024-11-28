@@ -51,7 +51,6 @@ getRideList ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
-  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->

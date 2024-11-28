@@ -24,6 +24,7 @@ import Data.Aeson
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data VehicleVariant
@@ -48,6 +49,8 @@ data VehicleVariant
   | BUS_NON_AC
   | BUS_AC
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+
+instance CH.ClickhouseValue VehicleVariant
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
 
