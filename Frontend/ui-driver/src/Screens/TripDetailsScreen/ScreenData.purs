@@ -53,7 +53,8 @@ initData = {
       acRide : Nothing,
       vehicleServiceTier : "",
       tripType : ST.Rental,
-      parkingCharge : 0.0
+      parkingCharge : 0.0,
+      stops : []
   },
   props: {
     rating : 4,

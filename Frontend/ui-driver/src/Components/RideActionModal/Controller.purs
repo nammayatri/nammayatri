@@ -27,6 +27,13 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe 
+import Services.API as API 
+import Components.PrimaryButton as PB
+import PrestoDOM (Margin(..))
+import Styles.Colors as Color
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Debug
 
 data Action = StartRide 
             | EndRide 
@@ -44,6 +51,8 @@ data Action = StartRide
             | ArrivedAtStop
             | GetFare
             | MoreDetails
+            | StopActionButton PB.Action
+            | ShowEndRideWithStops
 
 type Config = { 
   startRideActive :: Boolean,
@@ -91,7 +100,8 @@ type Config = {
   isDelivery :: Boolean,
   delivery :: Mb.Maybe DeliveryDetails,
   isSourceDetailsExpanded :: Boolean,
-  isDestinationDetailsExpanded :: Boolean
+  isDestinationDetailsExpanded :: Boolean,
+  stops :: Array API.Stop
 }
 
 type DeliveryDetails = {
@@ -170,5 +180,19 @@ config = {
   isDelivery : false,
   delivery : Nothing,
   isSourceDetailsExpanded : false,
-  isDestinationDetailsExpanded : false
+  isDestinationDetailsExpanded : false,
+  stops : []
 }
+
+stopActionButtonConfig :: Config -> PB.Config
+stopActionButtonConfig state = do 
+  let stopToDepart = HU.getStopToDepart state.stops
+      text' = getString if isJust stopToDepart then RESUME_RIDE else ARRIVED_AT_STOP
+      bgColor = if isJust stopToDepart then Color.green900 else Color.black700
+  PB.config {
+    textConfig { text = text', color = Color.white900 }
+    , margin = Margin 16 0 16 8
+    , background = bgColor
+    , id = "StopActionButton"
+    , enableRipple = true
+  }

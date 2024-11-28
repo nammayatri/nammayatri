@@ -20,7 +20,7 @@ import Data.Maybe
 import Screens.RideSelectionScreen.ScreenData
 
 import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber, _vehicleVariant, _stopLocation)
-import Common.Types.App (LazyCheck(..), CategoryListType(..))
+import Common.Types.App (LazyCheck(..), CategoryListType(..), City(..))
 import Common.Types.App as CTP
 import Data.Array (filter, null, (!!), any, elem, mapMaybe)
 import Data.Function.Uncurried (runFn2)
@@ -28,9 +28,9 @@ import Data.Lens ((^.))
 import Data.Ord (abs)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC, os, getCurrentUTC)
-import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Engineering.Helpers.Utils (getFixedTwoDecimals, getCityFromString, isAmbulance)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCityConfig,fetchVehicleVariant)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getVehicleVariantImage, getCityConfig,fetchVehicleVariant)
 import JBridge (differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getVarString)
 import Language.Types (STR(..))
@@ -41,7 +41,7 @@ import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter)
 import Resources.LocalizableV2.Strings (getEN)
 import Language.Strings (getString, getVarString)
-import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), VehicleViewType(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
@@ -53,7 +53,7 @@ import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
-import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), VehicleViewType(..))
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -143,7 +143,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
                     autoWaitingCharges
                 else if any (_ == rideDetails.vehicleVariant) ["BIKE", "DELIVERY_BIKE"] then
                     bikeWaitingCharges
-                else if HU.isAmbulance rideDetails.vehicleVariant then
+                else if isAmbulance rideDetails.vehicleVariant then
                     ambulanceWaitingCharges
                 else 
                     cabsWaitingCharges

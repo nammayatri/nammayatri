@@ -18,7 +18,8 @@ module Components.QuoteListItem.Controller where
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import ConfigProvider
-import Screens.Types (City(..), QuoteListItemState(..))
+import Screens.Types (QuoteListItemState(..))
+import Common.Types.App  (City(..))
 
 data Action = Click QuoteListItemState
               | NoAction 

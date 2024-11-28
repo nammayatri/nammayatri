@@ -18,7 +18,7 @@ import Accessor (_lat, _lon)
 import Animation
 import Animation.Config
 import Common.Resources.Constants (pickupZoomLevel, zoomLevel, chatService)
-import Common.Types.App (LazyCheck(..), Paths)
+import Common.Types.App (LazyCheck(..), Paths, City(..))
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
 import Constants.Configs (getPolylineAnimationConfig)
 import Data.Array (any, head, length, mapWithIndex, (!!), notElem, elem)
@@ -56,7 +56,7 @@ import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling (delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), Stage(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)

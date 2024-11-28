@@ -20,11 +20,11 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
 import Animation as Anim
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.View as PrimaryEditText
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getMetroConfigFromAppConfig, getCityFromString, CityMetroConfig(..), getMetroConfigFromCity, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMetroConfigFromAppConfig, CityMetroConfig(..), getMetroConfigFromCity, getDefaultPixelSize)
 import Prelude
 import Screens.TicketBookingFlow.MetroTicketBooking.Controller
 import Screens.TicketBookingFlow.MetroTicketBooking.ComponentConfig
@@ -70,6 +70,7 @@ import Common.Animation.Config
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
 import Data.Generic.Rep (class Generic)
+import Engineering.Helpers.Utils (getCityFromString)
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =

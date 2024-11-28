@@ -40,7 +40,7 @@ import Data.Either (Either(..), hush, either)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), split, take) as DS
@@ -70,7 +70,7 @@ import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
@@ -117,7 +117,8 @@ import Data.Ord (compare)
 import JBridge as JB
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
-
+import Data.Tuple as DT
+import Resource.Constants (decodeAddress)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -1109,7 +1110,8 @@ dummyLocationInfo = SA.LocationInfo {
       areaCode : Nothing,
       lon : 0.0,
       extras : Nothing,
-      instructions : Nothing
+      instructions : Nothing,
+      id : Nothing
   }
 
 getVehicleVariantName :: VehicleCategory -> String
@@ -1242,8 +1244,20 @@ isTokenWithExpValid token = do
       isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (ReExport.getCurrentUTC "")) > 0
   isTokenValid && not (DS.null cachedToken)
   
+checkIfStopsLeft :: Array SA.Stop -> Boolean
+checkIfStopsLeft stops = 
+  DA.any (\(SA.Stop item) -> maybe true (\(SA.StopInformation stopInfo) -> isNothing stopInfo.stopEndLatLng) item.stopInfo) stops
+
+getStopToDepart :: Array SA.Stop -> Maybe SA.Stop
+getStopToDepart stops = 
+  DA.find (\(SA.Stop item) -> maybe false (\(SA.StopInformation stopInfo) -> isNothing stopInfo.stopEndLatLng) item.stopInfo) stops
+
+getUpcomingStop :: Array SA.Stop -> Maybe SA.Stop
+getUpcomingStop stops = DA.find (\(SA.Stop item) ->isNothing item.stopInfo) stops
+
 getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
-getSrcDestConfig state = 
+getSrcDestConfig state = do
+  let hasStops = not $ DA.null state.data.activeRide.stops
   if state.props.currentStage == ST.RideAccepted then
     {
       srcLat : state.data.currentDriverLat,
@@ -1263,12 +1277,19 @@ getSrcDestConfig state =
       destination : fromMaybe "" state.data.activeRide.nextStopAddress
     }
   else {
-      srcLat : state.data.activeRide.src_lat,
-      srcLon : state.data.activeRide.src_lon,
+      srcLat : if hasStops then state.data.currentDriverLat else state.data.activeRide.src_lat,
+      srcLon : if hasStops then state.data.currentDriverLon else state.data.activeRide.src_lon,
       destLat : state.data.activeRide.dest_lat,
       destLon : state.data.activeRide.dest_lon,
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
-isAmbulance :: String -> Boolean
-isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+getStopName :: SA.Stop -> DT.Tuple String String
+getStopName (SA.Stop stopData) = do
+  let source = decodeAddress stopData.location true
+      (SA.LocationInfo location) = stopData.location
+      sourcePrefix = fromMaybe "" ((DS.split (DS.Pattern ",") source) DA.!! 0)
+      sourceArea = maybe sourcePrefix identity location.area
+      description = maybe source (\item -> item <> ", " <> source) location.extras
+  DT.Tuple sourceArea description

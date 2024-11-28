@@ -343,4 +343,5 @@ transformer (Location loc) =
       , lon: loc.lon
       , instructions: Nothing
       , extras: Nothing
+      , id : Nothing
       }
