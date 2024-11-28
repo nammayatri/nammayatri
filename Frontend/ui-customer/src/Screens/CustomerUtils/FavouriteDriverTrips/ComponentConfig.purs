@@ -91,5 +91,6 @@ sourceToDestinationConfig item = let
       , ellipsize = false
       }
     , showDestination =  true
+    , overrideSeparatorCount = 5
     }
   in sourceToDestinationConfig'

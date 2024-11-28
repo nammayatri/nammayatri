@@ -99,6 +99,7 @@ type Config = {
     showRetry :: Boolean,
     coverLottie :: CoverLottie,
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
+    completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
     deliveryDetailsConfig :: DeliveryDetailsConfig
 }
@@ -730,6 +731,7 @@ config = {
       }
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , completeProfileLayout : Mb.Nothing
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

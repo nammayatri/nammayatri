@@ -1639,6 +1639,7 @@ data STR = LETS_GET_STARTED
         | ADD_YOUR_PHOTOS
         | ADD_PHOTO_CAPTION
         | COMPLETE_PROFILE
+        | COMPLETE_PROFILE_MSG
         | EDIT_PROFILE
         | SAVE 
         | MANAGE_VEHICLE

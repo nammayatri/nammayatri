@@ -265,6 +265,19 @@ defEventsConfig = {
   loggingIntervalInMs : 10000.0
 }
 
+profileCompletionReminder :: ProfileCompletionReminder
+profileCompletionReminder = 
+  let 
+    config = fetchRemoteConfigString "profile_completion_reminder"
+    value = decodeForeignObject (parseJSON config) defaultProfileCompletionReminder
+  in 
+    value
+  
+  where 
+    defaultProfileCompletionReminder :: ProfileCompletionReminder
+    defaultProfileCompletionReminder = {
+        reminderDuration : 86400
+    }
 
 fetchRideAssignedAudioConfig :: String -> RideAssignedAudioConfig
 fetchRideAssignedAudioConfig city =

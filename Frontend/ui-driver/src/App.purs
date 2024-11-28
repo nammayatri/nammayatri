@@ -450,7 +450,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
                           | UPDATE_ROUTE HomeScreenState
-                          | FCM_NOTIFICATION String HomeScreenState
+                          | FCM_NOTIFICATION String HomeScreenState NotificationBody
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
@@ -461,6 +461,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
+                          | GO_TO_COMPLETE_PROFILE_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES

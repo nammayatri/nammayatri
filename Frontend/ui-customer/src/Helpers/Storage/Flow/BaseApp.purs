@@ -57,7 +57,6 @@ baseAppStorage = do
     setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
     setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
     setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-    setValueToLocalStore RATING_SKIPPED $ if (getValueToLocalStore RATING_SKIPPED == "true") then "true" else "false"
     setValueToLocalStore POINTS_FACTOR "3"
     setValueToLocalStore TRACKING_DRIVER "False"
     setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"

@@ -42,7 +42,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide,overlappingRides)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide,overlappingRides)
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
 import JBridge (showDateTimePicker, updateSliderValue)
 import Engineering.Helpers.Utils as EHU
@@ -68,6 +68,7 @@ import Components.PopUpModal.Controller as PopUpModal
 import Data.Function.Uncurried (runFn2)
 import Helpers.Utils (isParentView, emitTerminateApp)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Utils as EHC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -192,8 +193,8 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
         isAfterThirtyMinutes = (EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC "")) > (30 * 60)
-        validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
-                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+        validDate = (unsafePerformEffect $ runEffectFn2 EHC.compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 EHC.compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
         returnTimeUTC = EHC.getUTCAfterNSeconds selectedUTC (state.data.rentalBookingData.baseDuration * 60 * 60)

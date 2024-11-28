@@ -265,16 +265,10 @@ data Action = BackPressed
             | PendingVehicle String ST.VehicleCategory
             | CompleteProfile 
             | OpenCancellationRateScreen
-            | ProfileDataAPIResponseAction DriverProfileDataRes
             | ShowDrvierBlockedPopup
             | DriverBLockedPopupAction PopUpModal.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
-
-eval (ProfileDataAPIResponseAction res) state = do 
-  let DriverProfileDataRes resp = res 
-  continue state{data{completingProfileRes{
-    completed = getValueBtwRange ((if resp.pledges == [] then 0 else 1) + (if resp.aspirations == [] then 0 else 1) + (if resp.drivingSince == Nothing then 0 else 1) + (if resp.hometown == Nothing then 0 else 1) + (if resp.vehicleTags == [] then 0 else 1) + (if resp.otherImageIds == [] then 0 else 1)) 0 6 0 4}}}
 
 eval AfterRender state = continue state
 

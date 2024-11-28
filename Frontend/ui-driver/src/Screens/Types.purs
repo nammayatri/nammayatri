@@ -479,7 +479,7 @@ type DriverProfileScreenData = {
   cancellationWindow :: Maybe Int,
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
-  completingProfileRes :: CompletingProfileRes,
+  profileCompletedModules :: Int,
   driverBlocked :: Boolean,
   blockedExpiryTime :: String,
   favCount :: Maybe Int
@@ -1096,7 +1096,15 @@ type HomeScreenData =  {
 , onRideBannerTimer :: Int
 , blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
+, completingProfileRes :: CompletingProfileRes
+, favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
+}
+
+type FavouritePopUp = {
+  visibility :: Boolean,
+  title :: String,
+  message :: String
 }
 
 type PlansState = {
@@ -1957,6 +1965,7 @@ data NotificationType =  DRIVER_REACHED
                       | RIDE_REQUESTED
                       | TRIP_STARTED
                       | EDIT_LOCATION
+                      | USER_FAVOURITE_DRIVER
                       | DRIVER_REACHED_DESTINATION
                       | TO_METRO_COINS
                       | FROM_METRO_COINS
@@ -3284,6 +3293,11 @@ type PointsWithWeight = {
   weight :: Number,
   id :: String
 }
+
+type NotificationBody = {
+  title :: String,
+  message :: String
+} 
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 

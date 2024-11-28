@@ -6,7 +6,8 @@ import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, 
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketInfoScreenState)
-import Helpers.Utils (compareDate, getCurrentDate)
+import Helpers.Utils (getCurrentDate)
+import Engineering.Helpers.Utils(compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.GenericHeader as GenericHeader

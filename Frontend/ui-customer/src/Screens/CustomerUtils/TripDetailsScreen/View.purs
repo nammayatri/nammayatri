@@ -466,13 +466,13 @@ reportIssueView state push filteredTopics =
     , height WRAP_CONTENT
     , disableClickFeedback true
     , onClick push $ const ReportIssue
+    , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0) 
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin $ Margin 16 0 16 16
-        , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0) 
         ][  
           imageView
             [ width $ V 20

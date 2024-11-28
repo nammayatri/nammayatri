@@ -33,6 +33,10 @@ import Components.BannerCarousel as BannerCarousel
 import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
 import Data.Int (fromString)
+import Data.Array as DA
+import Common.Types.App (CustomerIssueTypes(..))
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 import Helpers.Utils (isParentView,emitTerminateApp)
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
@@ -116,16 +120,16 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
 
 eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
   let 
-    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.customerIssue.customerResponse
+    negativeResp = filter (\issueResp -> ((issueResp.selectedYes == Just false && issueResp.issueType /= DemandExtraTollAmount) || (issueResp.selectedYes == Just true && issueResp.issueType == DemandExtraTollAmount))) state.customerIssue.customerResponse
 
     hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
     hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
-    hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
+    demandExtraTollAmountIssue = any (\issueResp -> issueResp.issueType == CTP.DemandExtraTollAmount) negativeResp
 
-    priorityIssue = case hasSafetyIssue, hasTollIssue of
-      true, _ -> CTP.NightSafety
-      false, true -> CTP.TollCharge
-      _, _ -> CTP.NoIssue
+    priorityIssue = case hasSafetyIssue, demandExtraTollAmountIssue of
+      true , _ -> CTP.NightSafety
+      _ , true -> CTP.DemandExtraTollAmount
+      _ , _ -> CTP.NoIssue
 
     ratingUpdatedState = state {
       customerIssue {
@@ -137,7 +141,7 @@ eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
     }
     }
 
-  if priorityIssue == CTP.NoIssue then
+  if priorityIssue == CTP.NoIssue then do
     continue state {customerIssue {showIssueBanners = false}, ratingViewState{ nightSafety = Just true }}
   else 
     exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
@@ -283,13 +287,13 @@ eval (SelectButton selectedYes pageIndex) state = do
             Just updatedIssueResponseArrObj -> do
               let 
                 updatedState = state {customerIssue {customerResponse = updatedIssueResponseArrObj}}
-                userRespondedIssues = filter (\issueResp -> issueResp.selectedYes /= Nothing) updatedIssueResponseArrObj
+                userRespondedIssues = filter (\issueResp -> issueResp.selectedYes /= Nothing && (isIssue state issueResp.issueType)) updatedIssueResponseArrObj
                 userRespondedIssuesCount = length userRespondedIssues
 
               if noOfAvailableBanners == userRespondedIssuesCount then do
-                continue updatedState{customerIssue {respondedValidIssues = true, buttonActive = true}}
-              else 
-                continue updatedState{customerIssue {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex} }
+                if(isIssue state DemandExtraTollAmount && updatedState.goToLastBanner) then continue updatedState{goToLastBanner = false, customerIssue {respondedValidIssues = true, buttonActive = true, currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}
+                else continue updatedState{customerIssue {respondedValidIssues = true, buttonActive = true}}
+              else continue updatedState{customerIssue {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex} }
             Nothing -> update state
         _ , _ -> update state
     Nothing -> update state
@@ -352,23 +356,19 @@ updateFeedback feedbackId feedbackItem feedbackList =
       let config = {questionId : fid, answer : [newItem]}
       list <> [config]
 
+isIssue :: RiderRideCompletedScreenState -> CustomerIssueTypes -> Boolean
+isIssue state customerIssue = do
+    let bannerConfigs = issueReportBannerConfigs state
+    any(\x -> x.issueType == customerIssue) bannerConfigs
+
 issueReportBannerConfigs :: forall action. RiderRideCompletedScreenState -> Array (CustomerIssueCard)
 issueReportBannerConfigs state =
   let 
-    tollIssue = state.customerIssue.hasTollIssue 
     nightSafetyIssue = state.customerIssue.hasSafetyIssue
     accessibilityIssue =  state.customerIssue.hasAccessibilityIssue
     customerResposeArray = state.customerIssue.customerResponse
+    demandExtraTollAmountIssue = state.customerIssue.demandExtraTollAmountIssue
 
-
-    (tollIssueConfig :: CustomerIssueCard) = { 
-      issueType : TollCharge
-    , selectedYes : findYesNoState customerResposeArray TollCharge
-    , title : getString WAS_TOLL_EXP_SMOOTH   -- title should be one line
-    , subTitle : getString WAS_TOLL_EXP_SMOOTH_DESC  --- subtitle should be two lines
-    , yesText : getString YES
-    , noText : getString NO
-    }
 
     (nightSafetyIssueConfig :: CustomerIssueCard) = { 
       issueType : NightSafety
@@ -388,10 +388,19 @@ issueReportBannerConfigs state =
     , noText : getString NO
     }
 
+    (demandExtraTollAmountIssueConfig :: CustomerIssueCard) = { 
+      issueType : DemandExtraTollAmount
+    , selectedYes : findYesNoState customerResposeArray DemandExtraTollAmount
+    , title : getStringV2 driver_demand_extra
+    , subTitle : getStringV2 demand_extra_toll_amount
+    , yesText :  getStringV2 yes
+    , noText : getStringV2 no
+    }
+
   in
     if accessibilityIssue then [accessibilityIssueConfig] else
       (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
-      <> (if tollIssue then [tollIssueConfig] else [])
+      <> (if demandExtraTollAmountIssue then [demandExtraTollAmountIssueConfig] else [])
 
   where 
     findYesNoState customerResp issueType = 

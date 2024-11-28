@@ -69,7 +69,7 @@ data Action = BackPressed
               | Back
               | DisableShimmer
               | UpdateRoute Route
-              | Notification String
+              | Notification String ST.NotificationBody
               | PopUpModalErrorAction PopUpModal.Action
               | ApiError 
               
@@ -208,7 +208,7 @@ eval (ScheduleTimer seconds status timerID) state = do
 
 eval (DisableShimmer) state = continue state{props{shimmerVisibility = false}}
 
-eval (Notification notificationType) state = do
+eval (Notification notificationType _) state = do
     if (checkNotificationType notificationType ST.DRIVER_ASSIGNMENT ) then do
       exit $ FcmNotification notificationType state
     else if (checkNotificationType notificationType ST.CANCELLED_PRODUCT ) then do 

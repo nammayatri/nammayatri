@@ -91,7 +91,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..)) 
 import Services.Accessor (_lat, _lon)
@@ -113,12 +113,16 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig, profileCompletionReminder)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
 import Resource.Constants
 import RemoteConfig as RC
+import Services.API (DriverProfileDataRes(..))
+import Effect.Unsafe (unsafePerformEffect)
+import Components.PopUpModal.View as PopUpModal
+import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 
@@ -137,6 +141,13 @@ screen initialState (GlobalState globalState) =
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+            driverProfileResp <- Remote.fetchDriverProfile false
+            case driverProfileResp of
+                Right resp -> do
+                  liftFlow $ push $ ProfileDataAPIResponseAction resp
+                Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+            pure unit
 
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -299,8 +310,8 @@ screen initialState (GlobalState globalState) =
                                 when (initialState.props.currentStage == RideCompleted) $ do
                                   let mbVal = runFn3 getFromWindowString "notificationType" Nothing Just 
                                   case mbVal of
-                                    Just "FROM_METRO_COINS" -> push $ Notification "FROM_METRO_COINS"
-                                    Just "TO_METRO_COINS" -> push $ Notification "TO_METRO_COINS"
+                                    Just "FROM_METRO_COINS" -> push $ Notification "FROM_METRO_COINS" HU.defaultNotificationBody
+                                    Just "TO_METRO_COINS" -> push $ Notification "TO_METRO_COINS" HU.defaultNotificationBody
                                     _ -> pure unit 
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
@@ -465,10 +476,20 @@ view push state =
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
       , if state.props.isMockLocation && not cugUser then sourceUnserviceableView push state else dummyTextView
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
+      , if state.data.favPopUp.visibility then favPopUpView push state else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
+      , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
+          completeYourProfile push state 
+        else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
   ]
   where 
+    currentDate = HU.getCurrentUTC "" 
+    lastDate = case (getValueToLocalStore LAST_EXECUTED_TIME) of 
+                "__failed" -> 
+                  let _ = setValueToLocalStore LAST_EXECUTED_TIME currentDate
+                  in currentDate
+                time -> time
     showPopups = (DA.any (_ == true )
       [ state.props.bgLocationPopup,
         state.data.driverGotoState.gotoLocInRange,
@@ -488,6 +509,18 @@ view push state =
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
     isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
     cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
+    dateDiff = runFn2 JB.differenceBetweenTwoUTC currentDate lastDate
+
+favPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+favPopUpView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.blackLessTrans
+  , gravity CENTER
+  ][
+    PopUpModal.view (push <<< FavPopUpAction) (favPopUpConfig state) 
+  ]
 
 interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 interOperableInfoPopUpView push state =
@@ -2395,7 +2428,7 @@ endRidePopView push state =
   linearLayout
     [ width MATCH_PARENT,
       height MATCH_PARENT
-    ][ PopUpModal.view (push <<<PopUpModalAction) (endRidePopUp state )]
+    ][ PopUpModal.view (push <<< PopUpModalAction) (endRidePopUp state )]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
@@ -2485,7 +2518,7 @@ enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
 
 
-rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (DA.any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithCustomer]) then do
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null" --- needs review here
@@ -2499,7 +2532,7 @@ rideStatusPolling pollingId duration state push action = do
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
             if isLocalStageOn HomeScreen then pure unit
-              else doAff do liftEffect $ push $ action "CANCELLED_PRODUCT"
+              else doAff do liftEffect $ push $ action "CANCELLED_PRODUCT" HU.defaultNotificationBody
       Left err -> pure unit
     else pure unit
 
@@ -2543,7 +2576,7 @@ rentalRideStatusPolling pollingId duration state push action = do
         Nothing,Nothing  -> true
         _,_ -> false
 
-rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Flow GlobalState Unit
 rideRequestPolling pollingId count duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideRequested then do
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
@@ -2557,7 +2590,7 @@ rideRequestPolling pollingId count duration state push action = do
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
             if isLocalStageOn RideAccepted then pure unit
-              else doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT"
+              else doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT" HU.defaultNotificationBody
       Left err -> pure unit
     else pure unit
 
@@ -2577,7 +2610,7 @@ paymentStatusPooling orderId count delayDuration state push action = do
       Left err -> pure unit
     else pure unit
 
-checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> HomeScreenState -> Flow GlobalState Unit
+checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> NotificationBody -> action) -> HomeScreenState -> Flow GlobalState Unit
 checkCurrentRide push action initialState = do
   activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
   case activeRideResponse of
@@ -2586,7 +2619,7 @@ checkCurrentRide push action initialState = do
           pure unit
           else do
             case (rideList.list DA.!! 0) of
-              Just ride -> doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT"
+              Just ride -> doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT" HU.defaultNotificationBody
               Nothing -> pure unit
       Left err -> pure unit
 
@@ -2961,6 +2994,133 @@ checkRideCountAndTime tuple =
       if diff <= fiveMinInSec then Just count else Nothing
       ) tuple
 
+completeYourProfile :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+completeYourProfile push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.blackLessTrans
+  , gravity CENTER
+  ][
+    PopUpModal.view (push <<< CompleteProfileAction) (completeYourProfileConfig state){completeProfileLayout = Just $ profileCompletePopUpView state} 
+  ]
+
+driverImage :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
+driverImage state =
+  let per = (state.data.completingProfileRes.completed*100)/4
+  in
+  linearLayout[
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      gravity CENTER
+  ][
+      relativeLayout[
+        height $ V 98
+      , width $ V 98
+      ][
+          linearLayout[
+              height $ V 98,
+              width $ V 98,
+              orientation VERTICAL
+          ][
+              linearLayout[
+                  height $ V 49,
+                  width $ V 98
+              ][
+                  linearLayout[
+                  height $ V 49,
+                  width $ V 49,
+                  background $ getColor $ per >= 50,
+                  PP.cornerRadii $ PTD.Corners 100.0 true false false false
+                  ][]
+              , linearLayout[
+                  height $ V 49,
+                  width $ V 49,
+                  background $ getColor $ per >= 75,
+                  PP.cornerRadii $ PTD.Corners 100.0 false true false false
+                  ][]
+              ]
+              , linearLayout[
+                  height $ V 49,
+                  width $ V 98
+              ][
+                  linearLayout[
+                  height $ V 49,
+                  width $ V 49,
+                  background $ getColor $ per >= 25,
+                  PP.cornerRadii $ PTD.Corners 80.0 false false false true
+                  ][]
+              , linearLayout[
+                  height $ V 49,
+                  width $ V 49,
+                  background $ getColor $ per >= 100,
+                  PP.cornerRadii $ PTD.Corners 80.0 false false true false
+                  ][]
+              ]
+          ]
+      , linearLayout
+          [ height $ V 88
+          , width $ V 88
+          , cornerRadius 44.0
+          , margin $ Margin 5 5 0 0
+          , alpha $ 1.0
+          ]
+          [ ( if state.data.profileImg == Nothing then
+              imageView
+                  [ height $ V 88
+                  , width $ V 88
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_new_avatar_profile"
+                  ]
+              else
+              linearLayout
+                  [ height $ V 88
+                  , width $ V 88
+                  , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_profile") false "CENTER_CROP") (const NoAction)
+                  , id (getNewIDWithTag "driver_profile")
+                  ]
+                  []
+              )
+          ]
+      ]
+  ]
+  where
+    getColor :: Boolean -> String 
+    getColor isTrue = if isTrue then Color.blue900 else Color.white900
+
+profileCompletePopUpView :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
+profileCompletePopUpView state = 
+  relativeLayout[
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      margin $ MarginBottom 10
+  ][
+      driverImage state
+  ,   linearLayout[
+          height WRAP_CONTENT,
+          width MATCH_PARENT,
+          margin $ Margin 0 80 0 0,
+          gravity CENTER
+      ][
+          linearLayout[
+              height WRAP_CONTENT,
+              width WRAP_CONTENT,
+              cornerRadius 50.0,
+              background Color.blue900,
+              padding $ Padding 12 2 12 2
+              ][
+              textView
+              $ [ text $ show ((state.data.completingProfileRes.completed*100)/4)<> "%"
+                  , width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , color Color.white900
+                  , lineHeight "16"
+                  , textSize FontSize.a_15
+                  , fontStyle $ FontStyle.semiBold LanguageStyle
+                  , fontWeight $ FontWeight 600
+                  ]
+              ]
+      ]
+  ]
 
 
 customerDeliveryCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

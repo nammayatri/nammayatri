@@ -71,12 +71,6 @@ export const getCurrentDatev2 = function (string) {
   return today;
 }
 
-
-export const compareDate = function (date1, date2) {
-  console.log("comparing : ", date1, date2);
-  return date1 >= date2;
-}
-
 export const getNextDate = function (unit) {
   const currentDate = new Date();
   const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
