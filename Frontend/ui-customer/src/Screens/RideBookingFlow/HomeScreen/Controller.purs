@@ -957,7 +957,7 @@ eval BackPressed state = do
                       void $ pure $ performHapticFeedback unit
                       if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
                       else if state.props.showBoostSearch then do 
-                        void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
+                        void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
                         continue state{props{showBoostSearch = false}}
                       else continue $ state { props{isPopUp = ConfirmBack}}
     FavouriteLocationModel -> do
@@ -2645,7 +2645,8 @@ eval (QuoteListModelActionController (QuoteListModelController.ServicesOnClick c
 eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction (PrimaryButtonController.OnClick))) state = do 
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
   void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-  let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
+  let tipConfig = state.props.tipViewProps
+      lottieRawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
       updatedServices = state.data.boostSearchEstimate.selectedServices
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       bookAnyEstimate = fromMaybe ChooseVehicleController.config (find(\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList)
@@ -2657,6 +2658,7 @@ eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction
       updatedState = newState{data{specialZoneQuoteList = getUpdatedQuotes updatedServices bookAnyEstimate.index, otherSelectedEstimates = otherSelectedEstimates, selectedEstimatesObject = selectedEstimatesObject}, props {estimateId = estimateId}}
   void $ pure $ cacheRateCard updatedState
   void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA updatedState.data.selectedEstimatesObject.price
+  void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = lottieRawJson, lottieId = (getNewIDWithTag "lottieLoaderAnim") }
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (updatedState.data.selectedEstimatesObject.vehicleVariant)
   void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON updatedState.data.specialZoneQuoteList)
   void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
