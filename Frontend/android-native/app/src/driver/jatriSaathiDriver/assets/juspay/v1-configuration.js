@@ -559,7 +559,8 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      }
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -573,7 +574,8 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      }
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",
