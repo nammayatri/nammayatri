@@ -266,7 +266,6 @@ library
       ExternalBPP.EBIX.ExternalAPI.Verification
       ExternalBPP.EBIX.Flow
       Lib.JourneyPlannerTypes
-      Lib.Mesh
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal

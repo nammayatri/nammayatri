@@ -697,11 +697,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1723219060,
-        "narHash": "sha256-GHoQ9nMpmPxCTqlJBFmIuQxcf90ecM3yk3MAkvfdz68=",
+        "lastModified": 1732689486,
+        "narHash": "sha256-geIUi3MO2l91Ww3lPwztyVdt3gYf4bvqUKopQYfeXxU=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "a2d3de7e7a1bbac8237909367d8870a285e09c06",
+        "rev": "1d1f4490d5188d0fc07111d4a9be9e8bcb7dfc32",
         "type": "github"
       },
       "original": {
@@ -1652,16 +1652,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1715851947,
-        "narHash": "sha256-R1ykEbhpCXDJ3N309PccIIhAZysKWPS305ECZ7EoF6g=",
+        "lastModified": 1730967537,
+        "narHash": "sha256-RDF/G/ptWazyFxCQOv+fTTQVV4hzDxTV630rnmhH3i4=",
         "ref": "refs/heads/master",
-        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
-        "revCount": 736,
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
+        "revCount": 741,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -3802,15 +3802,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1732257817,
-        "narHash": "sha256-e08O/XRZwpA7gyKserkP05VufcpAL4cTwwrTM65meQY=",
+        "lastModified": 1732789324,
+        "narHash": "sha256-sw63YOFe/X3ZyP2drH7B9pp90bpFeip64EA56phFwRA=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "56e8051d14c4e54c5c2ede9dd2755b8881dba936",
+        "rev": "be94b893447208594ba4beac7466cb3c08bc96b8",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "prodHotPush-Common",
         "repo": "shared-kernel",
         "type": "github"
       }
@@ -4030,15 +4031,16 @@
       "locked": {
         "lastModified": 1669960992,
         "narHash": "sha256-o0WEbygbbfIYPonyY6ui1HcbaJcFdngjBhnjWbe65zs=",
+        "owner": "arjunkathuria",
+        "repo": "tinylog",
         "rev": "08d3b6066cd2f883e183b7cd01809d1711092d33",
-        "revCount": 78,
-        "type": "git",
-        "url": "https://gitlab.com/arjunkathuria/tinylog.git"
+        "type": "gitlab"
       },
       "original": {
+        "owner": "arjunkathuria",
+        "repo": "tinylog",
         "rev": "08d3b6066cd2f883e183b7cd01809d1711092d33",
-        "type": "git",
-        "url": "https://gitlab.com/arjunkathuria/tinylog.git"
+        "type": "gitlab"
       }
     },
     "treefmt-nix": {

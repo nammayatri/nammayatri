@@ -9,6 +9,8 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Text.Encoding as DTE
 import qualified Data.Text.Encoding as TE
@@ -21,6 +23,8 @@ import GHC.Float (int2Double)
 import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Types.Common
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
 import Types.DBSync
@@ -120,9 +124,10 @@ filterDeleteCommands _ = Nothing
 getStreamName :: Text -> Flow (Maybe Text)
 getStreamName streamName = do
   countWithErr <- RQ.incrementCounter $ T.pack C.ecRedisDBStreamCounter
+  numberOfStreamsForKV' <- getNumOfStreams
   count <- case countWithErr of
-    Right count -> pure (count `mod` C.numberOfStreamsForKV)
-    Left _ -> L.runIO $ randomInteger 0 C.numberOfStreamsForKV
+    Right count -> pure (count `mod` numberOfStreamsForKV')
+    Left _ -> L.runIO $ randomInteger 0 numberOfStreamsForKV'
   let dbStreamKey = streamName <> "{shard-" <> show count <> "}"
   let lockKeyName = dbStreamKey <> "_lock"
   resp <- RQ.setValueWithOptions lockKeyName "LOCKED" (L.Milliseconds 120000) L.SetIfNotExist
@@ -130,6 +135,19 @@ getStreamName streamName = do
     Right True -> pure $ Just dbStreamKey
     Right _ -> pure Nothing
     Left _ -> pure Nothing
+
+getNumOfStreams :: Flow Integer
+getNumOfStreams = do
+  tables <- L.getOption KBT.Tables >>= maybe (L.logError ("TABLES_NOT_FOUND" :: Text) "KV tables not found while getting number of streams" >> stopDrainer >> pure defaultTableData) pure
+  let defaultShardMod = fromIntegral tables.defaultShardMod
+      maxValueFromRange =
+        fromMaybe C.numberOfStreamsForKV $
+          getMaxValue (tables.tableShardModRange) -- Apply getMaxValue to shardRanges
+  pure $ max defaultShardMod maxValueFromRange
+
+getMaxValue :: HM.HashMap Text (Int, Int) -> Maybe Integer
+getMaxValue hashmap =
+  NE.nonEmpty (map snd $ HM.elems hashmap) >>= pure . fromIntegral . maximum
 
 genSessionId :: IO C8.ByteString
 genSessionId = do
