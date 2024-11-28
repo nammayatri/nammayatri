@@ -933,7 +933,7 @@ type QuoteListItemState =
   , driverName :: String
   , selectedQuote :: Maybe String
   , appConfig :: AppConfig
-  , city :: City
+  , city :: CTA.City
   , vehicleImage :: String
   , serviceTierName :: Maybe String
   }
@@ -1088,8 +1088,8 @@ type HomeScreenStateProps =
   , isNotificationExpanded :: Boolean
   , bottomSheetState :: SheetState
   , removeNotification :: Boolean
-  , city :: City
-  , destCity :: Maybe City
+  , city :: CTA.City
+  , destCity :: Maybe CTA.City
   , isHomescreenExpanded :: Boolean
   , isRepeatRide :: Boolean
   , currSlideIndex :: Number
@@ -1185,55 +1185,6 @@ data SafetyAlertType = DEVIATION | STATIONARY_VEHICLE
 derive instance genericSafetyAlertType :: Generic SafetyAlertType _
 instance showSafetyAlertType :: Show SafetyAlertType where show = genericShow
 instance eqSafetyAlertType :: Eq SafetyAlertType where eq = genericEq
-
-data City
-  = Bangalore
-  | Kolkata
-  | Paris
-  | Kochi
-  | Delhi
-  | Hyderabad
-  | Mumbai
-  | Chennai
-  | Coimbatore
-  | Pondicherry
-  | Goa
-  | Pune
-  | Mysore
-  | Tumakuru
-  | Siliguri
-  | AnyCity
-  | Gurugram
-  | Noida
-  | Thrissur
-  | Trivandrum
-  | Kozhikode
-  | Vellore
-  | Hosur
-  | Madurai
-  | Thanjavur
-  | Tirunelveli
-  | Salem
-  | Trichy
-  | Davanagere
-  | Shivamogga
-  | Hubli
-  | Mangalore
-  | Gulbarga
-  | Udupi
-  | Odisha
-  | Bhubaneswar
-  | Cuttack
-  | Nalgonda
-  | Puri
-  | Pudukkottai
-  | Bidar
-
-derive instance genericCity :: Generic City _
-instance showCity :: Show City where show = genericShow
-instance eqCity :: Eq City where eq = genericEq
-instance encodeCity :: Encode City where encode = defaultEnumEncode
-instance decodeCity :: Decode City where decode = defaultEnumDecode
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean
@@ -2285,7 +2236,7 @@ type MetroTicketDetailsScreenState = {
 type MetroTicketDetailsScreenData = {
   dummyData :: String
 , bookingId :: String
-, city :: City
+, city :: CTA.City
 , bookingUpdatedAt :: String
 , metroRoute :: Array MetroRoute
 , ticketsInfo :: Array MetroTicketInfo
@@ -2564,7 +2515,7 @@ type LocationInfo =
     metroInfo :: Maybe Station,
     busStopInfo :: Maybe Station,
     stationCode :: String,
-    city :: City
+    city :: CTA.City
   }
   
 data RideType = ROUTES | STOP
@@ -2803,7 +2754,7 @@ type FollowRideScreenData = {
 }
 
 type FollowRideScreenProps = {
-  city :: City
+  city :: CTA.City
 , showChatNotification :: Boolean
 , canSendSuggestion :: Boolean
 , isChatNotificationDismissed :: Boolean
@@ -2857,7 +2808,7 @@ type MetroStation = {
 }
 
 type MetroStations = {
-  city :: City,
+  city :: CTA.City,
   stations :: Array FRFSStationAPI,
   lastUpdatedAt :: String
 }

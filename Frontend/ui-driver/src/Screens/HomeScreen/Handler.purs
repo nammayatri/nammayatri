@@ -110,7 +110,7 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ RELOAD screenState)
     UpdateRoute updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure (UPDATE_ROUTE updatedState)
+      App.BackT $ App.BackPoint <$> pure (UPDATE_ROUTE updatedState false)
     FcmNotification notificationType notificationBody screenState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → screenState)
       App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState notificationBody)
@@ -176,7 +176,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_SPECIAL_LOCATION_LIST)
     UpdateRouteOnStageSwitch updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ UPDATE_ROUTE_ON_STAGE_SWITCH updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_ROUTE updatedState true)
     FetchOdometerReading updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
@@ -223,3 +223,6 @@ homeScreen = do
     GoToMetroWarriors updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_WARRIOR updatedState)
+    UpdateStopsStatus updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_STOPS_STATUS updatedState)

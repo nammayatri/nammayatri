@@ -40,7 +40,7 @@ import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import CarouselHolder as CarouselHolder
-import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
+import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData, City(..))
 import Common.Types.App as CT
 import Common.Types.App as CTP
 import Components.Banner.Controller as BannerConfig
@@ -106,8 +106,7 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, s
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
-import Engineering.Helpers.Utils (showAndHideLoader)
-import Engineering.Helpers.Utils (showAndHideLoader)
+import Engineering.Helpers.Utils (showAndHideLoader, getCityFromString)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
@@ -143,7 +142,7 @@ import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.Types (FareProductType(..)) as FPT
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
 import Screens.Types as ST
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking,ridebookingStatus, selectList, walkCoordinates, walkCoordinate, getSavedLocationList)
@@ -195,7 +194,7 @@ import JBridge as JB
 import Common.Types.App as CT
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
-import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
+import Helpers.Utils (decodeBookingTimeList, getLanguageBasedCityName)
 import Resources.LocalizableV2.Strings (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
@@ -3700,7 +3699,7 @@ homeScreenContent push state =  let
       linearLayout
       [ width $ V $ screenWidth unit
       , height $ V 172
-      , visibility $ boolToVisibility $ state.props.city /= ST.AnyCity && (not $ null banners)
+      , visibility $ boolToVisibility $ state.props.city /= AnyCity && (not $ null banners)
       ]$[
         -- imageView
         --   [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"

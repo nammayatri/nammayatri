@@ -79,6 +79,7 @@ import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
 import Foreign.Class (encode)
 import Data.String as DS
+import Common.Types.App (City(..))
 
 instance showAction :: Show Action where 
   show _ = ""

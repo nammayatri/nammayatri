@@ -15,7 +15,7 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map, (-), unit)
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map, (-), unit, (+))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action(..), Config, PillInfo)
 import PrestoDOM 
@@ -26,7 +26,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
 import Engineering.Helpers.Commons (getNewIDWithTag, os, screenWidth)
 import Constants (defaultSeparatorCount, getSeparatorFactor)
-import Data.Array ((!!), length)
+import Data.Array ((!!), length, mapWithIndex)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import Data.String as DS
@@ -105,6 +105,7 @@ viewWithStops push config =
                     , visibility $ boolToVisibility config.showDestination
                     ]
                     [ sourceLayout push config
+                    , stopsView config push
                     ]
                 , destinationLayout config push
                 ]
@@ -326,7 +327,42 @@ separatorConfig config =
   }
 
 getDistanceLayoutHeight :: Config -> Length
-getDistanceLayoutHeight config = if os == "ANDROID" then MATCH_PARENT else 
-  case config.id of
-    Nothing -> MATCH_PARENT
-    Just layoutId -> V $ (runFn1 getLayoutBounds $ getNewIDWithTag $ "src_dest_layout_" <> layoutId).height
+getDistanceLayoutHeight config = 
+  if config.showSourceDestWithStops then V $ (runFn1 getLayoutBounds $ getNewIDWithTag "all_stops_view").height
+  else if os == "ANDROID" then MATCH_PARENT else 
+    case config.id of
+      Nothing -> MATCH_PARENT
+      Just layoutId -> V $ (runFn1 getLayoutBounds $ getNewIDWithTag $ "src_dest_layout_" <> layoutId).height
+
+
+stopsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+stopsView config push =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , margin $ MarginBottom 16
+    , orientation VERTICAL
+    ]
+    (mapWithIndex (\index item -> stopView item) (config.stops))
+  where
+  stopView name =
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , margin $ MarginTop 16
+      ]
+      [ imageView
+          [ width config.stopsImageConfig.width
+          , height config.stopsImageConfig.height
+          , accessibility DISABLE
+          , imageWithFallback config.stopsImageConfig.imageUrl
+          , margin config.stopsImageConfig.margin
+          ]
+      , textView
+          $ [ text name
+            , margin $ MarginLeft 16
+            , color Color.greyDavy
+            ]
+          <> FontStyle.body3 LanguageStyle
+      ]

@@ -8,8 +8,9 @@ import Data.Maybe (Maybe(..), isNothing)
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Commons as EHU
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..),fetchVehicleVariant, isAmbulance)
+import Helpers.Utils (fetchImage, FetchImageFrom(..),fetchVehicleVariant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP

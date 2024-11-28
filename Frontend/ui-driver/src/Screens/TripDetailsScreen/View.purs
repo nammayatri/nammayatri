@@ -25,6 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getCityConfig)
@@ -355,7 +356,7 @@ tripDataView push state =
                 Just startTime, Just endTime -> (show $ runFn2 JB.differenceBetweenTwoUTCInMinutes endTime startTime) <> " Min"
                 _, _ -> "NA"
     currency = getCurrency appConfig
-    acText = if HU.isAmbulance state.data.vehicleServiceTier then "" else if state.data.acRide == Just true then "AC ∙ " else ""
+    acText = if EHU.isAmbulance state.data.vehicleServiceTier then "" else if state.data.acRide == Just true then "AC ∙ " else ""
     rideType = acText <> (RC.serviceTierMapping true state.data.rideType state.data.acRide)
     earningPerKm =
       let mbDist = NUM.fromString state.data.distance

@@ -46,6 +46,8 @@ type Config =
   , pillsConfig :: PillsConfig
   , showDestination :: Boolean
   , separatorLayoutMargin :: Margin
+  , stops :: Array String
+  , stopsImageConfig :: ImageConfig
   , showSourceDestWithStops :: Boolean
   }
 
@@ -194,5 +196,12 @@ config = {
   , overrideSeparatorCount : 0
   , showDestination : true
   , separatorLayoutMargin : Margin 0 0 0 0
+  , stops : [] 
+  , stopsImageConfig : {
+      width : V 10
+    , height : V 10
+    , imageUrl : ""
+    , margin : MarginTop 0
+    }
   , showSourceDestWithStops : false
   }

@@ -20,10 +20,11 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import PrestoDOM
 import Styles.Colors as Color
-import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..), getCityFromString)
+import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Common.Types.App(LazyCheck(..), Price)
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Utils (getCityFromString)
 import Data.Maybe
 import Font.Style as FontStyle
 import JBridge as JB
