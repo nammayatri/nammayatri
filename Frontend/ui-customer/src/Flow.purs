@@ -4753,20 +4753,25 @@ metroTicketPaymentFlow (CreateOrderRes orderResp) bookingId = do
   void $ lift $ lift $ toggleLoader true
   setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
   modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen { data { bookingId = bookingId } })
-  (GetMetroBookingStatusResp getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
-  let
-    (FRFSTicketBookingStatusAPIRes metroTicketStatusResp2) = getMetroStatusResp
-  void $ pure $ toggleBtnLoader "" false
-  void $ lift $ lift $ toggleLoader false
-  case metroTicketStatusResp2.payment of
-    Just (FRFSBookingPaymentAPI paymentInfo) -> do
-      if paymentInfo.status == "NEW" then
-        metroTicketBookingFlow
-      else do
-        modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer getMetroStatusResp metroTicketDetailsState)
-        modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer getMetroStatusResp metroTicketStatusScreen)
-        metroTicketStatusFlow
-    Nothing -> do
+  resp <- lift $ lift $ Remote.getMetroStatus bookingId
+  case resp of
+    Right (GetMetroBookingStatusResp getMetroStatusResp) -> do
+      let (FRFSTicketBookingStatusAPIRes metroTicketStatusResp2) = getMetroStatusResp
+      void $ pure $ toggleBtnLoader "" false
+      void $ lift $ lift $ toggleLoader false
+      case metroTicketStatusResp2.payment of
+        Just (FRFSBookingPaymentAPI paymentInfo) -> do
+          if paymentInfo.status == "NEW" then
+            metroTicketBookingFlow
+          else do
+            modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer getMetroStatusResp metroTicketDetailsState)
+            modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer getMetroStatusResp metroTicketStatusScreen)
+            metroTicketStatusFlow
+        Nothing -> defaultFlow
+    Left _ -> defaultFlow
+  where
+    defaultFlow :: FlowBT String Unit
+    defaultFlow = do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection} })
       metroTicketBookingFlow
 
