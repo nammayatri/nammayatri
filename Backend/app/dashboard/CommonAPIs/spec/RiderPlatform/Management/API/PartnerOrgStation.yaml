@@ -1,0 +1,40 @@
+imports:
+  Value: Data.Aeson
+
+module: PartnerOrgStation
+
+apis:
+  - POST:
+      endpoint: /createPartnerOrgStation
+      auth: ApiAuthV2
+      request:
+        type: CreatePartnerOrgStationReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CREATE_PARTNER_ORG_STATION CREATE_PARTNER_ORG_STATION
+
+  - POST:
+      endpoint: /updatePartnerOrgStation
+      auth: ApiAuthV2
+      request:
+        type: UpdatePartnerOrgStationReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT UPDATE_PARTNER_ORG_STATION UPDATE_PARTNER_ORG_STATION
+
+
+types:
+  CreatePartnerOrgStationReq:
+    - partnerOrgStationID : Text
+    - partnerOrgID : Text
+    - stationID : Text
+    - stationName : Text
+    - derive: "'HideSecrets"
+
+  UpdatePartnerOrgStationReq:
+    - oldPartnerOrgStationID : Text
+    - newPartnerOrgStationID : Text
+    - partnerOrgID : Text
+    - derive: "'HideSecrets"

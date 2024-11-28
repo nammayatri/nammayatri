@@ -15,9 +15,11 @@
 module Storage.CachedQueries.Station
   ( findByStationCode,
     findById,
+    findByStationIdAndMerchantOperatingCityId,
   )
 where
 
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -59,4 +61,22 @@ cacheById :: (CacheFlow m r) => Station -> m ()
 cacheById station = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let key = makeStationIdKey station.id
+  Hedis.setExp key station expTime
+
+findByStationIdAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Id Station -> m (Maybe Station)
+findByStationIdAndMerchantOperatingCityId merchantOperatingCityId stationId = do
+  let key = makeStationIdAndMerchantOperatingCityIdKey merchantOperatingCityId stationId
+  Hedis.safeGet key >>= \case
+    Just a -> return $ Just a
+    Nothing -> findAndCache
+  where
+    findAndCache = flip whenJust cacheStationIdAndMerchantOperatingCityId /=<< Queries.findByStationIdAndMerchantOperatingCityId merchantOperatingCityId stationId
+
+makeStationIdAndMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Id Station -> Text
+makeStationIdAndMerchantOperatingCityIdKey merchantOperatingCityId stationId = "CachedQueries:Station:MerchantOpertaingCityId" <> merchantOperatingCityId.getId <> ":StationId:" <> stationId.getId
+
+cacheStationIdAndMerchantOperatingCityId :: (CacheFlow m r) => Station -> m ()
+cacheStationIdAndMerchantOperatingCityId station = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let key = makeStationIdAndMerchantOperatingCityIdKey station.merchantOperatingCityId station.id
   Hedis.setExp key station expTime

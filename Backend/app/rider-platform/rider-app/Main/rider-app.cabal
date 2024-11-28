@@ -155,6 +155,7 @@ library
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.NammaTag.Handle
+      Domain.Action.Dashboard.PartnerOrgStation
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Booking
       Domain.Action.Dashboard.RideBooking.Cancel
@@ -434,6 +435,7 @@ library
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.UpdatePartnerOrgStation
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -470,6 +472,7 @@ library
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.PartnerOrgStation
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking
