@@ -1379,12 +1379,11 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing
+  (ride, _, vehicle, uBooking) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing cancelBooking
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
   when uBooking.isScheduled $ do
     now <- getCurrentTime

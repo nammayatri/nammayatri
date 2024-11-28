@@ -486,8 +486,7 @@ otpRideCreate driver otpCode booking clientId = do
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
-  (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing
-  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  (ride, rideDetails, _, uBooking) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing SBooking.cancelBooking
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
 
   driverNumber <- RD.getDriverNumber rideDetails

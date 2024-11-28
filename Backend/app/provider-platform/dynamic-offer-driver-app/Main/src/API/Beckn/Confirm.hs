@@ -78,7 +78,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote SBooking.cancelBooking
           case dConfirmRes.rideInfo of
             Just rideInfo' -> do
               fork "on_confirm with rideInfo" $ do
