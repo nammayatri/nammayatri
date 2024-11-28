@@ -244,6 +244,7 @@ rideListResponseTransformer list categoryAction =
     , acRide : ride.isVehicleAirConditioned
     , vehicleServiceTier : ride.vehicleServiceTier
     , parkingCharge : fromMaybe 0.0 ride.parkingCharge
+    , stops : fromMaybe [] ride.stops
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

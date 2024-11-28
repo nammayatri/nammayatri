@@ -9,7 +9,7 @@ import Data.String as DS
 import Helpers.Utils as HU
 import Data.Int
 import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (City(..), TipViewProps(..), TipViewStage(..), TipViewData(..))
+import Screens.Types (TipViewProps(..), TipViewStage(..), TipViewData(..))
 import Locale.Utils
 import MerchantConfig.Types
 import Effect (Effect)
@@ -17,9 +17,11 @@ import Foreign.Class (class Encode)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (City(..), LazyCheck(..))
 import RemoteConfig (getTipConfigRC)
 import Debug (spy)
+import Engineering.Helpers.Utils as EHU
+
 type TipConfig = {
   customerTipArray :: Array String,
   customerTipArrayWithValues :: Array Int
@@ -78,7 +80,7 @@ yatriSathiConfig variant =
   case variant of
     "BIKE" -> mkTipConfig [0, 10, 20, 30]
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
-    _ | HU.isAmbulance variant -> mkTipConfig []
+    _ | EHU.isAmbulance variant -> mkTipConfig []
     _ -> mkTipConfig [0, 20, 30, 50]
 
 getTipViewProps :: TipViewProps -> String -> Maybe String -> Maybe Int -> TipViewProps

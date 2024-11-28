@@ -1789,4 +1789,7 @@ getEn =
     , drivers_are_permitted_to_cancel_ambulance_bookings : "Drivers are permitted to cancel only for their medical reasons or vehicle breakdowns"
     , payment_under_maintenance : "Payment Under Maintenance"
     , payments_temporarily_unavailable : "Payments are temporarily unavailable and will be back soon. Please try again later."
+    , resume_ride : "Resume ride"
+    , end_ride_with_stops : "You have more stops until drop End Ride anyway?"
+    , stop: (\n -> "Stop " <> n)
     }

@@ -22,7 +22,7 @@ module Helpers.Utils
 import ConfigProvider
 import DecodeUtil
 import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _paymentMethod)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..), PolylineAnimationConfig)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..), PolylineAnimationConfig, City(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
@@ -58,7 +58,8 @@ import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os, getCurrentUTC, compareUTCDate,getUTCAfterNSeconds,getUTCBeforeNSeconds,convertDateTimeConfigToUTC,convertUTCtoISC)
 import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
-import Engineering.Helpers.Utils (class Serializable, serialize)
+import Engineering.Helpers.Utils (class Serializable, serialize, getCityFromString, getCitySpecificMarker)
+import Engineering.Helpers.Utils as EHU
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
@@ -74,7 +75,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>), negate,div)
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..),VehicleVariant(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..),NotificationBody,TripTypeData,ScheduledRideDriverInfo)
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..),VehicleVariant(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, ZoneType(..),NotificationBody,TripTypeData,ScheduledRideDriverInfo)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage,VehicleVariant(..))
@@ -725,16 +726,16 @@ getVehicleVariantImage variant viewType =
           "COMFY"         -> variantConfig.sedan.leftViewImage
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
           _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
-                              _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
-                              _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              _ | EHU.isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | EHU.isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
           "BOOK_ANY"      -> case getMerchant FunctionCall of
                               _ -> case city of
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      _ | EHU.isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      _ | EHU.isKeralaCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
@@ -759,8 +760,8 @@ getVehicleVariantImage variant viewType =
           "COMFY"         -> variantConfig.sedan.image
           "PREMIUM"       -> variantConfig.sedan.image
           _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
-                              _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
-                              _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              _ | EHU.isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | EHU.isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.image
@@ -768,8 +769,8 @@ getVehicleVariantImage variant viewType =
                               YATRISATHI -> variantConfig.bookAny.image
                               _ -> case city of
                                       Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
-                                      _ | isTamilNaduCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
-                                      _ | isKeralaCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
+                                      _ | EHU.isTamilNaduCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      _ | EHU.isKeralaCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
@@ -793,7 +794,7 @@ getVariantRideType variant =
                     "DELIVERY_BIKE" -> "2 Wheeler"
                     "SEDAN" -> "Sedan"
                     "HATCHBACK" -> "AC Mini"
-                    _ | isAmbulance variant -> "Ambulance"
+                    _ | EHU.isAmbulance variant -> "Ambulance"
                     _      -> "AC Cab"
     _          -> getString AC_CAB
 
@@ -866,12 +867,12 @@ quoteModalVariantImage variant =
     if variant == "AUTO_RICKSHAW"
       then case city of
         Bangalore -> "ny_ic_no_quotes_auto_bang_del"
-        _ | isKeralaCity city -> "ny_ic_no_quotes_auto_koc"
+        _ | EHU.isKeralaCity city -> "ny_ic_no_quotes_auto_koc"
         Delhi ->"ny_ic_no_quotes_auto_bang_del"
         Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
-        _ | isTamilNaduCity city -> "ny_ic_no_quotes_auto_che_hyd"
+        _ | EHU.isTamilNaduCity city -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
-      else if isAmbulance variant 
+      else if EHU.isAmbulance variant 
           then "ny_ic_no_quotes_ambulance"
       else "ny_ic_no_quotes_color"
 
@@ -903,9 +904,9 @@ getAutoRickshawNearImage  =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
     case city of
-    _ | isKeralaCity city -> "ny_ic_driver_near_auto_yellow"
+    _ | EHU.isKeralaCity city -> "ny_ic_driver_near_auto_yellow"
     Hyderabad -> "ny_ic_driver_near_auto_black"
-    _ | isTamilNaduCity city -> "ny_ic_driver_near_auto_black"
+    _ | EHU.isTamilNaduCity city -> "ny_ic_driver_near_auto_black"
     _ -> "ny_ic_driver_near_auto_green"
 
 getAutoRickshawStartedImage :: String
@@ -914,48 +915,12 @@ getAutoRickshawStartedImage  =
    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
       case city of
-       _ | isKeralaCity city -> "ny_ic_driver_started_auto_yellow"
+       _ | EHU.isKeralaCity city -> "ny_ic_driver_started_auto_yellow"
        Hyderabad -> "ny_ic_driver_started_auto_black"
-       _ | isTamilNaduCity city -> "ny_ic_driver_started_auto_black"
+       _ | EHU.isTamilNaduCity city -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
+ 
 
-getCityFromString :: String -> City
-getCityFromString cityString =
-  case cityString of
-    "Bangalore" -> Bangalore
-    "Kolkata" -> Kolkata
-    "Paris" -> Paris
-    "Kochi" -> Kochi
-    "Delhi" -> Delhi
-    "Hyderabad" -> Hyderabad
-    "Mumbai" -> Mumbai
-    "Chennai" -> Chennai
-    "Coimbatore" -> Coimbatore
-    "Pondicherry" -> Pondicherry
-    "Goa" -> Goa
-    "Pune" -> Pune
-    "Mysore" -> Mysore
-    "Tumakuru" -> Tumakuru
-    "Noida" -> Noida
-    "Gurugram" -> Gurugram
-    "Siliguri" -> Siliguri
-    "Trivandrum" -> Trivandrum
-    "Thrissur" -> Thrissur
-    "Kozhikode" -> Kozhikode
-    "Vellore" -> Vellore
-    "Hosur" -> Hosur
-    "Madurai" -> Madurai
-    "Thanjavur" -> Thanjavur
-    "Tirunelveli" -> Tirunelveli
-    "Salem" -> Salem
-    "Trichy" -> Trichy
-    "Bhubaneswar" -> Bhubaneswar
-    "Cuttack" -> Cuttack
-    "Nalgonda" -> Nalgonda
-    "Puri" -> Puri
-    "Pudukkottai" -> Pudukkottai
-    "Bidar" -> Bidar
-    _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
@@ -1178,7 +1143,7 @@ getAllServices dummy =
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    _ | isKeralaCity city  -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    _ | EHU.isKeralaCity city  -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Gurugram -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
@@ -1261,7 +1226,7 @@ getRouteMarkers variant city trackingType fareProductType currentStage =
 
 mkSrcMarker :: City -> String ->Maybe Stage -> String
 mkSrcMarker city variant currentStage =
-  let srcMarker = getCitySpecificMarker city variant currentStage
+  let srcMarker = getCitySpecificMarker city variant (show <$> currentStage)
   in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "ny_ic_blue_circle" -- Added local resource check for avoiding native crash
 
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
@@ -1288,23 +1253,6 @@ getVehicleCapacity variant =
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
     _ -> "4"
-getCitySpecificMarker :: City -> String -> Maybe Stage -> String
-getCitySpecificMarker city variant currentStage =
-    -- For compatibility with older native apk versions
-    let isDeliveryImagePresent = (JB.getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
-        isHeritageCabImagePresent = (JB.getResourceIdentifier "ny_ic_heritage_cab_nav_on_map" "drawable") /= 0 
-        variantImage = case variant of
-            _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
-            "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
-            "SUV"           -> "ny_ic_suv_nav_on_map"
-            "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
-            "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
-            "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
-            "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
-            _ | isAmbulance variant -> "ny_ic_ambulance_nav_on_map"
-            "HERITAGE_CAB"  -> if isHeritageCabImagePresent then "ny_ic_heritage_cab_nav_on_map" else "ny_ic_vehicle_nav_on_map"
-            _               -> "ny_ic_vehicle_nav_on_map"
-    in variantImage
 
 mkDestMarker :: TrackingType -> FareProductType -> String
 mkDestMarker trackingType fareProductType =
@@ -1313,12 +1261,6 @@ mkDestMarker trackingType fareProductType =
         DRIVER_TRACKING -> "ny_ic_src_marker"
         ADVANCED_RIDE_TRACKING -> "ny_ic_drop_loc_marker"
 
-getAutoImage :: City -> String
-getAutoImage city = case city of
-    Hyderabad -> "ny_ic_black_yellow_auto"
-    _ | isKeralaCity city -> "ny_ic_koc_auto_on_map"
-    _ | isTamilNaduCity city -> "ny_ic_black_yellow_auto"
-    _         -> "ic_auto_nav_on_map"
 
 normalRoute ::String -> Markers
 normalRoute _ = {
@@ -1612,13 +1554,3 @@ isDeliveryInitiator maybeTags =
 foreign import isHybridApp :: Effect Boolean
 
 foreign import decodeErrorMessage :: String -> String
-
-isTamilNaduCity :: City -> Boolean 
-isTamilNaduCity city = elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy, Pudukkottai]
-
-isKeralaCity :: City -> Boolean 
-isKeralaCity city = elem city [Kochi, Kozhikode, Thrissur, Trivandrum]
-
-
-isAmbulance :: String -> Boolean
-isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]

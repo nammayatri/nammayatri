@@ -19,7 +19,7 @@ import Locale.Utils
 import Services.API
 import Common.RemoteConfig.Utils (stuckRideFilterConfig)
 import Accessor (_deviceToken)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer, City(..))
 import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..), runBackT)
@@ -48,7 +48,7 @@ import ModifyScreenState (modifyScreenState)
 import Prelude
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, doAff, loadS, fork)
-import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
+import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), AutoCompleteReqType(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)

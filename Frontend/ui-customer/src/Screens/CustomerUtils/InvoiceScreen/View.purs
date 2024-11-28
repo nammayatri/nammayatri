@@ -15,7 +15,7 @@
 module Screens.InvoiceScreen.View where
 
 import Animation as Anim
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -25,6 +25,7 @@ import Data.Int (fromNumber)
 import Data.Number (fromString)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils (getCityFromString, isAmbulance)
 import Font.Size as FontSize
 import Resources.Constants as Constants
 import Font.Style as FontStyle
@@ -36,7 +37,7 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getCityFromString, formatFareType, getCityConfig, isAmbulance)
+import Helpers.Utils (isHaveFare, formatFareType, getCityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
@@ -115,7 +116,7 @@ referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
   let cityStr = getValueToLocalStore CUSTOMER_LOCATION
       city = getCityFromString cityStr
-      nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
+      nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
       cityConfig = getCityConfig state.data.config.cityConfig cityStr
       rideType = state.data.selectedItem.rideType

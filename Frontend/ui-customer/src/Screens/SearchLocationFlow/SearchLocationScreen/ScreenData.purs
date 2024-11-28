@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..),RideType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..),RideType(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -23,7 +23,7 @@ import Services.API (PlaceName(..), LatLong(..) , SearchRideType (..), TicketSer
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Prelude (negate)
- 
+import Common.Types.App (City(..))
 
 initData :: SearchLocationScreenState 
 initData = {

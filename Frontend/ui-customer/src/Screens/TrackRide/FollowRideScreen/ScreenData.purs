@@ -37,7 +37,7 @@ initData =
       , counter: 0
       }
   , props:
-      { city: AnyCity
+      { city: CT.AnyCity
       , showChatNotification: false
       , canSendSuggestion: true
       , isChatNotificationDismissed: false
