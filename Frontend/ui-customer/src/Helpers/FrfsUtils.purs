@@ -45,6 +45,8 @@ getTicketStatus ticketData =
         TicketStatus { status : FRFS_ACTIVE, statusColor : Color.green900, statusIcon : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", textColor: Color.white900}
       else if ticketStatus == Just "USED" then
         TicketStatus { status : FRFS_VERIFIED, statusColor : Color.blue800, statusIcon : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", textColor: Color.white900}
+      else if ticketStatus == Nothing then
+        TicketStatus { status : FRFS_PENDING, statusColor : Color.yellow900, statusIcon : fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock", textColor: Color.white900}  
       else 
         TicketStatus { status : FRFS_EXPIRED, statusColor : Color.grey900, statusIcon : fetchImage FF_ASSET "ny_ic_info", textColor: Color.black900}
     else

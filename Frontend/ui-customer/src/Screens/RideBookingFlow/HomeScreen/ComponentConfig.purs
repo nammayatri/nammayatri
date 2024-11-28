@@ -2457,6 +2457,7 @@ nammaServices dummy =
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
   let config = getAppConfig appConfig
+      enableBusBooking = config.feature.enableBusBooking -- && isJust (DA.find (\service -> service.type == RemoteConfig.BUS) (nammaServices FunctionCall))
   in
     [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3", preferredEstimateOrder : []}
     , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee", preferredEstimateOrder : []}
@@ -2465,9 +2466,9 @@ getAllServices dummy =
     , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : []}
     , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec", preferredEstimateOrder : []}
     , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
-    , {type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}
     , {type: RemoteConfig.METRO_RIDE, image: fetchImage COMMON_ASSET "ny_ic_metro_icon", name: METRO_RIDE, backgroundColor: "#faeeee" , preferredEstimateOrder : ["METRO_RIDE"]}
     ] <> if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : []}] else []
+      <> if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}] else []
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
 getChatDetails state contacts = 

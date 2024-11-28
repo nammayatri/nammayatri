@@ -56,7 +56,7 @@ screen initialState =
   , globalEvents : [
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.props.ticketServiceType)
+          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.props.ticketServiceType) Nothing Nothing
           lift $ lift $ doAff do liftEffect $ push $ MetroBookingListRespAC resp
         pure $ pure unit
       )

@@ -270,7 +270,8 @@ config =
     enableAcPopup : false,
     enableRentalReallocation : true,
     enableEditDestination : false,
-    enableHelpAndSupport : true
+    enableHelpAndSupport : true,
+    enableBusBooking : false
   }
 
   , rideCompletedCardConfig : {

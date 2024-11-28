@@ -261,8 +261,13 @@ confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/
 getMetroBookingStatus :: String -> String
 getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
 
-getMetroBookingList :: String -> String
-getMetroBookingList vehicleType = (getBaseUrl "52") <> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\""
+getMetroBookingList :: String -> Maybe String -> Maybe String -> String
+getMetroBookingList vehicleType limit offset = 
+  (getBaseUrl "52")
+    <>  (case limit, offset of
+          Just limit', Just offset' -> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\"" <> "&limit=" <> limit' <> "&offset=" <> offset'
+          _, _ -> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\""
+        )
 
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
