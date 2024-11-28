@@ -2126,34 +2126,6 @@ eval (GetEditLocResult (GetEditLocResultResp resp)) state = do
 
   continue state { data { newEstimatedFare = roundOff bookingUpdateRequestDetails.estimatedFare, newEstimatedDistance = truncate 1 bookingUpdateRequestDetails.estimatedDistance }, props { currentStage = RevisedEstimate } }
 
-eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
-  case (getMerchant FunctionCall) of
-    YATRI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
-    YATRISATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
-    _ -> do
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate_try_again"
-      let
-        estimatedQuotes = quotesRes.estimates
-
-        estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
-
-        estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
-
-        estimateId = if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimateId else ""
-      case (null estimatedVarient) of
-        true -> do
-          _ <- pure $ hideKeyboardOnNavigation true
-          _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-          continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
-          -- let newState = state { props { currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
-          -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
-        false -> do
-          if (estimatedPrice > state.data.suggestedAmount) then
-            continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, isEstimateChanged = true } }
-          else do
-            let
-              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, searchExpire = (getSearchExpiryTime true) } }
-            exit $ SelectEstimateAndQuotes updatedState
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
@@ -3603,27 +3575,6 @@ isTipEnabled state =
     let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
         customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
     in not $ null customerTipArrayWithValues
-
-estimatesListTryAgainFlow :: GetQuotesRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
-  let
-    estimates = quotesRes.estimates
-    estimatedVarient = filter (\x -> x ^. _vehicleVariant == state.data.selectedEstimatesObject.vehicleVariant) estimates
-    estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
-    quoteList = getEstimateList state estimatedVarient state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
-    defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
-  void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON quoteList)
-  case (null estimatedVarient) of
-    true -> do
-      _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
-      continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
-    false -> do
-      if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then
-            continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
-      else do
-        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, searchExpire = (getSearchExpiryTime true) } }
-        exit $ SelectEstimateAndQuotes updatedState
 
 
 normalRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

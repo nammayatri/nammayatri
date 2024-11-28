@@ -3008,7 +3008,6 @@ type RentalScreenProps = {
   , showRateCard :: Boolean
   , showShimmer :: Boolean
   , showPrimaryButton :: Boolean
-  , showPopUpModal :: Boolean
   , showRentalPolicy :: Boolean
   , isOtpRideFlow :: Boolean
   , showScheduledRideExistsPopUp :: Boolean

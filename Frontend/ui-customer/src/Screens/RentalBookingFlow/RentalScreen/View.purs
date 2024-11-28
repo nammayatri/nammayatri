@@ -89,8 +89,7 @@ view push state =
     , background Color.white900
     ] $
     [ getRentalScreenView push state
-    ] <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
-      <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
+    ] <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
       <> if state.props.showScheduledRideExistsPopUp then [scheduledRideExistsPopUpView push state] else []
 
 rentalPolicyExplainerView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
@@ -584,17 +583,6 @@ noQuotesErrorModel state =
         ] <> FontStyle.paragraphText TypoGraphy
     ]
     ]
-
-locUnserviceableView :: forall w. (Action -> Effect Unit) -> RentalScreenState ->  PrestoDOM (Effect Unit) w
-locUnserviceableView push state = 
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , gravity CENTER 
-    , background Color.blackLessTrans
-    ][ PrestoAnim.animationSet
-        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true]  $ 
-        PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 fetchSelectedQuote rentalsQuoteList = head $ filter (\item -> item.activeIndex == item.index) rentalsQuoteList
 

@@ -75,10 +75,13 @@ eval (PrimaryButtonActionController triggertype PrimaryButtonController.OnClick)
     continueWithCmd state [do 
       _ <- requestLocation unit
       pure NoAction]
-      else continueWithCmd state [do 
+  else if triggertype == "INTERNET_ACTION" then 
+    continueWithCmd state [do 
       internetCondition <- isInternetAvailable unit
       if internetCondition then pure Reload else pure NoAction
-      ]
+    ]
+  else 
+    exit Refresh 
 
 eval Reload state = exit Refresh
 

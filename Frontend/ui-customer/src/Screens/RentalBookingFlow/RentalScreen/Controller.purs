@@ -121,8 +121,6 @@ instance eqDescriptionType :: Eq DescriptionType where eq = genericEq
 
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 
-eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state {props{showPopUpModal = false}}
-
 eval RentalPolicyInfo state = continue state { props { showRentalPolicy = true}}
 
 eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue state {props { showRentalPolicy = false}}
