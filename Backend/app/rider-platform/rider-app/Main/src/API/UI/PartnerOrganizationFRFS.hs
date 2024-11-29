@@ -38,6 +38,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified Lib.JourneyPlannerTypes as JPT
 import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Station as CQS
 import qualified Storage.Queries.Route as QRoute
@@ -77,14 +78,12 @@ upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandl
 upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
 
-  fromStation <- B.runInReplica $ CQS.findByStationCode req.fromStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "")
-  let fromStationOpCityId = fromStation.merchantOperatingCityId
-      merchantId = fromStation.merchantId
-
+  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.merchantOperatingCityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.merchantOperatingCityId.getId ||+ "")
+  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.merchantOperatingCityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.merchantOperatingCityId.getId ||+ "")
+  let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  toStation <- B.runInReplica $ CQS.findByStationCode req.toStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "")
   route <-
     maybe
       (pure Nothing)
@@ -97,12 +96,13 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
 
   let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
-  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStationOpCityId merchantId mbRegCoordinates req
+  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.merchantOperatingCityId merchantId mbRegCoordinates req
+  merchantOperatingCity <- CQMOC.findById req.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId.getId)
 
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
     let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
         frfsVehicleType = fromStation.vehicleType
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId)
+    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId)
 
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where

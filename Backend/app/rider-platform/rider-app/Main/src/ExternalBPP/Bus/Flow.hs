@@ -55,7 +55,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                   endStopCode = toStation.code,
                   travelTime = Nothing
                 }
-        mkSingleRouteQuote searchReq.vehicleType routeInfo
+        mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
       Nothing -> do
         transitRoutesInfo <- getPossibleTransitRoutesBetweenTwoStops fromStation.code toStation.code
         if null transitRoutesInfo
@@ -64,7 +64,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
             quotes' <-
               mapM
                 ( \routeInfo -> do
-                    mkSingleRouteQuote searchReq.vehicleType routeInfo
+                    mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
                 )
                 routesInfo
             return $ concat quotes'
@@ -72,7 +72,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
             quotes' <-
               mapM
                 ( \transitRouteInfo -> do
-                    mkTransitRoutesQuote searchReq.vehicleType transitRouteInfo
+                    mkTransitRoutesQuote searchReq.vehicleType transitRouteInfo merchantOperatingCity.id
                 )
                 transitRoutesInfo
             return $ concat quotes'
@@ -104,11 +104,11 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                     <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
             [startStation] ++ intermediateStations ++ [endStation]
 
-    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> m [DQuote]
-    mkSingleRouteQuote vehicleType routeInfo = do
+    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> Id MerchantOperatingCity -> m [DQuote]
+    mkSingleRouteQuote vehicleType routeInfo merchantOperatingCityId = do
       stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code
-      startStation <- QStation.findByStationCode routeInfo.startStopCode >>= fromMaybeM (StationNotFound routeInfo.startStopCode)
-      endStation <- QStation.findByStationCode routeInfo.endStopCode >>= fromMaybeM (StationNotFound routeInfo.endStopCode)
+      startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+      endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
 
       currentTime <- getCurrentTime
@@ -175,15 +175,15 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         )
         serviceableFareProducts
 
-    mkTransitRoutesQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
-    mkTransitRoutesQuote vehicleType transitRouteInfo = do
+    mkTransitRoutesQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> [RouteStopInfo] -> Id MerchantOperatingCity -> m [DQuote]
+    mkTransitRoutesQuote vehicleType transitRouteInfo merchantOperatingCityId = do
       -- TODO :: This is to be handled properly with OTP
       routeStations <-
         mapM
           ( \routeInfo -> do
               stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code
-              startStation <- QStation.findByStationCode routeInfo.startStopCode >>= fromMaybeM (StationNotFound routeInfo.startStopCode)
-              endStation <- QStation.findByStationCode routeInfo.endStopCode >>= fromMaybeM (StationNotFound routeInfo.endStopCode)
+              startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound routeInfo.startStopCode)
+              endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound routeInfo.endStopCode)
               stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
 
               currentTime <- getCurrentTime
