@@ -15,9 +15,11 @@ import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
@@ -25,7 +27,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf, setIsNotificationSchedulerRunningKey)
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, jobDuplicationPreventionKey, roundToHalf, setIsNotificationSchedulerRunningKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -79,7 +81,11 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName False
             driverFeesPostRetries <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
             mapM_ handleNotificationFailureAfterRetiresEnd (driverFeesPostRetries <&> (.id))
-            scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName
+            let jobDataT :: Text = show jobData
+            hashedJobData <- getHash jobDataT
+            duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "Notification") (3600 * 12) True --- 12 hours expiry time  for duplication prevention  key
+            when duplicationKey $ do
+              scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
