@@ -1007,6 +1007,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
       , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
+      , basePrice = quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
