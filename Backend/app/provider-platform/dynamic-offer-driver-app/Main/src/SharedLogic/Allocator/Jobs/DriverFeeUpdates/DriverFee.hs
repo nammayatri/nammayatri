@@ -42,6 +42,7 @@ import Domain.Types.Person
 import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
@@ -55,7 +56,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -191,7 +192,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
       maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
+      let jobDataT :: Text = show jobData
+      hashedJobData <- getHash jobDataT
+      duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
+      when duplicationKey do
+        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
