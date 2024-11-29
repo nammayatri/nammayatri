@@ -244,3 +244,6 @@ mkCachedKeyTotalRidesByDriverId driverId = "TRIDES:DId:" <> driverId.getId
 
 getPaymentModeAndVehicleCategoryKey :: Plan.Plan -> Text
 getPaymentModeAndVehicleCategoryKey Plan.Plan {..} = show paymentMode <> "_" <> show vehicleCategory
+
+jobDuplicationPreventionKey :: Text -> Text -> Text
+jobDuplicationPreventionKey jobHash jobType = "JobDuplicationPreventionKey:Jt:-" <> jobType <> ":ParentJobDataHashed:-" <> jobHash
