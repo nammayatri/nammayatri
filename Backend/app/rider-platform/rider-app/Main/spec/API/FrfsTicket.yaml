@@ -230,6 +230,8 @@ apis:
       auth: TokenAuth
       mandatoryQuery:
         vehicleType: VehicleCategory
+      query:
+        city: City
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:

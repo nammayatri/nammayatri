@@ -144,8 +144,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
 
-  startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
-  endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
+  startStation <- QStation.findByStationCodeAndMerchantOperatingCityId dStartStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
+  endStation <- QStation.findByStationCodeAndMerchantOperatingCityId dEndStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText

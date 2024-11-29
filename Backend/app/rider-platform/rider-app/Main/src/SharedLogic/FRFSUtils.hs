@@ -69,9 +69,9 @@ mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
   APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
-mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
-mkPOrgStationAPI mbPOrgId stationAPI = do
-  station <- B.runInReplica $ CQS.findByStationCode stationAPI.code >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "")
+mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
+mkPOrgStationAPI mbPOrgId merchantOperatingCityId stationAPI = do
+  station <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId stationAPI.code merchantOperatingCityId >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and merchantOperatingCityId: " +|| merchantOperatingCityId ||+ "")
   mkPOrgStationAPIRes station mbPOrgId
 
 data FRFSTicketDiscountDynamic = FRFSTicketDiscountDynamic

@@ -68,6 +68,7 @@ import Kernel.Prelude hiding (drop)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
@@ -359,7 +360,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
   when (riderConfig.makeMultiModalSearch && isNothing journeySearchData) $ do
     case req of
-      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
+      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance originCity
       _ -> pure ()
 
   return $
@@ -525,8 +526,9 @@ multiModalSearch ::
   SearchRequest.SearchRequest ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
+  Context.City ->
   Flow ()
-multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId maximumWalkDistance = do
+multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId maximumWalkDistance originCity = do
   now <- getCurrentTime
 
   let transitRoutesReq =
@@ -576,7 +578,7 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             logDebug $ "journey for multi-modal: " <> show journey
 
             -- when (idx == 0) $ do
-            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance originCity
       )
       allRoutes.routes
 
@@ -596,8 +598,9 @@ makeChildSearchReqs ::
   Bool ->
   UTCTime ->
   Meters ->
+  Context.City ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
   now <- getCurrentTime
   void $
     mapWithIndex
@@ -646,10 +649,10 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                 void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
             DTrip.Metro -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.METRO frfsSearchReq
             DTrip.Bus -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.BUS frfsSearchReq
             DTrip.Walk -> do
               fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
               toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}

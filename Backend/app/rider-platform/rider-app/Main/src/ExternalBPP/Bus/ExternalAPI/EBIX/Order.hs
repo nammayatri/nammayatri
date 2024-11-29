@@ -98,8 +98,8 @@ getTicketDetail config qrTtl booking routeStation = do
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code >>= fromMaybeM (StationNotFound startStation.code)
-  toStation <- B.runInReplica $ QStation.findByStationCode endStation.code >>= fromMaybeM (StationNotFound endStation.code)
+  fromStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId startStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ startStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
+  toStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId endStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ endStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
   route <- B.runInReplica $ QRoute.findByRouteCode routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)
   fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code)
   toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code)
