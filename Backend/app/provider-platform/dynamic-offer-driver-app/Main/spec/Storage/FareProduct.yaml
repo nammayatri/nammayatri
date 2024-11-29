@@ -25,6 +25,7 @@ FareProduct:
     timeBounds : TimeBound|NoRelation
     searchSource: SearchSource
     enabled : Bool
+    disableRecompute : Maybe Bool
 
   beamFields:
     vehicleServiceTier:
