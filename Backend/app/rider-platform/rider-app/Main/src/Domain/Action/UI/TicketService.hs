@@ -671,7 +671,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
-  if ticketBooking'.status == DTTB.Cancelled || order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+  if ticketBooking'.status == DTTB.Cancelled || ticketBooking'.status == DTTB.Booked
     then do
       return ticketBooking'.status
     else do
