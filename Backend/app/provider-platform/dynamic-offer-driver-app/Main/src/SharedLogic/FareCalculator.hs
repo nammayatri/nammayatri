@@ -244,6 +244,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
+    stopWaitingTimes :: [Minutes],
     returnTime :: Maybe UTCTime,
     vehicleAge :: Maybe Months,
     roundTrip :: Bool,
@@ -564,10 +565,12 @@ calculateFareParameters params = do
 
     countWaitingCharge :: WaitingChargeInfo -> Maybe HighPrecMoney
     countWaitingCharge waitingChargeInfo = do
-      let waitingTimeMinusFreeWatingTime = params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)
-      let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
+      let waitingTimeMinusFreeWatingTime = max 0 (fromMaybe (Minutes 0) (params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)))
+      let totalStopWaitingTimeMinunFreeWaitingTime = sum $ params.stopWaitingTimes <&> (\wt -> max ((-) wt waitingChargeInfo.freeWaitingTime) 0)
+      let chargedWaitingTime = waitingTimeMinusFreeWatingTime + totalStopWaitingTimeMinunFreeWaitingTime
+      let mbChargedWaitingTime = if chargedWaitingTime == 0 then Nothing else Just chargedWaitingTime
       case waitingChargeInfo.waitingCharge of
-        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> chargedWaitingTime
+        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> mbChargedWaitingTime
         ConstantWaitingCharge charge -> Just $ toHighPrecMoney charge -- Always charged, freeWaitingTime doesn't make sense in this case
     countPlatformFee :: HighPrecMoney -> Maybe PlatformFeeInfo -> Currency -> FareParametersDetails -> FareParametersDetails
     countPlatformFee fullCompleteRideCost platformFeeInfo currency = \case

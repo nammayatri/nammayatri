@@ -1337,6 +1337,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               roundTrip = fromMaybe False searchReq.roundTrip,
               vehicleAge = sReqFD.vehicleAge,
               waitingTime = Nothing,
+              stopWaitingTimes = [],
               noOfStops = length searchReq.stops,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,

@@ -100,6 +100,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.middleStopCount middleStopCount,
       Se.Set Beam.mode mode,
       Se.Set Beam.notificationSource notificationSource,
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,

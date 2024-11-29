@@ -249,6 +249,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     vehicleAge = Nothing,
                     roundTrip = fromMaybe False booking.roundTrip,
                     waitingTime = Nothing,
+                    stopWaitingTimes = [],
                     noOfStops = length booking.stops,
                     actualRideDuration = Nothing,
                     avgSpeedOfVehicle = Nothing,

@@ -254,6 +254,7 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
             returnTime = Nothing,
             roundTrip = False,
             waitingTime = Nothing,
+            stopWaitingTimes = [],
             actualRideDuration = Nothing,
             vehicleAge = Nothing,
             avgSpeedOfVehicle = Nothing,

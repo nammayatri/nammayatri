@@ -90,6 +90,7 @@ import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
@@ -512,6 +513,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     if recomputeWithLatestPricing
       then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
       else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
+  stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams
@@ -522,6 +524,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           returnTime = booking.returnTime,
           roundTrip = fromMaybe False booking.roundTrip,
           waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
+          stopWaitingTimes = stopsInfo <&> (\stopInfo -> max 0 (secondsToMinutes $ roundToIntegral (diffUTCTime (fromMaybe stopInfo.waitingTimeStart stopInfo.waitingTimeEnd) stopInfo.waitingTimeStart))),
           actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
           estimatedRideDuration = booking.estimatedDuration,
           avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
