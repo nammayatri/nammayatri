@@ -247,7 +247,7 @@ baseAppFlow gPayload callInitUI = do
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
   let _ = EHE.addEvent (EHE.defaultEventObject "splash_screen_loaded") { module = "onboarding"}
   if callInitUI && bundleSplashConfig.enable then void $ lift $ lift $ fork $ EHE.runLogTracking else pure unit
-  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.10/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.11/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   -- checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
