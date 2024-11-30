@@ -23,6 +23,7 @@ data MerchantPushNotification = MerchantPushNotification
     language :: Kernel.External.Types.Language,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    shouldTrigger :: Kernel.Prelude.Bool,
     title :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     createdAt :: Kernel.Prelude.UTCTime,
