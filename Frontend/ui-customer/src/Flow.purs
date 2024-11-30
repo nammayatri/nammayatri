@@ -468,6 +468,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "addHome" -> addFavLocFlow SearchLocationScreenData.initData "HOME_TAG"
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
+        "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -632,6 +633,10 @@ hybridFlow flow = do
     "tripDetail" -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
       tripDetailsScreenFlow
+    "ticketing" -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true } })
+      modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData { props { hideMyTickets = false } })
+      placeListFlow
     "safetytools" -> do
       modifyScreenState
         $ NammaSafetyScreenStateType
