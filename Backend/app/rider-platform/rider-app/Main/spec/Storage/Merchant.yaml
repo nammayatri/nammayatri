@@ -531,6 +531,13 @@ MerchantPushNotification:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     tripCategory: Maybe TripCategory
+    shouldTrigger: Bool
+  beamType:
+    shouldTrigger: Maybe Bool
+  fromTType:
+    shouldTrigger: Kernel.Prelude.fromMaybe True|I
+  toTType:
+    shouldTrigger: Kernel.Prelude.Just|I
   default:
     id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:

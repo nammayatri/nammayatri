@@ -169,27 +169,28 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language
   when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
   whenJust mbMerchantPN \merchantPN -> do
-    let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
-    notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
-    notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
-    let title = buildTemplate dynamicTemplateParams merchantPN.title
-        body = buildTemplate dynamicTemplateParams merchantPN.body
-        notificationData =
-          Notification.NotificationReq
-            { category = merchantPN.fcmNotificationType,
-              subCategory = notiData.subCategory,
-              showNotification = notiData.showType,
-              messagePriority = notiData.priority,
-              entity = entity,
-              body = body,
-              title = title,
-              auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
-              sound = notificationSound,
-              ttl = notiData.ttl,
-              dynamicParams = dynamicParams
-            }
-    --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-    notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+    when (merchantPN.shouldTrigger) $ do
+      let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
+      notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
+      notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
+      let title = buildTemplate dynamicTemplateParams merchantPN.title
+          body = buildTemplate dynamicTemplateParams merchantPN.body
+          notificationData =
+            Notification.NotificationReq
+              { category = merchantPN.fcmNotificationType,
+                subCategory = notiData.subCategory,
+                showNotification = notiData.showType,
+                messagePriority = notiData.priority,
+                entity = entity,
+                body = body,
+                title = title,
+                auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
+                sound = notificationSound,
+                ttl = notiData.ttl,
+                dynamicParams = dynamicParams
+              }
+      --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
+      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 --------------------------------------------------------------------------------------------------
 
