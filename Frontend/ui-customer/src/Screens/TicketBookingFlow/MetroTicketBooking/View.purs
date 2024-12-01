@@ -574,7 +574,7 @@ incrementDecrementView push state metroConfig busClicked=
               [ background Color.grey700
               , height $ V 30 
               , width $ V 30  
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET if state.data.ticketCount < 2 then "ny_ic_disable_decrement" else "ny_ic_decrement"
+              , imageWithFallback $ fetchImage COMMON_ASSET if state.data.ticketCount < 2 then "ny_ic_disable_decrement" else "ny_ic_decrement"
               , rippleColor Color.rippleShade
               , cornerRadius 50.0  
               , onClick push $ const (DecrementTicket)
@@ -592,7 +592,7 @@ incrementDecrementView push state metroConfig busClicked=
               [ background Color.black900
               , height $ V 30 
               , width $ V 30  
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET if metroBookingConfigResp.oneWayTicketLimit == state.data.ticketCount then "ny_ic_disable_increment" else "ny_ic_increment"
+              , imageWithFallback $ fetchImage COMMON_ASSET if metroBookingConfigResp.oneWayTicketLimit == state.data.ticketCount then "ny_ic_disable_increment" else "ny_ic_increment"
               , rippleColor Color.rippleShade
               , cornerRadius 50.0  
               , margin $ MarginLeft 10
@@ -691,7 +691,7 @@ locationSelectionView push state =
   , imageView $ 
       [ height $ V 32
       , width $ V 32
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_src_dest_edit"
+      , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_src_dest_edit"
       , cornerRadius 10.0 
       , margin $ Margin 0 46 16 0
       , visibility $ boolToVisibility (not state.props.isRepeatRide)
@@ -730,7 +730,7 @@ textViewForLocation label actionId push state =
     [ imageView $ 
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback $ fetchImage COMMON_ASSET (if actionId == Src then "ny_ic_pickup_indicator" else "ny_ic_drop_red_indicator")
+            , imageWithFallback $ fetchImage COMMON_ASSET (if actionId == Src then "ny_ic_pickup_green_indicator" else "ny_ic_drop_red_indicator")
             , cornerRadius 4.0 
             , margin $ MarginLeft 8
             ]
