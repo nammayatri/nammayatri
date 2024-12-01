@@ -41,6 +41,8 @@ import Services.API as API
 import Screens.Types as ST
 import Services.Backend as Remote
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,7 +76,12 @@ data ScreenOutput
 
 eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState
 
-eval GoBack state = exit $ GoToHomeScreen state
+eval GoBack state =
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 

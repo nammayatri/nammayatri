@@ -4805,8 +4805,9 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen { data { quoteId = state.data.quoteId } })
       metroTicketBookingFlow
     GO_TO_HOME_FROM_METRO_TICKET -> homeScreenFlow
-    GO_TO_METRO_PAYMENT_PAGE orderResp bookingId -> do
-      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = ConfirmMetroQuote } })
+    GO_TO_METRO_PAYMENT_PAGE orderResp bookingId state -> do
+      modifyScreenState $ MetroTicketBookingScreenStateType (\ticketBookingState -> ticketBookingState { props { currentStage = ConfirmMetroQuote } })
+      modifyScreenState $ MetroTicketStatusScreenStateType (\ticketStatusState -> ticketStatusState { props { entryPoint = if state.props.ticketServiceType == BUS then ST.BusTicketToMetroTicketStatus else ticketStatusState.props.entryPoint } })
       metroTicketPaymentFlow orderResp bookingId
     GO_TO_SEARCH_SCREEN state -> do 
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN),ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing} })
@@ -5394,7 +5395,10 @@ metroTicketStatusFlow = do
       metroTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> homeScreenFlow
     GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> metroMyTicketsFlow
-    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> busTicketBookingFlow
+    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> do
+      setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
+      busTicketBookingFlow
 
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do

@@ -74,7 +74,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | GoToHome
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
-                  | GotoPaymentPage CreateOrderRes String
+                  | GotoPaymentPage CreateOrderRes String ST.MetroTicketBookingScreenState
                   | GotoSearchScreen ST.MetroTicketBookingScreenState
                   -- | GET_ROUTES ST.MetroTicketBookingScreenState
                   | AadhaarVerificationSO ST.MetroTicketBookingScreenState String
@@ -179,7 +179,7 @@ eval SelectRouteslistView state = do
     continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
 eval (SelectRoutes route routeName) state = continue state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
-eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
+eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId state
 
 eval _ state = update state
 

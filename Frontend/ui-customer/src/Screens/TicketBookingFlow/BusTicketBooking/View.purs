@@ -199,7 +199,7 @@ headerView push state =
           , height $ V 32
           , gravity RIGHT
           , padding $ Padding 4 4 4 4
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_icon_yellow"
+          , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_ticket_icon_yellow"
           , rippleColor Color.rippleShade
           ]
         , textView $

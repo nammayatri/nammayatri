@@ -419,7 +419,7 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
                                  | GO_TO_METRO_ROUTE_MAP
                                  | GO_TO_HOME_FROM_METRO_TICKET
                                  | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
-                                 | GO_TO_METRO_PAYMENT_PAGE CreateOrderRes String
+                                 | GO_TO_METRO_PAYMENT_PAGE CreateOrderRes String MetroTicketBookingScreenState
                                  | GO_TO_SEARCH_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_AADHAAR_VERIFICATION_SCREEN MetroTicketBookingScreenState String
                                  | EDIT_TICKET_BOOKING_STOPS MetroTicketBookingScreenState
