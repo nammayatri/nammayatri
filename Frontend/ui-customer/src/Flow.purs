@@ -621,6 +621,7 @@ hybridFlow flow = do
     "tripDetail" -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
       tripDetailsScreenFlow
+    "metro" ->  metroTicketBookingFlow
     "safetytools" -> do
       modifyScreenState
         $ NammaSafetyScreenStateType
