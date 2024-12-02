@@ -20,6 +20,7 @@ BookingCancellationReason:
     bookingId : Id Booking
     rideId : Maybe (Id Ride)
     merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     source : CancellationSource
     reasonCode : Maybe CancellationReasonCode
     additionalInfo : Maybe Text
@@ -64,5 +65,5 @@ BookingCancellationReason:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+  excludedFields: [merchantId, createdAt, updatedAt]
 

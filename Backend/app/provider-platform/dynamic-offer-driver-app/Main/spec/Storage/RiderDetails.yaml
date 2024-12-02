@@ -30,6 +30,7 @@ RiderDetails:
     currency : Currency
     disputeChancesUsed : Int
     merchantId : Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     otpCode : Maybe Text
     nightSafetyChecks : Bool
     firstRideId: Maybe Text
@@ -134,4 +135,4 @@ RiderDetails:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantId, createdAt, updatedAt]

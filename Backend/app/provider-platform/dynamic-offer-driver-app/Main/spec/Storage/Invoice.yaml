@@ -26,6 +26,7 @@ Invoice:
     bankErrorMessage : Maybe Text
     bankErrorCode : Maybe Text
     bankErrorUpdatedAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
     merchantOperatingCityId : Id MerchantOperatingCity
     lastStatusCheckedAt : Maybe UTCTime
     maxMandateAmount : Maybe HighPrecMoney
@@ -108,4 +109,4 @@ Invoice:
     - EXTRA_QUERY_FILE
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, createdAt, updatedAt]

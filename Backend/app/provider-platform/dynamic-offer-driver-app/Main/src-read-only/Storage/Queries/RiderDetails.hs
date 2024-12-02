@@ -110,6 +110,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.isDeviceIdExists isDeviceIdExists,
       Se.Set Beam.isFlagConfirmed isFlagConfirmed,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,
       Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
       Se.Set Beam.mobileNumberHash (mobileNumber & hash),

@@ -23,6 +23,7 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     driverDistToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     source :: B.C f Domain.Types.BookingCancellationReason.CancellationSource

@@ -5,6 +5,8 @@
 module Domain.Types.SearchReqLocation where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -25,6 +27,8 @@ data SearchReqLocation = SearchReqLocation
     instructions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime

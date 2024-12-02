@@ -106,7 +106,7 @@ callPayout ::
   Maybe PayoutConfig ->
   CashbackStatus ->
   m ()
-callPayout merchantId _ booking payoutConfig statusForRetry = do
+callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
   case payoutConfig of
     Just config -> do
       uid <- generateGUID
@@ -136,7 +136,7 @@ callPayout merchantId _ booking payoutConfig statusForRetry = do
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
-            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()
         Nothing -> do

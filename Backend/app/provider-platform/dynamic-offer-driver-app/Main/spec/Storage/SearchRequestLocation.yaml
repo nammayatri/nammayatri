@@ -24,6 +24,8 @@ SearchReqLocation:
     extras : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
 
 
@@ -54,4 +56,4 @@ SearchReqLocation:
 
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

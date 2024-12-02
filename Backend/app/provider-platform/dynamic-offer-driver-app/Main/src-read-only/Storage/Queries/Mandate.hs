@@ -43,6 +43,7 @@ updateByPrimaryKey (Domain.Types.Mandate.Mandate {..}) = do
       Se.Set Beam.endDate endDate,
       Se.Set Beam.mandatePaymentFlow mandatePaymentFlow,
       Se.Set Beam.maxAmount maxAmount,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.payerApp payerApp,
       Se.Set Beam.payerAppName payerAppName,
       Se.Set Beam.payerVpa payerVpa,

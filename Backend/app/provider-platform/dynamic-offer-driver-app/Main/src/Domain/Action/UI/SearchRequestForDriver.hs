@@ -193,5 +193,6 @@ convertDomainType DLoc.Location {..} =
       full_address = address.fullAddress,
       instructions = address.instructions,
       extras = address.extras,
+      merchantOperatingCityId = merchantOperatingCityId,
       ..
     }

@@ -23,6 +23,8 @@ instance FromTType' Beam.DriverGoHomeRequest Domain.Types.DriverGoHomeRequest.Dr
             lat = lat,
             lon = lon,
             mbReachedHome = reachedHome,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             numCancellation = numCancellation,
             status = status,
             updatedAt = updatedAt
@@ -37,6 +39,8 @@ instance ToTType' Beam.DriverGoHomeRequest Domain.Types.DriverGoHomeRequest.Driv
         Beam.lat = lat,
         Beam.lon = lon,
         Beam.reachedHome = mbReachedHome,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.numCancellation = numCancellation,
         Beam.status = status,
         Beam.updatedAt = updatedAt

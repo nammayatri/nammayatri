@@ -6,6 +6,8 @@ module Domain.Types.Location where
 
 import Data.Aeson
 import qualified Domain.Types.LocationAddress
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,7 +19,9 @@ data Location = Location
     id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates, ToJSON, FromJSON, ToSchema)
 
