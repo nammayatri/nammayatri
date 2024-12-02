@@ -149,7 +149,11 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
             refunds = [],
-            payerVpa = Nothing
+            payerVpa = Nothing,
+            card = Nothing,
+            paymentMethodType = Nothing,
+            authIdCode = Nothing,
+            txnUUID = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName

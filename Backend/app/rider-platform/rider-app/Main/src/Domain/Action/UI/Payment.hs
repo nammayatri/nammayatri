@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -170,6 +171,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
       Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
       Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
+      Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
       _ -> throwError $ InternalError "Unknown Service Config"
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
@@ -181,11 +183,13 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     case mbServiceType of
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
       Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (ShortId orderShortId) merchantId
       _ -> pure ()
   pure Ack
   where
     getPaymentServiceByType = \case
       Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
+      Just Payment.BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
