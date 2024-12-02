@@ -114,6 +114,9 @@ getServiceNameConfigJSON = \case
   Domain.BusPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.BusPaymentService Payment.Stripe, toJSON cfg)
+  Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
