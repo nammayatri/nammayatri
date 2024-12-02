@@ -17,55 +17,62 @@ module Storage.Clickhouse.BppTransactionJoin where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified Data.Text as Text
-import Domain.Types.Merchant (Merchant (..))
+import Domain.Types.DriverReferral
+import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
+import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as Ride
-import Domain.Types.RiderDetails (PayoutFlagReason)
+import Domain.Types.RideDetails as RideDetails
+import Domain.Types.RiderDetails as RiderDetails
+import Domain.Types.Trip
 import Domain.Types.VehicleVariant
-import Kernel.External.Encryption (DbHash (..))
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Kernel.Types.Time as Time
 import Kernel.Utils.Time
-import Storage.Queries.RideExtra
+import qualified Storage.Queries.RideExtra as QRE
 
 data BppTransactionJoinT f = BppTransactionJoinT
-  { bookingCustomerName :: C f Text,
-    bookingTripCategory :: C f Text,
+  { bookingCustomerName :: C f (Maybe Text),
+    bookingTripCategory :: C f TripCategory,
     rideShortId :: C f (ShortId Ride),
+    rideCurrency :: C f (Maybe Currency),
     rideCreatedAt :: C f UTCTime,
     riderDetailsCancellationDues :: C f HighPrecMoney,
     riderDetailsCreatedAt :: C f UTCTime,
-    riderDetailsCurrency :: C f (Maybe Currency),
+    riderDetailsCurrency :: C f Currency,
     riderDetailsDisputeChancesUsed :: C f Int,
     riderDetailsFirstRideId :: C f (Maybe Text),
     riderDetailsHasTakenValidRide :: C f Bool,
     riderDetailsHasTakenValidRideAt :: C f (Maybe UTCTime),
-    riderDetailsId :: C f Text,
+    riderDetailsId :: C f (Id RiderDetails),
     riderDetailsIsDeviceIdExists :: C f (Maybe Bool),
     riderDetailsIsFlagConfirmed :: C f (Maybe Bool),
-    riderDetailsMerchantId :: C f Text,
+    riderDetailsMerchantId :: C f (Id Merchant),
     riderDetailsMobileCountryCode :: C f Text,
     riderDetailsMobileNumberEncrypted :: C f Text,
     riderDetailsMobileNumberHash :: C f Text,
     riderDetailsNightSafetyChecks :: C f Bool,
     riderDetailsOtpCode :: C f (Maybe Text),
     riderDetailsPayoutFlagReason :: C f (Maybe PayoutFlagReason),
-    riderDetailsReferralCode :: C f (Maybe Text),
+    riderDetailsReferralCode :: C f (Maybe (Id DriverReferral)),
     riderDetailsReferredAt :: C f (Maybe UTCTime),
-    riderDetailsReferredByDriver :: C f (Maybe Text),
+    riderDetailsReferredByDriver :: C f (Maybe (Id Person)),
     riderDetailsUpdatedAt :: C f UTCTime,
     rideDetailsCreatedAt :: C f (Maybe UTCTime),
     rideDetailsDefaultServiceTierName :: C f (Maybe Text),
     rideDetailsDriverCountryCode :: C f (Maybe Text),
     rideDetailsDriverName :: C f Text,
-    rideDetailsDriverNumber :: C f (Maybe Text),
+    rideDetailsDriverNumberHash :: C f (Maybe Text),
+    rideDetailsDriverNumberEncrypted :: C f (Maybe Text),
     rideDetailsFleetOwnerId :: C f (Maybe Text),
     rideDetailsId :: C f (Id Ride),
-    rideDetailsVehicleAge :: C f (Maybe Int),
+    rideDetailsVehicleAge :: C f (Maybe Time.Months),
     rideDetailsVehicleClass :: C f (Maybe Text),
     rideDetailsVehicleColor :: C f (Maybe Text),
     rideDetailsVehicleModel :: C f (Maybe Text),
@@ -73,10 +80,11 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideDetailsVehicleVariant :: C f (Maybe VehicleVariant),
     bookingProviderId :: C f (Id Merchant),
     bookingMerchantOperatingCityId :: C f (Id MerchantOperatingCity),
-    bookingEstimatedFare :: C f HighPrecMoney,
-    rideFare :: C f HighPrecMoney,
+    bookingEstimatedFare :: C f (Maybe HighPrecMoney),
+    rideFare :: C f (Maybe HighPrecMoney),
     rideFareAmount :: C f HighPrecMoney,
-    rideStatus :: C f RideStatus
+    rideStatus :: C f RideStatus,
+    rideTripStartTime :: C f (Maybe UTCTime)
   }
   deriving (Generic)
 
@@ -88,6 +96,7 @@ bppTransactionJoinTTable =
     { bookingCustomerName = "booking_customer_name",
       bookingTripCategory = "booking_trip_category",
       rideShortId = "ride_short_id",
+      rideCurrency = "ride_currency",
       riderDetailsCancellationDues = "rider_details_cancellation_dues",
       riderDetailsCreatedAt = "rider_details_created_at",
       riderDetailsCurrency = "rider_details_currency",
@@ -113,7 +122,8 @@ bppTransactionJoinTTable =
       rideDetailsDefaultServiceTierName = "ride_details_default_service_tier_name",
       rideDetailsDriverCountryCode = "ride_details_driver_country_code",
       rideDetailsDriverName = "ride_details_driver_name",
-      rideDetailsDriverNumber = "ride_details_driver_number",
+      rideDetailsDriverNumberHash = "ride_details_driver_number_hash",
+      rideDetailsDriverNumberEncrypted = "ride_details_driver_number_encrypted",
       rideDetailsFleetOwnerId = "ride_details_fleet_owner_id",
       rideDetailsId = "ride_details_id",
       rideDetailsVehicleAge = "ride_details_vehicle_age",
@@ -127,10 +137,22 @@ bppTransactionJoinTTable =
       bookingMerchantOperatingCityId = "booking_merchant_operating_city_id",
       bookingEstimatedFare = "booking_estimated_fare",
       rideFare = "ride_fare",
-      rideFareAmount = "ride_fare_amount"
+      rideFareAmount = "ride_fare_amount",
+      rideTripStartTime = "ride_trip_start_time",
+      rideStatus = "ride_status"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
+
+instance ClickhouseValue RideStatus
+
+instance ClickhouseValue Common.BookingStatus
+
+instance ClickhouseValue Time.Months
+
+instance ClickhouseValue TripCategory
+
+$(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
 
 findAllRideItems ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -145,9 +167,9 @@ findAllRideItems ::
   UTCTime ->
   UTCTime ->
   UTCTime ->
-  m [RideItem]
+  m [QRE.RideItem]
 findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to = do
-  _ <-
+  bppTransaction <-
     CH.findAll $
       CH.select $
         CH.limit_ limitVal $
@@ -161,23 +183,73 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                     CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
-                    CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. (Text.pack . show . unDbHash) dpdh)
-                    CH.&&. CH.whenJust_ mbBookingStatus (\bs -> mkBookingStatusVal bppTransaction.rideStatus CH.==. bs)
+                    CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
+                    CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
-  pure []
+  return $ fmap mkRideItem bppTransaction
   where
-    mkBookingStatusVal ride =
-      CH.if_ (ride.status CH.==.. CH.valColumn Ride.COMPLETED) (CH.valColumn Common.COMPLETED) $
-        CH.if_ (ride.status CH.==. CH.valColumn Ride.NEW) (CH.not_ (ride.createdAt CH.<=. addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)) (CH.valColumn Common.UPCOMING) $
-          CH.if_ (ride.status CH.==. CH.valColumn Ride.NEW CH.&&. (ride.createdAt CH.<=. addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)) (CH.valColumn Common.UPCOMING_6HRS) $
-            CH.if_ (ride.status CH.==. CH.valColumn Ride.INPROGRESS CH.&&. CH.not_ (ride.tripStartTime CH.<=. Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)) (CH.valColumn Common.ONGOING) $
-              CH.if_ (ride.status CH.==. CH.valColumn Ride.CANCELLED) (CH.valColumn Common.CANCELLED) (CH.valColumn Common.ONGOING_6HRS)
+    mkBookingStatus ride
+      | ride.rideStatus == Ride.COMPLETED = Common.COMPLETED
+      | ride.rideStatus == Ride.NEW && (ride.rideCreatedAt) > subtract6Hrs = Common.UPCOMING
+      | ride.rideStatus == Ride.NEW && ride.rideCreatedAt <= subtract6Hrs = Common.UPCOMING_6HRS
+      | ride.rideStatus == Ride.INPROGRESS && ride.rideTripStartTime > Just subtract6Hrs = Common.ONGOING
+      | ride.rideStatus == Ride.CANCELLED = Common.CANCELLED
+      | otherwise = Common.ONGOING_6HRS
 
-$(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
+    subtract6Hrs = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
 
---
--- srfd.createdAt >=. CH.DateTime from
---               CH.&&. srfd.createdAt <=. CH.DateTime to
---               CH.&&. srfd.mode CH.==. Just DI.ONLINE
---               CH.&&. CH.isNotNull srfd.fromLocGeohash
+    mkBookingStatusCond Common.COMPLETED ride = ride.rideStatus CH.==. Ride.COMPLETED
+    mkBookingStatusCond Common.UPCOMING ride = ride.rideStatus CH.==. Ride.NEW CH.&&. ride.rideCreatedAt CH.>. subtract6Hrs
+    mkBookingStatusCond Common.UPCOMING_6HRS ride = ride.rideStatus CH.==. Ride.NEW CH.&&. ride.rideCreatedAt CH.<=. subtract6Hrs
+    mkBookingStatusCond Common.ONGOING ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.>. Just subtract6Hrs
+    mkBookingStatusCond Common.ONGOING_6HRS ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.<=. Just subtract6Hrs
+    mkBookingStatusCond Common.CANCELLED ride = ride.rideStatus CH.==. Ride.CANCELLED
+
+    mkRideItem bppTxn@BppTransactionJoinT {..} =
+      QRE.RideItem
+        { rideDetails =
+            RideDetails.RideDetails
+              { RideDetails.createdAt = bppTxn.rideDetailsCreatedAt,
+                RideDetails.defaultServiceTierName = bppTxn.rideDetailsDefaultServiceTierName,
+                RideDetails.driverCountryCode = bppTxn.rideDetailsDriverCountryCode,
+                RideDetails.driverName = bppTxn.rideDetailsDriverName,
+                RideDetails.driverNumber = EncryptedHashed <$> (Encrypted <$> bppTxn.rideDetailsDriverNumberEncrypted) <*> (DbHash <$> (encodeUtf8 <$> bppTxn.rideDetailsDriverNumberHash)),
+                RideDetails.fleetOwnerId = bppTxn.rideDetailsFleetOwnerId,
+                RideDetails.id = bppTxn.rideDetailsId,
+                RideDetails.vehicleAge = bppTxn.rideDetailsVehicleAge,
+                RideDetails.vehicleClass = bppTxn.rideDetailsVehicleClass,
+                RideDetails.vehicleColor = bppTxn.rideDetailsVehicleColor,
+                RideDetails.vehicleModel = bppTxn.rideDetailsVehicleModel,
+                RideDetails.vehicleNumber = bppTxn.rideDetailsVehicleNumber,
+                RideDetails.vehicleVariant = bppTxn.rideDetailsVehicleVariant
+              },
+          riderDetails =
+            RiderDetails.RiderDetails
+              { RiderDetails.cancellationDues = bppTxn.riderDetailsCancellationDues,
+                RiderDetails.createdAt = bppTxn.riderDetailsCreatedAt,
+                RiderDetails.currency = bppTxn.riderDetailsCurrency,
+                RiderDetails.disputeChancesUsed = bppTxn.riderDetailsDisputeChancesUsed,
+                RiderDetails.firstRideId = bppTxn.riderDetailsFirstRideId,
+                RiderDetails.hasTakenValidRide = bppTxn.riderDetailsHasTakenValidRide,
+                RiderDetails.hasTakenValidRideAt = bppTxn.riderDetailsHasTakenValidRideAt,
+                RiderDetails.id = bppTxn.riderDetailsId,
+                RiderDetails.isDeviceIdExists = bppTxn.riderDetailsIsDeviceIdExists,
+                RiderDetails.isFlagConfirmed = bppTxn.riderDetailsIsFlagConfirmed,
+                RiderDetails.merchantId = bppTxn.riderDetailsMerchantId,
+                RiderDetails.mobileCountryCode = bppTxn.riderDetailsMobileCountryCode,
+                RiderDetails.mobileNumber = EncryptedHashed (Encrypted bppTxn.riderDetailsMobileNumberEncrypted) (DbHash (encodeUtf8 bppTxn.riderDetailsMobileNumberHash)),
+                RiderDetails.nightSafetyChecks = bppTxn.riderDetailsNightSafetyChecks,
+                RiderDetails.otpCode = bppTxn.riderDetailsOtpCode,
+                RiderDetails.payoutFlagReason = bppTxn.riderDetailsPayoutFlagReason,
+                RiderDetails.referralCode = bppTxn.riderDetailsReferralCode,
+                RiderDetails.referredAt = bppTxn.riderDetailsReferredAt,
+                RiderDetails.referredByDriver = bppTxn.riderDetailsReferredByDriver,
+                RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt
+              },
+          customerName = bppTxn.bookingCustomerName,
+          fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),
+          bookingStatus = mkBookingStatus bppTxn,
+          tripCategory = bppTxn.bookingTripCategory,
+          ..
+        }
