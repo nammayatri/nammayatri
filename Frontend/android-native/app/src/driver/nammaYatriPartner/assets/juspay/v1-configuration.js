@@ -2223,7 +2223,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 20.30378209, 
         "cityLong" : 85.82251309,
-        "supportNumber" : "08069724848",
+        "supportNumber" : "08069724914",
         "languageKey" : "OD_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,
@@ -2298,7 +2298,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 20.46615822, 
         "cityLong" : 85.88302282,
-        "supportNumber" : "08069724848",
+        "supportNumber" : "08069724914",
         "languageKey" : "OD_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,
@@ -2373,7 +2373,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 19.80495793, 
         "cityLong" : 85.82209410,
-        "supportNumber" : "08069724848",
+        "supportNumber" : "08069724914",
         "languageKey" : "KN_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,
