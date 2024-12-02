@@ -17,8 +17,11 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 import Prelude
 import Screens.Types as ST
 import ConfigProvider
-import Services.API (MetroBookingConfigRes(..))
+import Services.API (FRFSConfigAPIRes(..), FRFSRouteAPI(..))
 import Data.Maybe as Mb
+import Data.Array 
+import Services.API as API
+import Data.Maybe (Maybe(..))
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -30,12 +33,18 @@ initData = {
   , srcCode : ""
   , destCode : ""
   , searchId : ""
-  , ticketPrice : 0
+  , ticketPrice : 0.0
   , bookingId : ""
   , quoteId : ""
   , quoteResp : []
-  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing}
+  , routeSearchedList : []
+  , routeList : []
+  , stopsSearchedList : []
+  , searchRideType : API.BUS_DESTINATION
+  , metroBookingConfigResp : FRFSConfigAPIRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0.0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
   , eventDiscountAmount : Mb.Nothing
+  , discounts : []
+  , applyDiscounts : Nothing
   },
   props: {
     isLimitExceeded : false
@@ -44,6 +53,16 @@ initData = {
     , isButtonActive : false
     , showMetroBookingTimeError : false
     , showShimmer : true
+    , busClicked : false
+    , routeList : false
+    , showRouteOptions : false
+    , isEmptyRoute : ""
+    , ticketServiceType : API.METRO
+    , srcLat : 0.00
+    , srcLong : 0.00
+    , routeName : ""
+    , isRepeatRide : false
+    
   },
   config :  getAppConfig appConfig
 }

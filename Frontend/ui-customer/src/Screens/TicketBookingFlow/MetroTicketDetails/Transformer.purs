@@ -21,11 +21,12 @@ import Screens.Types
 import Common.Types.App
 import Data.Array
 import Data.Maybe
+import Data.Int as INT
 import Engineering.Helpers.Commons
 import Helpers.Utils (getCityNameFromCode)
 
-metroTicketDetailsTransformer :: MetroTicketBookingStatus -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
-metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
+metroTicketDetailsTransformer :: FRFSTicketBookingStatusAPIRes -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
+metroTicketDetailsTransformer (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) state = 
   let
     
     metroRoute' = metroRouteTrasformer metroTicketBookingStatus.stations
@@ -41,6 +42,9 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
       , ticketType = metroTicketBookingStatus._type
       , noOfTickets = metroTicketBookingStatus.quantity
       , ticketPrice = metroTicketBookingStatus.price
+      , vehicleType = metroTicketBookingStatus.vehicleType
+      , route = metroTicketBookingStatus.routeStations
+      , transactionId = extractTransactionId metroTicketBookingStatus.payment
       }
     , props {
         stage = MetroTicketDetailsStage
@@ -105,3 +109,9 @@ ticketsInfoTransformer tickets =
     , status : ticket.status
   }) tickets
 
+extractTransactionId :: Maybe FRFSBookingPaymentAPI -> String
+extractTransactionId payment =
+  let dummyTransactionId = "12345678ABCD"
+  in case payment of
+      Just (FRFSBookingPaymentAPI paymentInfo) -> fromMaybe dummyTransactionId paymentInfo.transactionId
+      Nothing -> dummyTransactionId

@@ -1690,4 +1690,30 @@ getBn = Keymap {
 , updated_fare_str : "আপডেট করা ভাড়া"
 , book_any_details : "যেকোনো বিস্তারিত বুক করুন"
 , boost_search : "বুস্ট সার্চ"
+, bus__ : "বাস"
+, tickets_for_chennai_bus : "চেন্নাই বাসের টিকিট"
+, buy_bus_tickets : "বাস টিক"
+, book_and_pay : "বুক এবং পেমেন্ট"
+, bus_ticket : "বাস টিকিট"
+, check_spelling_and_try_again : "ওহ! অনুগ্রহ করে আপনার বানান পরীক্ষা করুন এবং আবার চেষ্টা করুন।"
+, book_bus_ticket : "বাস টিকিট বুক করুন"
+, book_a_one_way_instant_bus_ticket : "একদিকে তাৎক্ষণিক বাস টিকিট বুক করুন"
+, recent_ticket : "সাম্প্রতিক টিকিট"
+, experience_hassle_free_bus_bookings_with : "অসংকোচভাবে বাস বুকিং অভিজ্ঞতা অনুভব করুন"
+, enter_bus_number_or_destination : "বাস নম্বর বা গন্তব্য লিখুন"
+, destination_stop : "গন্তব্য স্টপ"
+, route_bus_number : "রুট বাস নম্বর"
+, pickup_stop : "পিকআপ স্টপ"
+, tickets_for_kolkata_bus : "কলকাতা ব" 
+, ticket_validity_30_minutes : "টিকিটটি বুকিংয়ের সময় থেকে মাত্র ৩০ মিনিটের জন্য বৈধ।"
+, fare_commission_free_wbtc :"ভাড়া কমিশন-মুক্ত এবং WBTC দ্বারা নির্ধারিত।"
+, select_route_number : "রুট নম্বর নির্বাচন করুন"
+, pickup_and_destination_stop : "পিকআপ এবং গন্তব্য স্টপ"
+, bus_boarded_confirmation : "আপনি কি বাসে উঠেছেন নিশ্চিত করুন?"
+, towards_station : (\s -> "দিকে " <> s)
+, bus_no : (\s -> "বাস নম্বর: " <> s)
+, verified : "যাচাই করা হয়েছে"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " টি প্রধান রুটে আমাদের বাস টিকিটিং পাইলট লঞ্চের অভিজ্ঞতা নিন। শীঘ্রই আরও রুট আসছে!")
+, note_your_ticket_is_only_valid_for : (\s -> "দ্রষ্টব্য: আপনার টিকিট বুকিংয়ের " <> s <> " পর্যন্ত বৈধ। স্থানীয় পরিস্থিতির কারণে বাসের সময়সূচি পরিবর্তিত হতে পারে, তাই দয়া করে বুক করার সময় স্টপেজে প্রস্তুত থাকুন।")
+, here_is_bus_ticket : "এখানে আ"
 }

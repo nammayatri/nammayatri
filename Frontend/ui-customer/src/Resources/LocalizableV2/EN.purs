@@ -1690,4 +1690,30 @@ getEn = Keymap {
 , updated_fare_str : "Updated Fare"
 , book_any_details : "Book Any Details"
 , boost_search : "Boost Search"
+, bus__ : "Bus"
+, tickets_for_chennai_bus : "Tickets for Chennai Bus"
+, buy_bus_tickets : "Buy Bus Tickets"
+, book_and_pay : "Book & Pay"
+, bus_ticket : "Bus Ticket"
+, check_spelling_and_try_again : "Oops! Please check your spelling and try searching again"
+, book_bus_ticket : "Book Bus Ticket"
+, book_a_one_way_instant_bus_ticket : "Book a one-way instant bus ticket"
+, recent_ticket : "Recent Tickets"
+, experience_hassle_free_bus_bookings_with : "Experience hassle-free bus bookings with"
+, enter_bus_number_or_destination : "Enter Bus No or Destination"
+, destination_stop : "Destination Stop"
+, route_bus_number : "Route/Bus No"
+, pickup_stop : "Pickup Stop"
+, tickets_for_kolkata_bus : "Tickets for Kolkata Bus"
+, ticket_validity_30_minutes : "The ticket is valid for only 30 minutes from the time of booking"
+, fare_commission_free_wbtc : "Fare is commission-free and determined by the WBTC"
+, select_route_number : "Select Route Number"
+, pickup_and_destination_stop : "Pickup and Destination Stop"
+, bus_boarded_confirmation : "Please confirm if you are inside the bus?"
+, towards_station : (\s -> "Towards " <> s)
+, bus_no : (\s -> "Bus No: " <> s)
+, verified : "Verified"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
+, note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
+, here_is_bus_ticket : "Here is your bus ticket"
 }

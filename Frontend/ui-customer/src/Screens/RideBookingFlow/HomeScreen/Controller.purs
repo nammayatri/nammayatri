@@ -2985,6 +2985,9 @@ eval (BottomNavBarAction id) state = do
   case id of
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
     MOBILITY -> continue newState
+    BUS_ -> do
+      let updatedState = newState { props { ticketServiceType = API.BUS } }
+      updateAndExit updatedState $ GoToBusTicketBookingFlow state
     _ -> update state
 
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
@@ -3059,7 +3062,10 @@ eval (ShareRideAction (PopupWithCheckboxController.CallContact index)) state = d
     Nothing -> continue state
 
 eval (UpdateBookingDetails (RideBookingRes response)) state = do
-  let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
+  let (RideBookingAPIDetails bookingDetails) = response.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      otpCode = contents.otpCode
+      rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
       newState = state{ props { currentStage =
                       case rideStatus of
                         "NEW" -> if state.props.currentStage == ChatWithDriver then ChatWithDriver else RideAccepted
@@ -3068,8 +3074,8 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         "CANCELLED" -> HomeScreen
                         _ -> RideAccepted
                     , bookingId = response.id
-                    }, data {
-                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState}}
+                    }, data { 
+                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState}}
   continue newState
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
@@ -3415,7 +3421,9 @@ eval (ServicesOnClick service) state = do
     RC.DELIVERY -> do 
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_delivery") { module = "onboarding"}
       exit $ GoToParcelInstructions state
-    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.BUS -> do
+      let newState = updatedState { props { ticketServiceType = API.BUS } }
+      updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO -> exit $ GoToMetroTicketBookingFlow state
     RC.METRO_OFFER -> exit $ GoToMetroTicketBookingFlow state
     _ -> continue state

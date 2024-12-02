@@ -122,6 +122,8 @@ data KeyStore
   | DRIVER_REACHED_DESTINATION_ACTION
   | LOCAL_ESTIMATES
   | BOOSTED_SEARCH
+  | RECENT_BUS_STOPS
+  | RECENT_BUS_ROUTES
 
 derive instance genericKeyStore :: Generic KeyStore _
 

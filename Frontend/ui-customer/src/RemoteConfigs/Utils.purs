@@ -131,6 +131,12 @@ getPreferredOrderInBookAny city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig false
     getCityBasedConfig value city
     
+getBusFlowConfigs :: String -> BusFlowConfig
+getBusFlowConfigs city = do
+    let config = fetchRemoteConfigString "bus_flow_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig {showBusTracking : false, showPostBookingTracking : false, liveRoutes : 0, ticketValidity : ""}
+    getCityBasedConfig value $ DS.toLower city
+
 defaultTipConfig :: TipsConfigRC
 defaultTipConfig = {
   sedan : [0, 20, 30, 50],
