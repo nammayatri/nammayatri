@@ -42,7 +42,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                                   Nothing -> dummyDriverFee
         statusTime = if resp.feeType == AUTOPAY_PAYMENT then resp.executionAt else resp.createdAt
         boothCharges specialZoneRideCount totalSpecialZoneCharges = case specialZoneRideCount,totalSpecialZoneCharges of
-                      Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
+                      Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x R$" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                       _, _ -> Nothing
         fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge fee.coinDiscountAmount (max 0.0 (fee.driverFeeAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges))) fee.totalRides
         autoPaySpecificKeys = do
@@ -69,7 +69,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                   {
                     key : "YOUR_EARNINGS",
                     title : getString YOUR_EARNINGS,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "₹" <> getFixedTwoDecimals driverFee'.totalEarnings
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else "R$" <> getFixedTwoDecimals driverFee'.totalEarnings
                   },
                   {
                     key : "FEE_BREAKUP",
@@ -124,7 +124,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
               {
                 key : "AMOUNT_PAID",
                 title : getString TOTAL_AMOUNT,
-                val : "₹" <> getFixedTwoDecimals resp.amount
+                val : "R$" <> getFixedTwoDecimals resp.amount
               },
               { key : "PAYMENT_MODE",
                 title : getString PAYMENT_MODE,

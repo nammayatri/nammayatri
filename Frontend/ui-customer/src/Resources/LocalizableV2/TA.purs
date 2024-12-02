@@ -351,7 +351,7 @@ getTa = Keymap {
 , nominal_fare: "கட்டாயமற்ற டிரைவர் கோரிக்கை*"
 , customer_cancellation_dues: "ரத்துக்கான நிலுவைத் தொகைகள்"
 , drivers_can_charge_an_additional_fare_upto: "* ட்ராஃபிக், திரும்பும் பயண வாய்ப்புகள் போன்ற பிற காரணிகளை ஈடுகட்ட ஓட்டுநர்கள் விருப்பப்படி அடிப்படைக் கட்டணத்தில் 10% (அருகிலுள்ள ரூ.10 வரை) கோரலாம்."
-, waiting_charge_description: "°காத்திருப்பு கட்டணம் முதல் {} நிமிடங்களுக்கு பூஜ்யம். அதற்குப் பிறகு காத்திருக்கும் நேரத்திற்கு ஒரு நிமிடத்திற்கு ₹{} வசூலிக்கப்படும்."
+, waiting_charge_description: "°காத்திருப்பு கட்டணம் முதல் {} நிமிடங்களுக்கு பூஜ்யம். அதற்குப் பிறகு காத்திருக்கும் நேரத்திற்கு ஒரு நிமிடத்திற்கு R${} வசூலிக்கப்படும்."
 , waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. முதல் " <> freeWaitingTime <> " நிமிடங்களுக்கு காத்திருப்பு கட்டணம் பூஜ்ஜியம்.\n 2. ஒரு நிமிடத்திற்கு "<> freeWaitingTime <>" காத்திருப்பு கட்டணம் அதன் பிறகு பொருந்தும்.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "முதல் "<> freeWaitingTime <>" நிமிட காத்திருப்புக்குப் பிறகு ஒரு நிமிடத்திற்கு "<> waitingCharge <> " பொருந்தும்")
 , successful_onboard: (\_ -> "நீங்கள் \nநம்ம யாத்ரியில் வெற்றிகரமாக உள்நுழைந்துள்ளீர்கள்")
@@ -429,7 +429,7 @@ getTa = Keymap {
 , gender_str: "பாலினம்"
 , profile_completion: "சுயவிவர நிறைவு"
 , early_end_ride_charges: "ஏர்லி ரைடு எண்ட் சார்ஜ்கள்^"
-, early_end_ride_charges_description: "^சவாரியை சீக்கிரமாக முடிப்பது, பயணிக்காத தூரத்தின் பாதிக் கட்டணமாக (அதிகபட்சம் ₹50) கூடுதல் கட்டணத்தைச் செலுத்துகிறது"
+, early_end_ride_charges_description: "^சவாரியை சீக்கிரமாக முடிப்பது, பயணிக்காத தூரத்தின் பாதிக் கட்டணமாக (அதிகபட்சம் R$50) கூடுதல் கட்டணத்தைச் செலுத்துகிறது"
 , yes_try_again: "ஆம், மீண்டும் முயற்சிக்கவும்"
 , no_dont: "இல்லை, வேண்டாம்"
 , yes_cancel_search: "ஆம், தேடலை ரத்துசெய்"
@@ -447,7 +447,7 @@ getTa = Keymap {
 , fare_update_policy: "கட்டண புதுப்பிப்புக் கொள்கை"
 , driver_additions_optional: "ஓட்டுநர் சேர்த்தல்கள் (விரும்பினால்)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "போக்குவரத்து, திரும்பும் பயண வாய்ப்பு போன்றவற்றை ஈடுகட்ட டிரைவர் கூடுதல் மேற்கோள் காட்டலாம்."
-, driver_additions_are_calculated_at_rate: (\_ -> "ஓட்டுனர் சேர்க்கும் வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை இருக்கும்")
+, driver_additions_are_calculated_at_rate: (\_ -> "ஓட்டுனர் சேர்க்கும் வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள R$10 வரை இருக்கும்")
 , driver_may_not_charge_this_additional_fare: "இந்த கூடுதல் கட்டணத்தை ஓட்டுநர் வசூலிக்கலாம்/வசூலிக்காமலும் இருக்கலாம் என்பதை நினைவில் கொள்ளவும்"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "கீழே உள்ள ஏதேனும் காரணங்களால் நீங்கள் புதுப்பிக்கப்பட்ட இறுதிக் கட்டணத்தைக் காணலாம்"
 , reason_change_in_route_a: "1. பாதையில் மாற்றம்"
@@ -520,7 +520,7 @@ getTa = Keymap {
 , call_112: "அழைப்பு 112"
 , call_emergency_centre: "அவசர நிலையத்தை அழைக்கவும்"
 , seats: "இருக்கைகள்"
-, driver_addition_limits_are_in_increments: "டிரைவர் சேர்க்கும் வரம்புகள் ₹20 அதிகரிப்பில் உள்ளன"
+, driver_addition_limits_are_in_increments: "டிரைவர் சேர்க்கும் வரம்புகள் R$20 அதிகரிப்பில் உள்ளன"
 , hatchback: "ஹேட்ச்பேக்"
 , suv: "SUV"
 , sedan: "சேடன்"
@@ -1171,7 +1171,7 @@ getTa = Keymap {
 , other_provider_no_receipt: "மற்ற வழங்குநர்களால் பூர்த்தி செய்யப்பட்ட சவாரிகளுக்கான ஓட்டுநர் ரசீது இன்னும் கிடைக்கவில்லை."
 , ride_fulfilled_by: (\merchantName -> "சவாரி நிறைவேற்றியது: " <> merchantName)
 , congestion_charges: "நெரிசல் கட்டணம்*"
-, tip_can_be_added: (\maxTip -> "சம்பளம் செலுத்தியதுக்கு முன் அதேபோல உங்கள் ரைட் வாட்கைக்கு முதல் ₹" <> maxTip <> " வரை கொடுக்கப்படலாம்.")
+, tip_can_be_added: (\maxTip -> "சம்பளம் செலுத்தியதுக்கு முன் அதேபோல உங்கள் ரைட் வாட்கைக்கு முதல் R$" <> maxTip <> " வரை கொடுக்கப்படலாம்.")
 , congestion_charges_desc: (\charges -> "*உங்கள் சவாரியில் தற்போது "<> charges <>"% நெரிசல் கட்டணம் பொருந்தும், அதிக போக்குவரத்து அல்லது உங்களுக்கு அதிக டிரைவர்கள் கிடைக்க பெற டிரைவர்களின் நேரத்தை இழப்பீடு செய்ய.")
 , ac_turned_off: "ஏசியை ஆன் செய்யவில்லை"
 , book_any: "முன்பதிவு ஏதேனும்"
@@ -1334,9 +1334,9 @@ getTa = Keymap {
 , thrissur: "திரிசூர்"
 , trivandrum: "திருவநந்தபுரம்"
 , metro_free_ticket_event: (\freeTicketInterval -> "ஒவ்வொரு " <> freeTicketInterval <> " டிக்கெட் இலவசமாகும்!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ஒவ்வொரு " <> freeTicketInterval <> " டிக்கெட் இலவசமாகும் (அதிகம் ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ஒவ்வொரு " <> freeTicketInterval <> " டிக்கெட் இலவசமாகும் (அதிகம் R$" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "அடுத்த டிக்கெட் இலவசமாகும்"
-, free_ticket_available: (\maxCashback freeTicketCount -> "இலவசமாக உள்ள டிக்கெட் (அதிகம் ₹" <> maxCashback <> ") உள்ள " <> freeTicketCount <> " டிக்கெட்!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "இலவசமாக உள்ள டிக்கெட் (அதிகம் R$" <> maxCashback <> ") உள்ள " <> freeTicketCount <> " டிக்கெட்!")
 , additional_charges_will_be_applicable: "பிக்கப் இடத்திற்கு அருகில் டிரைவர் இருக்கும்போது கூடுதல் கட்டணங்கள் விதிக்கப்படலாம்."
 , parking_charges_included: (\amount -> amount <> " பார்க்கிங் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன")
 , app_toll_charges: "பொருந்தக்கூடிய டோல் கட்டணங்கள் கட்டணத்தில் சேர்க்கப்பட்டுள்ளன"

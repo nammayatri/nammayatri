@@ -227,7 +227,7 @@ shimmerData i = {
   time : toPropValue "7:35pm",
   source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
-  totalAmount : toPropValue "₹ 0.0",
+  totalAmount : toPropValue "R$ 0.0",
   cardVisibility : toPropValue "gone",
   shimmerVisibility : toPropValue "visible",
   driverImage : toPropValue "",

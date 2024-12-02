@@ -73,7 +73,7 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
     [ do
         void $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : unsafeToForeign state.data.selectedItem.baseFare},
                                                                                                                     { key : "Distance", value : unsafeToForeign state.data.selectedItem.baseDistance},
-                                                                                                                    { key : "Driver pickup charges", value : unsafeToForeign "₹ 10"},
+                                                                                                                    { key : "Driver pickup charges", value : unsafeToForeign "R$ 10"},
                                                                                                                     { key : "Total fare", value : unsafeToForeign state.data.selectedItem.totalAmount},
                                                                                                                     { key : "Ride completion timestamp", value : unsafeToForeign state.data.selectedItem.rideEndTime}]
         _ <- pure $ generatePDF state "NEW"

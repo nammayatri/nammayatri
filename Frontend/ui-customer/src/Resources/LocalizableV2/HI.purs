@@ -350,7 +350,7 @@ getHi = Keymap {
 , nominal_fare: "वैकल्पिक ड्राइवर का अनुरोध*"
 , customer_cancellation_dues: "रद्दीकरण बकाया"
 , drivers_can_charge_an_additional_fare_upto: "* ड्राइवर वैकल्पिक रूप से ट्रैफ़िक, वापसी यात्रा की संभावना आदि जैसे अन्य कारकों को कवर करने के लिए बेस फेयर के 10% (निकटतम रु. 10 तक) का अनुरोध कर सकते हैं।"
-, waiting_charge_description: "°प्रतीक्षा शुल्क पहले {} मिनट के लिए शून्य है। उसके बाद आपसे प्रति मिनट प्रतीक्षा समय के लिए ₹{} शुल्क लिया जाएगा।"
+, waiting_charge_description: "°प्रतीक्षा शुल्क पहले {} मिनट के लिए शून्य है। उसके बाद आपसे प्रति मिनट प्रतीक्षा समय के लिए R${} शुल्क लिया जाएगा।"
 , waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. पहले 3 मिनट के लिए वेटिंग चार्ज शून्य है।\n 2. इसके बाद प्रति मिनट 1.5 रुपये का प्रतीक्षा शुल्क लागू होगा।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "प्रतीक्षा के पहले "<> freeWaitingTime <>" मिनट के बाद " <> waitingCharge <>" प्रति मिनट की दर से लागू")
 , successful_onboard: (\_ -> "आपने नम्मा यात्री में सफलतापूर्वक साइन इन कर लिया है")
@@ -427,7 +427,7 @@ getHi = Keymap {
 , gender_str: "लिंग"
 , profile_completion: "प्रोफ़ाइल पूर्णता"
 , early_end_ride_charges: "जल्दी सवारी खत्म करने का शुल्क^"
-, early_end_ride_charges_description: "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम ₹50)।"
+, early_end_ride_charges_description: "^जल्दी सवारी खत्म करने पर अतिरिक्त शुल्क लगता है जो तय नहीं की गई दूरी का आधा किराया होता है (अधिकतम R$50)।"
 , cancel_ongoing_search: "क्या आप वाकई चल रही खोज को रद्द करना जारी रखना चाहते हैं?"
 , yes_try_again: "हाँ, पुन: प्रयास करें"
 , no_dont: "नहीं"
@@ -447,7 +447,7 @@ getHi = Keymap {
 , fare_update_policy: "किराया अपडेट नीति"
 , driver_additions_optional: "चालक जोड़ (वैकल्पिक)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "चालक यातायात को कवर करने, वापसी यात्रा की संभावना आदि के लिए अतिरिक्त बोली लगा सकता है"
-, driver_additions_are_calculated_at_rate: (\_ -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम ₹10 में राउंड किया जाता है")
+, driver_additions_are_calculated_at_rate: (\_ -> "ड्राइवर द्वारा अतिरिक्त सीमा की गणना बेस फेयर के 10% पर की जाती है, जिसे निकटतम R$10 में राउंड किया जाता है")
 , driver_may_not_charge_this_additional_fare: "ध्यान दें: ड्राइवर पार्टनर यह अतिरिक्त किराया चार्ज कर सकते हैं या नहीं भी कर सकते हैं।"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "आप नीचे दिए गए किसी भी कारण से अपडेटेड अंतिम किराया देख सकते हैं:"
 , reason_change_in_route_a: "1.मार्ग में परिवर्तन: "
@@ -518,7 +518,7 @@ getHi = Keymap {
 , call_112: "112 पर कॉल करें"
 , call_emergency_centre: "आपातकालीन केंद्र को कॉल करें"
 , seats: "सीटें"
-, driver_addition_limits_are_in_increments: "ड्राइवर जोड़ने की सीमा ₹20 की वृद्धि में है"
+, driver_addition_limits_are_in_increments: "ड्राइवर जोड़ने की सीमा R$20 की वृद्धि में है"
 , hatchback: "हैचबैक"
 , suv: "एसयूवी"
 , sedan: "सेडान"
@@ -1173,7 +1173,7 @@ getHi = Keymap {
 , other_provider_no_receipt: "अन्य प्रदाताओं द्वारा पूरी की गई सवारी के लिए ड्राइवर रसीद अभी तक उपलब्ध नहीं है।"
 , ride_fulfilled_by: (\merchantName -> "सवारी इसके द्वारा पूरी की गई:" <> merchantName)
 , congestion_charges: "भीड़भाड़ शुल्क*"
-, tip_can_be_added: (\maxTip -> "राइड किराये में उपेक्ष्य ₹" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
+, tip_can_be_added: (\maxTip -> "राइड किराये में उपेक्ष्य R$" <> maxTip <> " तक की टिप जोड़ी जा सकती है।")
 , congestion_charges_desc: (\charges -> "*वर्तमान में आपकी सवारी पर "<> charges <>"% का भीड़भाड़ शुल्क लागू है ताकि ड्राइवर के उच्च ट्रैफिक में समय की भरपाई की जा सके या आपके लिए अधिक ड्राइवर उपलब्ध कराए जा सकें।")
 , ac_turned_off: "एसी बंद था"
 , estimates_expiry_error: "अनुमान समाप्त हो गया है। कृपया पुनः प्रयास करें।"
@@ -1335,9 +1335,9 @@ getHi = Keymap {
 , thrissur: "त्रिशूर"
 , trivandrum: "तिरुवनंतपुरम"
 , metro_free_ticket_event: (\freeTicketInterval -> "हर " <> freeTicketInterval <> " टिकट मुफ्त है!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "हर " <> freeTicketInterval <> " टिकट पर मुफ्त टिकट प्राप्त करें (अधिकतम ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "हर " <> freeTicketInterval <> " टिकट पर मुफ्त टिकट प्राप्त करें (अधिकतम R$" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "अगली टिकट मुफ्त है"
-, free_ticket_available: (\maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम ₹" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम R$" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!")
 , additional_charges_will_be_applicable: "अतिरिक्त शुल्क तब लागू हो सकता है जब ड्राइवर पिकअप स्थान के पास हो।"
 , parking_charges_included: (\amount -> amount <> " पार्किंग शुल्क शामिल")
 , app_toll_charges: "लागू टोल शुल्क किराए में शामिल हैं"

@@ -860,7 +860,7 @@ duesView push state =
               , color if state.props.myPlanProps.overDue then Color.red else Color.black800
               ]  <> if state.props.isSelectedLangTamil then FontStyle.body9 TypoGraphy else FontStyle.body6 TypoGraphy
             , textView $
-              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "R$" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
               , padding $ PaddingBottom 2
               , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
@@ -913,14 +913,14 @@ duesView push state =
             , width MATCH_PARENT
             , gravity CENTER_VERTICAL
             ][ textView $
-              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "R$" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red 
                       else if state.props.myPlanProps.multiTypeDues then Color.black900 
                       else Color.blue800
               , weight 1.0
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             , textView $
-              [ text $ "₹" <>  getFixedTwoDecimals state.data.myPlanData.maxDueAmount
+              [ text $ "R$" <>  getFixedTwoDecimals state.data.myPlanData.maxDueAmount
               , color Color.black700
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             ]
@@ -1472,7 +1472,7 @@ sfl height' =
 
 planPriceView :: forall w. Array PaymentBreakUp -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 planPriceView fares frequency isSelectedLangTamil isIntroductory =
-  let finalFee = "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+  let finalFee = "R$" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
@@ -1482,7 +1482,7 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
   , width WRAP_CONTENT
   , gravity CENTER_VERTICAL
   ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     [ textFromHtml $ "<strike> R$" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
      , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 && not isIntroductory then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
@@ -1683,7 +1683,7 @@ dueOverViewCard push state isManual =
           ) (const NoAction)
         ]
       , textView $
-        [ text $  "₹" <> getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
+        [ text $  "R$" <> getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
         , weight 1.0
         , gravity RIGHT
         , color if isManual then Color.orange900 else Color.blue800
@@ -1759,7 +1759,7 @@ tripList push trips isManual isExpanded viewDatailsText useFixedHeight =
                   , weight 1.0
                   ] <> FontStyle.body15 TypoGraphy
                 , textView $
-                  [ text $ "₹" <>  getFixedTwoDecimals item.amount
+                  [ text $ "R$" <>  getFixedTwoDecimals item.amount
                   , color Color.black700
                   ] <> FontStyle.body15 TypoGraphy
                 ]

@@ -293,7 +293,7 @@ rideStartDetails push state =
     , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "₹" <> state.data.finalPrice
+        , text $ "R$" <> state.data.finalPrice
         , weight 0.1
         , gravity RIGHT
         , textSize FontSize.a_18
@@ -301,7 +301,7 @@ rideStartDetails push state =
 
     ]
     where 
-    getRideDetailsAccessibilty state = getEN RIDE_STARTS_ON <> EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM" <> " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a" <> "and total Fare is : " <>  "₹" <> state.data.finalPrice
+    getRideDetailsAccessibilty state = getEN RIDE_STARTS_ON <> EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM" <> " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a" <> "and total Fare is : " <>  "R$" <> state.data.finalPrice
 
 notificationView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 notificationView push state =

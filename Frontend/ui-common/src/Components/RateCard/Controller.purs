@@ -75,7 +75,7 @@ type ButtonConfig =
 config :: Config 
 config = {
     isNightShift : false,
-    additionalFare : "₹30",
+    additionalFare : "R$30",
     currentRateCardType : DefaultRateCard,
     onFirstPage : false,
     showDetails : true,

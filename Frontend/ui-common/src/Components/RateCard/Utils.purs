@@ -38,7 +38,7 @@ fetchSpecificFare fareBreakup fareType =
 
 priceToBeDisplayed :: Price -> String
 priceToBeDisplayed price = case price.currency of
-  "INR" -> "₹" <> value
+  "INR" -> "R$" <> value
   _ -> price.currency <> show value
   where
     value = EHU.getFixedTwoDecimals price.amount

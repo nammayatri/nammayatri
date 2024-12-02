@@ -347,7 +347,7 @@ tripDetailsView state =
               ]
             , textView $
               [ text state.data.totalAmount
-              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
+              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "R$") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
               , accessibility ENABLE
               , color Color.black
               ] <> FontStyle.h2 LanguageStyle

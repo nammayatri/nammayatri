@@ -350,8 +350,8 @@ getKn = Keymap {
 , nominal_fare: "ಐಚ್ಛಿಕ ಚಾಲಕ ವಿನಂತಿ*"
 , customer_cancellation_dues: "ರದ್ದತಿ ಬಾಕಿಗಳು"
 , drivers_can_charge_an_additional_fare_upto: "* ಟ್ರಾಫಿಕ್, ರಿಟರ್ನ್ ಟ್ರಿಪ್‌ನ ಸಾಧ್ಯತೆಗಳು ಮುಂತಾದ ಇತರ ಅಂಶಗಳನ್ನು ಸರಿದೂಗಿಸಲು ಚಾಲಕರು ಐಚ್ಛಿಕವಾಗಿ 10% ಮೂಲ ದರವನ್ನು (ಹತ್ತಿರದ ರೂ. 10 ಕ್ಕೆ ದುಂಡಾದ) ಕೋರಬಹುದು."
-, waiting_charge_description: "°ಮೊದಲ {} ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ. ಅದರ ನಂತರ ನೀವು ಕಾಯುವ ಸಮಯಕ್ಕೆ ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ ₹{} ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ."
-, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ಮೊದಲ 3 ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ.\n 2. ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ ₹1.5 ವೇಟಿಂಗ್ ಚಾರ್ಜ್ ನಂತರ ಅನ್ವಯಿಸುತ್ತದೆ.")
+, waiting_charge_description: "°ಮೊದಲ {} ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ. ಅದರ ನಂತರ ನೀವು ಕಾಯುವ ಸಮಯಕ್ಕೆ ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ R${} ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ."
+, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ಮೊದಲ 3 ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ.\n 2. ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ R$1.5 ವೇಟಿಂಗ್ ಚಾರ್ಜ್ ನಂತರ ಅನ್ವಯಿಸುತ್ತದೆ.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "ಮೊದಲ" <> freeWaitingTime <> "ನಿಮಿಷಗಳ ಕಾಯುವಿಕೆಯ ನಂತರ ಪ್ರತಿ ನಿಮಿಷಕ್ಕೆ @ " <> waitingCharge <> " ಅನ್ವಯಿಸುತ್ತದೆ")
 , successful_onboard: (\_ -> "ನೀವು ಯಶಸ್ವಿಯಾಗಿ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸೈನ್ ಇನ್ ಆಗಿರುವಿರಿ")
 , have_referral_code: "ರೆಫರಲ್ ಕೋಡ್ ಇದೆಯೇ?"
@@ -426,7 +426,7 @@ getKn = Keymap {
 , gender_str: "ಲಿಂಗ"
 , profile_completion: "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ"
 , early_end_ride_charges: "ಬೇಗನೆ ಅಂತಿಮಗೊಂಡ ಸವಾರಿ ಶುಲ್ಕಗಳು^"
-, early_end_ride_charges_description: "^ಮುಂಚಿತವಾಗಿ ಸವಾರಿ ಮಾಡುವುದು ಪ್ರಯಾಣಿಸದ ದೂರದ ಅರ್ಧದಷ್ಟು ದರದ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕವನ್ನು ಉಂಟುಮಾಡುತ್ತದೆ (ಗರಿಷ್ಠ ₹ 50)"
+, early_end_ride_charges_description: "^ಮುಂಚಿತವಾಗಿ ಸವಾರಿ ಮಾಡುವುದು ಪ್ರಯಾಣಿಸದ ದೂರದ ಅರ್ಧದಷ್ಟು ದರದ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕವನ್ನು ಉಂಟುಮಾಡುತ್ತದೆ (ಗರಿಷ್ಠ R$ 50)"
 , cancel_ongoing_search: "ನಡೆಯುತ್ತಿರುವ ಹುಡುಕಾಟವನ್ನು ರದ್ದುಗೊಳಿಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?"
 , yes_try_again: "ಹೌದು, ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
 , no_dont: "ಇಲ್ಲ, ಬೇಡ"
@@ -446,7 +446,7 @@ getKn = Keymap {
 , fare_update_policy: "ದರ ನವೀಕರಣ ನೀತಿ"
 , driver_additions_optional: "ಚಾಲಕ ಸೇರ್ಪಡೆ (ಐಚ್ಛಿಕ)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ಟ್ರಾಫಿಕ್, ರಿಟರ್ನ್ ಟ್ರಿಪ್‌ನ ಅವಕಾಶ ಇತ್ಯಾದಿಗಳನ್ನು ಸರಿದೂಗಿಸಲು ಚಾಲಕ ಹೆಚ್ಚುವರಿಯನ್ನು ಉಲ್ಲೇಖಿಸಬಹುದು"
-, driver_additions_are_calculated_at_rate: (\_ -> "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು ₹10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ")
+, driver_additions_are_calculated_at_rate: (\_ -> "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಯನ್ನು ಮೂಲ ದರದ 10% ರಷ್ಟನ್ನು ಸುಮಾರು R$10 ಕ್ಕೆ ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ")
 , driver_may_not_charge_this_additional_fare: "ಗಮನಿಸಿ: ಚಾಲಕರು ಈ ಹೆಚ್ಚುವರಿ ದರವನ್ನು ವಿಧಿಸಬಹುದು/ಇಲ್ಲ."
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "ಕೆಳಗಿನ ಯಾವುದೇ ಕಾರಣಗಳಿಂದ ನೀವು ನವೀಕರಿಸಿದ ಅಂತಿಮ ದರವನ್ನು ನೋಡಬಹುದು:"
 , reason_change_in_route_a: "1.ಮಾರ್ಗದಲ್ಲಿ ಬದಲಾವಣೆ: "
@@ -516,7 +516,7 @@ getKn = Keymap {
 , call_namma_yatri_support: (\_ -> "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ")
 , call_112: "112 ಗೆ ಕರೆ ಮಾಡಿ"
 , call_emergency_centre: "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ"
-, driver_addition_limits_are_in_increments: "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹20 ಹೆಚ್ಚಳದಲ್ಲಿವೆ"
+, driver_addition_limits_are_in_increments: "ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು R$20 ಹೆಚ್ಚಳದಲ್ಲಿವೆ"
 , seats: "ಆಸನಗಳು"
 , hatchback: "ಹ್ಯಾಚ್ಬ್ಯಾಕ್"
 , suv: "ಎಸ್ ಯು ವಿ"
@@ -1173,7 +1173,7 @@ getKn = Keymap {
 , other_provider_no_receipt: "ಇತರ ಪೂರೈಕೆದಾರರು ಪೂರೈಸಿದ ರೈಡ್‌ಗಳಿಗಾಗಿ ಚಾಲಕ ರಸೀದಿ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ."
 , ride_fulfilled_by: (\merchantName -> "ರೈಡ್ ಪೂರೈಸಿದವರು: " <> merchantName)
 , congestion_charges: "ಟ್ರಾಫಿಕ್ ಶುಲ್ಕ*"
-, tip_can_be_added: (\maxTip -> "ರೈಡ್ ವೇತನಕ್ಕಾಗಿ ಅಪ್ಪಿಗೆ ₹" <> maxTip <> " ರೂಪಾಯಿಗೆ ಅಪ್ಟಿಯಾಗಿ ಟಿಪ್ ಸೇರಿಸಬಹುದು")
+, tip_can_be_added: (\maxTip -> "ರೈಡ್ ವೇತನಕ್ಕಾಗಿ ಅಪ್ಪಿಗೆ R$" <> maxTip <> " ರೂಪಾಯಿಗೆ ಅಪ್ಟಿಯಾಗಿ ಟಿಪ್ ಸೇರಿಸಬಹುದು")
 , congestion_charges_desc: (\charges -> "*ಈಗಾಗಲೇ ನಿಮ್ಮ ಪ್ರಯಾಣದ ಮೇಲೆ "<> charges <>"% ಟ್ರಾಫಿಕ್ ಶುಲ್ಕವನ್ನು ಅನ್ವಯಿಸಲಾಗಿದೆ, ಡ್ರೈವರ್‌ನ ಸಮಯವನ್ನು ಹೆಚ್ಚಿನ ಟ್ರಾಫಿಕ್‌ನಲ್ಲಿ ಪರಿಗಣಿಸಲು ಅಥವಾ ನಿಮ್ಮಿಗಾಗಿ ಹೆಚ್ಚು ಡ್ರೈವರ್‌ಗಳನ್ನು ಲಭ್ಯವಾಗಿಸಲು.")
 , ac_turned_off: "ಎಸಿ ಆಫ್ ಆಗಿದೆ"
 , estimates_expiry_error: "ಅಂಚೆಗಳು ಅವಧಿ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
@@ -1335,7 +1335,7 @@ getKn = Keymap {
 , thrissur: "ತೃಶೂರ್"
 , trivandrum: "ತಿರುವನಂತಪುರಂ"
 , metro_free_ticket_event: (\freeTicketInterval -> "ಪ್ರತಿ " <> freeTicketInterval <> " ಟಿಕೆಟ್ ಉಚಿತವಾಗಿದೆ!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ಪ್ರತಿ " <> freeTicketInterval <> " ಟಿಕೆಟ್ ಉಚಿತವಾಗಿದೆ (ಅತ್ಯಧಿಕ ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ಪ್ರತಿ " <> freeTicketInterval <> " ಟಿಕೆಟ್ ಉಚಿತವಾಗಿದೆ (ಅತ್ಯಧಿಕ R$" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "ಮುಂದಿನ ಟಿಕೆಟ್ ಉಚಿತವಾಗಿದೆ"
 , free_ticket_available: (\maxCashback freeTicketCount -> "ಉಚಿತ ಟಿಕೆಟ್ ಲಭ್ಯವಿದೆ (ಅತ್ಯಧಿಕ " <> maxCashback <> ") ಮತ್ತು " <> freeTicketCount <> " ಟಿಕೆಟ್‌ಗಳು!")
 , additional_charges_will_be_applicable: "ಚಾಲಕರು ಪಿಕಪ್ ಸ್ಥಳದ ಬಳಿ ಇರುವಾಗ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು."

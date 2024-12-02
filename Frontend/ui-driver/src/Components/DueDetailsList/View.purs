@@ -96,7 +96,7 @@ view push state =
                 , gravity CENTER_VERTICAL
               ][
                 textView $ [
-                  text $ "₹" <> getFixedTwoDecimals item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
+                  text $ "R$" <> getFixedTwoDecimals item.dueAmount <> if item.isAutoPayFailed || item.isSplitPayment then "*" else ""
                   , color Color.black800
                 ] <> FontStyle.h2 TypoGraphy
                 , imageView
@@ -122,7 +122,7 @@ view push state =
                 , keyValueView (getString PAYMENT_MODE) (mode item) true (not item.isDue) FontStyle.Body3 16 Color.black700
                 , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false FontStyle.Body3 16 Color.black700
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString YOUR_EARNINGS) ("R$" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString FARE_BREAKUP) item.fareBreakup (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
                 , maybe (linearLayout[visibility GONE][]) (\boothCharges -> keyValueView (getString BOOTH_CHARGES) boothCharges true false FontStyle.Captions 6 Color.black600) $ item.boothCharges
                 , linearLayout [

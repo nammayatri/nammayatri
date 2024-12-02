@@ -304,7 +304,7 @@ myRideListTransformerProp listres =
           , distance: toPropValue distance
           , source: toPropValue (decodeShortAddress (transformer booking.fromLocation))
           , destination: toPropValue $ (decodeShortAddress (transformer (Location toLocation)))
-          , totalAmount: toPropValue $ ("₹ " <> show totalAmount)
+          , totalAmount: toPropValue $ ("R$ " <> show totalAmount)
           , cardVisibility: toPropValue "visible"
           , shimmerVisibility: toPropValue "gone"
           , carImage: toPropValue $ totalAmount

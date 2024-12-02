@@ -241,8 +241,8 @@ priceAndDistanceUpdateView state push =
           , gravity CENTER
           , margin $ MarginHorizontal 16 16
           ][ textView $ 
-              [ text if state.isFreeRide then "₹0" else "₹" <> (show state.topCard.finalAmount)
-              , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show state.topCard.finalAmount)
+              [ text if state.isFreeRide then "₹0" else "R$" <> (show state.topCard.finalAmount)
+              , accessibilityHint $ "Ride Complete: Final Fare R$"  <> (show state.topCard.finalAmount)
               , accessibility state.accessibility
               , color Color.black900
               , width WRAP_CONTENT
@@ -250,8 +250,8 @@ priceAndDistanceUpdateView state push =
               , gravity CENTER
               ] <> (FontStyle.body28 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show state.topCard.initialAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show state.topCard.initialAmount) <> " To ₹" <> (show state.topCard.finalAmount)
+              [ textFromHtml $ "<strike> R$" <> (show state.topCard.initialAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From R$"  <> (show state.topCard.initialAmount) <> " To R$" <> (show state.topCard.finalAmount)
               , accessibility state.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
@@ -682,11 +682,11 @@ rentalTripRowView config push description =
             RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance rentalRowDetails.rideDistanceInfo (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show extraTimeFare) "" Color.black600
-            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show extraDistFare ) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("R$" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("R$" <> show extraTimeFare) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("R$" <> show extraDistFare ) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("R$" <> show config'.topCard.finalAmount) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("R$" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
 
             
       mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig

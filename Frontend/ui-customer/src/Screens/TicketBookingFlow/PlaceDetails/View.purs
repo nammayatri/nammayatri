@@ -441,7 +441,7 @@ serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
     daysOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     indexOf x xs = maybe 8 (\idx -> idx) (DA.findIndex (_ == x) xs)
 
-    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "₹" <>  show peopleCat.pricePerUnit }
+    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "R$" <>  show peopleCat.pricePerUnit }
 
     getCategoryNameMap catName isSinglePC = case catName, isSinglePC  of
                                               "Adult", true         -> "Per Person"
@@ -999,7 +999,7 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
   , orientation VERTICAL
   , margin $ MarginTop 24
   ][  textView $
-      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (₹" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
+      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (R$" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy

@@ -351,7 +351,7 @@ getOd = Keymap {
 , nominal_fare: "ଅପେକ୍ଷା କ୍ଷେତ୍ରରେ ଡ୍ରାଇଭର ଅନୁରୋଧ*"
 , customer_cancellation_dues: "କ୍ଷତିପୂରଣ ଦାୟି"
 , drivers_can_charge_an_additional_fare_upto: "* ଡ୍ରାଇଭରମାନେ ଚାହିଲେ ମୂଳ ଦରର 10% ଅତିରିକ୍ତ ଆବଦାନ (ନିକଟତମ ରୁ. 10 ରେ ପରିବର୍ତ୍ତିତ) ମାଗିପାରନ୍ତି ଯାହା ଯାତାୟାତର ପରିସ୍ଥିତି, ଫେରାଯାଇବାର ସମ୍ଭାବନା ଇତ୍ୟାଦି ଦ୍ୱାରା କୋରିବାକୁ ସାହାଯ୍ୟ କରେ।"
-, waiting_charge_description: "° ପ୍ରଥମ {} ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ। ତାପରେ ଆପଣଙ୍କୁ ପ୍ରତି ମିନିଟ ପାଇଁ ₹{} ଚାର୍ଜ କରାଯିବ।"
+, waiting_charge_description: "° ପ୍ରଥମ {} ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ। ତାପରେ ଆପଣଙ୍କୁ ପ୍ରତି ମିନିଟ ପାଇଁ R${} ଚାର୍ଜ କରାଯିବ।"
 , waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. ପ୍ରଥମ" <> freeWaitingTime <> " ମିନିଟ ପାଇଁ ପ୍ରତିକ୍ଷା ଚାର୍ଜ ଶୂନ୍ୟ।\n 2. ପରେ ମିନିଟ ପିଛା" <> waitingCharge <> " ଚାର୍ଜ ପ୍ରଯୋଜ୍ୟ ହେବ।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "ପ୍ରଥମ " <> freeWaitingTime <> " ମିନିଟ ପରେ ପ୍ରତି ମିନିଟରେ " <> waitingCharge <> " ରେ ପ୍ରଯୋଜ୍ୟ।")
 , successful_onboard: (\_ -> "ଆପଣ ସଫଳତାର ସହ ନମ୍ମା ଯାତ୍ରିକୁ ସାଇନ୍ କରିଛନ୍ତି।")
@@ -448,7 +448,7 @@ getOd = Keymap {
 , fare_update_policy: "ଭଡା ଅପଡେଟ୍ ନୀତି"
 , driver_additions_optional: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ସେବା (ଇଚ୍ଛାନୁସାରେ)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ଡ୍ରାଇଭର ଯାତାୟାତ ଆବଶ୍ୟକତା ପାଇଁ ଅତିରିକ୍ତ ଦାମ ମାଗିପାରନ୍ତି।"
-, driver_additions_are_calculated_at_rate: (\_ -> "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ଦାମ ମୂଳ ଭଡାର 10% ହାରରେ ନିକଟତମ ₹10 ପର୍ଯ୍ୟନ୍ତ ଗଣାଯାଇଛି।")
+, driver_additions_are_calculated_at_rate: (\_ -> "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ଦାମ ମୂଳ ଭଡାର 10% ହାରରେ ନିକଟତମ R$10 ପର୍ଯ୍ୟନ୍ତ ଗଣାଯାଇଛି।")
 , driver_may_not_charge_this_additional_fare: "ଲକ୍ଷ୍ୟ କରନ୍ତୁ ଡ୍ରାଇଭର ଏହି ଅତିରିକ୍ତ ଦାମ ଚାର୍ଜ୍ କରିବା ନ ହେବ ମାଗିବାକୁ ଥାଏ।"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "ନିମ୍ନଲିଖିତ କାରଣରୁ ଆପଣ ଏକ ଅପଡେଟ୍ ଅନ୍ତିମ ଭଡା ଦେଖିପାରିବେ"
 , reason_change_in_route_a: "1. ରୁଟ୍ ରେ ପରିବର୍ତ୍ତନ"
@@ -521,7 +521,7 @@ getOd = Keymap {
 , call_112: "112 କୁ କଲ୍ କରନ୍ତୁ"
 , call_emergency_centre: "ଆପତ୍କାଳୀନ କେନ୍ଦ୍ରକୁ କଲ୍ କରନ୍ତୁ"
 , seats: "ଆସନ"
-, driver_addition_limits_are_in_increments: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ମର୍ଯ୍ୟାଦା ଭାଗରେ ₹20 ରେ ରହିଛି"
+, driver_addition_limits_are_in_increments: "ଡ୍ରାଇଭର ଅତିରିକ୍ତ ମର୍ଯ୍ୟାଦା ଭାଗରେ R$20 ରେ ରହିଛି"
 , hatchback: "ହାଚବ୍ୟାକ୍"
 , suv: "SUV"
 , sedan: "ସେଡାନ"
@@ -1172,7 +1172,7 @@ getOd = Keymap {
 , other_provider_no_receipt: "ଅନ୍ୟ ପ୍ରଦାନକାରୀ ଦ୍ୱାରା ସମାପ୍ତ ଯାତ୍ରା ପାଇଁ ଡ୍ରାଇଭର ରସିଦ ଉପଲବ୍ଧ ନାହିଁ।"
 , ride_fulfilled_by: (\merchantName -> "ରାଇଡ୍ ପୂରଣ କରିଛି: " <> merchantName)
 , congestion_charges: "ଜନାସ୍ତର ଚାର୍ଜ*"
-, tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡ଼ାରେ ଅଧିକତମ ₹" <> maxTip <> " ଟିପ୍ ଯୋଗ କରାଯାଇପାରେ")
+, tip_can_be_added: (\maxTip -> "ରାଇଡ଼ ଭାଡ଼ାରେ ଅଧିକତମ R$" <> maxTip <> " ଟିପ୍ ଯୋଗ କରାଯାଇପାରେ")
 , congestion_charges_desc: (\charges -> "ଜନାସ୍ତର ଚାର୍ଜ "<> charges <>"% ରେ ଲାଗିଛି କାରଣ ଲୋକମାନଙ୍କର ସମୟକୁ ସଂକୋଚିତ କରି ଦରକାର ଉପଲବ୍ଧ କରିବାକୁ")
 , ac_turned_off: "AC ଚାଲୁ ହୋଇନାହିଁ"
 , estimates_expiry_error: "ଅନୁମାନ ସମାପ୍ତ ହୋଇଛି। ଦୟାକରି ପୁନଃଚେଷ୍ଟା କରନ୍ତୁ।"
@@ -1333,7 +1333,7 @@ getOd = Keymap {
 , kozhikode: "କୋଜିକୋଡ୍"
 , thrissur: "ଥ୍ରିଶୁର୍"
 , metro_free_ticket_event: (\freeTicketInterval -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ମାଗଣା!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ରେ ମାଗଣା ଟିକେଟ୍ (ଅଧିକତମ ₹" <> maxFreeTicketCashback <> ") ପାନ୍ତି (ONDC ଆଫର)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ପ୍ରତ୍ୟେକ " <> freeTicketInterval <> " ଟିକେଟ୍ ରେ ମାଗଣା ଟିକେଟ୍ (ଅଧିକତମ R$" <> maxFreeTicketCashback <> ") ପାନ୍ତି (ONDC ଆଫର)")
 , next_free_ticket: "ପରବର୍ତ୍ତୀ ଟିକେଟ୍ କ୍ୟାସବାକ୍ ପାଇଁ ଯୋଗ୍ୟ"
 , free_ticket_available: (\maxCashback freeTicketCount -> maxCashback <> " ଟିକେଟରେ ଅଫର ଆବଶ୍ୟକ!")
 , additional_charges_will_be_applicable: "ଅଧିକ ଚାର୍ଜ ଲାଗିପାରେ ଡ୍ରାଇଭର ଉଠା ଅବସ୍ଥାନ ପାଖରେ ଥିବା ବେଳେ"

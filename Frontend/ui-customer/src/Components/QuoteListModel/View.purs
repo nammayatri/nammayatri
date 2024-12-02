@@ -269,7 +269,7 @@ boostSearchView push state showBoostSearch =
                         , stroke $ "1," <> (if isSelected then Color.blue800 else Color.grey900)
                         , onClick push $ const $ TipBtnClick index (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index))
                         , accessibility ENABLE
-                        , accessibilityHint $ "₹" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+                        , accessibilityHint $ "R$" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
                         ][textView $ 
                           [ text $ item
                           , color $ if isSelected then Color.blue800 else Color.black800
