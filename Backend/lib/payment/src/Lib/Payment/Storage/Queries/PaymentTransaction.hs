@@ -135,6 +135,7 @@ instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
             applicationFeeAmount = fromMaybe (HighPrecMoney 0.0) applicationFeeAmount,
             retryCount = fromMaybe 0 retryCount,
             splitSettlementResponse = splitSettlementResponse_,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -147,6 +148,7 @@ instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
         applicationFeeAmount = Just applicationFeeAmount,
         retryCount = Just retryCount,
         splitSettlementResponse = toJSON <$> splitSettlementResponse,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
 

@@ -16,3 +16,8 @@ ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN payment_mode text NOT NULL
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN service_name text  default 'YATRI_SUBSCRIPTION';
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.invoice ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN merchant_id character varying(36) ;

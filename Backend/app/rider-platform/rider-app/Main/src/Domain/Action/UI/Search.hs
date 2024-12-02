@@ -311,8 +311,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   riderCfg <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg req
-  fromLocation <- buildSearchReqLoc origin
-  stopLocations <- buildSearchReqLoc `mapM` stops
+  fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
+  stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -571,13 +571,14 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             logDebug $ "journey for multi-modal: " <> show journey
 
             -- when (idx == 0) $ do
-            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance originCity
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId merchantOperatingCityId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance originCity
       )
       allRoutes.routes
 
 makeChildSearchReqs ::
   Id Person.Person ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   [MultiModal.MultiModalLeg] ->
   OneWaySearchReq ->
   SearchRequest.SearchRequest ->
@@ -593,7 +594,7 @@ makeChildSearchReqs ::
   Meters ->
   Context.City ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
+makeChildSearchReqs personId merchantId merchantOperatingCityId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
   now <- getCurrentTime
   void $
     mapWithIndex
@@ -647,8 +648,8 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
               fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.BUS frfsSearchReq
             DTrip.Walk -> do
-              fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
-              toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}
+              fromLocation_ <- buildSearchReqLoc merchantId merchantOperatingCityId $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
+              toLocation_ <- buildSearchReqLoc merchantId merchantOperatingCityId $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}
               walkeLegid <- generateGUID
               let walkLeg =
                     DWalkLeg.WalkLegMultimodal
@@ -864,8 +865,13 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
           triggerAutoCompleteEvent updatedRecord
 
-buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.Location
-buildSearchReqLoc SearchReqLocation {..} = do
+buildSearchReqLoc ::
+  MonadFlow m =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  SearchReqLocation ->
+  m Location.Location
+buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
   now <- getCurrentTime
   locId <- generateGUID
   return
@@ -874,6 +880,8 @@ buildSearchReqLoc SearchReqLocation {..} = do
         lat = gps.lat,
         lon = gps.lon,
         address = address,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now
       }

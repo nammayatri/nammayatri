@@ -45,6 +45,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
@@ -275,7 +276,7 @@ editLocation rideId (personId, merchantId) req = do
         Left err -> do
           logTagInfo "DriverLocationFetchFailed" $ show err
 
-      startLocation <- buildLocation pickup
+      startLocation <- buildLocation merchantId booking.merchantOperatingCityId pickup
       QL.create startLocation
       pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForBooking
@@ -317,7 +318,7 @@ editLocation rideId (personId, merchantId) req = do
         throwError EditLocationAttemptsExhausted
       when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
         throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
-      newDropLocation <- buildLocation destination
+      newDropLocation <- buildLocation merchantId booking.merchantOperatingCityId destination
       QL.create newDropLocation
       startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
       oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
@@ -359,8 +360,13 @@ editLocation rideId (personId, merchantId) req = do
       pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 
-buildLocation :: MonadFlow m => EditLocation -> m DL.Location
-buildLocation location = do
+buildLocation ::
+  MonadFlow m =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  EditLocation ->
+  m DL.Location
+buildLocation merchantId merchantOperatingCityId location = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -370,7 +376,9 @@ buildLocation location = do
         updatedAt = now,
         lat = location.gps.lat,
         lon = location.gps.lon,
-        address = location.address
+        address = location.address,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId
       }
 
 buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest

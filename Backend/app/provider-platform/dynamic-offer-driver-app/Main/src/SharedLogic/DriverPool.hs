@@ -593,7 +593,9 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     mbReachedHome = Nothing,
                     numCancellation = 0,
                     status = DDGR.ACTIVE,
-                    updatedAt = now
+                    updatedAt = now,
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId
                   }
           return (gHR, specialLocWarriorDriver)
       )

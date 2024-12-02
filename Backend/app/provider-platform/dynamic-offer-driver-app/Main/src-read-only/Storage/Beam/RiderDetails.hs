@@ -27,6 +27,7 @@ data RiderDetailsT f = RiderDetailsT
     isDeviceIdExists :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFlagConfirmed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileCountryCode :: B.C f Kernel.Prelude.Text,
     mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,

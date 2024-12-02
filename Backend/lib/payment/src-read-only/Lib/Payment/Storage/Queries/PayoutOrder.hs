@@ -70,6 +70,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.entityName entityName,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,
       Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.mobileNoEncrypted (mobileNo & unEncrypted . encrypted),
       Se.Set Beam.mobileNoHash (mobileNo & hash),
       Se.Set Beam.responseCode responseCode,

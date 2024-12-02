@@ -648,6 +648,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             bankErrorUpdatedAt = Nothing,
             lastStatusCheckedAt = Nothing,
             serviceName = driverFee.serviceName,
+            merchantId = Just driverFee.merchantId,
             merchantOperatingCityId = driverFee.merchantOperatingCityId,
             updatedAt = now,
             createdAt = now

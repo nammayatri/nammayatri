@@ -78,18 +78,27 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   let isValueAddNP = True
 
   now <- getCurrentTime
-  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
+  let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
   notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId driver.id driver.deviceToken entityData TN.EmptyDynamicParam Nothing
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   let fallBackCity = TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.VehicleVariant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> Bool -> USRD.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
+mkDummyNotificationEntityData ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DVeh.VehicleVariant ->
+  DLoc.DummyLocationInfo ->
+  DLoc.DummyLocationInfo ->
+  Bool ->
+  Bool ->
+  USRD.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
-      fromLocation = mkDummySearchReqFromLocation now fromLocData
-      toLocation = Just $ mkDummySearchReqToLocation now toLocData
+      fromLocation = mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData
+      toLocation = Just $ mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData
       -- newFromLocation = mkDummyFromLocation now fromLocData
       -- newToLocation = Just $ mkDummyToLocation now toLocData
       mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
@@ -144,8 +153,13 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           ..
         }
 
-mkDummySearchReqFromLocation :: UTCTime -> DLoc.DummyLocationInfo -> DSSL.SearchReqLocation
-mkDummySearchReqFromLocation now fromLocData =
+mkDummySearchReqFromLocation ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DLoc.DummyLocationInfo ->
+  DSSL.SearchReqLocation
+mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData =
   let DLoc.LocationAddress {..} = mkDummyFromAddress fromLocData
    in DSSL.SearchReqLocation
         { id = Id fromLocData.dummyId,
@@ -154,11 +168,18 @@ mkDummySearchReqFromLocation now fromLocData =
           full_address = fullAddress,
           createdAt = now,
           updatedAt = now,
+          merchantId = mbMerchantId,
+          merchantOperatingCityId = mbMerchantOpCityId,
           ..
         }
 
-mkDummySearchReqToLocation :: UTCTime -> DLoc.DummyLocationInfo -> DSSL.SearchReqLocation
-mkDummySearchReqToLocation now toLocData =
+mkDummySearchReqToLocation ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DLoc.DummyLocationInfo ->
+  DSSL.SearchReqLocation
+mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData =
   let DLoc.LocationAddress {..} = mkDummyToAddress toLocData
    in DSSL.SearchReqLocation
         { id = Id toLocData.dummyId,
@@ -167,6 +188,8 @@ mkDummySearchReqToLocation now toLocData =
           full_address = fullAddress,
           createdAt = now,
           updatedAt = now,
+          merchantId = mbMerchantId,
+          merchantOperatingCityId = mbMerchantOpCityId,
           ..
         }
 
