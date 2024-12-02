@@ -105,8 +105,9 @@ handler merchant req validatedQuote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   now <- getCurrentTime
+  let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
   unless isNewRider $ QRD.updateNightSafetyChecks req.nightSafetyCheck riderDetails.id
 
   case validatedQuote of

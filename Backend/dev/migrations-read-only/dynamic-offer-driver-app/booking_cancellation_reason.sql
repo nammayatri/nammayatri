@@ -16,3 +16,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD PRIMARY KEY (
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN merchant_operating_city_id character varying(36) ;

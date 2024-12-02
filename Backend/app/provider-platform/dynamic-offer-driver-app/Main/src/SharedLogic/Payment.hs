@@ -118,7 +118,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       createOrderCall = TPayment.createOrder merchantId opCity serviceName -- api call
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
@@ -164,6 +164,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       bankErrorUpdatedAt = Nothing,
       lastStatusCheckedAt = Nothing,
       serviceName = driverFee.serviceName,
+      merchantId = Just driverFee.merchantId,
       merchantOperatingCityId = driverFee.merchantOperatingCityId,
       updatedAt = now,
       createdAt = now

@@ -28,6 +28,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             driverDistToPickup = driverDistToPickup,
             driverId = Kernel.Types.Id.Id <$> driverId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             reasonCode = Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode,
             rideId = Kernel.Types.Id.Id <$> rideId,
             source = source
@@ -44,6 +45,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.driverDistToPickup = driverDistToPickup,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.reasonCode = (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.source = source

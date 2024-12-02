@@ -55,7 +55,8 @@ data PaymentOrderE e = PaymentOrder
     bankErrorCode :: Maybe Text,
     serviceProvider :: Payment.PaymentService,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic)
 

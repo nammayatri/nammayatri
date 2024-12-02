@@ -40,3 +40,8 @@ ALTER TABLE atlas_driver_offer_bpp.image DROP COLUMN is_valid;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN document_expiry timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN merchant_operating_city_id character varying(36) ;

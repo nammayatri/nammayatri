@@ -180,6 +180,7 @@ cancel req merchant booking mbActiveSearchTry = do
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             ..
           }
 

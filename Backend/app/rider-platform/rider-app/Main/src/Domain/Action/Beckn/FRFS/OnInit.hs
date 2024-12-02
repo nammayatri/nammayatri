@@ -117,7 +117,7 @@ onInit onInitReq merchant booking_ = do
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
       createOrderCall = Payment.createOrder merchant.id mocId Nothing (getPaymentType booking.vehicleType)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just _ -> do
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment

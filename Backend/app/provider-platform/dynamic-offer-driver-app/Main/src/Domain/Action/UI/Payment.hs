@@ -528,6 +528,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             mandatePaymentFlow,
             startDate = fromMaybe now startDate,
             endDate = fromMaybe now endDate,
+            merchantOperatingCityId = Just merchantOpCityId,
             ..
           }
     checkToUpdatePayerVpa existingMandateEntry autoPayStatus =

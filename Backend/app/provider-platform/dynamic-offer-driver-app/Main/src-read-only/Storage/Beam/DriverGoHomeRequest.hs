@@ -20,6 +20,8 @@ data DriverGoHomeRequestT f = DriverGoHomeRequestT
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
     reachedHome :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numCancellation :: B.C f Kernel.Prelude.Int,
     status :: B.C f Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

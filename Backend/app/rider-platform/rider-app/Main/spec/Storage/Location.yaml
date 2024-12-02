@@ -70,8 +70,6 @@ Location:
   fromTType:
     address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
 
-  excludedFields: [merchantId, merchantOperatingCityId]
-
   queries:
     updateAddress:
       kvFunction: updateOneWithKV
