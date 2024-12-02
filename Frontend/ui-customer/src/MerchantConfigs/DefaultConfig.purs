@@ -16,7 +16,7 @@ config =
   , autoConfirmingLoaderColor: "#80B2FF"
   , quoteListModelBackground: "#2C2F3A"
   , defaultLanguage : "EN_US"
-  , currency: "₹"
+  , currency: "R$"
   , primaryButtonCornerRadius: 8.0
   , showPickUpandDrop: true
   , alertDialogPrimaryColor: "#2194FF"

@@ -118,7 +118,7 @@ feeItem push state item =
       , gravity RIGHT
       , weight 1.0
       , color Color.black800
-      , text $ "₹" <> EHC.formatCurrencyWithCommas (show item.val)
+      , text $ "R$" <> EHC.formatCurrencyWithCommas (show item.val)
       ] <> FontStyle.body6 TypoGraphy
   ]
 

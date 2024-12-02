@@ -188,8 +188,8 @@ view push state =
                           , gravity RIGHT
                           , orientation VERTICAL
                           ] [ textView $
-                              [ text $ "₹"<>show (fromMaybe 0 item.totalFare)
-                              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") $ show (fromMaybe 0 item.totalFare)) <> (getString RUPEES)
+                              [ text $ "R$"<>show (fromMaybe 0 item.totalFare)
+                              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "R$") (DS.Replacement "") $ show (fromMaybe 0 item.totalFare)) <> (getString RUPEES)
                               , accessibility ENABLE
                               , color Color.black
                               ] <> FontStyle.h3 LanguageStyle

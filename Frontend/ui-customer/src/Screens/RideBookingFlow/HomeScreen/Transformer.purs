@@ -813,7 +813,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       destination= (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^.dropLocation)))),
       rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
       driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName) ,
-      totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
+      totalAmount = ("R$ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
       selectedItem = dummyIndividualCard{
         status = ride.status,
         rideType = rideType,
@@ -829,7 +829,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         rideStartTime = (convertUTCtoISC startTime "h:mm A"),
         rideEndTime = (convertUTCtoISC endTime "h:mm A"),
         vehicleNumber = rideDetails.vehicleNumber,
-        totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
+        totalAmount = ("R$ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
         shortRideId = rideDetails.shortRideId,
         baseDistance = baseDistanceVal,
         referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then (show nightCharges) <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")

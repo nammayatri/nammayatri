@@ -59,7 +59,7 @@ mkTipConfig customerTipArrayWithValues = {
 
 getTips :: Array Int -> Array String
 getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
-                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+                                           else "R$" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
   where
     emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
 
@@ -111,8 +111,8 @@ getTipViewText tipViewProps vehicleVariant prefixString = do
       _ -> getString SEARCHING_WITH_NO_TIP
   else  
     case (getLanguageLocale languageKey) of
-      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
-      _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
+      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +R$" else " R$")<>tip<>" "<> (getString TIP)
+      _ -> "+R$"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 isTipEnabled :: CustomerTip -> String -> Boolean
 isTipEnabled tipConfig vehicleVariant =

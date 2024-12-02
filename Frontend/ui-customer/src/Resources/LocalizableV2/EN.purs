@@ -351,7 +351,7 @@ getEn = Keymap {
 , nominal_fare: "Optional Driver Request*"
 , customer_cancellation_dues: "Cancellation Dues"
 , drivers_can_charge_an_additional_fare_upto: "* Drivers may optionally request 10% of base fare (rounded to nearest Rs.10) to cover other factors like traffic, chances of return trip etc."
-, waiting_charge_description: "°Waiting charge is zero for the first {} minutes. You will be charged ₹{} per minute of wait time after that."
+, waiting_charge_description: "°Waiting charge is zero for the first {} minutes. You will be charged R${} per minute of wait time after that."
 , waiting_charge_ratecard_description: (\ waitingCharge freeWaitingTime -> "1. Waiting Charge is zero for the first"<> freeWaitingTime <> "minutes.\n 2. Waiting Charge of " <> waitingCharge <> " per minute will be applicable thereafter.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "Applicable @" <> waitingCharge <> "per minute after the first " <> freeWaitingTime <> "minutes of waiting")
 , successful_onboard: (\_ -> "You have successfully signed on to \nNamma Yatri")
@@ -429,7 +429,7 @@ getEn = Keymap {
 , gender_str: "Gender"
 , profile_completion: "Profile Completion"
 , early_end_ride_charges: "Early Ride End Charges^"
-, early_end_ride_charges_description: "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. ₹50)"
+, early_end_ride_charges_description: "^Ending a ride early incurs additional charges amounting to half the fare of the untravelled distance (max. R$50)"
 , yes_try_again: "Yes, Try Again"
 , no_dont: "No, Don’t"
 , yes_cancel_search: "Yes, Cancel Search"
@@ -447,7 +447,7 @@ getEn = Keymap {
 , fare_update_policy: "Fare Update Policy"
 , driver_additions_optional: "Driver Additions (Optional)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "The Driver may quote extra to cover for traffic, chance of return trip etc."
-, driver_additions_are_calculated_at_rate: (\_ -> "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10")
+, driver_additions_are_calculated_at_rate: (\_ -> "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest R$10")
 , driver_may_not_charge_this_additional_fare: "Note The driver may/may not charge this additional fare"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "You may see an updated final fare due to any of the below reasons"
 , reason_change_in_route_a: "1.Change in Route "
@@ -520,7 +520,7 @@ getEn = Keymap {
 , call_112: "Call 112"
 , call_emergency_centre: "Call Emergency Centre"
 , seats: "Seats"
-, driver_addition_limits_are_in_increments: "Driver addition limits are in increments of ₹20"
+, driver_addition_limits_are_in_increments: "Driver addition limits are in increments of R$20"
 , hatchback: "Hatchback"
 , suv: "SUV"
 , sedan: "Sedan"
@@ -1173,7 +1173,7 @@ getEn = Keymap {
 , other_provider_no_receipt: "Driver receipt for rides fulfilled by other providers are not available yet."
 , ride_fulfilled_by: (\merchantName -> "Ride fulfilled by: " <> merchantName)
 , congestion_charges: "Congestion Charges*"
-, tip_can_be_added: (\maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare.")
+, tip_can_be_added: (\maxTip -> "Tip of upto R$" <> maxTip <> " can be added to the ride fare.")
 , congestion_charges_desc: (\charges -> "*A Congestion Charge of "<> charges <>"% on your ride is applicable currently to compensate driver’s time in high traffic or to get more drivers available for you")
 , ac_turned_off: "A/C was not ON"
 , estimates_expiry_error: "Estimates has been expired. Please try again."
@@ -1338,9 +1338,9 @@ getEn = Keymap {
 , thrissur: "Thrissur"
 , trivandrum: "Trivandrum"
 , metro_free_ticket_event: (\freeTicketInterval -> "Every " <> freeTicketInterval <> " ticket is FREE!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "Get a FREE ticket (up to ₹" <> maxFreeTicketCashback <> ") on every " <> freeTicketInterval <> " ticket (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "Get a FREE ticket (up to R$" <> maxFreeTicketCashback <> ") on every " <> freeTicketInterval <> " ticket (ONDC Offer)")
 , next_free_ticket: "Next ticket added is eligible for cashback"
-, free_ticket_available: (\maxCashback freeTicketCount -> "Unlocked cashback (upto ₹" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "Unlocked cashback (upto R$" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!")
 , additional_charges_will_be_applicable: "Additional charges may be applicable when driver is near pickup location."
 , parking_charges_included: (\amount -> amount <> " parking charges included")
 , app_toll_charges: "Toll charges are included"

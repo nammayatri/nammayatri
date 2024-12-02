@@ -160,7 +160,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
 getAutoPayDetailsList (MandateData mandateDetails) = 
-    [   {key : getString MAX_AMOUNT, val : "₹" <> getFixedTwoDecimals mandateDetails.maxAmount},
+    [   {key : getString MAX_AMOUNT, val : "R$" <> getFixedTwoDecimals mandateDetails.maxAmount},
         {key : getString FREQUENCY, val : getFrequencyText mandateDetails.frequency},
         {key : getString STATRED_ON, val : convertUTCtoISC  mandateDetails.startDate "Do MMM YYYY"},
         {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}
@@ -253,7 +253,7 @@ getFeeBreakup maxRidesEligibleForCharge pointsApplied driverFeeAmount totalRides
             if ridesToConsider /= 0 then getStringFeeBreakup
             else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
    where 
-    getStringFeeBreakup = (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
+    getStringFeeBreakup = (if driverFeeAmount > 0.0 then "R$" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of

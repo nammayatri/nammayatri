@@ -158,7 +158,7 @@ amountBreakupView state =
               [ textView $
                   [ text (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType)
                   , color Color.black800
-                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
+                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "R$") (DS.Replacement "") item.price) <> " Rupees"
                   , accessibility ENABLE
                   , layoutGravity "bottom"
                   ] <> FontStyle.paragraphText LanguageStyle
@@ -194,7 +194,7 @@ totalAmountView state =
     ]
     [ textView $
         [ text $ getString TOTAL_PAID
-        , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
+        , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "R$") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
         , accessibility ENABLE
         , color Color.black800
         , lineHeight "28"

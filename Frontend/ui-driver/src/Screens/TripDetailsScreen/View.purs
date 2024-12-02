@@ -201,7 +201,7 @@ tagView state config =
 
 tagList :: ST.TripDetailsScreenState -> Array ST.Tag
 tagList state = [
-  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "₹" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
+  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : isJust state.data.customerExtraFee, text : "R$" <> (show (fromMaybe 0 state.data.customerExtraFee)) <> " Tip" , textColor : Color.black900},
   {background : Colors.black200, image : fetchImage FF_ASSET "ny_ic_loc_black", visibility : state.data.gotoTagVisibility, text : getString GO_TO, textColor : Color.black900},
   {background : Colors.purple100, image : fetchImage FF_ASSET "ny_ic_disability_purple", visibility : state.data.purpleTagVisibility, text : getString PURPLE_RIDE, textColor : Color.purple},
   {background : Colors.blue100, image : fetchImage FF_ASSET "ny_ic_star", visibility : state.data.spLocTagVisibility, text : state.data.specialZoneText, textColor : Color.blue800},

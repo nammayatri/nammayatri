@@ -188,7 +188,7 @@ paymentList push state =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , visibility if item.isPaidByYatriCoins then GONE else VISIBLE
-                    ][ commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                    ][ commonTV push ("R$" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
                       , linearLayout
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
@@ -598,7 +598,7 @@ manualPaymentRidesList push state =
           , width $ V (screenwidth/3)
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ "₹" <> getString TOTAL_AMOUNT
+          [ text $ "R$" <> getString TOTAL_AMOUNT
           , width $ V (screenwidth/3)
           , color Color.black700
           , gravity RIGHT
@@ -626,7 +626,7 @@ manualPaymentRidesList push state =
                 , color Color.black800
                 ] <> FontStyle.tags TypoGraphy
               , textView $
-                [ text ("₹" <> getFixedTwoDecimals item.dueAmount)
+                [ text ("R$" <> getFixedTwoDecimals item.dueAmount)
                 , color Color.black800
                 , width $ V (screenwidth/3)
                 , gravity RIGHT

@@ -95,16 +95,16 @@ dummyIndividualCard = {
     destinationLocation : dummyBookingDetails,
     alpha : "",
     fareBreakUpList : {
-      baseFare : "₹ 0"
-    , pickupCharges : "₹ 0"
-    , nominalFare : "₹ 0"
-    , waitingCharges : "₹ 0"
+      baseFare : "R$ 0"
+    , pickupCharges : "R$ 0"
+    , nominalFare : "R$ 0"
+    , waitingCharges : "R$ 0"
     }
   , faresList : []
-  , baseFare : "₹ 0"
-  , pickupCharges : "₹ 0"
-  , extraFare : "₹ 0"
-  , waitingCharges : "₹ 0"
+  , baseFare : "R$ 0"
+  , pickupCharges : "R$ 0"
+  , extraFare : "R$ 0"
+  , waitingCharges : "R$ 0"
   , baseDistance : "0 km"
   , extraDistance : "0 km"
   , referenceString : ""

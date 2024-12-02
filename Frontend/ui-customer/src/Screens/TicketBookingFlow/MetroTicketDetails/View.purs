@@ -510,7 +510,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "₹" <> show state.data.ticketPrice
+          , text $ "R$" <> show state.data.ticketPrice
           , color Color.black800
           ] <> FontStyle.tags TypoGraphy
       ]

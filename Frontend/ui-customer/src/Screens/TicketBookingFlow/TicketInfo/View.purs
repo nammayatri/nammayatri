@@ -236,7 +236,7 @@ ticketHeaderView state push placeColor infoColor  =
         , orientation HORIZONTAL
         ][ textContentView (convertUTCtoISC state.data.selectedBookingInfo.visitDate "Do MMM, YYYY") infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ,  dotView placeColor (Margin 10 10 10 10) 5
-        ,  textContentView ("Total : ₹ " <>  show state.data.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+        ,  textContentView ("Total : R$ " <>  show state.data.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ]
      ]
   
@@ -435,7 +435,7 @@ bookingInfoView state push =
   , orientation VERTICAL
   ]([  bookingInfoListItemView push state "Service ID" activeItem.ticketServiceShortId
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView push state (getTextForQRType activeItem.ticketServiceName) ("₹" <> show activeItem.amount)
+    , bookingInfoListItemView push state (getTextForQRType activeItem.ticketServiceName) ("R$" <> show activeItem.amount)
   ] <> case activeItem.expiryDate of 
           Just expiryDate ->  [ separatorView (getSeparatorColor activeItem.ticketServiceName)
                               , bookingInfoListItemView push state "Valid Until" validityTime]

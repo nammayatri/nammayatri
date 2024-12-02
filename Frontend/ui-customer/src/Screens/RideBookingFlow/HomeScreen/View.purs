@@ -1755,7 +1755,7 @@ estimatedFareView push state =
   , cornerRadii $ Corners 24.0 true true false false
   , afterRender
         ( \action -> do
-            let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            let fareEstimate = if state.data.rateCard.additionalFare == 0 then "R$" <> (show state.data.suggestedAmount) else  "R$" <> (show state.data.suggestedAmount) <> "-" <> "R$" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             _ <- pure $  setValueToLocalStore FARE_ESTIMATE_DATA fareEstimate
             pure unit
         )

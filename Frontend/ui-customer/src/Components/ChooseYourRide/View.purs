@@ -169,7 +169,7 @@ tipSelectedView push state =
   , clickable true
   , onClick push $ const $ ChangeTip state.tipViewProps
   ][ textView $
-    [ text $ "₹" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
+    [ text $ "R$" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
     , color Color.black900
     , width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -234,7 +234,7 @@ tipsHorizontalView push state =
               , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.green900 else Color.grey900)
               , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
               , accessibility ENABLE
-              , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+              , accessibilityHint $ "R$" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
               ][textView $
                 [ text $ item
                 , color $ Color.black800

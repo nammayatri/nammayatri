@@ -33,7 +33,7 @@ import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, (*), negate, (-))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha, horizontalScrollView, scrollBarX, disableKeyboardAvoidance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..), City(..), TipViewStage(..), FareProductType(..))
 import Storage 
@@ -270,7 +270,7 @@ boostSearchView push state showBoostSearch =
                         , stroke $ "1," <> (if isSelected then Color.blue800 else Color.grey900)
                         , onClick push $ const $ TipBtnClick index (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) boostSearchTipViewProps
                         , accessibility ENABLE
-                        , accessibilityHint $ "₹" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+                        , accessibilityHint $ "R$" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
                         ][textView $ 
                           [ text $ item
                           , color $ if isSelected then Color.blue800 else Color.black800
@@ -581,12 +581,9 @@ findingRidesView state push =
       , gravity CENTER
       , accessibility DISABLE
       ]
-      [
-        lottieAnimationView
+      [ lottieAnimationView
         [ id (getNewIDWithTag "lottieLoaderAnim")
-        , afterRender (\action-> do
-                      void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = lottieRawJson, lottieId = (getNewIDWithTag "lottieLoaderAnim") }
-                      pure unit)(const NoAction state.tipViewProps)
+        , afterRender (\action-> void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = lottieRawJson, lottieId = (getNewIDWithTag "lottieLoaderAnim") })(const $  NoAction state.tipViewProps)
         , height $ V state.appConfig.quoteListModel.lottieHeight
         , accessibility DISABLE
         , width $ V state.appConfig.quoteListModel.lottieWidth
@@ -1195,3 +1192,6 @@ providerModelConfig config quoteItem =
     vehicleType = quoteItem.vehicleType,
     vehicleImage = quoteItem.vehicleImage
 }
+
+toggleAnimation :: String -> Boolean
+toggleAnimation lazy = true 

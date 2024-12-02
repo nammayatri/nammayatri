@@ -17,6 +17,11 @@ config =
       , { name: "हिंदी", value: "HI_IN", subtitle: "Hindi" }
       , { name: "தமிழ்", value: "TA_IN", subtitle: "Tamil" }
       , { name : "తెలుగు", value: "TE_IN", subtitle : "Telugu"}
+      , {
+        name: "português",
+        value: "PT-BR",
+        subtitle: "Portuguese"
+      }
       ]
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
@@ -1068,7 +1073,7 @@ config =
   , privacyLink : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader
-  , currency: "₹"
+  , currency: "R$"
   , internationalNumberEnabled : false
   , countryCodeConfig : []
   , feature : {

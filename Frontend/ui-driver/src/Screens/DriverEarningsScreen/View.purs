@@ -460,7 +460,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ "₹" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
+                  , text $ "R$" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
                   , color Color.black900
                   ]
                 <> FontStyle.priceFont TypoGraphy
@@ -1311,7 +1311,7 @@ historyViewItem item isLast subView =
                   , width WRAP_CONTENT
                   ]
                   [ textView
-                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "₹") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
+                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "R$") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
                         , color Color.black900
                         ]
                       <> FontStyle.tags TypoGraphy
@@ -1732,7 +1732,7 @@ historyViewForEarnings push state =
                   ]
                 <> FontStyle.paragraphText TypoGraphy
             , textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
+                $ [ text $ "R$" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
                   , color Color.black800
                   ]
                 <> FontStyle.h2 TypoGraphy
@@ -1763,7 +1763,7 @@ dottedLineView push margintop earnings =
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , gravity RIGHT
-          , text $ "₹" <> formatCurrencyWithCommas (show earnings)
+          , text $ "R$" <> formatCurrencyWithCommas (show earnings)
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
@@ -1935,7 +1935,7 @@ historyViewItemForEarnings push item state index =
               , padding $ Padding 11 3 11 6
               ]
               [ textView
-                  $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                  $ [ text $ if rideStatus /= "CANCELLED" then "R$" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
                     , height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , color color'

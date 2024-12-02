@@ -449,7 +449,7 @@ serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
     concatKeysArr arr = DA.concat $ map (\obj -> obj.key) arr
     concatKeys arr = foldr (\obj acc -> if not DS.null acc then obj <> ", " <> acc else  obj ) "" arr 
 
-    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "₹" <>  show peopleCat.pricePerUnit }
+    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "R$" <>  show peopleCat.pricePerUnit }
 
     getCategoryNameMap catName isSinglePC = case catName, isSinglePC  of 
                                               "Adult", true         -> "Per Person"
@@ -923,7 +923,7 @@ incrementDecrementView push state serviceId serviceCatId pcCategory  =
   , orientation VERTICAL
   , margin $ MarginTop 24
   ][  textView $
-      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (₹" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
+      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (R$" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -1235,7 +1235,7 @@ ticketHeaderView state push placeColor infoColor  =
         , orientation HORIZONTAL
         ][ textContentView (convertUTCtoISC state.props.selectedBookingInfo.visitDate "Do MMM, YYYY") infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ,  dotView placeColor (Margin 10 10 10 10) 5
-        ,  textContentView ("Total : ₹ " <>  show state.props.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+        ,  textContentView ("Total : R$ " <>  show state.props.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
         ]
      ]
   

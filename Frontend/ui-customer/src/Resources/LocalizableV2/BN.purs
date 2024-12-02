@@ -344,9 +344,9 @@ getBn = Keymap {
 , pickup_charge: "পিকআপ চার্জ"
 , total_paid: "মোট প্রদত্ত"
 , waiting_charge: "অপেক্ষার চার্জ"
-, drivers_can_charge_an_additional_fare_upto: "* ড্রাইভাররা ট্রাফিক, রিটার্ন ট্রিপের সম্ভাবনা ইত্যাদির মতো অন্যান্য বিষয়গুলি কভার করতে ₹20 পর্যন্ত অতিরিক্ত ভাড়া নিতে পারে।"
-, waiting_charge_description: "°প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। এর পরে অপেক্ষার সময় প্রতি মিনিটে আপনাকে ₹1.5 চার্জ করা হবে।"
-, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। \n 2. এর পরে প্রতি মিনিটে ₹1.5 এর ওয়েটিং চার্জ প্রযোজ্য হবে।")
+, drivers_can_charge_an_additional_fare_upto: "* ড্রাইভাররা ট্রাফিক, রিটার্ন ট্রিপের সম্ভাবনা ইত্যাদির মতো অন্যান্য বিষয়গুলি কভার করতে R$20 পর্যন্ত অতিরিক্ত ভাড়া নিতে পারে।"
+, waiting_charge_description: "°প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। এর পরে অপেক্ষার সময় প্রতি মিনিটে আপনাকে R$1.5 চার্জ করা হবে।"
+, waiting_charge_ratecard_description: (\waitingCharge freeWaitingTime -> "1. প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। \n 2. এর পরে প্রতি মিনিটে R$1.5 এর ওয়েটিং চার্জ প্রযোজ্য হবে।")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "প্রযোজ্য @ "<>waitingCharge<>" প্রতি মিনিটে প্রথম "<> freeWaitingTime <>" মিনিট অপেক্ষা করার পরে")
 , successful_onboard: (\_ -> "আপনি সফলভাবে \n জাত্রি সাথিতে স্বাক্ষর করেছেন")
 , have_referral_code: "একটি রেফারেল কোড আছে?"
@@ -426,7 +426,7 @@ getBn = Keymap {
 , gender_str: "লিঙ্গ"
 , profile_completion: "প্রোফাইল সমাপ্তি"
 , early_end_ride_charges: "প্রারম্ভিক রাইড শেষ চার্জ^"
-, early_end_ride_charges_description: "Reard যাত্রা শেষে প্রথম দিকে অবরুদ্ধ দূরত্বের অর্ধেক ভাড়ার পরিমাণের অতিরিক্ত চার্জ দেয় (সর্বোচ্চ ₹ 50)"
+, early_end_ride_charges_description: "Reard যাত্রা শেষে প্রথম দিকে অবরুদ্ধ দূরত্বের অর্ধেক ভাড়ার পরিমাণের অতিরিক্ত চার্জ দেয় (সর্বোচ্চ R$ 50)"
 , yes_try_again: "হ্যাঁ, আবার চেষ্টা করুন"
 , no_dont: "না, না"
 , yes_cancel_search: "হ্যাঁ, অনুসন্ধান বাতিল করুন"
@@ -455,7 +455,7 @@ getBn = Keymap {
 , update_now: "এখন হালনাগাদ করুন"
 , driver_additions_optional: "ড্রাইভার সংযোজন (ঐচ্ছিক)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ড্রাইভার ট্রাফিক কভার করার জন্য অতিরিক্ত উদ্ধৃত করতে পারে, ফিরতি ট্রিপের সুযোগ ইত্যাদি।"
-, driver_additions_are_calculated_at_rate: (\_ -> "ড্রাইভার সংযোজনের সীমা বেস ভাড়ার 10% এ গণনা করা হয় নিকটতম ₹10 এ রাউন্ড অফ")
+, driver_additions_are_calculated_at_rate: (\_ -> "ড্রাইভার সংযোজনের সীমা বেস ভাড়ার 10% এ গণনা করা হয় নিকটতম R$10 এ রাউন্ড অফ")
 , driver_may_not_charge_this_additional_fare: "দ্রষ্টব্য: ড্রাইভার এই অতিরিক্ত ভাড়া নিতে পারে/নাও পারে"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "নিচের যেকোনো কারণে আপনি একটি আপডেট করা চূড়ান্ত ভাড়া দেখতে পারেন:"
 , reason_change_in_route_a: "1. রুটে পরিবর্তন: "
@@ -514,7 +514,7 @@ getBn = Keymap {
 , call_namma_yatri_support: (\_ -> "নম্মা যাত্রী সমর্থনে কল করুন")
 , call_112: "112 কল করুন"
 , call_emergency_centre: "ইমার্জেন্সি সেন্টারে কল করুন"
-, driver_addition_limits_are_in_increments: "ড্রাইভার যোগ করার সীমা ₹20 বৃদ্ধিতে রয়েছে "
+, driver_addition_limits_are_in_increments: "ড্রাইভার যোগ করার সীমা R$20 বৃদ্ধিতে রয়েছে "
 , seats: "আসন"
 , hatchback: "হ্যাচব্যাক"
 , suv: "এসইউভি"
@@ -1334,9 +1334,9 @@ getBn = Keymap {
 , kozhikode: "কোজিকোড"
 , thrissur: "ত্রিশূর"
 , metro_free_ticket_event: (\freeTicketInterval -> "প্রতিটি " <> freeTicketInterval <> " টিকেট বিনামূল্যে!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "প্রতিটি " <> freeTicketInterval <> " টিকেটে একটি বিনামূল্যে টিকেট পান (সর্বোচ্চ ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "প্রতিটি " <> freeTicketInterval <> " টিকেটে একটি বিনামূল্যে টিকেট পান (সর্বোচ্চ R$" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "পরবর্তী টিকেট বিনামূল্যে"
-, free_ticket_available: (\maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ ₹" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!")
+, free_ticket_available: (\maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ R$" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!")
 , additional_charges_will_be_applicable: "চালক যখন পিকআপ অবস্থানের কাছাকাছি থাকে তখন অতিরিক্ত চার্জ প্রযোজ্য হতে পারে।"
 , parking_charges_included: (\amount -> amount <> " পার্কিং চার্জ অন্তর্ভুক্ত")
 , app_toll_charges: "প্রযোজ্য টোল চার্জ ভাড়ার মধ্যে অন্তর্ভুক্ত করা হয়েছে"

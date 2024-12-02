@@ -279,7 +279,7 @@ shimmerData :: Int -> ItemState
 shimmerData i =
   { date : toPropValue "31/05/2022",
   time : toPropValue "7:35pm",
-  total_amount : toPropValue "₹ 0.0",
+  total_amount : toPropValue "R$ 0.0",
   card_visibility : toPropValue "gone",
   shimmer_visibility : toPropValue "visible",
   rideDistance : toPropValue "10km Ride with Bharat",

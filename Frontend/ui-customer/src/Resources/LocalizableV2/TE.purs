@@ -352,7 +352,7 @@ getTe = Keymap {
 , nominal_fare: "ఐచ్ఛిక డ్రైవర్ అభ్యర్థన*"
 , customer_cancellation_dues: "రద్దు బకాయిలు"
 , drivers_can_charge_an_additional_fare_upto: "* ట్రాఫిక్, రిటర్న్ ట్రిప్ అవకాశాలు మొదలైన ఇతర అంశాలను కవర్ చేయడానికి డ్రైవర్లు ఐచ్ఛికంగా బేస్ ఫేర్‌లో 10% అభ్యర్థించవచ్చు (సమీప రూ.10కి రౌండ్ చేయబడింది)."
-, waiting_charge_description: "°మొదటి {} నిమిషాలకు వెయిటింగ్ ఛార్జ్ సున్నా. ఆ తర్వాత వేచి ఉండే సమయానికి మీకు నిమిషానికి ₹{} ఛార్జీ విధించబడుతుంది."
+, waiting_charge_description: "°మొదటి {} నిమిషాలకు వెయిటింగ్ ఛార్జ్ సున్నా. ఆ తర్వాత వేచి ఉండే సమయానికి మీకు నిమిషానికి R${} ఛార్జీ విధించబడుతుంది."
 , waiting_charge_ratecard_description: (\ waitingCharge freeWaitingTime -> "1. మొదటి"<> freeWaitingTime <> " నిమిషాలకు వెయిటింగ్ ఛార్జ్ సున్నా.\n 2. నిమిషానికి వెయిటింగ్ ఛార్జీ " <> waitingCharge <> " ఆ తర్వాత వర్తిస్తుంది.")
 , waiting_charge_info: (\waitingCharge freeWaitingTime -> "మొదటి " <> freeWaitingTime <> "నిమిషాల నిరీక్షణ తర్వాత నిమిషానికి @" <> waitingCharge <> "వర్తిస్తుంది")
 , successful_onboard: (\_ -> "మీరు \nనమ్మ యాత్రిలో విజయవంతంగా సైన్ ఇన్ చేసారు")
@@ -430,7 +430,7 @@ getTe = Keymap {
 , gender_str: "లింగం"
 , profile_completion: "ప్రొఫైల్ పూర్తి"
 , early_end_ride_charges: "ప్రారంభ రైడ్ ముగింపు ఛార్జీలు^"
-, early_end_ride_charges_description: "^రైడ్‌ను ముందుగానే ముగించడం వలన ప్రయాణించని దూరం (గరిష్టంగా ₹50)లో సగం ఛార్జీలు అదనంగా ఉంటాయి."
+, early_end_ride_charges_description: "^రైడ్‌ను ముందుగానే ముగించడం వలన ప్రయాణించని దూరం (గరిష్టంగా R$50)లో సగం ఛార్జీలు అదనంగా ఉంటాయి."
 , yes_try_again: "అవును, మళ్లీ ప్రయత్నించండి"
 , no_dont: "లేదు, చేయవద్దు"
 , yes_cancel_search: "అవును, శోధనను రద్దు చేయి"
@@ -448,7 +448,7 @@ getTe = Keymap {
 , fare_update_policy: "ఛార్జీల నవీకరణ విధానం"
 , driver_additions_optional: "డ్రైవర్ చేర్పులు (ఐచ్ఛికం)"
 , the_driver_may_quote_extra_to_cover_for_traffic: "ట్రాఫిక్, రిటర్న్ ట్రిప్ అవకాశం మొదలైన వాటి కోసం డ్రైవర్ అదనపు కోట్ చేయవచ్చు."
-, driver_additions_are_calculated_at_rate: (\_ -> "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప ₹10కి లెక్కించబడతాయి")
+, driver_additions_are_calculated_at_rate: (\_ -> "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప R$10కి లెక్కించబడతాయి")
 , driver_may_not_charge_this_additional_fare: "గమనిక డ్రైవర్ ఈ అదనపు ఛార్జీని వసూలు చేయవచ్చు/చేయకపోవచ్చు"
 , you_may_see_an_updated_final_fare_due_to_any_of_the_below_reasons: "దిగువన ఉన్న ఏవైనా కారణాల వల్ల మీరు అప్‌డేట్ చేయబడిన తుది ఛార్జీని చూడవచ్చు"
 , reason_change_in_route_a: "1.రూట్‌లో మార్పు "
@@ -521,7 +521,7 @@ getTe = Keymap {
 , call_112: "112కి కాల్ చేయండి"
 , call_emergency_centre: "అత్యవసర కేంద్రానికి కాల్ చేయండి"
 , seats: "సీట్లు"
-, driver_addition_limits_are_in_increments: "డ్రైవర్ చేరిక పరిమితులు ₹20 ఇంక్రిమెంట్లలో ఉన్నాయి"
+, driver_addition_limits_are_in_increments: "డ్రైవర్ చేరిక పరిమితులు R$20 ఇంక్రిమెంట్లలో ఉన్నాయి"
 , hatchback: "హ్యాచ్‌బ్యాక్"
 , suv: "SUV"
 , sedan: "సెడాన్"
@@ -1172,7 +1172,7 @@ getTe = Keymap {
 , other_provider_no_receipt: "ఇతర ప్రొవైడర్లు నెరవేర్చిన రైడ్‌ల కోసం డ్రైవర్ రసీదు ఇంకా అందుబాటులో లేదు."
 , ride_fulfilled_by: (\ merchantName -> "రైడ్ పూర్తి చేసినవారు: " <> merchantName)
 , congestion_charges: "రద్దీ ఛార్జీలు*"
-, tip_can_be_added: (\maxTip -> "రైడ్ ఫేర్‌కు ఉపయోగించవచ్చే టిప్‌ మొత్తం ₹" <> maxTip <> " వరకు జోడించబడవచ్చు")
+, tip_can_be_added: (\maxTip -> "రైడ్ ఫేర్‌కు ఉపయోగించవచ్చే టిప్‌ మొత్తం R$" <> maxTip <> " వరకు జోడించబడవచ్చు")
 , congestion_charges_desc: (\charges -> "*మీ రైడ్‌పై ప్రస్తుతం "<> charges <>"% రద్దీ ఛార్జీలు వర్తిస్తాయి, అధిక ట్రాఫిక్‌లో డ్రైవర్ సమయాన్ని పరిహరించడానికి లేదా మీకు ఎక్కువ డ్రైవర్లను అందుబాటులోకి తీసుకురావడానికి.")
 , ac_turned_off: "ఎసి ఆఫ్ చేయబడింది"
 , book_any: "ఏదైనా బుక్ చేయండి"
@@ -1335,7 +1335,7 @@ getTe = Keymap {
 , thrissur: "తృశూర్"
 , trivandrum: "తిరువనంతపురం"
 , metro_free_ticket_event: (\freeTicketInterval -> "ప్రతి " <> freeTicketInterval <> " టికెట్ ఉచితం!")
-, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ప్రతి " <> freeTicketInterval <> " టికెట్ పొందండి (అప్పుడు ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)")
+, metro_free_ticket_event_desc: (\freeTicketInterval maxFreeTicketCashback -> "ప్రతి " <> freeTicketInterval <> " టికెట్ పొందండి (అప్పుడు R$" <> maxFreeTicketCashback <> ") (ONDC Offer)")
 , next_free_ticket: "తదుపరి టికెట్ ఉచితం"
 , free_ticket_available: (\maxCashback freeTicketCount -> "అంచనా ధరకు ఉచితం (మధ్య నిలువు " <> maxCashback <> ") లో " <> freeTicketCount <> " టికెట్!")
 , additional_charges_will_be_applicable: "డ్రైవర్ పికప్ స్థానానికి సమీపంలో ఉన్నప్పుడు అదనపు ఛార్జీలు వర్తించవచ్చు."

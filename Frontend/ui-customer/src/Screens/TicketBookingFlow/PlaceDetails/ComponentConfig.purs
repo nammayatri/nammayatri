@@ -57,7 +57,7 @@ primaryButtonConfig state = let
       { textConfig
         { text = (case state.props.currentStage of 
                     ST.DescriptionStage -> buttonConfigForDescription.buttonText
-                    ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                    ST.ChooseTicketStage -> ("Pay R$" <> (show state.data.totalAmount))
                     ST.ViewTicketStage -> "Book Tickets"
                     _ -> "")
         , color = Color.yellow900
@@ -87,7 +87,7 @@ primaryButtonConfig1 state =
       primaryButtonConfig' = config
         { textConfig
           { text = (case state.props.currentStage of 
-                      ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                      ST.ChooseTicketStage -> ("Pay R$" <> (show state.data.totalAmount))
                       _ -> "")
           , color = Color.yellow900
           }

@@ -44,16 +44,16 @@
     "eslint-config-google": "^0.14.0",
     "filemanager-webpack-plugin": "^2.0.5",
     "husky": "^8.0.1",
+    "hyper-purescript": "^0.0.25",
     "npm-run-all": "^4.1.5",
+    "purescript-psa": "0.8.2",
     "purty": "^7.0.0",
     "semantic-release": "^19.0.5",
     "uglify-js": "^3.17.4",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0",
-    "hyper-purescript": "^0.0.25",
-    "purescript-psa": "0.8.2"
+    "webpack-merge": "^5.8.0"
   },
   "dependencies": {
     "axios": ">=1.6.0",

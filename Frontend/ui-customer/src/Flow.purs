@@ -1327,11 +1327,11 @@ homeScreenFlow = do
       (GlobalState newState) <- getState
       let
         state = newState.homeScreen
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_tip_search" $ [ { key: "Tip amount (₹)", value: unsafeToForeign state.props.customerTip.tipForDriver } ]
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_tip_search" $ [ { key: "Tip amount (R$)", value: unsafeToForeign state.props.customerTip.tipForDriver } ]
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_retry_request_quote"
         $ [ { key: "Request Type", value: unsafeToForeign if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign" }
-          , { key: "Estimate Fare (₹)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
-          , { key: "Customer tip (₹)", value: unsafeToForeign state.props.customerTip.tipForDriver }
+          , { key: "Estimate Fare (R$)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
+          , { key: "Customer tip (R$)", value: unsafeToForeign state.props.customerTip.tipForDriver }
           , { key: "Estimated Ride Distance", value: unsafeToForeign state.data.rideDistance }
           , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
           ]
@@ -1725,7 +1725,7 @@ homeScreenFlow = do
           liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote"
             $ [ { key: "Request Type", value: unsafeToForeign if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign" }
-              , { key: "Estimate Fare (₹)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
+              , { key: "Estimate Fare (R$)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
               , { key: "Estimated Ride Distance", value: unsafeToForeign state.data.rideDistance }
               , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
             ]
@@ -4499,10 +4499,10 @@ rideCompletedDetails (RideBookingRes resp) = do
   [ { key: "Estimate ride distance (km)", value: unsafeToForeign (fromMaybe 0 contents.estimatedDistance / 1000) }
   , { key: "Actual ride distance (km)", value: unsafeToForeign ((fromMaybe 0 ride.chargeableRideDistance) / 1000) }
   , { key: "Difference between estimated and actual ride distance (km)", value: unsafeToForeign (differenceOfDistance / 1000) }
-  , { key: "Total Estimated fare (₹)", value: unsafeToForeign (resp.estimatedFare) }
-  , { key: "Total Actual fare (₹)", value: unsafeToForeign (finalAmount) }
-  , { key: "Difference between estimated and actual fares (₹)", value: unsafeToForeign (resp.estimatedFare - finalAmount) }
-  , { key: "Driver pickup charges (₹)", value: unsafeToForeign "10" }
+  , { key: "Total Estimated fare (R$)", value: unsafeToForeign (resp.estimatedFare) }
+  , { key: "Total Actual fare (R$)", value: unsafeToForeign (finalAmount) }
+  , { key: "Difference between estimated and actual fares (R$)", value: unsafeToForeign (resp.estimatedFare - finalAmount) }
+  , { key: "Driver pickup charges (R$)", value: unsafeToForeign "10" }
   , { key: "Night ride", value: unsafeToForeign nightChargesVal }
   , { key: "Actual Toll Charges", value: unsafeToForeign actualTollCharge.amount }
   , { key: "Has Toll", value: unsafeToForeign (maybe false (\charge -> charge.amount /= 0.0) (Just actualTollCharge)) }
@@ -5018,7 +5018,7 @@ fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
                 , keyValArray =
                   [ { key: "Date", val: convertUTCtoISC resp.visitDate "Do MMM YYYY" }
                   , { key: "Booking For", val: "" }
-                  , { key: "Total Paid", val: ("₹" <> show resp.amount) }
+                  , { key: "Total Paid", val: ("R$" <> show resp.amount) }
                   , { key: "Booking ID", val: resp.ticketShortId }
                   , { key: "Transaction ID", val: shortOrderID }
                   ]

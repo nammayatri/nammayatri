@@ -648,12 +648,12 @@ planPriceView fares frequency isSelectedLangTamil =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     [ textFromHtml $ "<strike> R$" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
      , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
    , textView
-      [ text $ "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+      [ text $ "R$" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
@@ -673,7 +673,7 @@ planPriceView fares frequency isSelectedLangTamil =
 --   , orientation VERTICAL
 --   ][ 
 --     textView $ 
---     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+--     [ textFromHtml $ "<strike> R$" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
 --     , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
 --     , color Color.black600
 --     ] <> FontStyle.body7 TypoGraphy
@@ -681,7 +681,7 @@ planPriceView fares frequency isSelectedLangTamil =
 --     [ height WRAP_CONTENT
 --     , width MATCH_PARENT
 --     , gravity LEFT
---     , text $ "₹" <> (getPlanPrice fares "FINAL_FEE")
+--     , text $ "R$" <> (getPlanPrice fares "FINAL_FEE")
 --     , textSize FontSize.a_32
 --     , fontStyle $ FontStyle.bold LanguageStyle
 --     , color Color.black800

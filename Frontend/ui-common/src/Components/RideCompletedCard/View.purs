@@ -228,16 +228,16 @@ priceAndDistanceUpdateView config push =
           , gravity CENTER
           , margin $ MarginHorizontal 16 16
           ][ textView $ 
-              [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
-              , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
+              [ text if config.isFreeRide then "R$0" else "R$" <> (show config.topCard.finalAmount)
+              , accessibilityHint $ "Ride Complete: Final Fare R$"  <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               ] <> (FontStyle.body28 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initialAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initialAmount) <> " To ₹" <> (show config.topCard.finalAmount)
+              [ textFromHtml $ "<strike> R$" <> (show config.topCard.initialAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From R$"  <> (show config.topCard.initialAmount) <> " To R$" <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
@@ -1061,7 +1061,7 @@ rentalTripRowView config push description =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , margin $ MarginTop if any ( _ == description) [EstimatedFare, RideStartedAt] then 0 else 16
-    , visibility $ boolToVisibility (textConfig.estimatedValue /= "₹0")
+    , visibility $ boolToVisibility (textConfig.estimatedValue /= "R$0")
     ] 
     [ linearLayout
       [ height WRAP_CONTENT
@@ -1113,11 +1113,11 @@ rentalTripRowView config push description =
             RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance rentalRowDetails.rideDistanceInfo (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show extraTimeFare) "" Color.black600
-            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show extraDistFare ) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("R$" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("R$" <> show extraTimeFare) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("R$" <> show extraDistFare ) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("R$" <> show config'.topCard.finalAmount) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("R$" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
 
             
       mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig

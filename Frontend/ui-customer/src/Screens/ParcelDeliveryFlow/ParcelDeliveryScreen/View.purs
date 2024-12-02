@@ -455,7 +455,7 @@ tipView push state =
     , visibility $ boolToVisibility $ isJust state.data.tipForDriver
     ][
       textView $ 
-      [ text $ "₹" <> (show $ fromMaybe 0 state.data.tipForDriver) <> " " <> getString TIP_ADDED
+      [ text $ "R$" <> (show $ fromMaybe 0 state.data.tipForDriver) <> " " <> getString TIP_ADDED
       , color Color.black900
       , width WRAP_CONTENT
       , height WRAP_CONTENT
