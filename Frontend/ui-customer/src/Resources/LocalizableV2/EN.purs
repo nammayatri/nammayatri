@@ -440,7 +440,7 @@ getEn = Keymap {
 , direct_call: "Direct Call"
 , anonymous_call: "Anonymous Call"
 , your_number_will_not_be_shown_to_the_driver_the_call_will_be_recorded_for_compliance: "Your number will not be shown to the driver. The call will be recorded for compliance."
-, your_number_will_be_visible_to_the_driver_use_if_not_calling_from_registered_number: "Your number will be visible to the driver. Use if not calling from registered number."
+, your_number_will_be_visible_to_the_driver_use_if_not_calling_from_registered_number: "Your number will be visible to the driver. Use when not calling from a registered number or facing connection issues."
 , call_driver_using: "Call Driver using"
 , was_your_call_successful: "Was Your Call Successful"
 , driver_additions: "Driver Additions*"
