@@ -87,7 +87,7 @@ type Service = {
   secondaryPillColor :: String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq
@@ -140,4 +140,11 @@ type EventsConfig = {
   enabled :: Boolean,
   pushEventChunkSize :: Int,
   loggingIntervalInMs :: Number
+}
+
+type BusFlowConfig = {
+  showBusTracking :: Boolean,
+  showPostBookingTracking :: Boolean,
+  liveRoutes :: Int,
+  ticketValidity :: String
 }

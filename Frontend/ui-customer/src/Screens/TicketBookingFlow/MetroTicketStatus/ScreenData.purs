@@ -41,20 +41,21 @@ initData =
     }
   }
 
-dummyMetroBookingStatus :: MetroTicketBookingStatus
+dummyMetroBookingStatus :: FRFSTicketBookingStatusAPIRes
 dummyMetroBookingStatus = 
-  MetroTicketBookingStatus {
+  FRFSTicketBookingStatusAPIRes {
     _type: "SingleJourney",
     createdAt : "",
     bookingId : "",
     city : "",
     updatedAt : "",
     payment : Nothing,
-    price: 1,
+    price: 1.0,
     quantity: 2,
     stations: [],
     status: "CONFIRMED",
     tickets: [],
     vehicleType: "Metro_",
-    validTill: "2024-01-26T19:37:12.516Z"
+    validTill: "2024-01-26T19:37:12.516Z",
+    routeStations : Nothing
     }

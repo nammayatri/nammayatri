@@ -56,6 +56,7 @@ type InputView =
   , clearTextIcon :: ImageConfig
   , fontStyle :: forall properties. Array (Prop properties)
   , inputTextConfig :: InputTextConfig
+  , alpha :: Number
   }
   
 

@@ -279,7 +279,8 @@ deliveryGuidelinesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ Margin 0 20 0 120
+  , padding $ Padding 0 0 0 100
+  , margin $ Margin 0 20 0 125
   ]
   [ linearLayout
     [ width MATCH_PARENT

@@ -770,6 +770,9 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
-      "ny_ic_earn_through_parcel" : true
+      "ny_ic_earn_through_parcel" : true,
+      "ny_ic_bike_delivery_nav_on_map": true,
+      "ny_ic_refresh" : true,
+      "ny_ic_ticket_clip_background" : true
    }
 }

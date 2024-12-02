@@ -79,7 +79,7 @@ import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop)
+import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop, elem)
 import Data.Array as Arr
 import Data.Either (Either(..),either)
 import Data.Function.Uncurried (runFn1)
@@ -681,7 +681,7 @@ view push state =
                          || (runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > acPopupConfig.showAfterTime)))
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
-                        && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
+                        && (not $ state.data.driverInfoCardState.serviceTierName `Arr.elem` [Just "Auto", Just "Bike Taxi"])
                         && state.data.currentCityConfig.enableAcViews
                         && state.data.fareProductType /= FPT.DELIVERY
 
@@ -722,6 +722,7 @@ scheduledRideExistsPopUpView push state =
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let
   viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen
+  enableBusBooking = state.data.config.feature.enableBusBooking -- && isJust (Arr.find (\service -> service.type == RemoteConfig.BUS) (nammaServices FunctionCall))
   in
   linearLayout
     [ height MATCH_PARENT
@@ -758,8 +759,11 @@ bottomNavBarView push state = let
                     ] <> FontStyle.body9 TypoGraphy
 
               ]
-            ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
-                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
+            ) ([{text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}]
+                <> (if enableBusBooking then [{text : "Bus" , image : "ny_ic_bus_black", id : BUS_}] else [])
+                <> [{text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]
+              )
+            )
     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3)
@@ -3700,7 +3704,7 @@ homeScreenContent push state =  let
 
 servicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 servicesView push state =
-  let itemLen = length $ nammaServices FunctionCall
+  let itemLen = length $ spy "nammaServices-codex" $ nammaServices FunctionCall
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       firstName = fromMaybe "Yatri " (head (DS.split (DS.Pattern " ") appName))
   in
@@ -3794,7 +3798,7 @@ verticalServiceView push index service =
   , accessibility ENABLE
   , accessibility DISABLE_DESCENDANT
   , accessibilityHint $ getEN service.name
-  , margin $ MarginLeft $ if index == 0 then 0 else 16
+  , margin $ MarginLeft $ if index == 0 then 0 else 12
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout 
     [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
@@ -3813,7 +3817,7 @@ verticalServiceView push index service =
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 8 8 8 8
+    , padding $ Padding 5 5 5 5
     , background service.backgroundColor
     , margin $ MarginVertical 9 16
     , cornerRadius 12.0

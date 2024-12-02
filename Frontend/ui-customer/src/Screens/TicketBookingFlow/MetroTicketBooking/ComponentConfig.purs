@@ -38,8 +38,13 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
-import Services.API (MetroBookingConfigRes(..))
+import Services.API (FRFSConfigAPIRes(..),TicketServiceType(..), FRFSDiscountReq(..))
 import Mobility.Prelude (getNumberWithSuffix)
+import Debug
+import Data.Array as DA
+import Accessor (_amount)
+import Data.Lens((^.))
+import Data.Int as INT
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -57,7 +62,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = getString BUY_METRO_TICKETS
+            text = if state.props.currentStage == ST.OfferSelection then "Offers" else if state.props.ticketServiceType == BUS then getString BUY_BUS_TICKETS else getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {
@@ -70,14 +75,14 @@ updateButtonConfig :: ST.MetroTicketBookingScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     config = PrimaryButton.config
-    price = state.data.ticketPrice * state.data.ticketCount
+    price = state.data.ticketPrice * (INT.toNumber state.data.ticketCount)
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
-    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-    priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
-    discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
+    (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100.0) + price)
+    discountText = if price /= priceAfterExtraDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show price)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 
-        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY) <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
+        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection ) then (getString BOOK_AND_PAY <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -87,13 +92,25 @@ updateButtonConfig state = let
         , alpha = if (state.props.termsAndConditionsSelected && state.props.isButtonActive) then 1.0 else 0.5
         }
     in updateButtonConfig'
+    where
+      appliedDiscountCodes :: Array String
+      appliedDiscountCodes = maybe [] extractDiscountCodes state.data.applyDiscounts
+
+      extractDiscountCodes :: Array FRFSDiscountReq -> Array String
+      extractDiscountCodes discounts = map (\(FRFSDiscountReq discountItem) -> discountItem.code) discounts
+
+      priceAfterExtraDiscount = 
+        state.data.ticketPrice * (INT.toNumber state.data.ticketCount) - ( 
+            case DA.find (\discount -> discount.code == (fromMaybe "" $ DA.head appliedDiscountCodes)) state.data.discounts of
+              Just discount -> discount.price.amount
+              _ -> 0.0)
 
 metroBannerConfig :: CityMetroConfig -> ST.MetroTicketBookingScreenState -> Banner.Config
 metroBannerConfig (CityMetroConfig cityMetroConfig) state =
   let
     config = Banner.config
     appName = fromMaybe state.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     title' = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT $ getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) else getString $ EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName
     actionText' = config.actionText { 
                       text = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT_DESC (getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) (maybe "" show metroBookingConfigResp.maxFreeTicketCashback)) else ""
