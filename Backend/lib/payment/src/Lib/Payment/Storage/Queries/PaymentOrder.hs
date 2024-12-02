@@ -104,6 +104,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
             clientAuthToken = case (clientAuthTokenEncrypted, clientAuthTokenHash) of
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
               (_, _) -> Nothing,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
     where
@@ -129,5 +130,6 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         clientAuthTokenEncrypted = clientAuthToken <&> unEncrypted . (.encrypted),
         clientAuthTokenHash = clientAuthToken <&> (.hash),
         serviceProvider = Just serviceProvider,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }

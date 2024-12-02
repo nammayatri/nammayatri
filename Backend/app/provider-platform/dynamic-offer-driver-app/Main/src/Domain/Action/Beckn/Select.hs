@@ -64,7 +64,8 @@ handler merchant sReq searchReq estimates = do
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
-      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+      let mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
       when sReq.toUpdateDeviceIdInfo do
         let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist

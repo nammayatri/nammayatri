@@ -202,7 +202,9 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                       updatedAt = now,
                       cancellationCharges = amountPaid,
                       tipAmount = 0.0,
-                      totalRideTime = 0
+                      totalRideTime = 0,
+                      merchantId = Just merchantId,
+                      merchantOperatingCityId = Just merchantOperatingCity.id
                     }
             QDailyStats.create dailyStatsOfDriver'
 

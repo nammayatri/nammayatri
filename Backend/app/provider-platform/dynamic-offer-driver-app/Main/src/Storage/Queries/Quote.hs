@@ -60,6 +60,7 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             estimatedFare = mkAmountWithDefault estimatedFareAmount estimatedFare,
             currency = fromMaybe INR currency,
             distanceUnit = fromMaybe Meter distanceUnit,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -87,5 +88,6 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         BeamQSZ.isBlockedRoute = isBlockedRoute,
         BeamQSZ.tollNames = tollNames,
-        BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
+        BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy,
+        BeamQSZ.merchantOperatingCityId = getId <$> merchantOperatingCityId
       }

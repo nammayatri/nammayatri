@@ -52,6 +52,7 @@ data PaymentTransaction = PaymentTransaction
     mandateMaxAmount :: Maybe HighPrecMoney,
     splitSettlementResponse :: Maybe KPayment.SplitSettlementResponse,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic)

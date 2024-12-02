@@ -5,6 +5,7 @@
 module Domain.Types.Mandate where
 
 import Data.Aeson
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -19,6 +20,7 @@ data Mandate = Mandate
     id :: Kernel.Types.Id.Id Domain.Types.Mandate.Mandate,
     mandatePaymentFlow :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     payerApp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payerAppName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

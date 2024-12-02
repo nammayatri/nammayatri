@@ -21,6 +21,7 @@ data MandateT f = MandateT
     id :: B.C f Kernel.Prelude.Text,
     mandatePaymentFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     maxAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerApp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerAppName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

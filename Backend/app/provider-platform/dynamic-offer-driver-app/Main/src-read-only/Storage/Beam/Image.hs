@@ -21,6 +21,7 @@ data ImageT f = ImageT
     id :: B.C f Kernel.Prelude.Text,
     imageType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personId :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewerEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

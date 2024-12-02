@@ -93,7 +93,8 @@ cancelBooking booking mbDriver transporter = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
-            distanceUnit = booking.distanceUnit
+            distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId
           }
 
 removeBookingFromRedis :: (MonadFlow m, CacheFlow m r) => DRB.Booking -> m ()

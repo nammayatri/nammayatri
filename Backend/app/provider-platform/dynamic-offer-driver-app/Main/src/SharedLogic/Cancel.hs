@@ -260,5 +260,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = newBooking.distanceUnit,
+            merchantOperatingCityId = Just newBooking.merchantOperatingCityId,
             ..
           }

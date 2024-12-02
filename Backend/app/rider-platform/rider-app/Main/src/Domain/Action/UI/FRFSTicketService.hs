@@ -729,7 +729,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 splitSettlementDetails = Nothing
               }
-      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq (createOrderCall merchantOperatingCityId booking)
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId createOrderReq (createOrderCall merchantOperatingCityId booking)
 
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
