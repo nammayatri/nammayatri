@@ -78,8 +78,8 @@ upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandl
 upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
 
-  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.merchantOperatingCityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.merchantOperatingCityId.getId ||+ "")
-  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.merchantOperatingCityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.merchantOperatingCityId.getId ||+ "")
+  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
@@ -96,8 +96,8 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
 
   let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
-  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.merchantOperatingCityId merchantId mbRegCoordinates req
-  merchantOperatingCity <- CQMOC.findById req.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId.getId)
+  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.cityId merchantId mbRegCoordinates req
+  merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
 
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
     let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
