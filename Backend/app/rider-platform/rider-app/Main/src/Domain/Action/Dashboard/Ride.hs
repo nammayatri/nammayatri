@@ -216,7 +216,7 @@ getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId 
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
   case (mbFrom, mbTo) of
     (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()

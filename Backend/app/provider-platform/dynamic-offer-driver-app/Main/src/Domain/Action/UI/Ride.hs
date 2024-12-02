@@ -298,11 +298,12 @@ listDriverRides ::
   Maybe Int ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
-  rides <-
-    if mbOnlyActive == Just True
-      then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
-      else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  rides <- case (driverInfo.onRide, mbOnlyActive) of
+    (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
+    (False, Just True) -> return []
+    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
+
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id

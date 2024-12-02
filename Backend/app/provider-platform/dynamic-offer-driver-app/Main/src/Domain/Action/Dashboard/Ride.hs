@@ -45,6 +45,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
@@ -62,6 +63,7 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -76,6 +78,7 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified System.Environment as Se
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -104,15 +107,18 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
     throwError $ InvalidRequest "At least one filter is required"
   when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
+  let from = fromMaybe now mbfrom
+  let to = fromMaybe now mbto
+  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
-    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto
-      then pure []
+    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+      then BppT.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to
       else QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
