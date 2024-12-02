@@ -169,7 +169,9 @@ buildRideDetails ride driver vehicle = do
         vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
         defaultServiceTierName = defaultServiceTierName,
-        createdAt = Just now
+        createdAt = Just now,
+        merchantId = ride.merchantId,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId
       }
 
 buildRide ::

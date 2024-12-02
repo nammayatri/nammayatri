@@ -37,6 +37,8 @@ instance FromTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest wher
           { id = Id id,
             driverId = Id driverId,
             mbReachedHome = reachedHome,
+            merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -46,5 +48,7 @@ instance ToTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest where
       { id = getId id,
         driverId = getId driverId,
         reachedHome = mbReachedHome,
+        merchantId = getId <$> merchantId,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }

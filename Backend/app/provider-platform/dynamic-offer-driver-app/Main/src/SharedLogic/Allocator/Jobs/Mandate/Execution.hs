@@ -159,7 +159,7 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   let paymentService = subscriptionConfig.paymentServiceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
-      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
+      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
       case exec of
         Left err -> do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing

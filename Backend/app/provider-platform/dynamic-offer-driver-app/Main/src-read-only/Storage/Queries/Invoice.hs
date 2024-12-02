@@ -98,6 +98,7 @@ updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.invoiceStatus invoiceStatus,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,
       Se.Set Beam.maxMandateAmount maxMandateAmount,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Just (Kernel.Types.Id.getId merchantOperatingCityId)),
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.serviceName (Just serviceName),

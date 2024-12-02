@@ -50,6 +50,7 @@ data PaymentTransaction = PaymentTransaction
     mandateFrequency :: Maybe Payment.MandateFrequency,
     mandateMaxAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic)

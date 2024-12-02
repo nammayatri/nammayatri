@@ -16,6 +16,7 @@ module Domain.Types.DriverLocation where
 
 import Data.Time
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.HasCoordinates
@@ -28,6 +29,7 @@ data DriverLocation = DriverLocation
     coordinatesCalculatedAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantId :: Id DMerchant.Merchant
+    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity) -- Need to check that location service send mocid
   }
   deriving (Generic, Show, Eq, HasCoordinates, FromJSON, ToJSON)

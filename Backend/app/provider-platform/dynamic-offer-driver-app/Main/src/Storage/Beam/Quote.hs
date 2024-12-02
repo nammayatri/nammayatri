@@ -44,7 +44,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     isBlockedRoute :: B.C f (Maybe Bool),
     tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    updatedAt :: B.C f LocalTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

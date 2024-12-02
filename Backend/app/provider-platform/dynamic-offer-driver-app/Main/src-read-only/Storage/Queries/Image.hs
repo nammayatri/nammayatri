@@ -80,6 +80,7 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
       Se.Set Beam.failureReason failureReason,
       Se.Set Beam.imageType imageType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rcId rcId,
       Se.Set Beam.reviewerEmail reviewerEmail,

@@ -198,7 +198,9 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 updatedAt = now,
                 cancellationCharges = 0.0,
                 tipAmount = 0.0,
-                totalRideTime = rideDuration
+                totalRideTime = rideDuration,
+                merchantId = DR.merchantId ride,
+                merchantOperatingCityId = Just merchantOpCityId
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do

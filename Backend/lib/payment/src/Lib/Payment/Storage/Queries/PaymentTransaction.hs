@@ -128,6 +128,7 @@ instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
             merchantId = Id merchantId,
             applicationFeeAmount = fromMaybe (HighPrecMoney 0.0) applicationFeeAmount,
             retryCount = fromMaybe 0 retryCount,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -139,5 +140,6 @@ instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
         merchantId = merchantId.getId,
         applicationFeeAmount = Just applicationFeeAmount,
         retryCount = Just retryCount,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }

@@ -208,7 +208,7 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
               let serviceName = DEMSC.PayoutService PT.Juspay
               let entityName = DLP.DAILY_STATS_VIA_DASHBOARD
                   createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
-              void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+              void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
             Nothing -> do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
                 QDS.updatePayoutStatusById DDS.PendingForVpa dailyStats.id
@@ -244,7 +244,9 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    merchantId = ride.merchantId,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId
                   }
 
           QDS.create dailyStats -- create dstats for that date
@@ -307,7 +309,7 @@ callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
         entityName = DLP.RETRY_VIA_DASHBOARD
         createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
     QPayoutOrder.updateRetriedOrderId (Just uid) payoutOrder.orderId
-    void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (cast driverId) payoutOrder.entityIds (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+    void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (cast driverId) payoutOrder.entityIds (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
     updateDailyStatsStatus uid (Id payoutOrder.customerId) payoutOrder.entityIds
 
 updateDailyStatsStatus :: Text -> Id Dashboard.Common.Driver -> Maybe [Text] -> Environment.Flow ()
