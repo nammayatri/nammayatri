@@ -167,7 +167,8 @@ data GetConfigResp = GetConfigResp
   { frfsConfig :: FRFSTypes.FRFSConfigAPIRes,
     fromStation :: FRFSTypes.FRFSStationAPI,
     toStation :: FRFSTypes.FRFSStationAPI,
-    city :: Context.City
+    city :: Context.City,
+    cityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -344,8 +345,9 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = do
   fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just partnerOrg.orgId)
   toStation <- Utils.mkPOrgStationAPIRes toStation' (Just partnerOrg.orgId)
   let frfsConfig = Utils.mkFRFSConfigAPI frfsConfig'
-  city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
-
+  moc <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
+  let city = moc.city
+  let cityId = moc.id
   pure $ GetConfigResp {..}
 
 shareTicketInfo :: Id DFTB.FRFSTicketBooking -> Flow ShareTicketInfoResp
