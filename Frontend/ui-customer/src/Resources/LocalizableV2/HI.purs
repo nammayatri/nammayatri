@@ -1690,4 +1690,30 @@ getHi = Keymap {
 , updated_fare_str : "अद्यतन किराया"
 , book_any_details : "कोई भी विवरण बुक करें"
 , boost_search : "खोज को बढ़ावा दें"
+, bus__ : "बस"
+, tickets_for_chennai_bus : "चेन्नई बस के लिए टिकट"
+, buy_bus_tickets : "बस के टिकट खरीदें"
+, book_and_pay : "बुक और पे"
+, bus_ticket : "बस टिकट"
+, check_spelling_and_try_again : "ओह! कृपया अपनी वर्तनी जांचें और फिर से खोजने का प्रयास करें।"
+, book_bus_ticket : "बस का टिकट बुक करें"
+, book_a_one_way_instant_bus_ticket : "एक तरफ़ तत्काल बस टिकट बुक करें"
+, recent_ticket : "हाल का टिकट"
+, experience_hassle_free_bus_bookings_with : "के साथ हासिल फ्री बस बुकिंग का अनुभव करें"
+, enter_bus_number_or_destination : "बस नंबर या गंतव्य दर्ज करें"
+, destination_stop : "गंतव्य स्टॉप"
+, route_bus_number : "मार्ग / बस नंबर"
+, pickup_stop : "पिकअप स्टॉप"
+, tickets_for_kolkata_bus : "कोलकाता बस के लिए टिकट"
+, ticket_validity_30_minutes : "टिकट बुकिंग के समय से केवल 30 मिनट तक ही मान्य है।"
+, fare_commission_free_wbtc : "किराया बिना कमीशन के है और WBTC द्वारा निर्धारित किया गया है।"
+, select_route_number : "मार्ग नंबर चुनें"
+, pickup_and_destination_stop : "पिकअप और गंतव्य स्टॉप"
+, bus_boarded_confirmation : "कृपया पुष्टि करें कि आप बस में हैं?"
+, towards_station : (\s -> s <> " की ओर")
+, bus_no : (\s -> "बस नंबर: " <> s)
+, verified : "सत्यापित"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " प्रमुख मार्गों पर हमारे बस टिकटिंग पायलट लॉन्च का अनुभव करें। जल्द ही और मार्ग जोड़े जाएंगे!")
+, note_your_ticket_is_only_valid_for : (\s -> "ध्यान दें: आपकी टिकट बुकिंग के " <> s <> " तक ही वैध है। स्थानीय परिस्थितियों के कारण बसों का समय बदल सकता है, इसलिए कृपया बुकिंग के समय स्टॉप पर तैयार रहें।")
+, here_is_bus_ticket : "यहाँ बस टिकट है"
 }

@@ -103,8 +103,8 @@ view push state =
     , background Color.white900
     , onBackPressed push $ const BackPressed
     ]
-    [ shimmerView state
-    , linearLayout 
+    [ 
+     linearLayout 
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
@@ -126,7 +126,7 @@ view push state =
               ][ bookingStatusView state push state.props.paymentStatus ]
             ]
           ]
-    , bookingConfirmationActions state push state.props.paymentStatus
+    -- , bookingConfirmationActions state push state.props.paymentStatus
     ]
 
 shimmerView :: forall w . ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
@@ -235,6 +235,7 @@ bookingStatusView state push paymentStatus =
       , gravity CENTER
       ][  paymentStatusHeader state push paymentStatus
         , bookingStatusBody state push paymentStatus
+        , bookingConfirmationActions state push state.props.paymentStatus
       ]
   ]
 

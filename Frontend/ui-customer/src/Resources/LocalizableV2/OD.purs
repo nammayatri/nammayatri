@@ -1690,4 +1690,30 @@ getOd = Keymap {
 , book_any_details: "ଯେକଉଣସି ବିବରଣୀ ବୁକ୍ କରନ୍ତୁ"
 , boost_search: "ଖୋଜ ବୃଦ୍ଧି କରନ୍ତୁ"
 , delivery_str: "Delivery"
+, bus__ : "ବସ୍"  
+, tickets_for_chennai_bus : "ଚେନ୍ନାଇ ବସ୍ ଟିକେଟ୍"  
+, buy_bus_tickets : "ବସ୍ ଟିକେଟ୍ କିଣନ୍ତୁ"  
+, book_and_pay : "ବୁକ୍ କରନ୍ତୁ ଏବଂ ଦେୟ କରନ୍ତୁ"  
+, bus_ticket : "ବସ୍ ଟିକେଟ୍"  
+, check_spelling_and_try_again : "ଅଫସ! ଦୟାକରି ନିଜର ଭାଷା ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ପୁନର୍ବାର ଖୋଜନ୍ତୁ"  
+, book_bus_ticket : "ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"  
+, book_a_one_way_instant_bus_ticket : "ଏକ-ଦିଗର ତୁରନ୍ତ ବସ୍ ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"  
+, recent_ticket : "ସମ୍ପ୍ରତିର ଟିକେଟ୍"  
+, experience_hassle_free_bus_bookings_with : "ଆମ ସହ ଅତ୍ୟନ୍ତ ସୁବିଧାଜନକ ବସ୍ ବୁକିଂ ଅଭିଜ୍ଞତା ନିଆନ୍ତୁ"  
+, enter_bus_number_or_destination : "ବସ୍ ନମ୍ବର କିମ୍ବା ଗନ୍ତବ୍ୟ ସ୍ଥାନ ପ୍ରବେଶ କରନ୍ତୁ"  
+, destination_stop : "ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"  
+, route_bus_number : "ପଥ/ବସ୍ ନମ୍ବର"  
+, pickup_stop : "ପିକ୍ଅପ୍ ଷ୍ଟପ୍"  
+, tickets_for_kolkata_bus : "କଲକାତା ବସ୍ ଟିକେଟ୍"  
+, ticket_validity_30_minutes : "ଟିକେଟ୍ ବୁକିଂ ପରଠାରୁ ୩୦ ମିନିଟ୍ ପର୍ଯ୍ୟନ୍ତ ମାତ୍ର ପ୍ରାମାଣିକ ହେବ"  
+, fare_commission_free_wbtc : "ଭାଡା ଦାଲାଲ ମୁକ୍ତ ଏବଂ ଏହା WBTC ଦ୍ୱାରା ନିର୍ଦ୍ଧାରିତ"  
+, select_route_number : "ପଥ ସଂଖ୍ୟା ଚୟନ କରନ୍ତୁ"  
+, pickup_and_destination_stop : "ପିକ୍ଅପ୍ ଏବଂ ଗନ୍ତବ୍ୟ ଷ୍ଟପ୍"  
+, bus_boarded_confirmation : "ଦୟାକରି ନିଶ୍ଚିତ କରନ୍ତୁ ଯେ ଆପଣ ବସ୍ ଭିତରେ ଅଛନ୍ତି କି?"  
+, towards_station : (\s -> "ସ୍ଥାନାନ୍ତର ମୁଖେ " <> s)  
+, bus_no : (\s -> "ବସ୍ ନମ୍ବର: " <> s)  
+, verified : "ପ୍ରମାଣିତ"  
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "ଆମ ପାଇଲଟ୍ ପ୍ରବର୍ତ୍ତନକୁ ଅନୁଭବ କରନ୍ତୁ " <> s <> " ମୁଖ୍ୟ ପଥଗୁଡିକରେ। ସିଗ୍ରହ ସବୁ ଆସୁଛି!")  
+, note_your_ticket_is_only_valid_for : (\s -> "ଧ୍ୟାନ ଦିଅନ୍ତୁ: ଆପଣଙ୍କ ଟିକେଟ୍ କେବଳ " <> s <> " ପାଇଁ ପ୍ରାମାଣିକ ଅଟେ। ସ୍ଥାନୀୟ ପରିସ୍ଥିତି ଅନୁସାରେ ବସ୍ ସମୟ ପରିବର୍ତ୍ତିତ ହୋଇପାରେ, ସେପରି ଷ୍ଟପ୍ରେ ବସ୍ ବୁକିଂ କରିବା ସମୟରେ ଥାନ୍ତୁ")  
+, here_is_bus_ticket : "ଏହା ଆପଣଙ୍କର ବସ୍ ଟିକେଟ୍"  
 }

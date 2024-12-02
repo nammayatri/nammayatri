@@ -1690,4 +1690,30 @@ getKn = Keymap {
 , updated_fare_str : "ನವೀಕರಿಸಿದ ದರ"
 , book_any_details : "ಯಾವುದೇ ವಿವರಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
 , boost_search : "ಹುಡುಕಾಟವನ್ನು ಹೆಚ್ಚಿಸಿ"
+, bus__ : "ಬಸ್"
+, tickets_for_chennai_bus : "ಚென்னை ಪேருந்து டிக்கெட்டுகள்"
+, buy_bus_tickets : "ಬಸ್ ಟಿಕೆಟ್ಗಳನ್ನು ಖರೀದಿಸಿ"
+, book_and_pay : "ಬುಕ್ ಮತ್ತು ಪಾವತಿಸಿ"
+, bus_ticket : "ಬಸ್ ಟಿಕೆಟ್"
+, check_spelling_and_try_again : "ವರ್ಣನೆಯನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸಿ"
+, book_bus_ticket : "ಬಸ್ ಟಿಕೆಟ್ ಬುಕ್ ಮಾಡಿ"
+, book_a_one_way_instant_bus_ticket : "ಒಂದು ದಾರಿಯ ತಕ್ಷಣ ಬಸ್ ಟಿಕೆಟ್ ಬುಕ್ ಮಾಡಿ"
+, recent_ticket : "ಇತ್ತೀಚಿನ ಟಿಕೆಟ್"
+, experience_hassle_free_bus_bookings_with : "ಅನುಭವಿಸಿ ಹಾಸಲ್ ಫ್ರೀ ಬಸ್ ಬುಕ್ಕಿಂಗ್ಗಳನ್ನು"
+, enter_bus_number_or_destination : "ಬಸ್ ಸಂಖ್ಯೆ ಅಥವಾ ಗಮನಾರ್ಹ ನಗರಕ್ಕೆ ನಮೂದಿಸಿ"
+, destination_stop : "ಗಮನಾರ್ಹ ನಿಲ್ದಾಣ"
+, route_bus_number : "ರೂಟ್ / ಬಸ್ ಸಂಖ್ಯೆ"
+, pickup_stop : "ಪಿಕಪ್ ನಿಲ್ದಾಣ"
+, tickets_for_kolkata_bus : "ಕೊಲ್ಕಾತಾ ಬಸ್ ಟಿಕೆಟ್ಗಳು"
+, ticket_validity_30_minutes : "ಟಿಕೆಟ್ ಮಾನ್ಯತೆ: 30 ನಿಮಿಷ"
+, fare_commission_free_wbtc : "ಶುಲ್ಕ ಮತ್ತು ಕಮಿಷನ್ ಫ್ರೀ ಡಬ್ಲ್ಯೂಬಿಟಿಸಿ"
+, select_route_number : "ರೂಟ್ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+, pickup_and_destination_stop : "ಪಿಕಪ್ ಮತ್ತು ಗಮನಾರ್ಹ ನಿಲ್ದಾಣ"
+, bus_boarded_confirmation : "ನೀವು ಬಸ್ಸಿನಲ್ಲಿ ಇದ್ದೀರಾ ಎಂದು ದೃಢೀಕರಿಸಿ?"
+, towards_station : (\s -> s <> " ಕಡೆಗೆ")
+, bus_no : (\s -> "ಬಸ್ ಸಂಖ್ಯೆ: " <> s)
+, verified : "ಪರಿಶೀಲಿತ"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ಪ್ರಮುಖ ಮಾರ್ಗಗಳಲ್ಲಿ ನಮ್ಮ ಬಸ್ ಟಿಕೇಟಿಂಗ್ ಪೈಲಟ್ ಲಾಂಚ್ ಅನುಭವಿಸಿ. ಇನ್ನಷ್ಟು ಮಾರ್ಗಗಳು ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿವೆ!")
+, note_your_ticket_is_only_valid_for : (\s -> "ಗಮನಿಸಿ: ನಿಮ್ಮ ಟಿಕೆಟ್ ಬುಕ್ಕಿಂಗ್‌ನ " <> s <> " ಗಳಿಗಷ್ಟೇ ಮಾನ್ಯವಾಗಿದೆ. ಸ್ಥಳೀಯ ಪರಿಸ್ಥಿತಿಗಳ ಪರಿಣಾಮವಾಗಿ ಬಸ್ಸುಗಳ ಸಮಯ ಬದಲಾಗಬಹುದು, ಆದ್ದರಿಂದ ನೀವು ಬುಕ್ ಮಾಡಿದಾಗ ನಿಲ್ದಾಣದಲ್ಲಿ ಸಿದ್ಧರಾಗಿರಿರಿ.")
+, here_is_bus_ticket : "ಇಲ್ಲಿ ಬಸ್ ಟಿಕೆಟ್ ಇದೆ"
 }
