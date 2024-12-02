@@ -1098,7 +1098,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
             (getString TICKETS_FOR_KOLKATA_BUS)
             [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
             "" 
-            config
+            config{ logoImage = "ny_ic_kolkata_bus" }
         _ ->
             mkCityBasedConfig "" [] "" config
   where

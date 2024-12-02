@@ -655,7 +655,7 @@ qrCodeView push state =
         , cornerRadius 24.0
         , visibility $ boolToVisibility $ isTicketExpired
         -- , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_qr_code_expired"
+        , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_qr_code_expired"
         ]
       , linearLayout [
           height WRAP_CONTENT
