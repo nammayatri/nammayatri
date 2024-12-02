@@ -47,6 +47,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
     TextView stopSuggestion1TextView = null;
     TextView stopSuggestion2TextView = null;
     TextView stopSuggestion3TextView = null;
+    TextView quickChatsTextView = null;
     ImageView stopSuggestion1ImageView = null;
     ImageView stopSuggestion2ImageView = null;
     ImageView stopSuggestion3ImageView = null;
@@ -213,6 +214,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 stopSuggestion1ImageView = stopDetectedOverlayView.findViewById(R.id.suggestion1_image);
                 stopSuggestion2ImageView = stopDetectedOverlayView.findViewById(R.id.suggestion2_image);
                 stopSuggestion3ImageView = stopDetectedOverlayView.findViewById(R.id.suggestion3_image);
+                quickChatsTextView = stopDetectedOverlayView.findViewById(R.id.quick_chats);
                 headerTextView = stopDetectedOverlayView.findViewById(R.id.HeaderTextView);
                 bodyTextView = stopDetectedOverlayView.findViewById(R.id.BodyTextView);
                 gotItButtonView = stopDetectedOverlayView.findViewById(R.id.got_it_button);
@@ -225,6 +227,9 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 if(gotItButtonView != null) gotItButtonView.setVisibility(View.GONE);
                 if (stopDetectedOverlayView != null && !stopDetectedOverlayView.isAttachedToWindow()) {
                     windowManager.addView(stopDetectedOverlayView, widgetLayoutParams);
+                }
+                if (quickChatsTextView != null) {
+                    quickChatsTextView.setText(R.string.quick_chats);
                 }
                 stopDetectedOverlayView.setVisibility(View.VISIBLE);
             }

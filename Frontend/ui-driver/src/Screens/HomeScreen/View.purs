@@ -982,8 +982,8 @@ seeNearbyHotspots state push =
   ]
   [ lottieAnimationView
     [ id (EHC.getNewIDWithTag "goToHotspotsLottie")
-    , height $ V $ pillLayoutBounds.height + 12
-    , width $ V $ pillLayoutBounds.width + 12
+    , height $ V $ (HU.getDefaultPixelSize $ pillLayoutBounds.height) + 12
+    , width $ V $ (HU.getDefaultPixelSize $ pillLayoutBounds.width) + 12
     , afterRender (\_-> do
                     void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "blue_pulse_animation.json", lottieId = (EHC.getNewIDWithTag "goToHotspotsLottie"), speed = 1.0, scaleType = "CENTER_CROP" }
                   )(const NoAction)

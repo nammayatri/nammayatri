@@ -112,7 +112,8 @@
                     android:layout_gravity="center_vertical"
                     android:background="@drawable/message_sheet_chat_background"
                     android:id="@+id/suggestion1"
-                    android:padding="8dp"
+                    android:clickable="true"
+                    android:padding="6dp"
                     android:layout_marginVertical="4dp">
 
                     <TextView
@@ -125,6 +126,7 @@
                         android:textFontWeight="500"
                         android:lineHeight="18dp"
                         android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
                         >
                     </TextView>
 
@@ -161,7 +163,8 @@
                     android:layout_gravity="center_vertical"
                     android:background="@drawable/message_sheet_chat_background"
                     android:id="@+id/suggestion2"
-                    android:padding="8dp"
+                    android:clickable="true"
+                    android:padding="6dp"
                     android:layout_marginVertical="4dp">
 
                     <TextView
@@ -174,6 +177,7 @@
                         android:textFontWeight="500"
                         android:lineHeight="18dp"
                         android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
                         >
                     </TextView>
 
@@ -209,7 +213,8 @@
                     android:layout_gravity="center_vertical"
                     android:background="@drawable/message_sheet_chat_background"
                     android:id="@+id/suggestion3"
-                    android:padding="8dp"
+                    android:clickable="true"
+                    android:padding="6dp"
                     android:layout_marginVertical="4dp">
 
                     <TextView
@@ -222,6 +227,7 @@
                         android:textFontWeight="500"
                         android:lineHeight="18dp"
                         android:textSize="14dp"
+                        android:layout_marginVertical="2dp"
                         >
                     </TextView>
 
