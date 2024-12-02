@@ -12,6 +12,7 @@ module Domain.Types.FarePolicy.FarePolicyInterCityDetails where
 import Data.Aeson as DA
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as Reexport
+import Domain.Types.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -30,7 +31,8 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     pricingSlabs :: NonEmpty (FPInterCityDetailsPricingSlabsD s),
     defaultWaitTimeAtDestination :: Minutes,
     currency :: Currency,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    farePolicyIntercitySourceDestinationCityDetails :: NonEmpty (FarePolicyIntercitySourceDestinationCityDetailsD s)
   }
   deriving (Generic, Show)
 

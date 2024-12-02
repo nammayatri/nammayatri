@@ -70,6 +70,7 @@ import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.Common as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as FPIDPS
+import qualified Domain.Types.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails as FPISDCD
 import qualified Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as FPRDDB
 import qualified Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as FPRDPS
 import qualified Domain.Types.FareProduct as DFareProduct
@@ -1033,7 +1034,11 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     perDayMaxHourAllowance :: Text,
     perDayMaxAllowanceInMins :: Text,
     defaultWaitTimeAtDestination :: Text,
-    enabled :: Text
+    enabled :: Text,
+    destinationCity :: Text,
+    sourceCity :: Text,
+    tollChargeAtCityLevel :: Text,
+    stateEntryPermitCharges :: Text
   }
   deriving (Show)
 
@@ -1115,6 +1120,10 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_day_max_allowance_in_mins"
       <*> r .: "default_wait_time_at_destination"
       <*> r .: "enabled"
+      <*> r .: "destination_city"
+      <*> r .: "source_city"
+      <*> r .: "state_entry_permit_charges"
+      <*> r .: "toll_charge_at_city_level"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1503,8 +1512,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             farePercentage :: Int <- readCSVField idx row.farePercentage "Fare Percentage"
             includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include ActualTime Percentage"
             includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Nnclude Actual Dist Percentage"
+            --FarePolicyIntercitySourceDestinationCityDetails
+            destinationCity :: Text <- readCSVField idx row.destinationCity "Destination City"
+            sourceCity :: Text <- readCSVField idx row.sourceCity "Source City"
+            stateEntryPermitCharges :: Maybe HighPrecMoney <- readCSVField idx row.stateEntryPermitCharges "State Entry Permit Charges"
+            tollChargeAtCityLevel :: Maybe HighPrecMoney <- readCSVField idx row.tollChargeAtCityLevel "Toll Charge At City Level"
 
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
+            let farePolicyIntercitySourceDestinationCityDetails = NE.fromList [FPISDCD.FarePolicyIntercitySourceDestinationCityDetails {tollCharges = tollChargeAtCityLevel, ..}]
             return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 

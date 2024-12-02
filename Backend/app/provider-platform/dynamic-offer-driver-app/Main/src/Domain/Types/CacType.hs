@@ -10,6 +10,7 @@ import qualified Storage.Beam.FarePolicy as FP
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as DEFB
 import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as FPAD
 import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as FPICDPS
+import qualified Storage.Beam.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails as FPICSDCD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FPFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FPPDPEKRS
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as FPRD
@@ -33,6 +34,7 @@ checkParseCommon (key, value) = do
         "farePolicyRentalDetailsDistanceBuffers" -> checkParse (Proxy @[FPRDDB.FarePolicyRentalDetailsDistanceBuffers]) tableColumn value
         "farePolicyRentalDetailsPricingSlabs" -> checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
         "farePolicyInterCityDetailsPricingSlabs" -> checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
+        "farePolicyIntercitySourceDestinationCityDetails" -> checkParse (Proxy @[FPICSDCD.FarePolicyIntercitySourceDestinationCityDetails]) tableColumn value
         "farePolicySlabsDetailsSlab" -> checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
         "driverExtraFeeBounds" -> checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
         "farePolicyProgressiveDetails" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value

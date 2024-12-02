@@ -20,7 +20,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPICDPS
+import qualified Storage.Beam.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails as BeamFPICSDCD
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as QueriesFPICDPS
+import qualified Storage.Queries.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails as QueriesFPICSDCD
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyInterCityDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
@@ -28,26 +30,31 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyInterCityDetails -> m ()
 create farePolicyInterCityDetails = do
   mapM_ QueriesFPICDPS.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).pricingSlabs))
+  mapM_ QueriesFPICSDCD.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).farePolicyIntercitySourceDestinationCityDetails))
   createWithKV farePolicyInterCityDetails
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPICDPS.delete farePolicyId
+  QueriesFPICSDCD.delete farePolicyId
   deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   fromTType' farePolicyInterCityDetails = do
     fullFPICDPS <- QueriesFPICDPS.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
     fPICDPS <- fromMaybeM (InternalError "No pricing slab found for intercity") (NE.nonEmpty fullFPICDPS) -- check it
-    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+    fullFPICSDCD <- QueriesFPICSDCD.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
+    fPICSDCD <- fromMaybeM (InternalError "No source destination city details found for intercity") (NE.nonEmpty fullFPICSDCD)
+    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS fPICSDCD
 
 fromTTypeFarePolicyInterCityDetails ::
   BeamFPRD.FarePolicyInterCityDetails ->
   NonEmpty BeamFPICDPS.FullFarePolicyInterCityDetailsPricingSlabs ->
+  NonEmpty BeamFPICSDCD.FullFarePolicyIntercitySourceDestinationCityDetails ->
   Domain.FullFarePolicyInterCityDetails
-fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
+fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS fPICSDCD =
   ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails {pricingSlabs = snd <$> fPICDPS, ..}
+    Domain.FPInterCityDetails {pricingSlabs = snd <$> fPICDPS, farePolicyIntercitySourceDestinationCityDetails = snd <$> fPICSDCD, ..}
   )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where

@@ -38,6 +38,7 @@ data CacPrefix
   | FarePolicyInterCityDetailsPricingSlabs
   | MerchantServiceUsageConfig
   | Empty
+  | FarePolicyIntercitySourceDestinationCityDetails
   deriving (Eq, Bounded)
 
 instance Show CacPrefix where
@@ -59,6 +60,7 @@ instance Show CacPrefix where
   show FarePolicyInterCityDetailsPricingSlabs = "farePolicyInterCityDetailsPricingSlabs:"
   show MerchantServiceUsageConfig = "merchantServiceUsageConfig:"
   show Empty = ""
+  show FarePolicyIntercitySourceDestinationCityDetails = "farePolicyIntercitySourceDestinationCityDetails:"
 
 $(mkCacFunction ''CacPrefix "getCacMetricErrorFromCac" "_from_cac_parse_error")
 $(mkCacFunction ''CacPrefix "getCacMetricErrorFromDB" "_from_db_parse_error")

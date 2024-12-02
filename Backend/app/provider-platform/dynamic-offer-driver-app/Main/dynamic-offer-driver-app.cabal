@@ -277,6 +277,7 @@ library
       Domain.Types.FarePolicy.FarePolicyAmbulanceDetails
       Domain.Types.FarePolicy.FarePolicyInterCityDetails
       Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
+      Domain.Types.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
@@ -387,6 +388,7 @@ library
       Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Beam.FarePolicy.FarePolicyInterCityDetails
       Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Beam.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
@@ -415,6 +417,7 @@ library
       Storage.Cac.FarePolicy.FarePolicyAmbulanceDetails
       Storage.Cac.FarePolicy.FarePolicyInterCityDetails
       Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Cac.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
@@ -518,6 +521,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Queries.FarePolicy.FarePolicyInterCityDetails
       Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Queries.FarePolicy.FarePolicyIntercitySourceDestinationCityDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
