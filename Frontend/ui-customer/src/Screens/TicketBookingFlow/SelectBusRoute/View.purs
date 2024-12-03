@@ -68,14 +68,14 @@ screen fromStationCode toStationCode initialState =
 
 view :: forall w . (Action -> Effect Unit) -> SD.SelectBusRouteScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  PrestoAnim.animationSet [Anim.fadeIn true] $ 
-  linearLayout
+  PrestoAnim.animationSet [Anim.fadeIn true]  $ frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
+  , orientation VERTICAL
   , onBackPressed push $ const BackPressed
   ][ linearLayout 
-      [ height MATCH_PARENT
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
       ]
@@ -98,28 +98,28 @@ view push state =
           , margin $ MarginBottom 8
           ] <> FontStyle.body3 TypoGraphy
         ]
-      , frameLayout
+      , linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , margin $ Margin 16 0 16 100
+        ][  linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][case state.data.quotes of
+                Just quotes -> routeListView quotes state push
+                Nothing -> routeListShimmerView
+            ]
+        ]
+      ]
+    , frameLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , gravity BOTTOM
         , alignParentBottom "true,-1"
         ][
-           scrollView
-            [ height $ WRAP_CONTENT
-            , width MATCH_PARENT
-            , margin $ Margin 16 0 16 100
-            ][  linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ][case state.data.quotes of
-                    Just quotes -> routeListView quotes state push
-                    Nothing -> routeListShimmerView
-                ]
-            ]
-        , seeRouteButton state push
+          seeRouteButton state push
         ]
-      ]
   ]
 
 pickupAndDestView :: forall w. SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -157,6 +157,7 @@ routeListShimmerView =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 8
+    , background Color.white900
     ](
       DA.mapWithIndex (\index quote ->
         linearLayout
@@ -244,9 +245,9 @@ routeRadioComponent state push (FrfsQuote quote) =
 locationSelectionView :: (Action -> Effect Unit) -> SD.SelectBusRouteScreenState ->  forall w. PrestoDOM (Effect Unit) w
 locationSelectionView push state =
   relativeLayout 
-  [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-   ]
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ]
   [
     linearLayout[
     width MATCH_PARENT
@@ -260,8 +261,8 @@ locationSelectionView push state =
   [srcTextView push state
   , linearLayout[
       height $ V 1
-    , width $ V 280
-    , padding $ Padding 0 0 10 0
+    , width MATCH_PARENT
+    , margin $ MarginHorizontal 20 40
     , background Color.borderColorLight
     ][ ]
   , destTextView push state

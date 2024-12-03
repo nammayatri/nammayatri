@@ -489,10 +489,14 @@ termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop =
            ][ textView $
                   [ textFromHtml $ "&#8226;&ensp;"
                   , color Color.black700
+                  , width MATCH_PARENT
+                  , height WRAP_CONTENT
                   ] <> FontStyle.paragraphText TypoGraphy
                 , textView $
                   [ textFromHtml $ item
                   , color Color.black700
+                  , width MATCH_PARENT
+                  , height WRAP_CONTENT
                   ] <> FontStyle.paragraphText TypoGraphy
               ]
        ) cityMetroConfig.termsAndConditions )
@@ -666,9 +670,9 @@ updateButtonView state push =
 locationSelectionView :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState ->  forall w. PrestoDOM (Effect Unit) w
 locationSelectionView push state =
   relativeLayout 
-  [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-   ]
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ]
   [
     linearLayout[
     width MATCH_PARENT
@@ -682,8 +686,8 @@ locationSelectionView push state =
   [srcTextView push state
   , linearLayout[
       height $ V 1
-    , width $ V 280
-    , padding $ Padding 0 0 10 0
+    , width MATCH_PARENT
+    , margin $ MarginHorizontal 20 40
     , background Color.borderColorLight
     ][ ]
   , destTextView push state
