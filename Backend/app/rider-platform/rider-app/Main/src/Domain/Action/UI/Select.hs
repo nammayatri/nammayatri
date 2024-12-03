@@ -73,6 +73,7 @@ import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
@@ -86,7 +87,8 @@ data DSelectReq = DSelectReq
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
-    deliveryDetails :: Maybe DTDD.DeliveryDetails
+    deliveryDetails :: Maybe DTDD.DeliveryDetails,
+    temporaryNotDisable :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -129,7 +131,8 @@ data DSelectRes = DSelectRes
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
-    tripCategory :: Maybe TripCategory
+    tripCategory :: Maybe TripCategory,
+    disabilityTag :: Maybe Text
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -190,8 +193,12 @@ select2 personId estimateId req@DSelectReq {..} = do
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  tag <- case (person.hasDisability, temporaryNotDisable) of
+    (Just True, Just False) -> fmap (.tag) <$> PD.findByPersonId personId
+    _ -> return Nothing
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  when (temporaryNotDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
@@ -241,6 +248,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         variant = DV.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         tripCategory = estimate.tripCategory,
+        disabilityTag = tag,
         ..
       }
   where

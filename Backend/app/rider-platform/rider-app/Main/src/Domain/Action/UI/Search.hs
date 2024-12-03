@@ -54,7 +54,6 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
@@ -90,7 +89,6 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
@@ -292,9 +290,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  tag <- case person.hasDisability of
-    Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
-    _ -> return Nothing
 
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let txnCity = show merchant.defaultCity
@@ -335,7 +330,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       clientVersion
       clientConfigVersion_
       device
-      tag
       shortestRouteDuration
       shortestRouteStaticDuration
       riderPreferredOption
@@ -371,7 +365,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest,
+        taggings = getTags searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest,
         ..
       }
   where
@@ -383,7 +377,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest = do
+    getTags searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled && isNothing searchRequest.driverIdentifier
       Just $
         def{Beckn.fulfillmentTags =
@@ -406,7 +400,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
             Beckn.personTags =
               [ (Beckn.CUSTOMER_LANGUAGE, (Just . show) searchRequest.language),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
-                (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
                 (Beckn.CUSTOMER_NAMMA_TAGS, show <$> person.customerNammaTags)
               ]
            }
@@ -715,7 +708,6 @@ buildSearchRequest ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
-  Maybe Text ->
   Maybe Seconds ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
@@ -728,7 +720,7 @@ buildSearchRequest ::
   Maybe JPT.JourneySearchData ->
   Maybe (DRL.DriverIdentifier, Seconds) ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -759,7 +751,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         backendConfigVersion = Nothing,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         language = person.language,
-        disabilityTag = disabilityTag,
+        disabilityTag = Nothing,
         customerExtraFee = Nothing,
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,

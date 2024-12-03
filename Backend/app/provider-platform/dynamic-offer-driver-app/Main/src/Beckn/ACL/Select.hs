@@ -63,6 +63,7 @@ buildSelectReqV2 subscriber req = do
   let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
+      disabilityTag = buildDisabilityTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
   fulfillment <- case order.orderFulfillments of
@@ -83,7 +84,8 @@ buildSelectReqV2 subscriber req = do
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
-        toUpdateDeviceIdInfo = toUpdateDeviceIdInfo
+        toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
+        ..
       }
 
 getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
@@ -103,6 +105,11 @@ getAutoAssignEnabledV2 tagGroups =
         Just "True" -> True
         Just "False" -> False
         _ -> False
+
+buildDisabilityTag :: Maybe [Spec.TagGroup] -> Maybe Text
+buildDisabilityTag tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
+  readMaybe $ T.unpack tagValue
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =
