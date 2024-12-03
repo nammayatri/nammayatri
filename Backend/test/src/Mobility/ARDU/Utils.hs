@@ -165,7 +165,8 @@ select bapToken quoteId =
         autoAssignEnabledV2 = Nothing,
         isAdvancedBookingEnabled = Nothing,
         paymentMethodId = Nothing,
-        deliveryDetails = Nothing
+        deliveryDetails = Nothing,
+        temporaryNotDisable = Nothing
       }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty DSRD.SearchRequestForDriverAPIEntity)

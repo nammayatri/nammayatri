@@ -88,3 +88,9 @@ updateMultipleByRequestId searchRequestId autoAssignEnabled isAdvancedBookingEna
         <> [Se.Set BeamSR.isAdvanceBookingEnabled $ Just isAdvancedBookingEnabled | isAdvancedBookingEnabled]
     )
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+
+updateDisabilityTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updateDisabilityTag searchRequestId disabilityTag =
+  updateOneWithKV
+    [Se.Set BeamSR.disabilityTag disabilityTag]
+    [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]

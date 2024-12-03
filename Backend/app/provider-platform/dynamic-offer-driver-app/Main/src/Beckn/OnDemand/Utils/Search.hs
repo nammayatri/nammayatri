@@ -142,11 +142,6 @@ checkIfDashboardSearch req = do
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.DASHBOARD_USER tagGroups
   readMaybe . T.unpack =<< tagValue
 
-buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
-buildDisabilityTag req = do
-  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
-  Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
-
 buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
 buildCustomerPhoneNumber req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
