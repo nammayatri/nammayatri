@@ -152,6 +152,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
+  QDI.updateHasRideStarted driverId False
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride

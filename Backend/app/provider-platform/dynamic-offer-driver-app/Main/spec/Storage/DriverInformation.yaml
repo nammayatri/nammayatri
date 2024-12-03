@@ -99,6 +99,7 @@ DriverInformation:
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong
     onRideTripCategory: Maybe TripCategory
+    hasRideStarted: Maybe Bool
     issueBreachCooldownTimes: Maybe [IssueBreachCooldownTime]
 
   default:

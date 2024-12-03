@@ -158,3 +158,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN extra_fare_miti
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN on_ride_trip_category text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN issue_breach_cooldown_times json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_ride_started boolean ;
