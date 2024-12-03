@@ -170,7 +170,7 @@ view globalProps push state =
           ][  mapViewLayout push state globalProps
             , backIconView push state 
             , markerView push state
-            , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else emptyTextView
+            , searchLocationView push state globalProps
             , if currentStageOn state PredictionsStage then locateOnMapFooterView push state else emptyTextView
             , popUpViews push state globalProps
             , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
