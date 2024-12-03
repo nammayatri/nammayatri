@@ -48,6 +48,7 @@ data DriverInformation = DriverInformation
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
+    hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],

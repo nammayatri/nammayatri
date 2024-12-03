@@ -276,7 +276,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             preferredSecondarySpecialLocIds = [],
             isSpecialLocWarrior = False,
             driverTripEndLocation = Nothing,
-            issueBreachCooldownTimes = Nothing
+            issueBreachCooldownTimes = Nothing,
+            hasRideStarted = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
