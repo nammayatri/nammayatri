@@ -50,7 +50,8 @@ postMultimodalConfirm (personId, merchantId) journeyId journeyConfirmReq = do
             paymentMethodId = Nothing,
             otherSelectedEstimates = Nothing,
             isAdvancedBookingEnabled = Nothing,
-            deliveryDetails = Nothing
+            deliveryDetails = Nothing,
+            temporaryNotDisable = Nothing
           }
   let skippedBookings = filter (\journeyConfirmReqElement -> journeyConfirmReqElement.skipBooking) journeyConfirmReq.journeyConfirmReqElements
 
