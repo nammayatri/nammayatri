@@ -1,0 +1,16 @@
+imports: #
+  APISuccess: Kernel.Types.APISuccess
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+module: Status
+
+apis:
+  - GET:
+      endpoint: /getFRFSTicketStatus/{bookingId}
+      auth: ApiAuthV2
+      params:
+        bookingId: Id FRFSTicketBooking
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS TICKET_STATUS
+types: {}
