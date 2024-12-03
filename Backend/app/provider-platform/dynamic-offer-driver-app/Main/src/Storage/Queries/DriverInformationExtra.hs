@@ -362,3 +362,12 @@ updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
            ]
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasRideStarted driverId hasRideStarted = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.hasRideStarted (Just hasRideStarted),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]

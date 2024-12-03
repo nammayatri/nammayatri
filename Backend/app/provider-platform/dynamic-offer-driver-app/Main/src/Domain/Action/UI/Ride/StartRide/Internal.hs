@@ -27,6 +27,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
+import qualified Storage.Queries.DriverInformation as SQD
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
@@ -35,6 +36,7 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId
   QRide.updateStatus ride.id SRide.INPROGRESS
+  SQD.updateHasRideStarted driverId True
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
