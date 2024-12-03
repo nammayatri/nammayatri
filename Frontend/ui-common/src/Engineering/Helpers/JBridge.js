@@ -1613,6 +1613,7 @@ export const showDialer = function (str) {
     try {
       window.JBridge.showDialer(str, call);
     } catch (error) {
+      console.log("INSIDE JBRIDGE SHOW DIALER ERROR", error);
       window.JBridge.showDialer(str);
     }
   }

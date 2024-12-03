@@ -1140,7 +1140,6 @@ type HomeScreenStateProps =
   , isConfirmSourceCurrentLocation :: Boolean
   , showDeliveryImageAndOtpModal :: Boolean
   , loadingDeliveryImage :: Boolean
-  , fromDeliveryScreen :: Boolean
   , showBookAnyOptions :: Boolean
   , showBoostSearch :: Boolean
   }
