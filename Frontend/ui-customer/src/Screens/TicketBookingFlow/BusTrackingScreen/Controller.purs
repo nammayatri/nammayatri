@@ -289,7 +289,7 @@ drawDriverRoute resp state = do
       markerId = item.code
       pointertype = getStopType item.code index state
       size = getStopMarkerSize pointertype
-    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype, primaryText = item.name } lat lon size 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype } lat lon size 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
     when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP]) $ EHC.liftFlow $ runEffectFn1 
       EHR.upsertMarkerLabel 
         { id: item.code <> "label"
