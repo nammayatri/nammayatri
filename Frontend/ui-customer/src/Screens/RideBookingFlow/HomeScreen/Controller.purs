@@ -657,7 +657,6 @@ eval (DriverInfoCardActionController DriverInfoCardController.RateCardInfo) stat
     Nothing -> continue state
 
 eval(MessagingViewActionController (MessagingView.Call)) state = do
-  void $ pure $ performHapticFeedback unit
   void $ pure $ hideKeyboardOnNavigation true
   if state.props.isChatWithEMEnabled
     then do
@@ -910,9 +909,9 @@ eval BackPressed state = do
         continue state { props{isPopUp = ConfirmBack}, data { iopState { timerVal = "0"}}}
       else do
         void $ pure $ updateLocalStage SearchLocationModel
-        if state.props.fromDeliveryScreen then
+        if state.data.fareProductType == FPT.DELIVERY then
           continue state{
-            props {fromDeliveryScreen = false, homeScreenPrimaryButtonLottie = true, isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = true},  rideSearchProps{ sessionId = generateSessionId unit } }
+            props { homeScreenPrimaryButtonLottie = true, isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = true},  rideSearchProps{ sessionId = generateSessionId unit } }
             , data { fareProductType = FPT.DELIVERY, locationList = state.data.recentSearchs.predictionArray}
           }
         else
@@ -3803,8 +3802,7 @@ callDriver state callType = do
                         _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
   updateWithCmdAndExit newState
     [ do
-        _ <- pure $ showDialer driverNumber false
-        let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField ("ny_user_"<> callType <>"_call_click") "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
+        void $ pure $ showDialer driverNumber false
         pure NoAction
     ] $ CallDriver newState (if callType == "DIRECT" then DIRECT_CALLER else ANONYMOUS_CALLER) driverNumber
 

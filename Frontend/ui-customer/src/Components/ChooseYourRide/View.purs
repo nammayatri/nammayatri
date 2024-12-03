@@ -93,7 +93,7 @@ view push config =
       let variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
@@ -768,6 +768,7 @@ getQuoteListViewHeight config len =
       height = if quoteHeight == 0 then 72 else quoteHeight
       rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
       rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
+      _ = spy "getQuoteListViewHeight" (((if len >= 4 then (if EHC.os == "IOS" then 3 else 5) * height else 3 * height) + rideHeaderHeight + 24) + (if len > 0 then len-1 else len) * 8)
   in ((if len >= 4 then (if EHC.os == "IOS" then 3 else 5) * height else 3 * height) + rideHeaderHeight + 24) + (if len > 0 then len-1 else len) * 8
 
 getScrollViewHeight :: Config -> Int -> Int
@@ -783,6 +784,7 @@ getScrollViewHeight config len =
       calculatedHeight
         | len >= 4 && EHC.os == "IOS" = remainingAvailableScrollSpace
         | len >= 4 = min (HU.getDefaultPixelSize remainingAvailableScrollSpace) ((variantListLength + 2)* height)
+        | EHC.os == "IOS" = ((len) * height) + (HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "deliveryPaymentAtReceivingEndLayout").height)
         | otherwise = ((len+3) * height) + (HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "deliveryPaymentAtReceivingEndLayout").height)
   in calculatedHeight
 

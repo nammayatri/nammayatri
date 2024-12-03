@@ -1806,8 +1806,8 @@ homeScreenFlow = do
             srcMarker = (normalRoute "").srcMarker
             destMarker = (normalRoute "").destMarker
             isRoundTrip = state.props.searchLocationModelProps.tripType == ROUND_TRIP
-        case state.props.routeEndPoints, state.props.fromDeliveryScreen of
-          Just points, false -> do
+        case state.props.routeEndPoints of
+          Just points -> do
             push <- lift $ lift $ liftFlow $ getPushFn Nothing "HomeScreen"
             let callback = runFn2 EHC.getMarkerCallback push MarkerLabelOnClick
                 sourceAddress = if state.props.isSpecialZone && not (DS.null state.props.defaultPickUpPoint)
@@ -1817,7 +1817,7 @@ homeScreenFlow = do
                 destMarkerConfig = JB.defaultMarkerConfig{ markerId = destMarker, pointerIcon = destMarker, shortTitle = (runFn3 splitString points.destination.place "," 2), primaryText = points.destination.place, labelImage = defaultMarkerImageConfig{image = destSpecialTagIcon}, position{ lat = points.destination.lat, lng = points.destination.lng }, labelActionImage = defaultMarkerImageConfig{image = "ny_ic_chevron_right_black_2", height = markerArrowSize, width = markerArrowSize}, markerCallback = callback, labelMaxWidth = estimateLabelMaxWidth, labelMaxLines = 2, labelTextSize = 11, anchorV = 1.0}
             lift $ lift $ liftFlow $ updateMarker sourceMarkerConfig
             lift $ lift $ liftFlow $ updateMarker destMarkerConfig
-          _,_ -> pure unit
+          _ -> pure unit
 
         homeScreenFlow
     GET_SELECT_LIST state -> do
@@ -7327,7 +7327,7 @@ parcelDeliveryFlow = do
     ParcelDeliveryScreenController.GoToChooseYourRide state -> do
       (GlobalState globalState) <- getState
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { fromDeliveryScreen = true}})
+      (GlobalState globalState) <- getState
       void $ drawMapRoute' state
       updateLocalStage SettingPrice
       homeScreenFlow
@@ -7335,7 +7335,7 @@ parcelDeliveryFlow = do
       let deliveryDetailsInfo = API.DeliveryDetails { senderDetails : mkPersonLocation state.data.senderDetails, receiverDetails : mkPersonLocation state.data.receiverDetails, initiatedAs : state.data.initiatedAs }
       updateLocalStage GoToConfirmgDelivery
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmgDelivery, fromDeliveryScreen = true }, data { deliveryDetailsInfo = Just deliveryDetailsInfo } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmgDelivery }, data { deliveryDetailsInfo = Just deliveryDetailsInfo } })
       void $ drawMapRoute' state
       homeScreenFlow
       where

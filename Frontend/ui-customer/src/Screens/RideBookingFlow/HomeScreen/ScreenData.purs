@@ -420,7 +420,6 @@ initData = let
     , isConfirmSourceCurrentLocation : true
     , showDeliveryImageAndOtpModal : false
     , loadingDeliveryImage : false
-    , fromDeliveryScreen : false
     , showBookAnyOptions : false
     , showBoostSearch : false
     , busClicked : false
