@@ -96,6 +96,7 @@ DriverInformation:
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong
     onRideTripCategory: Maybe TripCategory
+    hasRideStarted: Maybe Bool
 
   default:
     active: "false"

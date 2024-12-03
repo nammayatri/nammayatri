@@ -46,6 +46,7 @@ data DriverInformation = DriverInformation
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
+    hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

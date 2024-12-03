@@ -45,6 +45,7 @@ data DriverInformationT f = DriverInformationT
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasRideStarted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInteroperable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSpecialLocWarrior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lastACStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
