@@ -34,6 +34,8 @@ type RemoteConfig a
     , kolkata :: Maybe a
     , chennai :: Maybe a
     , tumakuru :: Maybe a
+    , paris :: Maybe a
+    , odisha :: Maybe a
     , mysore :: Maybe a
     , kochi :: Maybe a
     , delhi :: Maybe a
@@ -61,8 +63,26 @@ type RemoteConfig a
     , gulbarga :: Maybe a
     , udupi :: Maybe a
     , ysCities :: Maybe a
+    , bhubaneshwar :: Maybe a
+    , bhubaneswar :: Maybe a
+    , cuttack :: Maybe a
+    , puri :: Maybe a
     , config :: Maybe Config
     }
+    
+type AppConfigRC a =
+  { nammaYatri :: Maybe a
+  , nammaYatriPartner :: Maybe a
+  , odishaYatri :: Maybe a
+  , odishaYatriPartner :: Maybe a
+  , yatri :: Maybe a
+  , yatriPartner :: Maybe a
+  , manaYatri :: Maybe a
+  , manaYatriPartner :: Maybe a
+  , yatriSathi :: Maybe a
+  , yatriSathiPartner :: Maybe a
+  , default :: a
+  }
 
 type VariantLevelRemoteConfig a = 
     { autoRickshaw :: a,
@@ -161,6 +181,12 @@ type TipsConfig
 type SubscriptionConfigVariantLevel 
   = VariantLevelRemoteConfig (Maybe SubscriptionConfigVariantLevelEntity)
 
+type AppLanguage
+  = {
+    name :: String,
+    value :: String,
+    subtitle :: String
+  }
 
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,
@@ -173,7 +199,25 @@ type SubscriptionConfigVariantLevelEntity = {
    enableSubsV2 :: Maybe Boolean,
    duesConfig :: Maybe RCSubscriptionDues,
    freeTrialPopupDaysList :: Maybe (Array Int),
-   freeTrialPopupOnRidesList :: Maybe (Array Int)
+   freeTrialPopupOnRidesList :: Maybe (Array Int),
+   lottieSubscriptionInfo :: Maybe LottieSubscriptionInfo
+}
+
+type LottieSubscriptionInfo = {
+  freeTrialLottie :: LanguageKeyValue,
+  introductoryLottie :: LanguageKeyValue,
+  subscriptionPlanLottie :: LanguageKeyValue
+}
+
+type LanguageKeyValue = {
+  english :: String,
+  hindi :: String,
+  kannada :: String,
+  tamil :: String,
+  bengali :: String,
+  telugu :: String,
+  malayalam :: String,
+  default :: String
 }
 
 type OfferBanner = {

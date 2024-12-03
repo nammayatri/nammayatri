@@ -257,6 +257,8 @@ library
       ExternalBPP.Bus.ExternalAPI.CallAPI
       ExternalBPP.Bus.ExternalAPI.CUMTA.Order
       ExternalBPP.Bus.ExternalAPI.CUMTA.Status
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Verify
       ExternalBPP.Bus.ExternalAPI.EBIX.Auth
       ExternalBPP.Bus.ExternalAPI.EBIX.Order
       ExternalBPP.Bus.ExternalAPI.EBIX.Payment
@@ -286,6 +288,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
+      SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -308,6 +311,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Search
       SharedLogic.Serviceability
       Storage.Beam.BecknRequest
       Storage.Beam.Common
@@ -431,6 +435,7 @@ library
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -849,6 +854,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingService
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig

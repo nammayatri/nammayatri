@@ -119,6 +119,7 @@ import Services.API as APITypes
 import Helpers.SplashUtils as HS
 import Resource.Constants
 import RemoteConfig as RC
+import Components.SwitchButtonView as SwitchButtonView
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -971,30 +972,48 @@ helpAndSupportBtnView push showReportText =
 
 seeNearbyHotspots :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 seeNearbyHotspots state push =
-  linearLayout
+  let pillLayoutBounds = runFn1 JB.getLayoutBounds (getNewIDWithTag "goToHotspotsPill")
+  in
+  frameLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , margin $ MarginLeft 12
-  , cornerRadius 22.0
-  , onClick push $ const OpenHotspotScreen
-  , background Color.white900
-  , padding $ Padding 16 12 16 12
+  , margin $ MarginLeft 6
   , gravity CENTER
-  , stroke $ "1,"<> Color.grey900
-  , rippleColor Color.rippleShade
-  ][ imageView
-     [ width $ V 15
-     , height $ V 15
-     , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_hotspots"
-     ]
-   , textView $
-     [ weight 1.0
-     , text $ getString HOTSPOTS
-     , gravity CENTER
-     , margin $ MarginLeft 10
-     , color Color.black800
-     ] <> FontStyle.tags TypoGraphy
+  ]
+  [ lottieAnimationView
+    [ id (EHC.getNewIDWithTag "goToHotspotsLottie")
+    , height $ V $ pillLayoutBounds.height + 12
+    , width $ V $ pillLayoutBounds.width + 12
+    , afterRender (\_-> do
+                    void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "blue_pulse_animation.json", lottieId = (EHC.getNewIDWithTag "goToHotspotsLottie"), speed = 1.0, scaleType = "CENTER_CROP" }
+                  )(const NoAction)
+    ]
+  ,  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , cornerRadius 22.0
+    , onClick push $ const OpenHotspotScreen
+    , id (EHC.getNewIDWithTag "goToHotspotsPill")
+    , background Color.white900
+    , padding $ Padding 15 11 15 11
+    , gravity CENTER
+    , stroke $ "1,"<> Color.grey900
+    , rippleColor Color.rippleShade
+    , margin $ Margin 6 6 0 0
+    ][ imageView
+        [ width $ V 15
+        , height $ V 15
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_hotspots"
+        ]
+      , textView $
+        [ weight 1.0
+        , text $ getString HOTSPOTS
+        , gravity CENTER
+        , margin $ MarginLeft 10
+        , color Color.black800
+        ] <> FontStyle.tags TypoGraphy
+    ]
   ]
 
 recenterBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -1765,7 +1784,7 @@ pillView state push =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
-    , margin $ MarginLeft 12
+    , margin $ MarginLeft 6
     , cornerRadius 22.0
     , onClick push $ const RideRequestsList
     , clickable $ state.data.upcomingRide == Nothing 
@@ -3084,7 +3103,7 @@ metroWarriorsToggleView push state =
       , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
       , cornerRadius 8.0
       ][ imageView
-        [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_metro_filled_blue"
+        [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_metro_filled_blue"
         , height $ V 20
         , width $ V 20
         , margin $ MarginRight 8
@@ -3094,13 +3113,11 @@ metroWarriorsToggleView push state =
           , color Color.blue800
           , weight 1.0
           ] <> FontStyle.body1 TypoGraphy
-        , imageView
-          [ imageWithFallback $ HU.fetchImage HU.GLOBAL_COMMON_ASSET if state.data.isSpecialLocWarrior then "ny_ic_switch_filled_blue" else "ny_ic_switch_inactive"
-          , height $ V 20
-          , width $ V 36
-          , onClick push $ const ToggleMetroWarriors
-          ]
+      , switchButtonView push state.data.isSpecialLocWarrior
       ]
     ]
   where
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+
+    switchButtonView push isActive = 
+      SwitchButtonView.view (push <<< MetroWarriorSwitchAction) $ SwitchButtonView.config {isActive = isActive}

@@ -86,7 +86,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
           activatedItems = earning.activatedValidRides,
           earningDate = earning.merchantLocalDate,
           referrals = earning.referralCounts,
-          status = if earning.payoutStatus == DS.PendingForVpa then DS.Verifying else earning.payoutStatus,
+          status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }
 

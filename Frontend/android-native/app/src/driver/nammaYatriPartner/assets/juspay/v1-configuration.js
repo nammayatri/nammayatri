@@ -2066,7 +2066,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Paris",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode": "std:001",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2141,7 +2141,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Odisha",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode" : "std:001", // check this once from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2149,7 +2149,157 @@ window.getMerchantConfig = function () {
         "cityLat" : 20.2376, 
         "cityLong" : 84.2700,
         "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
+        "languageKey" : "OD_IN",
+        "showScheduledRides" : false,
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "enableGullak": false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://odishayatri.in"
+          , "customerAppId" : "in.mobility.odishayatri"
+          , "driverAppId" : "in.mobility.odishayatripartner"
+        },
+        "waitingCharges" : 1.50,
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "gstPercentage": "18",
+        "enableHvSdk" : true,
+        "purpleRideConfig" : {
+          "purpleRideConfigForAuto" : {
+            "vehicleVariant" : "Auto",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForCabs" : {
+            "vehicleVariant" : "Cab",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForBikes" : {
+            "vehicleVariant" : "Bike",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          }
+        },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
+        "assets" :{
+          "auto_image" : "ic_auto_rickshaw",
+          "onboarding_auto_image" : "ny_ic_auto_side",
+          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+        }
+      },
+      {
+        "cityName" : "Bhubaneshwar",
+        "mapImage" : "ny_ic_location_map",
+        "cityCode" : "std:0674",  // check this from backend
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+        "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 20.30378209, 
+        "cityLong" : 85.82251309,
+        "supportNumber" : "08069724914",
+        "languageKey" : "OD_IN",
+        "showScheduledRides" : false,
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "enableGullak": false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : false,
+          "staticViewPlans" : staticSubscriptionConfig
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://odishayatri.in"
+          , "customerAppId" : "in.mobility.odishayatri"
+          , "driverAppId" : "in.mobility.odishayatripartner"
+        },
+        "waitingCharges" : 1.50,
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "gstPercentage": "18",
+        "enableHvSdk" : true,
+        "purpleRideConfig" : {
+          "purpleRideConfigForAuto" : {
+            "vehicleVariant" : "Auto",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForCabs" : {
+            "vehicleVariant" : "Cab",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          },
+          "purpleRideConfigForBikes" : {
+            "vehicleVariant" : "Bike",
+            "showVideo" : false,
+            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+          }
+        },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
+        "assets" :{
+          "auto_image" : "ic_auto_rickshaw",
+          "onboarding_auto_image" : "ny_ic_auto_side",
+          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+        }
+      },
+      {
+        "cityName" : "Cuttack",
+        "mapImage" : "ny_ic_location_map",
+        "cityCode" : "std:0671",  // check this from backend
+        "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "" ,
+        "callDriverInfoPost": false, // Dummy link need to change
+        "cityLat" : 20.46615822, 
+        "cityLong" : 85.88302282,
+        "supportNumber" : "08069724914",
+        "languageKey" : "OD_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -2214,16 +2364,16 @@ window.getMerchantConfig = function () {
         }
       },
       {
-        "cityName" : "Bhubaneswar",
+        "cityName" : "Puri",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode" : "std:06752",  // check this from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
-        "cityLong" : 84.2700,
-        "supportNumber" : "08069724919",
+        "cityLat" : 19.80495793, 
+        "cityLong" : 85.82209410,
+        "supportNumber" : "08069724914",
         "languageKey" : "KN_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,

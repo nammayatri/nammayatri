@@ -32,6 +32,7 @@ import Servant
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
@@ -55,47 +56,33 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     person <- QP.findById driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     driverStats <- QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     now <- getCurrentTime
-    aboutMe <- generateAboutMe person driverStats now req
-    DPQ.upsert
-      ( DTDPQ.DriverProfileQuestions
-          { updatedAt = now,
-            createdAt = now,
-            driverId = driverId,
-            hometown = hometown,
-            merchantOperatingCityId = merchantOpCityId,
-            pledges = pledges,
-            aspirations = toMaybe aspirations,
-            drivingSince = drivingSince,
-            imageIds = toMaybe imageIds,
-            vehicleTags = toMaybe vehicleTags,
-            aboutMe = Just aboutMe
-          }
-      )
-      >> pure Success
+    fork "generating about_me" $ do
+      aboutMe <- generateAboutMe person driverStats now req
+      DPQ.upsert
+        ( DTDPQ.DriverProfileQuestions
+            { updatedAt = now,
+              createdAt = now,
+              driverId = driverId,
+              hometown = hometown,
+              merchantOperatingCityId = merchantOpCityId,
+              pledges = pledges,
+              aspirations = toMaybe aspirations,
+              drivingSince = drivingSince,
+              imageIds = toMaybe imageIds,
+              vehicleTags = toMaybe vehicleTags,
+              aboutMe = Just aboutMe
+            }
+        )
+    pure Success
   where
     toMaybe xs = guard (not (null xs)) >> Just xs
 
-    -- Generate with LLM or create a template text here
     generateAboutMe person driverStats now req' = do
-      orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let promptServiceName = DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig
-          promptKey = DTL.AzureOpenAI_DriverProfileGen_1
-          useCase = DTL.DriverProfileGen
-      llmPrompt <- SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId promptServiceName useCase promptKey >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let promptTemplate = llmPrompt.promptTemplate
-          prompt =
-            T.replace "{#hometown#}" (hometownDetails req'.hometown)
-              . T.replace "{#withNY#}" (withNY now person.createdAt)
-              . T.replace "{#driverStats#}" (writeDriverStats driverStats)
-              . T.replace "{#aspirations#}" (genAspirations req'.aspirations)
-              $ promptTemplate
-          gccreq = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
-      gccresp <- TC.getChatCompletion merchantId merchantOpCityId gccreq
-      let genContent = gccresp.genMessage.genContent
-          genRole = gccresp.genMessage.genRole
-      logDebug $ "azure open AI api response - by " <> show genRole <> " content " <> show genContent
-      pure genContent
-    -- generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
+      gptGenProfile <- try $ genAboutMeWithAI person driverStats now req'
+      either
+        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
+        pure
+        gptGenProfile
 
     hometownDetails mHometown = case mHometown of
       Just hometown' -> "Hailing from " <> hometown' <> ", "
@@ -122,6 +109,32 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
             else ""
 
     genAspirations aspirations' = if null aspirations' then "" else "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
+
+    genAboutMeWithAI person driverStats now req' = do
+      orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      prompt <-
+        SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.DriverProfileGen_1))
+          >>= buildPrompt person driverStats now req' . (.promptTemplate)
+      gccresp <- TC.getChatCompletion merchantId merchantOpCityId (buildChatCompletionReq prompt)
+      logDebug $ "generated - " <> gccresp.genMessage.genContent
+      pure $ gccresp.genMessage.genContent
+
+    buildPrompt person driverStats now req' promptTemplate = do
+      merchant <- CQM.findById merchantId
+      pure $
+        T.replace "{#homeTown#}" (hometownDetails req'.hometown)
+          . T.replace "{#withNY#}" (withNY now person.createdAt)
+          . T.replace "{#rating#}" (show driverStats.rating)
+          . T.replace "{#drivingSince#}" (maybe "" show req'.drivingSince)
+          . T.replace "{#aspirations#}" (T.intercalate ", " req'.aspirations)
+          . T.replace "{#vehicleTags#}" (T.intercalate ", " req'.vehicleTags)
+          . T.replace "{#pledge#}" (T.intercalate ", " req'.pledges)
+          . T.replace "{#onPlatformSince#}" (show person.createdAt)
+          . T.replace "{#merchant#}" (maybe "" (.name) merchant)
+          . T.replace "{#driverName#}" ((.firstName) person)
+          $ promptTemplate
+
+    buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),

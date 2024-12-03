@@ -215,7 +215,7 @@ window.getMerchantConfig = function () {
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
     , "acExplanation" : false
-    , "showMonthlyLeaderboard" : true
+    , "showMonthlyLeaderBoard" : true
     , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
@@ -559,7 +559,8 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      }
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -573,7 +574,8 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      }
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",

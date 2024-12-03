@@ -81,7 +81,7 @@ public class GpsListeningService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             }else {
                 startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
             }
@@ -106,7 +106,7 @@ public class GpsListeningService extends Service {
         super.onCreate();
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             }else{
                 startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
             }

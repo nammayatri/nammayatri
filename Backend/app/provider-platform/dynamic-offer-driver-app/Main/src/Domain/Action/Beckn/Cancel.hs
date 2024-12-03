@@ -49,6 +49,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -117,7 +118,7 @@ cancel req merchant booking mbActiveSearchTry = do
     bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-
+    when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup

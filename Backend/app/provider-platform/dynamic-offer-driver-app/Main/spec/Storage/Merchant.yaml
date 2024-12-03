@@ -166,6 +166,7 @@ MerchantMessage:
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
     senderHeader: Maybe Text
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -202,6 +203,10 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
    - EXTRA_DOMAIN_TYPE_FILE
@@ -371,6 +376,7 @@ Overlay:
     toastMessage: Maybe Text
     secondaryActions: "Maybe [Text]"
     socialMediaLinks: "Maybe [FCMMediaLink]"
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     showPushNotification: Maybe Bool
 
   excludedFields:
@@ -432,6 +438,22 @@ Overlay:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, overlayKey, language, udf1]
+    deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findAllByLanguageVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language, vehicleCategory]
+    findAllByOverlayKeyUdfVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -940,6 +962,7 @@ TransporterConfig:
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
     issueBreachConfig: Maybe [IssueBreachConfig]
+    recentScheduledBookingsSafeLimit: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -984,6 +1007,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
     issueBreachConfig: Maybe Value
+    recentScheduledBookingsSafeLimit: Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1037,6 +1061,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1095,6 +1120,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1276,6 +1302,7 @@ TransporterConfig:
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
+    recentScheduledBookingsSafeLimit: "50"
 
   excludedDefaultQueries:
     - findByPrimaryKey

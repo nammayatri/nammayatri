@@ -34,6 +34,8 @@ import Language.Strings
 import Language.Types
 import MerchantConfig.Types (MetroConfig)
 import Data.Int as DI
+import Helpers.Utils (isParentView, emitTerminateApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -73,7 +75,14 @@ eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
 
-eval BackPressed state =  exit $ GoToHome
+eval BackPressed state = 
+  if isParentView FunctionCall
+      then do
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+        else 
+            exit $ GoToHome
+
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     updateAndExit state $ UpdateAction state
 

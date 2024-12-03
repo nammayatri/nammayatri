@@ -89,7 +89,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- bool (QRide.getInProgressByDriverId driver.id) (pure Nothing) (booking.isScheduled)
+  previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
+  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
@@ -104,7 +105,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
         QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
       QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
@@ -178,18 +179,18 @@ buildRide ::
   Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
-  Maybe DRide.Ride ->
+  Maybe DDI.DriverInformation ->
   UTCTime ->
   DVeh.Vehicle ->
   Bool ->
   Maybe Bool ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment enableOtpLessRide = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
   trackingUrl <- buildTrackingUrl guid
-  let previousRideToLocation = previousRide >>= (.toLocation)
+  let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
   return
     DRide.Ride
@@ -338,7 +339,7 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
     then do
       Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-        unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+        unless hasAdvancedRide $ QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
         QDI.updateHasAdvancedRide (cast personId) False
         void $ Redis.del $ editDestinationUpdatedLocGeohashKey personId
     else throwError $ DriverTransactionTryAgain (Just personId.getId)

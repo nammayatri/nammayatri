@@ -83,6 +83,7 @@ types:
     - socialMediaLinks: Maybe [FCMMediaLink]
     - secondaryActions2: Maybe [FCMActions]
     - showPushNotification: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   OverlayContent:
     - language: Language
@@ -94,6 +95,7 @@ types:
   DeleteOverlayReq:
     - overlayKey: Text
     - udf1: Maybe Text
+    - vehicleCategory : Maybe VehicleCategory
     - derive: "'HideSecrets"
   ListOverlayResp:
     - recordType: Type

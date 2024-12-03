@@ -34,13 +34,13 @@ jobs:
             local_properties: LOCAL_PROPERTIES_YP
             config_path: app/src/driver/yatriPartner/assets/juspay
             config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
-          # - name: YatriPartner
-          #   keystore: ANDROID_KEYSTORE_FILE_OYP
-          #   fastlane_cm: YP
-          #   key_alias: KEYSTORE_KEY_ALIAS_OYP
-          #   local_properties: LOCAL_PROPERTIES_MYP
-          #   config_path: app/src/driver/odishaYatriPartner/assets/juspay
-          #   config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+          - name: OdishaYatriPartner
+            keystore: ANDROID_KEYSTORE_FILE_OYP
+            fastlane_cm: YP
+            key_alias: KEYSTORE_KEY_ALIAS_OYP
+            local_properties: LOCAL_PROPERTIES_MYP
+            config_path: app/src/driver/odishaYatriPartner/assets/juspay
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
           # Add more variants as needed
     defaults:
       run:

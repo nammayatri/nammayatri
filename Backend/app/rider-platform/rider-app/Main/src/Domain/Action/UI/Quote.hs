@@ -27,7 +27,10 @@ module Domain.Action.UI.Quote
   )
 where
 
+import API.Types.UI.FRFSTicketService
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Beckn.ACL.Cancel as CancelACL
+import BecknV2.FRFS.Enums as BecknSpec
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -53,7 +56,8 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
-import EulerHS.Prelude hiding (id)
+import qualified Domain.Types.Trip as DTrip
+import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -74,6 +78,9 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -191,7 +198,23 @@ data GetQuotesRes = GetQuotesRes
     stops :: [DL.LocationAPIEntity],
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
-    paymentMethods :: [DMPM.PaymentMethodAPIEntity]
+    paymentMethods :: [DMPM.PaymentMethodAPIEntity],
+    journey :: Maybe [JourneyData]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data JourneyData = JourneyData
+  { totalPrice :: HighPrecMoney,
+    modes :: [DTrip.TravelMode],
+    journeyLegs :: [JourneyLeg]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data JourneyLeg = JourneyLeg
+  { journeyLegOrder :: Int,
+    journeyMode :: DTrip.TravelMode,
+    estimate :: Maybe UEstimate.EstimateAPIEntity,
+    quote :: Maybe FRFSTicketService.FRFSQuoteAPIRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -221,6 +244,7 @@ getQuotes searchRequestId = do
   activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
   whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
+  journeyData <- getJourneyData searchRequestId
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
@@ -232,7 +256,8 @@ getQuotes searchRequestId = do
           stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
           quotes = offers,
           estimates,
-          paymentMethods = []
+          paymentMethods = [],
+          journey = journeyData
         }
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()
@@ -317,3 +342,84 @@ sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
+
+getJourneyData :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m (Maybe [JourneyData])
+getJourneyData searchRequestId = do
+  allJourneys <- QJourney.findBySearchId searchRequestId
+  journeyNeeded <- pure $ listToMaybe allJourneys
+  journeyData <- try @_ @SomeException $
+    case journeyNeeded of
+      Just journey -> do
+        searchReqs <- QSR.findAllByJourneyId journey.id
+        searchReqJourneyData <- do
+          forM searchReqs \searchReq -> do
+            journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
+            estimateId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "estimateId not found")
+            estimate <- QEstimate.findById (Id estimateId) >>= fromMaybeM (InvalidRequest "estimate not found")
+            estimateApiEntity <- UEstimate.mkEstimateAPIEntity False estimate
+            return $
+              JourneyLeg
+                { journeyLegOrder = journeyLegInfo.journeyLegOrder,
+                  journeyMode = DTrip.Taxi,
+                  estimate = Just estimateApiEntity,
+                  quote = Nothing
+                }
+        frfsSearchReqs <- QFRFSSearch.findAllByJourneyId journey.id
+        frfsSearchReqJourneyData <-
+          forM frfsSearchReqs \frfsSearchReq -> do
+            journeyLegInfo <- frfsSearchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
+            quoteId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "quoteId not found")
+            quote <- QFRFSQuote.findById (Id quoteId) >>= fromMaybeM (InvalidRequest "quote not found")
+            (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+            let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+                discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
+            let quoteRes =
+                  FRFSTicketService.FRFSQuoteAPIRes
+                    { quoteId = quote.id,
+                      _type = quote._type,
+                      price = quote.price.amount,
+                      priceWithCurrency = mkPriceAPIEntity quote.price,
+                      quantity = quote.quantity,
+                      validTill = quote.validTill,
+                      vehicleType = quote.vehicleType,
+                      discountedTickets = quote.discountedTickets,
+                      eventDiscountAmount = quote.eventDiscountAmount,
+                      ..
+                    }
+            let journeyMode = case quote.vehicleType of
+                  BecknSpec.BUS -> DTrip.Bus
+                  BecknSpec.METRO -> DTrip.Metro
+            return $
+              JourneyLeg
+                { journeyLegOrder = journeyLegInfo.journeyLegOrder,
+                  journeyMode,
+                  estimate = Nothing,
+                  quote = Just quoteRes
+                }
+        logDebug $ "journey data for search request: " <> show searchReqJourneyData <> show frfsSearchReqJourneyData
+        let journeyLegs = sortOn (.journeyLegOrder) $ (concat [searchReqJourneyData, frfsSearchReqJourneyData])
+        let sumPrice =
+              sum $
+                map
+                  ( \leg -> do
+                      case (leg.estimate, leg.quote) of
+                        (Just estimate, _) -> estimate.estimatedTotalFareWithCurrency.amount.getHighPrecMoney
+                        (_, Just quote) -> quote.priceWithCurrency.amount.getHighPrecMoney
+                        (_, _) -> 0.0
+                  )
+                  journeyLegs
+        return $
+          Just $
+            [ JourneyData
+                { totalPrice = HighPrecMoney {getHighPrecMoney = sumPrice},
+                  modes = journey.modes,
+                  journeyLegs
+                }
+            ]
+      Nothing ->
+        pure Nothing
+  case journeyData of
+    Left err -> do
+      logDebug $ "journey unavailable for searchId: " <> searchRequestId.getId <> show err
+      return Nothing
+    Right journey -> return journey

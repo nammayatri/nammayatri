@@ -42,7 +42,7 @@ data Action = GoBack
             | CancelTimer
             | BoostSearchButtonClick PrimaryButtonController.Action
             | ServicesOnClick ChooseVehicle.Config String
-            | TipBtnClick Int Int
+            | TipBtnClick Int Int TipViewProps
             | ChooseVehicleAC ChooseVehicle.Action
             | BoostSearchAction PrimaryButtonController.Action
             | GotItAction PrimaryButtonController.Action

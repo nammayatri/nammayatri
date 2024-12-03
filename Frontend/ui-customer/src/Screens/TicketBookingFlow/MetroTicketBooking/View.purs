@@ -324,7 +324,7 @@ termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop =
            linearLayout
            [ width MATCH_PARENT
            , height WRAP_CONTENT
-           , orientation HORIZONTAL
+           , visibility $ boolToVisibility (item /= "")
            ][ textView $
               [ textFromHtml $ " &#8226;&ensp; " <> item
               , color Color.black700

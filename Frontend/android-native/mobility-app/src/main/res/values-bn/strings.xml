@@ -14,6 +14,7 @@
     <string name="we_have_updated_your_app_kindly_relaunch">আমরা আপনার অ্যাপ্লিকেশন আপডেট করেছি, অ্যাপ্লিকেশনটি এখন পুনরায় লোড হবে।</string>
     <string name="okay_got_it">আচ্ছা আমি বুঝে গেছি</string>
     <string name="okay_got_it_smallcase">আচ্ছা আমি বুঝে গেছি</string>
+    <string name="sent">পাঠানো হয়েছে</string>
     <string name="upload_image">চিত্র আপলোড</string>
     <string name="not_interested">আগ্রহী নই</string>
     <string name="too_far">অনেক দূরে</string>

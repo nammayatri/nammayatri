@@ -158,6 +158,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
               waitingTime = Nothing,
+              stopWaitingTimes = [],
               actualRideDuration = Nothing,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
@@ -271,6 +272,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 renderedAt = Nothing,
                 respondedAt = Nothing,
+                middleStopCount = Just $ length searchReq.stops,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
                 isFavourite = isFavourite,
                 ..

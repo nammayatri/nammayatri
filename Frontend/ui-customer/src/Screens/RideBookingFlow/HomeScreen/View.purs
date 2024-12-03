@@ -3724,7 +3724,7 @@ servicesView push state =
           ],
     linearLayout[
       height WRAP_CONTENT
-      , margin $ MarginTop 12
+      , margin $ MarginTop $ if itemLen > 2 then 9 else 12
       , width MATCH_PARENT
     ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
   ]
@@ -3733,7 +3733,7 @@ servicesView push state =
 horizontalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
 horizontalServiceView push index service =
   linearLayout
-  [ height $ WRAP_CONTENT
+  [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
   , orientation VERTICAL
   , gravity CENTER
@@ -3743,7 +3743,7 @@ horizontalServiceView push index service =
   , accessibilityHint $ getEN service.name
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout
-    [ height WRAP_CONTENT
+    [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
     , width MATCH_PARENT
     , padding $ Padding 16 8 16 8
     , background service.backgroundColor
@@ -3755,18 +3755,39 @@ horizontalServiceView push index service =
       , width $ V 32
       , margin $ MarginRight 8
       ]
-    , textView $
-      [ text $ getString $ service.name
-      , color Color.black800
-      , singleLine false
-      ] <> FontStyle.body20 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ][ textView $ 
+        [ text $ getString $ service.name
+        , color Color.black800
+        , singleLine false
+        ] <> FontStyle.body20 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity CENTER_HORIZONTAL
+        , visibility $ boolToVisibility service.hasSecondaryPill
+        ][ textView $
+            [ text $ getString $ METRO_FREE_TICKET_EVENT $ getNumberWithSuffix $ 3
+            , color Color.white900
+            , padding $ Padding 6 3 6 3
+            , background service.secondaryPillColor
+            , cornerRadius 41.0
+            , gravity CENTER
+            , margin $ MarginTop 3
+            ] <> FontStyle.captions TypoGraphy
+        ]
+      ]
     ]
   ]
 
 verticalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
-verticalServiceView push index service =
-  linearLayout
-  [ height WRAP_CONTENT
+verticalServiceView push index service = 
+  relativeLayout
+  [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
   , orientation VERTICAL
   , gravity CENTER
@@ -3775,26 +3796,43 @@ verticalServiceView push index service =
   , accessibilityHint $ getEN service.name
   , margin $ MarginLeft $ if index == 0 then 0 else 16
   , onClick push $ const $ ServicesOnClick service
-  ][linearLayout
+  ][linearLayout 
+    [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , visibility $ boolToVisibility service.hasSecondaryPill
+    ][ textView $
+        [ text $ getString OFFERS
+        , color Color.white900
+        , gravity CENTER
+        , padding $ Padding 6 3 6 3
+        , background service.secondaryPillColor
+        , cornerRadius 41.0
+        ] <> FontStyle.captions TypoGraphy
+    ]
+  , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 8 8 8 8
     , background service.backgroundColor
+    , margin $ MarginVertical 9 16
     , cornerRadius 12.0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
-    ][ imageView
+    ] [ imageView 
       [ imageWithFallback $ service.image
       , height $ V 32
       , width $ V 32
       ]
     ]
-  , textView $
-    [ text $ getString $ service.name
-    , color Color.black800
-    , margin $ MarginTop 4
-    , gravity CENTER
-    ] <> FontStyle.body33 TypoGraphy
+    , textView $ 
+      [ text $ getString $ service.name
+      , color Color.black800
+      , width MATCH_PARENT
+      , gravity CENTER
+      , singleLine true
+      , alignParentBottom "true,-1"
+      ] <> FontStyle.body33 TypoGraphy
   ]
 
 isHomeScreenView :: HomeScreenState -> Boolean

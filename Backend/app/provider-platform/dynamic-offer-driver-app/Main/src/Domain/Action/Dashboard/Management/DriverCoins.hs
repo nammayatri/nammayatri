@@ -27,7 +27,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.PurchaseHistory as PurchaseHistory
 import Domain.Types.TransporterConfig
-import qualified Domain.Types.VehicleCategory as DTVehCategory
+import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -87,7 +87,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       vehCategory <-
         QVeh.findById driverId
           >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
-          <&> (\vehicle -> fromMaybe DTVehCategory.AUTO_CATEGORY (vehicle.category))
+          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -149,7 +149,7 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
       vehCategory <-
         QVeh.findById driverId
           >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
-          <&> (\vehicle -> fromMaybe DTVehCategory.AUTO_CATEGORY (vehicle.category))
+          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,

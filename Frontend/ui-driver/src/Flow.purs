@@ -177,7 +177,7 @@ import Data.Newtype (unwrap)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
-    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.10/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.11/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
     when baseFlow $ do 
       lift $ lift $ initUI
     let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "splash"
@@ -4042,7 +4042,6 @@ chooseCityFlow = do
               let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
                   displayCityName = case city of 
                                       "TamilNaduCities" -> Just "Tamil Nadu"
-                                      "Paris" -> Just "Odisha"
                                       _ -> Just city
                   locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = displayCityName }, props { locationUnserviceable = false, locationDetectionFailed = false }}
               modifyScreenState if cityInList then locationServiceableState else unserviceableState

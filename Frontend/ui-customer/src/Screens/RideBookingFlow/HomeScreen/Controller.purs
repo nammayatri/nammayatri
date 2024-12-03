@@ -1206,8 +1206,10 @@ eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state
       updatedState = state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
   exit $ PastRides updatedState false
 
-eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = do
-  if state.data.config.feature.enableHelpAndSupport
+eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state =
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      isOdishaApp = appName == "Odisha Yatri" -- TODO: Need to make this city config instead of app config and replace hard coded values
+  in if state.data.config.feature.enableHelpAndSupport && not isOdishaApp
     then exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
     else continue state {props{isContactSupportPopUp = true}}
 
@@ -1954,7 +1956,10 @@ eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =
     ]
 
 eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
-    void $ pure $ showDialer (getSupportNumber "") false
+    let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+        isOdishaApp = appName == "Odisha Yatri" -- TODO: Need to make this city config instead of app config and replace hard coded values
+        supportNumber = if isOdishaApp then "08069724915" else getSupportNumber ""
+    void $ pure $ showDialer supportNumber false
     continue state{props{isContactSupportPopUp = false}}
 
 eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
@@ -2734,9 +2739,9 @@ eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction
       else item{activeIndex = activeIndex}
     ) state.data.specialZoneQuoteList 
 
-eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
+eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value boostSearchTipViewProps)) state = do
   let check = index == state.props.tipViewProps.activeIndex
-  continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
+  continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , customerTipArray = boostSearchTipViewProps.customerTipArray, customerTipArrayWithValues = boostSearchTipViewProps.customerTipArrayWithValues, isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
 
 eval (ProviderAutoSelected seconds status timerID) state = do
   if status == "EXPIRED" then do
@@ -3410,6 +3415,9 @@ eval (ServicesOnClick service) state = do
     RC.DELIVERY -> do 
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_delivery") { module = "onboarding"}
       exit $ GoToParcelInstructions state
+    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.METRO -> exit $ GoToMetroTicketBookingFlow state
+    RC.METRO_OFFER -> exit $ GoToMetroTicketBookingFlow state
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
@@ -3431,9 +3439,10 @@ updateBoostSearchConfig :: HomeScreenState -> HomeScreenState
 updateBoostSearchConfig state = do 
   let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
       userCity = DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      customerTipArrayWithValues = if state.props.customerTip.tipForDriver <=0 then tipConfig.customerTipArrayWithValues else [0, state.props.customerTip.tipForDriver, state.props.customerTip.tipForDriver + 10, state.props.customerTip.tipForDriver+20]
+      customerTipArray = getTips customerTipArrayWithValues
       boostSearchConfig = RC.getBoostSearchConfig userCity state.data.selectedEstimatesObject.vehicleVariant
-      selectedTipIndex = fromMaybe 1 (findIndex (\item -> item == boostSearchConfig.selectedTip) customerTipArrayWithValues)
+      selectedTipIndex = if state.props.customerTip.tipForDriver <=0 then fromMaybe 0 (findIndex (\item -> item == boostSearchConfig.selectedTip) customerTipArrayWithValues) else 1
       bookAnyEstimate = find (\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList
       selectedEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) boostSearchConfig.selectedEstimates then acc <> [item.id] else acc) [] state.data.specialZoneQuoteList
       estimateId = fromMaybe state.props.estimateId (head selectedEstimates)
@@ -3446,7 +3455,7 @@ updateBoostSearchConfig state = do
                                              let sortedEstimates =  DA.sortWith (\item -> not $ item `elem` boostSearchConfig.selectedEstimates) filteredEstimates
                                              estimate{selectedServices = boostSearchConfig.selectedEstimates, availableServices = sortedEstimates, activeIndex = selectedIndex}
                           Nothing -> state.data.selectedEstimatesObject
-  state{data{boostSearchEstimate = updatedBookAny}, props { tipViewProps {activeIndex = selectedTipIndex}}}
+  state{data{boostSearchEstimate = updatedBookAny}, props { tipViewProps {activeIndex = selectedTipIndex, customerTipArrayWithValues = customerTipArrayWithValues, customerTipArray = customerTipArray}}}
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

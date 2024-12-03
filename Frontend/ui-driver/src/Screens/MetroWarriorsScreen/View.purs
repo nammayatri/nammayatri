@@ -13,6 +13,7 @@ import Data.Function.Uncurried (runFn2)
 import Screens.MetroWarriorsScreen.ComponentConfig
 import Helpers.Utils as HU
 import Components.GenericHeader as GenericHeader
+import Components.SwitchButtonView as SwitchButtonView
 import Control.Monad.Trans.Class (lift)
 import Styles.Colors as Color
 import Font.Style as FontStyle
@@ -295,18 +296,14 @@ metroStationCard push mbStationData isPrimary state = case mbStationData of
   isStationEnabled id = DA.elem id state.data.stationData.secondaryStationsData
 
 switchButtonView :: forall w. (Action -> Effect Unit) -> Boolean -> Action -> PrestoDOM (Effect Unit) w
-switchButtonView push isActive action =
-  imageView
-    [ height $ V 20
-    , width $ V 36
-    , imageWithFallback
-        $ HU.fetchImage HU.GLOBAL_COMMON_ASSET
-            if isActive then
-              "ny_ic_switch_filled_blue"
-            else
-              "ny_ic_switch_inactive"
-    , onClick push $ const action
-    ]
+switchButtonView push isActive action = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , onClick push $ const action
+  ]
+  [ SwitchButtonView.view (push <<< SwitchButtonAction) $ SwitchButtonView.config {isActive = isActive, isClickable = false} ]
+  
 
 metroStationListView :: forall w. (Action -> Effect Unit) -> ST.MetroWarriorsScreenState -> PrestoDOM (Effect Unit) w
 metroStationListView push state =

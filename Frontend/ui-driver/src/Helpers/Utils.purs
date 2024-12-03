@@ -789,6 +789,7 @@ generateLanguageList languages = map getLanguage languages
       "MALAYALAM" -> {name:"മലയാളം", value:"ML_IN", subtitle: "Malayalam"}
       "BENGALI" -> {name:"বাংলা", value:"BN_IN", subtitle: "Bengali"}
       "ENGLISH" -> {name : "English", value: "EN_US", subtitle: "English"}
+      "ODIA" -> {name: "ଓଡିଆ", value: "OD_IN", subtitle: "Odia"}
       _ -> {name : "English", value: "EN_US", subtitle: "English"}
 
 getDriverStatus :: String -> DriverStatus

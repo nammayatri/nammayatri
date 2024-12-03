@@ -11,7 +11,8 @@ import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data NammaTag = NammaTag
-  { category :: Kernel.Prelude.Text,
+  { actionEngine :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    category :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     info :: Lib.Yudhishthira.Types.NammaTag.TagInfo,
     name :: Kernel.Prelude.Text,

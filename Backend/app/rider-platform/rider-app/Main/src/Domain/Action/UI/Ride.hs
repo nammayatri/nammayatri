@@ -137,7 +137,7 @@ getDriverLoc rideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   res <-
-    if isValueAddNP
+    if isValueAddNP && isJust ride.trackingUrl
       then CallBPP.callGetDriverLocation ride.trackingUrl
       else do
         withLongRetry $ CallBPP.callTrack booking ride

@@ -83,6 +83,7 @@ SearchRequestForDriver:
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
     isForwardRequest : Bool
+    middleStopCount: Maybe Int
     currency: Currency
     distanceUnit: DistanceUnit
     totalRides: Int

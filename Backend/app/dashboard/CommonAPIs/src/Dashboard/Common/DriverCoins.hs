@@ -33,6 +33,13 @@ data CoinMessage
   deriving stock (Eq, Show, Generic, Read, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MetroRideType
+  = ToMetro
+  | FromMetro
+  | None
+  deriving stock (Eq, Show, Generic, Read, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverCoinsFunctionType
   = OneOrTwoStarRating
   | FiveStarRating
@@ -44,7 +51,7 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2 CoinMessage
-  | MetroRideCompleted
+  | MetroRideCompleted MetroRideType
   | RidesCompleted Kernel.Prelude.Int
   deriving stock (Show, Generic, Eq, Ord)
   deriving anyclass (ToSchema, ToJSON)
@@ -113,11 +120,11 @@ instance Read DriverCoinsFunctionType where
                ]
             ++ [ (BulkUploadFunctionV2 msg, r2)
                  | r1 <- stripPrefix "BulkUploadFunctionV2 " r,
-                   (msg, r2) <- readsPrec 10 r1
+                   (msg, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (MetroRideCompleted, r2)
+            ++ [ (MetroRideCompleted v1, r2)
                  | r1 <- stripPrefix "MetroRideCompleted" r,
-                   ((), r2) <- pure ((), r1)
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (RidesCompleted v1, r2)
                  | r1 <- stripPrefix "RidesCompleted " r,
@@ -146,7 +153,7 @@ instance FromJSON DriverCoinsFunctionType where
       "LeaderBoardTopFiveHundred" -> pure LeaderBoardTopFiveHundred
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction
-      "MetroRideCompleted" -> pure MetroRideCompleted
+      "MetroRideCompleted" -> MetroRideCompleted <$> obj .: "contents"
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag

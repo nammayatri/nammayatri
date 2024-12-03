@@ -166,7 +166,8 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
-  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
+  unless isScheduled $
+    void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties

@@ -1,7 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.Dashboard.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagTagUpdate,
@@ -24,51 +20,29 @@ module Domain.Action.Dashboard.NammaTag
 where
 
 import qualified Dashboard.Common as Common
-import qualified Data.Aeson as A
-import Data.Default.Class (Default (..))
-import Data.List (nub)
-import qualified Data.List.NonEmpty as DLNE
-import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Domain.Action.Dashboard.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import JsonLogic
 import qualified Kernel.Prelude as Prelude
 import Kernel.Types.APISuccess
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
-import Lib.Scheduler.Types (AnyJob (..), Job (..))
-import qualified Lib.Yudhishthira.Event.KaalChakra as KaalChakra
+import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
-import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
-import Lib.Yudhishthira.Types.AppDynamicLogicRollout
-import qualified Lib.Yudhishthira.Types.ChakraQueries
-import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
-import Servant hiding (throwError)
 import SharedLogic.JobScheduler (RiderJobType (..))
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth
 import Tools.Error
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

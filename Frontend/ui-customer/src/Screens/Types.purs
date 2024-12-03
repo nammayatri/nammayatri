@@ -1205,6 +1205,8 @@ data City
   | Udupi
   | Odisha
   | Bhubaneswar
+  | Cuttack
+  | Puri
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
@@ -2425,7 +2427,8 @@ type SearchLocationScreenData =
     updatedMetroStations :: Array Station,
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
-    rideDetails :: RideDetails
+    rideDetails :: RideDetails,
+    listItem :: Maybe ListItem
   }
 
 type RideDetails = {

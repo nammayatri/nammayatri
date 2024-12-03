@@ -94,6 +94,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FareProduct.FareProduct {..}) = do
   updateWithKV
     [ Se.Set Beam.area area,
+      Se.Set Beam.disableRecompute disableRecompute,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.farePolicyId (Kernel.Types.Id.getId farePolicyId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

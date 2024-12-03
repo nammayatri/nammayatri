@@ -13,12 +13,10 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverInformation as Beam
-import qualified Storage.Queries.Transformers.DriverInformation
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
   fromTType' (Beam.DriverInformationT {..}) = do
-    preferredPrimarySpecialLoc' <- Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId
     pure $
       Just
         Domain.Types.DriverInformation.DriverInformation
@@ -68,7 +66,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             payoutVpa = payoutVpa,
             payoutVpaBankAccount = payoutVpaBankAccount,
             payoutVpaStatus = payoutVpaStatus,
-            preferredPrimarySpecialLoc = preferredPrimarySpecialLoc',
+            preferredPrimarySpecialLocId = Kernel.Types.Id.Id <$> preferredPrimarySpecialLocId,
             preferredSecondarySpecialLocIds = Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds,
             referralCode = referralCode,
             referredByDriverId = Kernel.Types.Id.Id <$> referredByDriverId,
@@ -134,7 +132,7 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.payoutVpa = payoutVpa,
         Beam.payoutVpaBankAccount = payoutVpaBankAccount,
         Beam.payoutVpaStatus = payoutVpaStatus,
-        Beam.preferredPrimarySpecialLocId = Kernel.Types.Id.getId . (.id) <$> preferredPrimarySpecialLoc,
+        Beam.preferredPrimarySpecialLocId = Kernel.Types.Id.getId <$> preferredPrimarySpecialLocId,
         Beam.preferredSecondarySpecialLocIds = Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds),
         Beam.referralCode = referralCode,
         Beam.referredByDriverId = Kernel.Types.Id.getId <$> referredByDriverId,

@@ -10,15 +10,6 @@ GET {{bpp-dashboard-host}}
 
 ###
 
-# FIXME use templates:
-# SELECT driver_id as userId, count(id) as totalRides, sum(chargeable_distance) as totalDistance, sum(fare) as totalFare
-#   FROM atlas_driver_offer_bpp.ride
-#   WHERE (created_at > now AND created_at > now - {period})
-#   GROUP BY driver_id
-#   LIMIT {limit}
-#   OFFSET {offset}
-
-
 # @name dailyRidesQueryCreate
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/create
@@ -169,6 +160,87 @@ content-type: application/json
       }
     }
   }
+}
+
+###
+
+# @name DriverSpeedTagUpdate
+
+# action data example:
+# { "oldValue" : "SLOW_DRIVER",
+#   "newValue" : "FAST_DRIVER"
+# }
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/tag/update
+token: {{customer_service}}
+content-type: application/json
+
+{
+  "tagName": "DriverSpeed",
+    "tagRule": {
+      "tag": "RuleEngine",
+      "contents": {
+        "if": [
+          {
+            "and": [
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalRides"
+                  },
+                  2
+                ]
+              },
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalDistance"
+                  },
+                  700
+                ]
+              },
+              {
+                "<=": [
+                  {
+                    "var": "dailyCancellations.cancellationsCount"
+                  },
+                  2
+                ]
+              }
+            ]
+          },
+          "FAST_DRIVER",
+          "SLOW_DRIVER"
+        ]
+      }
+    },
+  "actionEngine" :
+    {
+      "if": [
+        {
+          "and": [
+            {
+              "==": [
+                {
+                  "var": "oldValue"
+                },
+                "SLOW_DRIVER"
+              ]
+            },
+            {
+              "==": [
+                {
+                  "var": "newValue"
+                },
+                "FAST_DRIVER"
+              ]
+            }
+          ]
+        },
+        "UNSAFE_TO_SAFE_COHORT",
+        "SAFE_TO_UNSAFE_COHORT"
+      ]
+    }
 }
 
 ###

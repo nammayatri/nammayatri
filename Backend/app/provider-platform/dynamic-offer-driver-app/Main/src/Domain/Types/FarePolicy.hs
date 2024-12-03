@@ -162,6 +162,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
+    disableRecompute :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -199,8 +200,8 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} =
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> Maybe Bool -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} disableRecompute =
   FullFarePolicy {..}
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy

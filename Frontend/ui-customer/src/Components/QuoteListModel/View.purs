@@ -175,7 +175,7 @@ boostSearchView push state showBoostSearch =
   let filteredEstimates = filter (\estimate -> estimate.vehicleVariant /= "BOOK_ANY") state.quoteList
       estimates = filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) state.boostSearchEstimate.selectedServices) filteredEstimates
       bookAnyProps = getBookAnyProps estimates
-      tipConfig = getTipConfig state.boostSearchEstimate.vehicleVariant
+      tipConfig = state.tipViewProps
       finalPrice = getPriceWithTip bookAnyProps state.boostSearchEstimate estimates ((fromMaybe 0 (tipConfig.customerTipArrayWithValues !! state.tipViewProps.activeIndex)))
       enableBoostSearch = state.selectedEstimatesObject.price /= finalPrice && length state.boostSearchEstimate.selectedServices > 0 && state.tipViewProps.activeIndex >= 0
       smartTipReason = case state.selectedEstimatesObject.smartTipReason of 
@@ -185,6 +185,7 @@ boostSearchView push state showBoostSearch =
                                     case head reasons of 
                                       Just val -> val
                                       Nothing -> getStringV2 it_seems_to_be_taking_longer_than_usual
+      boostSearchTipViewProps = state.tipViewProps{customerTipArray = tipConfig.customerTipArray, customerTipArrayWithValues = tipConfig.customerTipArrayWithValues}
   in
   relativeLayout
   [ height MATCH_PARENT
@@ -267,7 +268,7 @@ boostSearchView push state showBoostSearch =
                         , gravity CENTER
                         , padding $ PaddingHorizontal 12 12
                         , stroke $ "1," <> (if isSelected then Color.blue800 else Color.grey900)
-                        , onClick push $ const $ TipBtnClick index (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index))
+                        , onClick push $ const $ TipBtnClick index (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) boostSearchTipViewProps
                         , accessibility ENABLE
                         , accessibilityHint $ "₹" <> show (fromMaybe 0 (tipConfig.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
                         ][textView $ 

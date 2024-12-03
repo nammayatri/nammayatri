@@ -34,6 +34,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
+import Domain.Types.VehicleVariant (VehicleVariant (..))
 import EulerHS.Prelude hiding (elem, find, id, length, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -143,7 +144,8 @@ data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
     fromLocation :: Location,
     toLocation :: Maybe Location,
     totalFare :: Maybe Money,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    vehicleVariant :: Maybe VehicleVariant
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -388,7 +390,8 @@ makeFavouriteBookingAPIEntity ride = do
       fromLocation = ride.fromLocation,
       toLocation = ride.toLocation,
       totalFare = (.amountInt) <$> ride.totalFare,
-      startTime = ride.rideStartTime
+      startTime = ride.rideStartTime,
+      vehicleVariant = Just ride.vehicleVariant
     }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
@@ -433,7 +436,9 @@ buildBookingAPIEntity booking personId = do
             --------- Need to remove it after fixing the status api polling in frontend ---------
             estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
             return ([], estimatedFareBreakups)
-      Nothing -> return ([], [])
+      Nothing -> do
+        estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
+        return ([], estimatedFareBreakups)
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
