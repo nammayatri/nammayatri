@@ -22,6 +22,7 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
@@ -352,6 +353,7 @@ rideAssignedReqHandler req = do
   case mbRide of
     Just ride -> do
       QERIDE.updateStatus ride.id rideStatus
+      void $ updateActiveBookingsIfNeeded rideStatus booking
       unless isInitiatedByCronJob $ do
         Notify.notifyOnRideAssigned booking ride
         when req.isDriverBirthDay $
@@ -407,6 +409,7 @@ rideAssignedReqHandler req = do
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
+      void $ updateActiveBookingsIfNeeded rideStatus booking
       QPFS.clearCache booking.riderId
       unless isInitiatedByCronJob $ do
         if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
@@ -645,6 +648,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  removeActiveBookingIds booking.id.getId person
+  addPendingFeedbackBookingIds booking.id.getId person
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
 
@@ -783,10 +788,11 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  removeActiveBookingIds booking.id.getId person
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
-      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
         (Just True, Just ride, Just _countryCode) -> do
           -- creating cancellation execution job which charges cancellation fee from users stripe account
@@ -1017,3 +1023,23 @@ sendRideEndMessage bk = case bk.tripCategory of
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderSmsReq
       Sms.sendSMS bk.merchantId bk.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
   _ -> pure ()
+
+updateActiveBookingsIfNeeded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DRide.RideStatus -> BT.Booking -> m ()
+updateActiveBookingsIfNeeded rideStatus booking =
+  case (rideStatus, booking.bookingDetails) of
+    (DRide.NEW, BT.OneWaySpecialZoneDetails _) -> pure ()
+    (DRide.NEW, _) -> do
+      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+      let updatedActiveBookings = Just $ nub $ booking.id.getId : fromMaybe [] person.activeBookings
+      void $ QP.updateActiveBookings updatedActiveBookings person.id
+    _ -> pure ()
+
+removeActiveBookingIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> DPerson.Person -> m ()
+removeActiveBookingIds bookingId person = do
+  let updatedActiveBookings = Just $ maybe [] (filter (/= bookingId)) person.activeBookings
+  void $ QP.updateActiveBookings updatedActiveBookings person.id
+
+addPendingFeedbackBookingIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> DPerson.Person -> m ()
+addPendingFeedbackBookingIds bookingId person = do
+  let updatePendingFeedbacks = Just $ nub $ bookingId : fromMaybe [] person.pendingFeedbacks
+  void $ QP.updatePendingFeedbacks updatePendingFeedbacks person.id

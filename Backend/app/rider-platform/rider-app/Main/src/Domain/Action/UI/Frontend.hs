@@ -23,8 +23,9 @@ module Domain.Action.UI.Frontend
 where
 
 import Domain.Action.UI.Booking
-import Domain.Action.UI.Quote
+import Domain.Action.UI.Quote hiding (id)
 import qualified Domain.Types.Booking as DB
+import Domain.Types.Booking.API (buildBookingAPIEntity)
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -34,11 +35,13 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -71,13 +74,37 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   where
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let mayHaveActiveBookings = (maybe False (not . null) person.activeBookings) || isNothing person.activeBookings
       if (isJust pollActiveBooking)
         then do
-          activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing
+          activeBookings <- bool (pure BookingListRes {list = []}) (bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing) mayHaveActiveBookings
           if not (null activeBookings.list)
             then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
-            else do
-              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing
+            else handlePendingFeedbacks person
+        else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+
+    handlePendingFeedbacks :: DP.Person -> Flow GetPersonFlowStatusRes
+    handlePendingFeedbacks person = do
+      case person.pendingFeedbacks of
+        Just [] -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+        Nothing -> do
+          pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing
+          case pendingFeedbackBookings.list of
+            [booking] -> do
+              let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
+              let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
+              if isRated || isSkipped
+                then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+                else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
+            _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+        Just pendingFeedbackIds -> do
+          let mbbookingId = listToMaybe pendingFeedbackIds
+          case mbbookingId of
+            Just bookingId -> do
+              booking' <- QB.findById (Id bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId)
+              bookingAPIEntity <- buildBookingAPIEntity booking' booking'.riderId
+              let pendingFeedbackBookings = BookingListRes {list = [bookingAPIEntity]}
               case pendingFeedbackBookings.list of
                 [booking] -> do
                   let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
@@ -86,7 +113,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                     then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
                     else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
                 _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
-        else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+            Nothing -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
 
     findValueAddNP personStatus providerId = do
       isValueAddNP_ <- maybe (pure True) QNP.isValueAddNP providerId
@@ -110,6 +137,9 @@ notifyEvent personId merchantId req = do
         [booking] -> do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
+          person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          let updatePendingFeedbacks = Just $ maybe [] (filter (/= booking.id.getId)) person.pendingFeedbacks
+          void $ QP.updatePendingFeedbacks updatePendingFeedbacks person.id
         _ -> pure ()
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId

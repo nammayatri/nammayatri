@@ -24,6 +24,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    activeBookings :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
@@ -70,6 +71,7 @@ data PersonE e = Person
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    pendingFeedbacks :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -102,6 +104,7 @@ instance EncryptedItem Person where
     pure
       Person
         { aadhaarVerified = aadhaarVerified entity,
+          activeBookings = activeBookings entity,
           androidId = androidId entity,
           backendAppVersion = backendAppVersion entity,
           blocked = blocked entity,
@@ -148,6 +151,7 @@ instance EncryptedItem Person where
           nightSafetyChecks = nightSafetyChecks entity,
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
+          pendingFeedbacks = pendingFeedbacks entity,
           rating = rating entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
@@ -172,6 +176,7 @@ instance EncryptedItem Person where
     pure
       ( Person
           { aadhaarVerified = aadhaarVerified entity,
+            activeBookings = activeBookings entity,
             androidId = androidId entity,
             backendAppVersion = backendAppVersion entity,
             blocked = blocked entity,
@@ -218,6 +223,7 @@ instance EncryptedItem Person where
             nightSafetyChecks = nightSafetyChecks entity,
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
+            pendingFeedbacks = pendingFeedbacks entity,
             rating = rating entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,

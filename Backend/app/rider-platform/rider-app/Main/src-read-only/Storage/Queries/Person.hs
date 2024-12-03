@@ -49,6 +49,11 @@ updateAadhaarVerifiedState aadhaarVerified id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.aadhaarVerified aadhaarVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateActiveBookings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateActiveBookings activeBookings id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.activeBookings activeBookings, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateAverageRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateAverageRating totalRatings totalRatingScore isValidRating id = do
   _now <- getCurrentTime
@@ -98,6 +103,11 @@ updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePendingFeedbacks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePendingFeedbacks pendingFeedbacks id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.pendingFeedbacks pendingFeedbacks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateReferralCodeAndReferredAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -125,6 +135,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
+      Se.Set Beam.activeBookings activeBookings,
       Se.Set Beam.androidId androidId,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.blocked blocked,
@@ -175,6 +186,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
+      Se.Set Beam.pendingFeedbacks pendingFeedbacks,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,

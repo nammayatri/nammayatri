@@ -410,6 +410,8 @@ onUpdate = \case
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
     void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    Common.removeActiveBookingIds booking.id.getId person
     QBCR.upsert bookingCancellationReason
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     Notify.notifyOnBookingReallocated booking
@@ -425,6 +427,8 @@ onUpdate = \case
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    Common.removeActiveBookingIds booking.id.getId person
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId}
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- make all the booking parties inactive during rellocation
@@ -467,6 +471,8 @@ onUpdate = \case
     void $ QBPL.createMany newBookingParties
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    Common.removeActiveBookingIds booking.id.getId person
     void $ QPFS.updateStatus booking.riderId flowStatus
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- notify customer

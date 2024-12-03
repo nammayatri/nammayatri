@@ -128,6 +128,7 @@ feedback request personId = do
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  removePendingFeedbackBookingIds booking.id.getId person
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   let isLOFeedback = ratingValue <= riderConfig.feedbackAlertRatingThreshold && IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
@@ -160,6 +161,11 @@ feedback request personId = do
         ..
       }
   where
+    removePendingFeedbackBookingIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Person.Person -> m ()
+    removePendingFeedbackBookingIds bookingId person = do
+      let updatePendingFeedbacks = Just $ maybe [] (filter (/= bookingId)) person.pendingFeedbacks
+      void $ QPerson.updatePendingFeedbacks updatePendingFeedbacks person.id
+
     getIssueIdForRide booking = do
       res <- QIssue.findNightIssueByBookingId booking.id
       case res of
