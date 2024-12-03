@@ -44,10 +44,19 @@ type API =
       :> Get
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "journey"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "quotes"
+      :> Get
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalConfirm :<|> getMultimodalSwitchTaxi
+handler = postMultimodalConfirm :<|> getMultimodalSwitchTaxi :<|> getJourneyQuotes
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -68,3 +77,12 @@ getMultimodalSwitchTaxi ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 getMultimodalSwitchTaxi a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalSwitchTaxi (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getJourneyQuotes ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+getJourneyQuotes a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getJourneyQuotes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
