@@ -25,6 +25,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Helpers.Utils as HU
+import Common.Types.App
 import Prelude
 import Storage
 import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit)
@@ -74,7 +75,10 @@ eval GoBack state =
    ST.SENDER_DETAILS -> updateAndExit state $ GoToChooseYourRide state
    ST.RECEIVER_DETAILS -> continue state { data { currentStage = ST.SENDER_DETAILS } }
    ST.FINAL_DETAILS -> updateAndExit state $ GoToChooseYourRide state
-   ST.DELIVERY_INSTRUCTIONS -> updateAndExit state $ GoToHomeScreen state
+   ST.DELIVERY_INSTRUCTIONS -> if HU.isParentView FunctionCall then do 
+                                  void $ pure $ HU.emitTerminateApp Nothing true
+                                  continue state
+                              else updateAndExit state $ GoToHomeScreen state
 
 eval (MapViewLoaded _ _ _) state =
   continueWithCmd state [do

@@ -6,7 +6,7 @@ import Screens.Types (RiderRideCompletedScreenState)
 import Components.RideCompletedCard.Controller ( CustomerIssueCard(..))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
-import Common.Types.App (FeedbackAnswer(..), CustomerIssueTypes(..))
+import Common.Types.App
 import Data.Array (filter, any, length, elem, (!!), find, findIndex, updateAt)
 import Effect.Uncurried (runEffectFn1, runEffectFn7, runEffectFn3, runEffectFn5)
 import JBridge as JB
@@ -33,6 +33,7 @@ import Components.BannerCarousel as BannerCarousel
 import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
 import Data.Int (fromString)
+import Helpers.Utils (isParentView,emitTerminateApp)
 
 data Action =
               RideDetails
@@ -177,7 +178,10 @@ eval (Back) state = do
     recordAudioState { pauseLootie = false, recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00 : 00", recordedAudioUrl = Nothing, uploadedAudioId = Nothing, isListening = false } }, 
     isRatingCard = false } 
 
-eval (Skip) state = exit $ HomeScreen state
+eval (Skip) state = if isParentView FunctionCall then do 
+                        void $ pure $ emitTerminateApp Nothing true
+                        continue state
+                    else exit $ HomeScreen state
 
 eval (SelectPill feedbackItem id) state = do
   let newFeedbackList = updateFeedback id feedbackItem state.ratingCard.feedbackList
