@@ -686,7 +686,7 @@ predictionsView push state globalProps = let
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     ][ scrollView
