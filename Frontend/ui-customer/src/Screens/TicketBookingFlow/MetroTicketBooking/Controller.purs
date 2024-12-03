@@ -103,12 +103,16 @@ eval (MetroBookingConfigAction resp) state = do
   continue updatedState
 
 eval BackPressed state = 
-  if isParentView FunctionCall
+  if isParentView FunctionCall && state.props.ticketServiceType == API.METRO
       then do
         void $ pure $ emitTerminateApp Nothing true
         continue state
-        else 
-            exit $ GoToHome
+        else if state.props.ticketServiceType == API.BUS 
+                then 
+                  case state.props.currentStage of
+                    ST.OfferSelection -> continue state { props { currentStage = ST.ConfirmMetroQuote }}
+                    _ -> exit $ GotoSearchScreen state 
+                else exit $ GoToHome
 
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do

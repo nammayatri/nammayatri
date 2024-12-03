@@ -533,10 +533,7 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
     preferedVariant =  if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
     preferredEstimatesOrder = maybe [] (\service -> service.preferredEstimateOrder) state.data.selectedService
     finalList =  DA.nub $ [preferedVariant] <> preferredEstimatesOrder <> estimatesOrder
-    filteredEstimate = 
-      case (getMerchant FunctionCall) of
-        YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-        _ -> estimates
+    filteredEstimate =  estimates
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
    sortEstimateWithVariantOrder sortWithFare finalList

@@ -6,7 +6,7 @@ import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Services.Common.Backend
 import Engineering.Helpers.Utils as EHU
-import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Commons 
 import Services.Common.API
 import Data.Array as DA
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -21,6 +21,9 @@ import Language.Types (STR(..)) as STR
 import Helpers.Utils (emitTerminateApp, isParentView)
 import Effect (Effect)
 import Common.Types.App (LazyCheck(..))
+import Constants as Constants
+import Data.Lens ((^.))
+import Engineering.Helpers.Accessor
 
 data ScreenOutput = GoToBack
 
@@ -71,11 +74,19 @@ eval (NextImg) state = do
     pure NoAction
   ]
 
-eval GoBack state = 
+eval GoBack state = do
   if isParentView FunctionCall 
     then do 
-      void $ pure $ emitTerminateApp Nothing true
-      continue state
+      let mBPayload = getGlobalPayload Constants.globalPayload
+      case mBPayload of 
+        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+          Just screen -> case screen of
+            "driverprofile" -> do 
+              void $ pure $ emitTerminateApp Nothing true
+              continue state
+            _ -> exit $ GoToBack
+          _ -> exit $ GoToBack
+        Nothing -> exit $ GoToBack
     else exit $ GoToBack
 
 eval _ state = update state
@@ -88,7 +99,7 @@ getProfileImages arr1 arr2 =
 
 getDriverProfile :: (DriverProfile) -> DriverProfileScreenCommonData
 getDriverProfile (DriverProfile details) = {
-    certificates : EHC.convertTo2DArray details.certificates,
+    certificates : convertTo2DArray details.certificates,
     homeTown : details.homeTown,
     driverName : details.driverName,
     aboutMe : details.aboutMe,

@@ -499,7 +499,18 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                     Left _ -> currentFlowStatus false
                 _ -> currentFlowStatus false
             _ -> pure unit
-        "delivery" -> currentFlowStatus false
+        "delivery" -> do
+            if getValueToLocalNativeStore PARCEL_INSTRUCTIONS_VISITED /= "true" then do
+              modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData { data { currentStage = ST.DELIVERY_INSTRUCTIONS}})
+              parcelDeliveryFlow 
+            else do
+              void $ pure $ updateLocalStage SearchLocationModel
+              modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData)
+              modifyScreenState $ HomeScreenStateType (\updatedState-> updatedState { 
+                props { homeScreenPrimaryButtonLottie = true, isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = true},  rideSearchProps{ sessionId = generateSessionId unit } }
+              , data {fareProductType = FPT.DELIVERY, source="", locationList = updatedState.data.recentSearchs.predictionArray} 
+              })
+              homeScreenFlow
         "bt" -> do
           setValueToLocalStore SESSION_ID (generateSessionId unit)
           modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
@@ -1968,10 +1979,10 @@ homeScreenFlow = do
           liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
           removeChatService ""
           updateUserInfoToState state
-          homeScreenFlow
         Left err -> do
           void $ pure $ toast $ getString STR.UNABLE_TO_CANCEL_RIDE
-          homeScreenFlow
+      when (HU.isParentView FunctionCall) $ pure $ HU.terminateApp state.props.currentStage true
+      homeScreenFlow
     FCM_NOTIFICATION notification notificationBody state -> fcmHandler notification state notificationBody
     LOGOUT -> do
       (APISuccessResp resp) <- Remote.logOutBT LogOutReq

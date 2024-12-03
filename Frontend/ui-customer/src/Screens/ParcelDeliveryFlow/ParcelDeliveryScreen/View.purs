@@ -60,7 +60,6 @@ parcelDeliveryScreen initialState =
   , name: "ParcelDeliveryScreen"
   , globalEvents: [
     (\push -> do
-      void $ runEffectFn2 JB.storeCallBackPickContact push PickContactCallBack
       pure (pure unit)
     )
   ]
