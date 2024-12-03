@@ -100,3 +100,9 @@ updateSkipBooking (Id searchRequestId) skipBooking = do
   updateOneWithKV
     [Se.Set BeamSR.skipBooking skipBooking]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateDisability :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updateDisability (Id searchRequestId) disability = do
+  updateOneWithKV
+    [Se.Set BeamSR.disabilityTag disability]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
