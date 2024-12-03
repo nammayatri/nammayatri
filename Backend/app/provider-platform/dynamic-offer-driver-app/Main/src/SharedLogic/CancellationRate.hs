@@ -196,7 +196,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
         else return False
 
     nudgeDriverCondition cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount fcmType pnKey = do
-      let condition = (cancellationRate > cancellationRateThreshold) && (rideAssignedCount > minAssignedRides && rideAssignedCount < maxAssignedRides)
+      let condition = (cancellationRate > cancellationRateThreshold) && (rideAssignedCount > minAssignedRides && rideAssignedCount <= maxAssignedRides)
       when condition $ do
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (InternalError $ "Overlay not found for " <> pnKey)
         let fcmOverlayReq = Notify.mkOverlayReq overlay
