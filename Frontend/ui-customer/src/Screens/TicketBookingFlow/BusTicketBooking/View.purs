@@ -143,12 +143,13 @@ shimmerView state =
 headerView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 headerView push state =
   relativeLayout
-  [ height $ V 220
+  [ height $ V $ 220 + EHC.safeMarginTop
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.black900
   , gravity CENTER
   , cornerRadii $ Corners 24.0 false false true true
+  , padding $ PaddingTop EHC.safeMarginTop
   ]
   [ linearLayout
     [ height MATCH_PARENT
@@ -272,12 +273,16 @@ dummyIllustrationView push state =
     , color Color.black800
     , gravity CENTER_HORIZONTAL
     , visibility $ boolToVisibility $ busConfig.liveRoutes > 0
+    , width MATCH_PARENT
+    , height WRAP_CONTENT
     ] <> FontStyle.subHeading3 TypoGraphy
   , textView $
     [ text $ getString $ NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR busConfig.ticketValidity
     , color Color.black800
     , margin $ MarginTop 12
     , gravity CENTER_HORIZONTAL
+    , width MATCH_PARENT
+    , height WRAP_CONTENT
     , visibility $ boolToVisibility $ not $ DS.null busConfig.ticketValidity
     ] <> FontStyle.body3 TypoGraphy
   ]

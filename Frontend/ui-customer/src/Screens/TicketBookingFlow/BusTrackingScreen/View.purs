@@ -147,7 +147,7 @@ view push state =
             , cornerRadius 25.0
             , gravity CENTER
             , background Color.white900
-            , margin $ Margin 16 16 0 0
+            , margin $ Margin 16 EHC.safeMarginTop 0 0
             , onClick push $ const BackPressed
             ]
             [ imageView
