@@ -1,196 +1,184 @@
 package in.juspay.mobility.driver;
 
+import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertisingSet;
-import android.widget.TextView;
+import android.bluetooth.le.AdvertisingSetCallback;
+import android.bluetooth.le.AdvertisingSetParameters;
+import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+
 
 public class DriverBeacon {
-    public boolean isAdvertsing = false;
+    private final Context context;
+    private final String[] permissions = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)?
+            new String[]{
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_ADMIN
+        }:  new String[]{
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        };
+    public boolean isAdvertising = false;
     public boolean isPeriodicallyAdvertising = false;
     private AdvertisingSet advertisingSet = null;
+    public BluetoothAdapter bluetoothAdapter = null;
+    public BluetoothLeAdvertiser bluetoothLeAdvertiser = null;
 
-    private boolean currentlyMajor = false;
-    private boolean firstEntry = true;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private AdvertisingSetCallback setCallback = new AdvertisingSetCallback() {
+        @Override
+        public void onAdvertisingSetStarted(AdvertisingSet advertisingSet, int txPower, int status) {
+            if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
+                Log.i("AdvertisingSet", "Advertising started successfully");
+                DriverBeacon.this.advertisingSet = advertisingSet;
+                isAdvertising = true;
+            } else {
+                Log.e("AdvertisingSet", "Falied to start advertising: " + status);
+            }
+        }
+        @Override
+        public void onAdvertisingSetStopped(AdvertisingSet advertisingSet) {
+            Log.i("AdvertisingSet", "Advertising stopped.");
+            isAdvertising = false;
+        }
+    };
 
+    public DriverBeacon(Context context) {
+        this.context = context;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            Toast.makeText(this.context, "Android versions is too old " + Build.VERSION.SDK_INT, Toast.LENGTH_LONG).show();
+            Log.i("BTinit", "${Build.VERSION.SDK_INT}");
+            return;
+        }
+
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
+
+        if (!bluetoothAdapter.isEnabled()) {
+            promptEnableBluetooth();
+            Log.e("BTinit", "Bluetooth is off or not supported; cannot stop advertising");
+            throw new IllegalStateException("Bluetooth must be enabled to use DriverBeacon.");
+        }
+
+        if (!hasPermissions()) {
+            throw new IllegalStateException("Required permissions not granted.");
+        }
+    }
+
+    public void startBeacon(String uuid, int major, int minor) {
+        if (!bluetoothAdapter.isEnabled()) {
+            Log.e("iBeacon", "Bluetooth is off or not supported; cannot start advertising");
+            throw new IllegalStateException("Bluetooth needs to be on to use this application");
+        }
+
+        byte[] beaconData = createIBeaconData(
+                uuid,
+                major,
+                minor
+        );
+
+        AdvertiseData advertiseData = new AdvertiseData.Builder()
+                .addManufacturerData(0x4C00, beaconData)
+                .build();
+
+        AdvertisingSetParameters params = new AdvertisingSetParameters.Builder()
+                .setConnectable(false)
+                .setScannable(true)
+                .setInterval(AdvertisingSetParameters.INTERVAL_MEDIUM)
+                .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
+                .build();
+
+        bluetoothLeAdvertiser.startAdvertisingSet(params, advertiseData, null, null, null, setCallback);
+
+        isAdvertising = true;
+    }
+
+    public void stopBeacon() {
+        if (!bluetoothAdapter.isEnabled()) {
+            Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising");
+            throw new IllegalStateException("Bluetooth is not enabled.");
+        }
+        if (advertisingSet == null) {
+            throw new IllegalStateException("Can't stop running beacon without first starting.");
+        }
+
+        bluetoothLeAdvertiser.stopAdvertisingSet(setCallback);
+        advertisingSet = null;
+        isAdvertising = false;
+
+    }
+
+    public void updateBeacon(String uuid, int major, int minor) {
+        byte[] beaconData = createIBeaconData(
+            uuid,
+            major,
+            minor
+        );
+
+        AdvertiseData advertiseData = new AdvertiseData.Builder()
+            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
+            .build();
+
+        if (advertisingSet == null) {
+            throw new IllegalStateException("Can't stop running beacon without first starting.");
+        }
+
+        advertisingSet.setAdvertisingData(advertiseData);
+
+    }
+
+    private byte[] createIBeaconData(
+            String uuid,
+            int major,
+            int minor
+    ) {
+        String uuidWithoutDashes = uuid.replace("-", "");
+        byte[] uuidBytes = new byte[16];
+        for (int i = 0; i < uuidBytes.length; i++) {
+            uuidBytes[i] = (byte) Integer.parseInt(uuidWithoutDashes.substring(i * 2, i * 2 + 2), 16);
+        }
+
+        byte[] majorBytes = new byte[] {(byte) ((major >> 8) & 0xFF), (byte) (major & 0xFF)};
+        byte[] minorBytes = new byte[] {(byte) ((minor >> 8) & 0xFF), (byte) (minor & 0xFF)};
+        byte[] iBeaconBytes = new byte[23];
+        iBeaconBytes[0] = 0x02;
+        iBeaconBytes[1] = 0x15;
+        System.arraycopy(uuidBytes, 0, iBeaconBytes, 2, uuidBytes.length);
+        System.arraycopy(majorBytes, 0, iBeaconBytes, 18, majorBytes.length);
+        System.arraycopy(minorBytes, 0, iBeaconBytes, 20, minorBytes.length);
+        iBeaconBytes[22] = (byte) (-59);
+        return iBeaconBytes;
+    }
+
+    private void promptEnableBluetooth() {
+        Toast.makeText(this.context, "Please enable bluetooth to start advertising", Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+        context.startActivity(intent);
+    }
+
+    private boolean hasPermissions() {
+        for (String permission: permissions) {
+            if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED)
+                return false;
+        }
+        return true;
+    }
 }
 
-//private var currentlyMajor = false
-//private var firstTime = true
-//private var selectedBus: String? = null
-//private var uuid: String? = null
-//private val busHash: HashMap<String, String> = hashMapOf(
-//        "TN 015 0123" to "27B2F751-228D-4BEA-8A06-F8ADC74388E6".lowercase(),
-//        "KA 321 3210" to "ACA22A9D-06B2-4789-9669-9313B2F5605A".lowercase()
-//    )
-//
-//
-//private val handler = Handler(Looper.getMainLooper())
-//private val advertisingInterval: Long = 10000
-//private val updateInterval: Long = 5000
-//
-//private val callback = object : AdvertisingSetCallback() {
-//    override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
-//        if (status == AdvertisingSetCallback.ADVERTISE_SUCCESS) {
-//            Log.i("AdvertisingSet", "Advertising started successfully")
-//            this@MainActivity.advertisingSet = advertisingSet
-//                    isAdvertising = true
-//        } else {
-//            Log.e("AdvertisingSet", "Failed to start advertising: $status")
-//        }
-//    }
-//
-//    override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
-//        Log.i("AdvertisingSet", "Advertising stopped")
-//        isAdvertising = false
-//    }
-//}
-//
-//@RequiresApi(Build.VERSION_CODES.O)
-//override fun onCreate(savedInstanceState: Bundle?) {
-//    super.onCreate(savedInstanceState)
-//
-//    setContentView(R.layout.activity_main)
-//    supportActionBar!!.hide()
-//
-//    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-//        Toast.makeText(this, "Android versions is too old " + Build.VERSION.SDK_INT, Toast.LENGTH_LONG).show()
-//        Log.i("version", "${Build.VERSION.SDK_INT}")
-//    }
-//
-//    bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-//    bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
-//
-//    if (!bluetoothAdapter.isEnabled) {
-//        promptEnableBluetooth()
-//        Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising")
-//        return
-//    }
-//
-//    statusTextView = findViewById(R.id.statusTextView)
-//    startButton = findViewById(R.id.startButton)
-//    stopButton = findViewById(R.id.stopButton)
-//    radioGroup = findViewById(R.id.busSelect)
-//
-//    radioGroup.clearCheck()
-//
-//    radioGroup.setOnCheckedChangeListener { _, checkedId ->
-//            radioButton = findViewById(checkedId)
-//
-//        Toast.makeText(
-//                this@MainActivity,
-//        "Selected Bus is : " + radioButton.text,
-//                Toast.LENGTH_SHORT
-//            ).show()
-//    }
-//
-//    if (!hasPermissions()) {
-//        requestPermissions()
-//    }
-//
-//    startButton.setOnClickListener {
-//        if (radioGroup.checkedRadioButtonId == -1) {
-//            Toast.makeText(this, "Please choose a bus.", Toast.LENGTH_LONG).show()
-//        }
-//        else if (!isPeriodicallyAdvertising) {
-//            startPeriodicAdvertising()
-//        }
-//    }
-//
-//    stopButton.setOnClickListener {
-//        if (isPeriodicallyAdvertising) {
-//            stopPeriodicAdvertising()
-//        }
-//    }
-//}
-//
-//@RequiresApi(Build.VERSION_CODES.O)
-//private fun startBeacon() {
-//    if (!bluetoothAdapter.isEnabled) {
-//        Log.e("iBeacon", "Bluetooth is off or not supported; cannot start advertising")
-//        return
-//    }
-//
-//    val beaconData = createIBeaconData(
-//            uuid = uuid!!,
-//            major = 1,
-//            minor = 59
-//        )
-//
-//    val advertiseData = AdvertiseData.Builder()
-//            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
-//            .build()
-//
-//    val params = AdvertisingSetParameters.Builder()
-//            .setConnectable(false)
-//            .setScannable(true)
-//            .setInterval(AdvertisingSetParameters.INTERVAL_LOW)
-//            .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
-//            .build()
-//
-//    bluetoothLeAdvertiser.startAdvertisingSet(params, advertiseData, null, null, null, callback)
-//    statusTextView.text = getString(R.string.update_advertising, selectedBus, uuid, 1, 59)
-//}
-//
-//private fun stopBeacon() {
-//    if (!bluetoothAdapter.isEnabled) {
-//        Log.e("iBeacon", "Bluetooth is off or not supported; cannot stop advertising")
-//        return
-//    }
-//    advertisingSet?.let {
-//        bluetoothLeAdvertiser.stopAdvertisingSet(callback)
-//        advertisingSet = null
-//    }
-//    isAdvertising = false
-//    statusTextView.text = "Status: Paused advertising"
-//}
-//
-//private fun createIBeaconData(
-//        uuid: String,
-//        major: Int,
-//        minor: Int,
-//        ): ByteArray {
-//    val uuidBytes = uuid.replace("-", "")
-//            .chunked(2)
-//            .map {it.toInt(16).toByte()}
-//            .toByteArray()
-//    val majorBytes = byteArrayOf((major shr 8).toByte(), major.toByte())
-//    val minorBytes = byteArrayOf((minor shr 8).toByte(), minor.toByte())
-//    return byteArrayOf(
-//            0x02, 0x15
-//    ) + uuidBytes + majorBytes + minorBytes + byteArrayOf((-59).toByte())
-//}
-//
-//private fun updateBeacon() {
-//    if (firstTime) {
-//        firstTime = false
-//        return
-//    }
-//    Log.i("Update", "updating")
-//    val major: Int
-//    val minor: Int
-//    if (!currentlyMajor) {
-//        major = 59
-//        minor = 1
-//        currentlyMajor = true
-//    } else {
-//        major = 1
-//        minor = 59
-//        currentlyMajor = false
-//    }
-//
-//    val beaconData = createIBeaconData(
-//            uuid = uuid!!,
-//            major = major,
-//            minor = minor
-//        )
-//
-//    val advertiseData = AdvertiseData.Builder()
-//            .addManufacturerData(0x4C00, beaconData) // 0x4C00 is Apple's Manufacturer ID
-//            .build()
-//
-//    advertisingSet?.setAdvertisingData(advertiseData)
-//
-//    statusTextView.text = getString(R.string.update_advertising, selectedBus, uuid, major, minor)
-//}
 //
 //private fun startPeriodicAdvertising() {
 //    if(!hasPermissions()) {
@@ -232,55 +220,4 @@ public class DriverBeacon {
 //    startButton.visibility = View.VISIBLE
 //    stopButton.visibility = View.GONE
 //    radioGroup.visibility = View.VISIBLE
-//}
-//
-//private fun hasPermissions(): Boolean {
-//    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//        arrayOf(
-//                Manifest.permission.BLUETOOTH_ADVERTISE,
-//                Manifest.permission.BLUETOOTH_SCAN,
-//                Manifest.permission.BLUETOOTH_CONNECT,
-//                Manifest.permission.BLUETOOTH_ADMIN
-//        )
-//    } else {
-//        arrayOf(
-//                Manifest.permission.BLUETOOTH_ADMIN,
-//                Manifest.permission.ACCESS_FINE_LOCATION
-//        )
-//    }
-//
-//    return permissions.all {
-//        ActivityCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-//    }
-//}
-//
-//private fun promptEnableBluetooth() {
-//    Toast.makeText(this, "Please enable bluetooth to start advertising", Toast.LENGTH_LONG).show()
-//    startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-//}
-//
-//private fun requestPermissions() {
-//    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//        arrayOf(
-//                Manifest.permission.BLUETOOTH_ADVERTISE,
-//                Manifest.permission.BLUETOOTH_SCAN,
-//                Manifest.permission.BLUETOOTH_CONNECT
-//        )
-//    } else {
-//        arrayOf(
-//                Manifest.permission.BLUETOOTH_ADMIN,
-//                Manifest.permission.ACCESS_FINE_LOCATION
-//        )
-//    }
-//
-//    ActivityCompat.requestPermissions(this, permissions, 1)
-//}
-//
-//override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String>,
-//        grantResults: IntArray
-//) {
-//    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//}
 //}
