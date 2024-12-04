@@ -11,7 +11,8 @@ INSERT INTO
         govt_charges,
         special_zone_amount,
         collected_at,
-        collected_by
+        collected_by,
+        updated_at
     )
 VALUES
     (
@@ -26,7 +27,8 @@ VALUES
         6,
         '2.0',
         '2024-01-22 07:02:42',
-        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb'
+        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb',
+        '2024-01-22 07:02:42'
     );
 INSERT INTO
     atlas_driver_offer_bpp.driver_fee (
@@ -41,7 +43,8 @@ INSERT INTO
         govt_charges,
         special_zone_amount,
         collected_at,
-        collected_by
+        collected_by,
+        updated_at
     )
 VALUES
     (
@@ -56,7 +59,8 @@ VALUES
         7,
         '3.0',
         '2024-01-22 07:02:42',
-        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb'
+        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb',
+        '2024-01-22 07:02:42'
     );
 INSERT INTO
     atlas_driver_offer_bpp.driver_fee (
@@ -71,7 +75,8 @@ INSERT INTO
         govt_charges,
         special_zone_amount,
         collected_at,
-        collected_by
+        collected_by,
+        updated_at
     )
 VALUES
     (
@@ -86,7 +91,8 @@ VALUES
         8,
         '5.0',
         '2024-01-22 07:02:42',
-        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb'
+        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb',
+        '2024-01-22 07:02:42'
     );
 
 INSERT INTO

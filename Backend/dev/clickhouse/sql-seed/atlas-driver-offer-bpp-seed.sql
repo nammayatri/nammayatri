@@ -10,7 +10,8 @@ CREATE TABLE atlas_driver_offer_bpp.driver_fee(
     `sgst` Nullable(Float64),
     `govt_charges` Nullable(Int64),
     `collected_at` DateTime DEFAULT now(),
-    `collected_by` Nullable(String)
+    `collected_by` Nullable(String),
+    `updated_at` DateTime DEFAULT now()
 ) ENGINE = MergeTree() PRIMARY KEY (id);
 
 CREATE TABLE atlas_driver_offer_bpp.ride_details (
