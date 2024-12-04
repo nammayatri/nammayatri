@@ -141,6 +141,36 @@ public class DriverBeacon {
 
     }
 
+    public void startPeriodicAdvertising(String uuid, int major, int minor, long advertisingInterval) {
+        if(!hasPermissions()) {
+            Log.e("BLEBeacon", "Required permissions are not granted");
+            return;
+        }
+        startBeacon(uuid, major, minor);
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isAdvertising) {
+                    stopBeacon();
+                } else {
+                    startBeacon(uuid, major, minor);
+                }
+                handler.postDelayed(this, advertisingInterval);
+            }
+        };
+
+        handler.post(runnable);
+
+        isPeriodicallyAdvertising = true;
+    }
+
+    public void stopPeriodicAdvertising() {
+        handler.removeCallbacksAndMessages(null);
+        stopBeacon();
+        isPeriodicallyAdvertising = false;
+    }
+
     private byte[] createIBeaconData(
             String uuid,
             int major,
@@ -163,7 +193,6 @@ public class DriverBeacon {
         iBeaconBytes[22] = (byte) (-59);
         return iBeaconBytes;
     }
-
     private void promptEnableBluetooth() {
         Toast.makeText(this.context, "Please enable bluetooth to start advertising", Toast.LENGTH_LONG).show();
         Intent intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
@@ -178,46 +207,3 @@ public class DriverBeacon {
         return true;
     }
 }
-
-//
-//private fun startPeriodicAdvertising() {
-//    if(!hasPermissions()) {
-//        Log.e("BLEBeacon", "Required permissions are not granted")
-//        return
-//    }
-//
-//    val checkedButton = radioGroup.checkedRadioButtonId
-//    if (checkedButton == -1) {
-//        Toast.makeText(this, "Please choose a bus", Toast.LENGTH_LONG).show()
-//        return
-//    }
-//    selectedBus = findViewById<RadioButton>(checkedButton).text.toString()
-//    uuid = busHash[selectedBus] ?: return
-//
-//            startBeacon()
-//
-//    val runnable = object: Runnable {
-//        @RequiresApi(Build.VERSION_CODES.O)
-//        override fun run() {
-//            handler.postDelayed(this, advertisingInterval)
-//            updateBeacon()
-//        }
-//    }
-//
-//    handler.post(runnable)
-//
-//    isPeriodicallyAdvertising = true
-//    startButton.visibility = View.GONE
-//    stopButton.visibility = View.VISIBLE
-//    radioGroup.visibility = View.GONE
-//}
-//
-//private fun stopPeriodicAdvertising() {
-//    handler.removeCallbacksAndMessages(null)
-//    stopBeacon()
-//    isPeriodicallyAdvertising = false
-//    statusTextView.text = getString(R.string.stop_advertising)
-//    startButton.visibility = View.VISIBLE
-//    stopButton.visibility = View.GONE
-//    radioGroup.visibility = View.VISIBLE
-//}
