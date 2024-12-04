@@ -289,8 +289,8 @@ getVehicleImage variant vehicleDetail city = do
       mkAutoImage city = 
         case city of 
           Hyderabad -> "ic_auto_rickshaw_black_yellow"
-          _ | Array.elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ic_auto_rickshaw_black_yellow"
-          _ | Array.elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_black_auto"
+          _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
+          _ | HU.isKeralaCity city -> "ny_ic_black_auto"
           _ -> "ic_auto_rickshaw"
 
 
