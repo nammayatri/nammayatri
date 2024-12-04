@@ -11,6 +11,7 @@ imports:
   SpecialLocationWarrior: Lib.Queries.SpecialLocation
   SpecialLocation: Lib.Types.SpecialLocation
   IssueBreachCooldownTime: SharedLogic.BehaviourManagement.IssueBreach
+  ServiceTierType: Domain.Types.ServiceTierType
   Value: Data.Aeson
 
 DriverInformation:
@@ -101,6 +102,9 @@ DriverInformation:
     onRideTripCategory: Maybe TripCategory
     hasRideStarted: Maybe Bool
     issueBreachCooldownTimes: Maybe [IssueBreachCooldownTime]
+    softBlockStiers: "Maybe [ServiceTierType]"
+    softBlockExpiryTime: Maybe UTCTime
+    softBlockReasonFlag: Maybe Text
 
   default:
     active: "false"
@@ -149,6 +153,7 @@ DriverInformation:
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
+    softBlockStiers: "text[]"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -310,5 +315,9 @@ DriverInformation:
     updateIssueBreachCooldownTimes:
       kvFunction: updateOneWithKV
       params: [issueBreachCooldownTimes]
+      where: driverId
+    updateSoftBlock:
+      kvFunction: updateOneWithKV
+      params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
       where: driverId
 

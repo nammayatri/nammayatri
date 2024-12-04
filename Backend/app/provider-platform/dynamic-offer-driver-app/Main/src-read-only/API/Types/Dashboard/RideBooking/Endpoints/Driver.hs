@@ -76,7 +76,10 @@ data DriverInfoRes = DriverInfoRes
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    blockedInfo :: [DriverBlockTransactions]
+    blockedInfo :: [DriverBlockTransactions],
+    softBlockStiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

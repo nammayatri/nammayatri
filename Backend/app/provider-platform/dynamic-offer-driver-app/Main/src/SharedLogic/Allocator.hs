@@ -37,10 +37,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Tools.Notifications as Notify
 
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | UnblockSoftBlockedDriver
+  | SoftBlockNotifyDriver
   | SupplyDemand
   | SendPDNNotificationToDriver
   | MandateExecution
@@ -71,6 +74,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
+  restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
@@ -143,6 +148,25 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+newtype UnblockSoftBlockedDriverRequestJobData = UnblockSoftBlockedDriverRequestJobData
+  { driverId :: Id DP.Driver
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnblockSoftBlockedDriver
+
+type instance JobContent 'UnblockSoftBlockedDriver = UnblockSoftBlockedDriverRequestJobData
+
+data SoftBlockNotifyDriverRequestJobData = SoftBlockNotifyDriverRequestJobData
+  { driverId :: Id DP.Driver,
+    entityData :: Notify.IssueBreachEntityData
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SoftBlockNotifyDriver
+
+type instance JobContent 'SoftBlockNotifyDriver = SoftBlockNotifyDriverRequestJobData
 
 data SupplyDemandRequestJobData = SupplyDemandRequestJobData
   { scheduleTimeIntervalInMin :: Int,

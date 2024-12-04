@@ -7,6 +7,7 @@ module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformati
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -232,6 +233,19 @@ updateRentalAndInterCitySwitch canSwitchToRental canSwitchToInterCity driverId =
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateSoftBlock ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.softBlockStiers softBlockStiers,
+      Se.Set Beam.softBlockExpiryTime softBlockExpiryTime,
+      Se.Set Beam.softBlockReasonFlag softBlockReasonFlag,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateSpecialLocWarriorInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -329,6 +343,9 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
+      Se.Set Beam.softBlockExpiryTime softBlockExpiryTime,
+      Se.Set Beam.softBlockReasonFlag softBlockReasonFlag,
+      Se.Set Beam.softBlockStiers softBlockStiers,
       Se.Set Beam.subscribed subscribed,
       Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount,
       Se.Set Beam.totalReferred totalReferred,
