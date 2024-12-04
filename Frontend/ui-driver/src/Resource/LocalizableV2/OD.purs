@@ -1659,7 +1659,8 @@ getOd =
     , favourites: "ପ୍ରିୟତମ"
     , rental_ride_accepted: "ଭାଡା ରାଇଡ୍ ଗ୍ରହଣ କରାଗଲା"
     , points_earned_: (\points -> points <> " ପଏଣ୍ଟ ଅର୍ଜିତ ହେଲା ✨")
-    , for_metro_ride: "ମେଟ୍ରୋ ରାଇଡ୍ ପାଇଁ"
+    , for_metro_pickup_ride: "ମେଟ୍ରୋ ଉଠା ରାଇଡ୍ ପାଇଁ"
+    , for_metro_drop_ride: "ମେଟ୍ରୋ ଛାଡ଼ା ରାଇଡ୍ ପାଇଁ"
     , continue_with: (\text -> text <> " ସହିତ ଜାରି ରଖନ୍ତୁ")
     , contact_support_for_help: "ସହାୟତା ପାଇଁ ସମର୍ଥନ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"
     , you_have_switched_city_or_vehicle: "ଆପଣ ଆପଣଙ୍କ ସହର କିମ୍ବା ଭାହନ ପରିବର୍ତ୍ତନ କରିଛନ୍ତି। ରାଇଡ୍ ପାଇବାକୁ ଦୟାକରି ଏକ ପ୍ଲାନ୍ ବାଛନ୍ତୁ"

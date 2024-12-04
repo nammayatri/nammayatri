@@ -1677,7 +1677,8 @@ getTa =
     , favourites: "விருப்பங்கள்"
     , total_earnings_missed: "மொத்தம் சம்பாதிக்க தவறிய புள்ளிகள்"
     , points_earned_: (\points -> points <> " புள்ளிகள் பெற்றுள்ளீர் ✨")
-    , for_metro_ride: "மெட்ரோ சவாரிக்கு"
+    , for_metro_pickup_ride: "மெட்ரோ பிக்கப் ரைடிற்காக"
+    , for_metro_drop_ride: "மெட்ரோ டிராப் ரைடிற்காக"
     , continue_with: (\text -> text <> " உடன் தொடரவும்")
     , contact_support_for_help: "உதவிக்கு ஆதரவை தொடர்பு கொள்ளவும்"
     , you_have_switched_city_or_vehicle: "நீங்கள் உங்கள் வாகனம் அல்லது நகரத்தை மாற்றியுள்ளீர்கள். சவாரிகளைப் பெற திட்டத்தைத் தேர்ந்தெடுக்கவும்"

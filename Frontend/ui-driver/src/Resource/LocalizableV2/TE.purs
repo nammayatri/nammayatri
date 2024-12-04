@@ -1677,7 +1677,8 @@ getTe =
     , buy_new_home: "కొత్త ఇంటిని కొనండి"
     , favourites: "ఇష్టాలు"
     , points_earned_: (\points -> points <> " సంపాదించిన పాయింట్‌లు ✨")
-    , for_metro_ride: "మెట్రో రైడ్ కోసం"
+    , for_metro_pickup_ride: "మెట్రో పికప్ రైడ్ కోసం"
+    , for_metro_drop_ride: "మెట్రో డ్రాప్ రైడ్ కోసం"
     , continue_with: (\text -> text <> " తో కొనసాగించండి")
     , contact_support_for_help: "సహాయం కోసం మద్దతును సంప్రదించండి"
     , you_have_switched_city_or_vehicle: "మీరు మీ వాహనం లేదా నగరాన్ని మార్చారు. రైడ్లు పొందడానికి ఒక ప్లాన్‌ను ఎంచుకోండి"

@@ -1677,7 +1677,8 @@ getKn =
     , buy_new_home: "ಹೊಸ ಮನೆ ಖರೀದಿಸಿ"
     , favourites: "ಇಷ್ಟಗಳು"
     , points_earned_: (\points -> points <> " ಅಂಕ ಗಳಿಸಿದೆ ✨")
-    , for_metro_ride: "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"
+    , for_metro_pickup_ride: "ಮೆಟ್ರೊ ಪಿಕ್‌ಅಪ್ ರೈಡ್‌ಗಾಗಿ"
+    , for_metro_drop_ride: "ಮೆಟ್ರೊ ಡ್ರಾಪ್ ರೈಡ್‌ಗಾಗಿ"
     , continue_with: (\text -> text <> " ಜೊತೆ ಮುಂದುವರಿಸಿ")
     , contact_support_for_help: "ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
     , you_have_switched_city_or_vehicle: "ನೀವು ನಿಮ್ಮ ವಾಹನ ಅಥವಾ ನಗರವನ್ನು ಬದಲಾಯಿಸಿದ್ದೀರಿ. ಸವಾರಿ ಪಡೆಯಲು ಯೋಜನೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"

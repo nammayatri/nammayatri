@@ -53,7 +53,7 @@ getEventName state event bulkUploadTitle = do
     API.PurpleRideCompleted -> getString PURPLE_RIDE_COMPLETED
     API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
     API.TrainingCompleted -> getString TRAINING_COMPLTED
-    API.MetroRideCompleted -> getString METRO_RIDE_COMPLETED
+    API.MetroRideCompleted metroRideType -> show metroRideType <> " " <> getString METRO_RIDE_COMPLETED
     API.BulkUploadFunction -> case bulkUploadTitle of
       Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
                         "HI_IN" -> title.hi

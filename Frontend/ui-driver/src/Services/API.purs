@@ -3483,7 +3483,12 @@ data DriverCoinsFunctionType
   | BulkUploadFunction
   | BulkUploadFunctionV2
   | RidesCompleted Int
-  | MetroRideCompleted
+  | MetroRideCompleted MetroRideType
+
+data MetroRideType
+  = ToMetro
+  | FromMetro
+  | None
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequestWithoutLogs GET (EP.getCoinTransactions date) headers reqBody Nothing
@@ -3515,6 +3520,12 @@ instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = gene
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
   where
     standardEncode _ = standardEncode {}
+
+derive instance genericMetroRideType :: Generic MetroRideType _
+instance showMetroRideType :: Show MetroRideType where show = genericShow
+instance decodeMetroRideType :: Decode MetroRideType where decode = defaultEnumDecode
+instance encodeMetroRideType :: Encode MetroRideType where encode = defaultEnumEncode
+instance eqMetroRideType :: Eq MetroRideType where eq = genericEq
 
 derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
 derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _

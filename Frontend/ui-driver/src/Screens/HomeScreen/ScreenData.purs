@@ -123,6 +123,7 @@ initData =
           , tripStartTime : Nothing
           , tripEndTime : Nothing
           , specialLocationTag : Nothing
+          , metroRideCoinData : Nothing
           }
       , driverGotoState:
           { gotoCount: 0
