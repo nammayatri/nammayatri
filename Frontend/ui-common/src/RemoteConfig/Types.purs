@@ -67,6 +67,7 @@ type RemoteConfig a
     , bhubaneswar :: Maybe a
     , cuttack :: Maybe a
     , puri :: Maybe a
+    , pudukkottai :: Maybe a
     , config :: Maybe Config
     }
     

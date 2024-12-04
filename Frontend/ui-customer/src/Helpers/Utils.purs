@@ -722,16 +722,16 @@ getVehicleVariantImage variant viewType =
           "COMFY"         -> variantConfig.sedan.leftViewImage
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
           "AUTO_RICKSHAW" -> case city of
-                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
-                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
           "BOOK_ANY"      -> case getMerchant FunctionCall of
                               _ -> case city of
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
@@ -750,8 +750,8 @@ getVehicleVariantImage variant viewType =
           "COMFY"         -> variantConfig.sedan.image
           "PREMIUM"       -> variantConfig.sedan.image
           "AUTO_RICKSHAW" -> case city of
-                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
-                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+                              _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.image
@@ -759,8 +759,8 @@ getVehicleVariantImage variant viewType =
                               YATRISATHI -> variantConfig.bookAny.image
                               _ -> case city of
                                       Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
-                                      _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
-                                      _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
+                                      _ | isTamilNaduCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      _ | isKeralaCity city -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
@@ -835,6 +835,7 @@ cityCodeMap =
   , Tuple (Just "std:0674") Bhubaneswar
   , Tuple (Just "std:0671") Cuttack
   , Tuple (Just "std:06752") Puri
+  , Tuple (Just "std:04322") Pudukkottai
   , Tuple Nothing AnyCity
   ]
 
@@ -846,10 +847,10 @@ quoteModalVariantImage variant =
     if variant == "AUTO_RICKSHAW"
       then case city of
         Bangalore -> "ny_ic_no_quotes_auto_bang_del"
-        _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_no_quotes_auto_koc"
+        _ | isKeralaCity city -> "ny_ic_no_quotes_auto_koc"
         Delhi ->"ny_ic_no_quotes_auto_bang_del"
         Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
-        _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_no_quotes_auto_che_hyd"
+        _ | isTamilNaduCity city -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
       else  "ny_ic_no_quotes_color"
 
@@ -873,9 +874,9 @@ getAutoRickshawNearImage  =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
     case city of
-    _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_near_auto_yellow"
+    _ | isKeralaCity city -> "ny_ic_driver_near_auto_yellow"
     Hyderabad -> "ny_ic_driver_near_auto_black"
-    _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_near_auto_black"
+    _ | isTamilNaduCity city -> "ny_ic_driver_near_auto_black"
     _ -> "ny_ic_driver_near_auto_green"
 
 getAutoRickshawStartedImage :: String
@@ -884,9 +885,9 @@ getAutoRickshawStartedImage  =
    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
       case city of
-       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_started_auto_yellow"
+       _ | isKeralaCity city -> "ny_ic_driver_started_auto_yellow"
        Hyderabad -> "ny_ic_driver_started_auto_black"
-       _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_started_auto_black"
+       _ | isTamilNaduCity city -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
 
 getCityFromString :: String -> City
@@ -922,6 +923,7 @@ getCityFromString cityString =
     "Bhubaneswar" -> Bhubaneswar
     "Cuttack" -> Cuttack
     "Puri" -> Puri
+    "Pudukkottai" -> Pudukkottai
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -1145,7 +1147,7 @@ getAllServices dummy =
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum]  -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
+    _ | isKeralaCity city  -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Gurugram -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
@@ -1253,8 +1255,8 @@ mkDestMarker trackingType fareProductType =
 getAutoImage :: City -> String
 getAutoImage city = case city of
     Hyderabad -> "ny_ic_black_yellow_auto"
-    _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_koc_auto_on_map"
-    _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_black_yellow_auto"
+    _ | isKeralaCity city -> "ny_ic_koc_auto_on_map"
+    _ | isTamilNaduCity city -> "ny_ic_black_yellow_auto"
     _         -> "ic_auto_nav_on_map"
 
 normalRoute ::String -> Markers
@@ -1303,6 +1305,7 @@ getLanguageBasedCityName cityName =
     Bhubaneswar -> getString BHUBANESWAR
     Cuttack -> "Cuttack"
     Puri -> "Puri"
+    Pudukkottai -> "Pudukkottai"
     AnyCity -> ""
 
 breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))
@@ -1546,3 +1549,10 @@ isDeliveryInitiator maybeTags =
 foreign import isHybridApp :: Effect Boolean
 
 foreign import decodeErrorMessage :: String -> String
+
+isTamilNaduCity :: City -> Boolean 
+isTamilNaduCity city = elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy, Pudukkottai]
+
+isKeralaCity :: City -> Boolean 
+isKeralaCity city = elem city [Kochi, Kozhikode, Thrissur, Trivandrum]
+
