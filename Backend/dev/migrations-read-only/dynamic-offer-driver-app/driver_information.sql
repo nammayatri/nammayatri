@@ -164,3 +164,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN issue_breach_co
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_ride_started boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_stiers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_reason_flag text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_expiry_time timestamp with time zone ;

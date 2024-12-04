@@ -21,6 +21,11 @@ import Tools.Beam.UtilsTH
 
 data IssueBreachType = EXTRA_FARE_MITIGATION deriving (Generic, Show, Eq, Read, ToSchema, ToParamSchema)
 
+data IssueBreachBlockType = IBSoft | IBHard deriving (Generic, Show, Eq, Read, ToSchema, ToParamSchema)
+
+-- soft is stier level block, driver will be able to go online
+-- hard is driver level block, driver will not be able to go online
+
 data IssueBreachConfig = IssueBreachConfig
   { ibCountWindowSizeInDays :: Int,
     ibDailyMinRidesforBlocking :: Int,
@@ -32,7 +37,9 @@ data IssueBreachConfig = IssueBreachConfig
     ibDailyCooldownTimeInHours :: Int,
     ibWeeklyCooldownTimeInHours :: Int,
     ibAllowedServiceTiers :: [ServiceTierType],
-    ibIssueBreachType :: IssueBreachType
+    ibIssueBreachType :: IssueBreachType,
+    ibBlockType :: IssueBreachBlockType,
+    ibNotifyInMins :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, Read, ToSchema)
 
@@ -47,6 +54,12 @@ instance ToJSON IssueBreachType where
   toJSON = String . show
 
 instance FromJSON IssueBreachType where
+  parseJSON = fmap read . parseJSON
+
+instance ToJSON IssueBreachBlockType where
+  toJSON = String . show
+
+instance FromJSON IssueBreachBlockType where
   parseJSON = fmap read . parseJSON
 
 $(mkHttpInstancesForEnum ''IssueBreachType)

@@ -17,6 +17,7 @@ import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
+import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -34,6 +35,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import Tools.Notifications
 
 mkIssueBreachCounterKey :: IssueBreachType -> Text -> Text
 mkIssueBreachCounterKey breachType driverId = "driver-offer:issue-breach:" <> show breachType <> "-counter-dId:" <> driverId
@@ -95,32 +97,33 @@ issueBreachMitigation ::
   TransporterConfig ->
   DI.DriverInformation ->
   m ()
-issueBreachMitigation issueType transporterConfig driverInfo = when (isJust transporterConfig.issueBreachConfig && not driverInfo.blocked && not driverInfo.onRide) $ do
+issueBreachMitigation issueType transporterConfig driverInfo = when (isJust transporterConfig.issueBreachConfig && not driverInfo.blocked) $ do
   let issueBreachConfigOfIssueType = getIssueBreachConfig issueType transporterConfig
   whenJust issueBreachConfigOfIssueType $ \config -> do
-    now <- getCurrentTime
-    let (blockReasonDaily, blockReasonWeekly) = getBlockReasonFlag issueType
-    let windowSize = toInteger config.ibCountWindowSizeInDays
-    (issueBreachRateDaily, completedBookingCountDaily) <- getIssueBreachCountOfDays 1 windowSize
-    (issueBreachRateWeekly, completedBookingCountWeekly) <- getIssueBreachCountOfDays 7 windowSize
-    let issueBreachCooldownTime = getIssueBreachCooldownTime issueType driverInfo
-        mbCooldDownWeekly = issueBreachCooldownTime >>= (.ibWeeklyCooldownTimeInHours)
-        mbCooldDownDaily = issueBreachCooldownTime >>= (.ibDailyCooldownTimeInHours)
-    blockedOnWeekly <- tryBlockDriver (config.ibRateThresholdWeekly) (config.ibWeeklyMinRidesforBlocking) issueBreachRateWeekly completedBookingCountWeekly (config.ibWeeklyOffenceSuspensionTimeInHours) mbCooldDownWeekly now blockReasonWeekly
-    if blockedOnWeekly
-      then do
-        let calculatedCooldownTime = addUTCTime (fromIntegral config.ibWeeklyCooldownTimeInHours * 60 * 60) now
-            finalWeeklyCooldownTime = calculateFinalCoolDownTime mbCooldDownWeekly calculatedCooldownTime
-            finalCooldownTime = IssueBreachCooldownTime {ibWeeklyCooldownTimeInHours = Just finalWeeklyCooldownTime, ibDailyCooldownTimeInHours = mbCooldDownDaily, ibType = issueType}
-        updateIssueBreachCooldownTimes driverInfo finalCooldownTime
-      else do
-        blockedOnDaily <- tryBlockDriver (config.ibRateThresholdDaily) (config.ibDailyMinRidesforBlocking) issueBreachRateDaily completedBookingCountDaily (config.ibDailyOffenceSuspensionTimeInHours) mbCooldDownDaily now blockReasonDaily
-        when blockedOnDaily $ do
-          let calculatedCooldownTime = addUTCTime (fromIntegral config.ibDailyCooldownTimeInHours * 60 * 60) now
-              dailyFinalCooldownTime = calculateFinalCoolDownTime mbCooldDownDaily calculatedCooldownTime
-              weeklyFinalCooldownTime = calculateFinalCoolDownTime mbCooldDownWeekly calculatedCooldownTime
-              finalCooldownTime = IssueBreachCooldownTime {ibDailyCooldownTimeInHours = Just dailyFinalCooldownTime, ibWeeklyCooldownTimeInHours = Just weeklyFinalCooldownTime, ibType = issueType}
+    when ((config.ibBlockType == IBHard && not driverInfo.onRide) || (config.ibBlockType == IBSoft && (isNothing driverInfo.softBlockStiers))) $ do
+      now <- getCurrentTime
+      let (blockReasonDaily, blockReasonWeekly) = getBlockReasonFlag issueType
+      let windowSize = toInteger config.ibCountWindowSizeInDays
+      (issueBreachRateDaily, completedBookingCountDaily) <- getIssueBreachCountOfDays 1 windowSize
+      (issueBreachRateWeekly, completedBookingCountWeekly) <- getIssueBreachCountOfDays 7 windowSize
+      let issueBreachCooldownTime = getIssueBreachCooldownTime issueType driverInfo
+          mbCooldDownWeekly = issueBreachCooldownTime >>= (.ibWeeklyCooldownTimeInHours)
+          mbCooldDownDaily = issueBreachCooldownTime >>= (.ibDailyCooldownTimeInHours)
+      blockedOnWeekly <- tryBlockDriver (config.ibNotifyInMins) (config.ibAllowedServiceTiers) (config.ibBlockType) (config.ibRateThresholdWeekly) (config.ibWeeklyMinRidesforBlocking) issueBreachRateWeekly completedBookingCountWeekly (config.ibWeeklyOffenceSuspensionTimeInHours) mbCooldDownWeekly now blockReasonWeekly
+      if blockedOnWeekly
+        then do
+          let calculatedCooldownTime = addUTCTime (fromIntegral config.ibWeeklyCooldownTimeInHours * 60 * 60) now
+              finalWeeklyCooldownTime = calculateFinalCoolDownTime mbCooldDownWeekly calculatedCooldownTime
+              finalCooldownTime = IssueBreachCooldownTime {ibWeeklyCooldownTimeInHours = Just finalWeeklyCooldownTime, ibDailyCooldownTimeInHours = mbCooldDownDaily, ibType = issueType}
           updateIssueBreachCooldownTimes driverInfo finalCooldownTime
+        else do
+          blockedOnDaily <- tryBlockDriver (config.ibNotifyInMins) (config.ibAllowedServiceTiers) (config.ibBlockType) (config.ibRateThresholdDaily) (config.ibDailyMinRidesforBlocking) issueBreachRateDaily completedBookingCountDaily (config.ibDailyOffenceSuspensionTimeInHours) mbCooldDownDaily now blockReasonDaily
+          when blockedOnDaily $ do
+            let calculatedCooldownTime = addUTCTime (fromIntegral config.ibDailyCooldownTimeInHours * 60 * 60) now
+                dailyFinalCooldownTime = calculateFinalCoolDownTime mbCooldDownDaily calculatedCooldownTime
+                weeklyFinalCooldownTime = calculateFinalCoolDownTime mbCooldDownWeekly calculatedCooldownTime
+                finalCooldownTime = IssueBreachCooldownTime {ibDailyCooldownTimeInHours = Just dailyFinalCooldownTime, ibWeeklyCooldownTimeInHours = Just weeklyFinalCooldownTime, ibType = issueType}
+            updateIssueBreachCooldownTimes driverInfo finalCooldownTime
   where
     calculateFinalCoolDownTime :: Maybe UTCTime -> UTCTime -> UTCTime
     calculateFinalCoolDownTime prevCooldownTime calculatedCooldownTime =
@@ -134,21 +137,42 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
       let ibRate = (ibCount * 100) `div` max 1 completedBookingCount
       return (ibRate, completedBookingCount)
 
-    tryBlockDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> BlockReasonFlag -> m Bool
-    tryBlockDriver issueBreachRateThreshold minCompletedBookingsRequired ibRate completedBookingCount blockTimeInHours cooldownTime now blockReasonFlag = do
+    tryBlockDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Int -> [ServiceTierType] -> IssueBreachBlockType -> Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> BlockReasonFlag -> m Bool
+    tryBlockDriver ibNotifyInMins allowedSTiers ibBlockType issueBreachRateThreshold minCompletedBookingsRequired ibRate completedBookingCount blockTimeInHours cooldownTime now blockReasonFlag = do
       let rule = ibRate >= issueBreachRateThreshold && completedBookingCount >= minCompletedBookingsRequired
           canApplyBlock = rule && maybe True (<= now) cooldownTime
       when canApplyBlock $ do
-        logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-        QDriverInformation.updateDynamicBlockedStateWithActivity driverInfo.driverId (Just $ "ISSUE_BREACH_" <> show issueType) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
         let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
-        void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId expiryTime
         maxShards <- asks (.maxShards)
         let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
-        JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
-          UnblockDriverRequestJobData
-            { driverId = driverInfo.driverId
-            }
+            notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral ibNotifyInMins) * 60
+        case ibBlockType of
+          IBSoft -> do
+            logInfo $ "Soft Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
+            QDriverInformation.updateSoftBlock (Just allowedSTiers) (Just expiryTime) (Just $ "ISSUE_BREACH_" <> show issueType) driverInfo.driverId
+            JC.createJobIn @_ @'UnblockSoftBlockedDriver unblockDriverJobTs maxShards $
+              UnblockSoftBlockedDriverRequestJobData
+                { driverId = driverInfo.driverId
+                }
+            JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
+              SoftBlockNotifyDriverRequestJobData
+                { driverId = driverInfo.driverId,
+                  entityData =
+                    IssueBreachEntityData
+                      { ibName = "ISSUE_BREACH_" <> show issueType,
+                        blockExpirationTime = expiryTime,
+                        blockedReasonFlag = show blockReasonFlag,
+                        blockedSTiers = allowedSTiers
+                      }
+                }
+          IBHard -> do
+            logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
+            QDriverInformation.updateDynamicBlockedStateWithActivity driverInfo.driverId (Just $ "ISSUE_BREACH_" <> show issueType) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
+            void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId expiryTime
+            JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+              UnblockDriverRequestJobData
+                { driverId = driverInfo.driverId
+                }
       return canApplyBlock
 
 getBlockReasonFlag :: IssueBreachType -> (BlockReasonFlag, BlockReasonFlag)
