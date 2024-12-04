@@ -109,10 +109,10 @@ getStopMarker stopType = do
 getStopMarkerSize :: StopType -> Int 
 getStopMarkerSize stopType = 
   case stopType of
-    SOURCE_STOP -> 90
-    DESTINATION_STOP -> 90
-    NORMAL_STOP -> 20
-    _ -> 50
+    SOURCE_STOP -> if os == "IOS" then 40 else 90
+    DESTINATION_STOP -> if os == "IOS" then 40 else 90
+    NORMAL_STOP -> if os == "IOS" then 10 else 20
+    _ -> if os == "IOS" then 20 else 50
 
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 
 getStopType code index state = do
