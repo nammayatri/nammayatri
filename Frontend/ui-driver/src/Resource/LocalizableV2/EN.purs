@@ -1676,7 +1676,8 @@ getEn =
     , favourites: "Favourites"
     , rental_ride_accepted: "Rental Ride Accepted"
     , points_earned_: (\points -> points <> " Points Earned ✨")
-    , for_metro_ride: "For Metro Ride"
+    , for_metro_pickup_ride: "for metro pickup ride"
+    , for_metro_drop_ride: "for metro drop ride"
     , continue_with: (\text -> "Continue with " <> text)
     , contact_support_for_help: "Contact support for help"
     , you_have_switched_city_or_vehicle: "You have switched your vehicle or city. Please select a plan to get rides"

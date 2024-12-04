@@ -1179,8 +1179,14 @@ type EndRideData = {
     tollAmbigous :: Boolean,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    specialLocationTag :: Maybe String
-  }
+    specialLocationTag :: Maybe String,
+    metroRideCoinData :: Maybe MetroRideCoinData
+}
+
+type MetroRideCoinData = {
+  coinsEarned :: Int,
+  metroRideType :: API.MetroRideType
+}
 
 type PaymentState = {
   rideCount :: Int,
@@ -1952,6 +1958,8 @@ data NotificationType =  DRIVER_REACHED
                       | TRIP_STARTED
                       | EDIT_LOCATION
                       | DRIVER_REACHED_DESTINATION
+                      | TO_METRO_COINS
+                      | FROM_METRO_COINS
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow

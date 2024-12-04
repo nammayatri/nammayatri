@@ -727,7 +727,18 @@ eval (Notification notificationType) state = do
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
-      exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+    exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+  else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
+    let city = getValueToLocalStore DRIVER_LOCATION
+        metroRideCoinConfig = RC.getMetroCoinsEvent city
+        metroRideCoinData = case notificationType of
+          "TO_METRO_COINS" ->
+              { coinsEarned: metroRideCoinConfig.coinsToMetroRide, metroRideType: API.ToMetro }
+          "FROM_METRO_COINS" ->
+              { coinsEarned: metroRideCoinConfig.coinsFromMetroRide, metroRideType: API.FromMetro }
+          _ ->
+              { coinsEarned: 0, metroRideType: API.None }
+    continue state { data = state.data { endRideData = state.data.endRideData { metroRideCoinData = Just metroRideCoinData } } }
   else continue state
 
 eval CancelGoOffline state = do

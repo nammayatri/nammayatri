@@ -124,11 +124,11 @@ getReferralBonusVideo city =
       value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ""
   in getCityBasedConfig value city
 
-getMetroCoinsEvent ::  String -> MetroCoinsEvent 
+getMetroCoinsEvent ::  String -> MetroCoinsEvent
 getMetroCoinsEvent city = do
     let config = fetchRemoteConfigString "metro_coins_event"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultMetroCoinsEvent
-    getCityBasedConfig value $ toLower city 
+    getCityBasedConfig value $ toLower city
 
 defaultEnableOtpRideConfig :: EnableOtpRideConfig
 defaultEnableOtpRideConfig = {
@@ -170,8 +170,8 @@ getenableScheduledRideConfigData city =
     
 defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
-  coins : 0,
-  minDistance : 0
+  coinsFromMetroRide : 0,
+  coinsToMetroRide : 0
 }
 
 getParcelConfig :: String -> ParcelConfig

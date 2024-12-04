@@ -1754,7 +1754,8 @@ getProxy str = case str of
   BUY_NEW_HOME -> \a -> a @~ buy_new_home
   FAVOURITES -> \a -> a @~ favourites
   POINTS_EARNED_ arg1 -> \a -> (a @~ points_earned_) arg1
-  FOR_METRO_RIDE -> \a -> a @~ for_metro_ride
+  FOR_METRO_PICKUP_RIDE -> \a -> a @~ for_metro_pickup_ride
+  FOR_METRO_DROP_RIDE -> \a -> a @~ for_metro_drop_ride
   CONTINUE_WITH arg1 -> \a -> (a @~ continue_with) arg1
   CONTACT_SUPPORT_FOR_HELP -> \a -> a @~ contact_support_for_help
   YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> \a -> a @~ you_have_switched_city_or_vehicle

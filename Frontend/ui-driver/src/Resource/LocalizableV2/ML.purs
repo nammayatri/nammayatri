@@ -1677,7 +1677,8 @@ getMl =
     , buy_new_home: "പുതിയ വീടു വാങ്ങുക"
     , favourites: "ഇഷ്ടങ്ങൾ"
     , points_earned_: (\points -> points <> " പോയിൻ്റ് നേടി ✨")
-    , for_metro_ride: "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"
+    , for_metro_pickup_ride: "മെട്രോ പിക്കപ്പ് റൈഡിനായി"
+    , for_metro_drop_ride: "മെട്രോ ഡ്രോപ്പ് റൈഡിനായി"
     , continue_with: (\text -> text <> " തുടരുക")
     , contact_support_for_help: "സഹായത്തിനായി പിന്തുണയെ ബന്ധപ്പെടുക"
     , you_have_switched_city_or_vehicle: "നിങ്ങൾ നിങ്ങളുടെ വാഹനം അല്ലെങ്കിൽ നഗരം മാറ്റിയിരിക്കുന്നു. യാത്രകൾ നേടാൻ ഒരു പദ്ധതി തിരഞ്ഞെടുക്കുക"

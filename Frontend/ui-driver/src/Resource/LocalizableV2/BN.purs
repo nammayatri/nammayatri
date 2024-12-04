@@ -1694,7 +1694,8 @@ getBn =
     , buy_new_home: "নতুন বাড়ি কিনুন"
     , favourites: "পছন্দগুলি"
     , points_earned_: (\points -> points <> " পয়েন্ট অর্জিত ✨")
-    , for_metro_ride: "মেট্রো যাত্রার জন্য"
+    , for_metro_pickup_ride: "মেট্রো পিকআপ রাইডের জন্য"
+    , for_metro_drop_ride: "মেট্রো ড্রপ রাইডের জন্য"
     , continue_with: (\text -> "এর সাথে চালিয়ে যান " <> text)
     , contact_support_for_help: "সহায়তার জন্য সমর্থনের সাথে যোগাযোগ করুন"
     , you_have_switched_city_or_vehicle: "আপনি আপনার গাড়ি বা শহর পরিবর্তন করেছেন। রাইড পেতে একটি পরিকল্পনা নির্বাচন করুন"

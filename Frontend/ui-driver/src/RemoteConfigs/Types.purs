@@ -53,13 +53,13 @@ type CancellationThresholdConfig  = {
 
 type ReferralPopUpDelays = {
   refer_now :: Int,
-  add_upi :: Int, 
+  add_upi :: Int,
   verify_upi :: Int
 }
 
 type MetroCoinsEvent = {
-  coins :: Int,
-  minDistance :: Int
+  coinsFromMetroRide :: Int,
+  coinsToMetroRide :: Int
 }
 
 type EnableOtpRideConfig = {

@@ -1693,7 +1693,8 @@ newtype Keymap
   , buy_new_home :: String
   , favourites :: String
   , points_earned_ :: String -> String
-  , for_metro_ride :: String
+  , for_metro_pickup_ride :: String
+  , for_metro_drop_ride :: String
   , continue_with :: String -> String
   , contact_support_for_help :: String
   , you_have_switched_city_or_vehicle :: String
@@ -6815,8 +6816,11 @@ favourites = a
 points_earned_ :: Proxy "points_earned_"
 points_earned_ = a
 
-for_metro_ride :: Proxy "for_metro_ride"
-for_metro_ride = a
+for_metro_pickup_ride :: Proxy "for_metro_pickup_ride"
+for_metro_pickup_ride = a
+
+for_metro_drop_ride :: Proxy "for_metro_drop_ride"
+for_metro_drop_ride = a
 
 continue_with :: Proxy "continue_with"
 continue_with = a

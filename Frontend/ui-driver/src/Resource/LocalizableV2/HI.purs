@@ -1677,7 +1677,8 @@ getHi =
     , buy_new_home: "नया घर खरीदें"
     , favourites: "पसंदीदाएँ"
     , points_earned_: (\points -> points <> " अंक अर्जित किये गये ✨")
-    , for_metro_ride: "मेट्रो सवारी के लिए"
+    , for_metro_pickup_ride: "मेट्रो पिकअप राइड के लिए"
+    , for_metro_drop_ride: "मेट्रो ड्रॉप राइड के लिए"
     , continue_with: (\text -> text <> " के साथ जारी रखें")
     , contact_support_for_help: "सहायता के लिए समर्थन से संपर्क करें"
     , you_have_switched_city_or_vehicle: "आपने अपना वाहन या शहर बदल लिया है। राइड्स प्राप्त करने के लिए एक योजना चुनें"

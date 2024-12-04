@@ -1618,8 +1618,9 @@ getRideCompletedConfig state = let
   disability = state.data.endRideData.disability /= Nothing
   specialZonePickup = isJust $ state.data.endRideData.specialZonePickup
   topPillConfig = constructTopPillConfig disability specialZonePickup
+  metroRideCoinData = state.data.endRideData.metroRideCoinData
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
-  viewOrderConfig = [ {condition : isJust metroRideCoins, elementView :  RideCompletedCard.COINS_EARNED_VIEW },
+  viewOrderConfig = [ {condition : isJust metroRideCoinData, elementView :  RideCompletedCard.COINS_EARNED_VIEW },
                       {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
                       {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
                       {condition : (not isRentalRide) && not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
@@ -1737,8 +1738,8 @@ getRideCompletedConfig state = let
     }
   , additionalCharges = additionalCharges
   , coinsEarned  {
-      title = maybe "" (\coins -> getString $ POINTS_EARNED_ $ show coins) metroRideCoins
-    , subTitle = if isJust metroRideCoins then getString FOR_METRO_RIDE else ""
+      title = maybe "" (\coinData -> getString $ POINTS_EARNED_ $ show coinData.coinsEarned) metroRideCoinData
+    , subTitle = maybe "" (\coinData -> if coinData.metroRideType == API.FromMetro then getString FOR_METRO_PICKUP_RIDE else getString FOR_METRO_DROP_RIDE) metroRideCoinData
     }
   , showIntercityDetails  = state.data.activeRide.tripType == ST.Intercity
   , parkingCharges {
@@ -1748,7 +1749,7 @@ getRideCompletedConfig state = let
   }
   in config'
 
-  where 
+  where
     additionalCharges = [
       {
         text : if state.data.toll.tollAmbigous then getString TOLL_ROAD_CHANGED else if state.data.toll.finalCharge > 0.0  then getString $ RIDE_TOLL_FARE_INCLUDES $  (getCurrency appConfig) <> (show $ round $ state.data.toll.finalCharge) else getString TOLL_ROAD_CHANGED
@@ -1763,22 +1764,6 @@ getRideCompletedConfig state = let
       , textColor : Color.blue800
       }
     ]
-
-    metroRideCoins :: Maybe Int
-    metroRideCoins = 
-      case DA.find (\(API.CoinsEarned item) -> item.eventType == "MetroRideCompleted") state.data.coinsEarned of 
-        Just (API.CoinsEarned item) -> Just item.coins
-        Nothing -> 
-          let 
-            city = getValueToLocalStore DRIVER_LOCATION
-            metroRideCoinConfig = RemoteConfig.getMetroCoinsEvent city
-          in 
-            if fromMaybe 0 state.data.endRideData.actualRideDistance >= metroRideCoinConfig.minDistance && 
-              state.data.endRideData.serviceTier == "Auto" && 
-              DA.any (\tag -> DS.contains(DS.Pattern(tag)) (fromMaybe "" state.data.endRideData.specialLocationTag)) ["SureMetro", "SureWarriorMetro"] && 
-              metroRideCoinConfig.coins > 0 then 
-                Just metroRideCoinConfig.coins
-            else Nothing
 
 type TopPillConfig = {
   visible :: Boolean,
