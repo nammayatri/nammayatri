@@ -106,7 +106,7 @@ eval (BackPressed backpressState) state = do
         else 
           if isParentView FunctionCall 
             then do 
-              void $ pure $ emitTerminateApp Nothing true
+              void $ pure $ emitTerminateApp (Just "Profile") true
               continue state
             else exit $ GoToHome state
 
