@@ -64,7 +64,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   case personStatus' of
     Just personStatus -> do
       case personStatus of
-        DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId -> findValueAddNP personStatus providerId
+        DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
         DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
         _ -> checkForActiveBooking
     Nothing -> checkForActiveBooking
