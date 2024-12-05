@@ -8,3 +8,7 @@ health:
       required: true
     system:
       min_ram: "24G"
+develop:
+  default:
+    readme: |
+      Run `,` to see available commands in devShell.

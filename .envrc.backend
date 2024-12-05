@@ -2,6 +2,7 @@ source_url https://raw.githubusercontent.com/juspay/omnix/3a82640921c61528b3a466
 
 watch_file \
     $(find Backend -name "*.cabal" | tr '\n' ' ') \
+    om.yaml \
     Backend/cabal.project \
     Backend/*.nix \
     Backend/nix/*.nix
