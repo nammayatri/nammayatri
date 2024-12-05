@@ -289,7 +289,7 @@ calculateFareParameters params = do
           DFP.ExtraDistanceFare congestionCharge -> HighPrecMoney (partOfNightShiftCharge.getHighPrecMoney * toRational congestionCharge) - partOfNightShiftCharge
       congestionChargeByPerMin =
         fp.congestionChargePerMin >>= \congestionChargePerMin ->
-          let duration = params.actualRideDuration <|> params.estimatedRideDuration
+          let duration = params.estimatedRideDuration <|> params.actualRideDuration
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
       congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
