@@ -286,6 +286,11 @@ newtype RideStartedParam = RideStartedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype TripAssignedData = TripAssignedData
+  { tripCategory :: Maybe TripCategory
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 notifyOnRideStarted ::
   ServiceFlow m r =>
   SRB.Booking ->
@@ -297,7 +302,7 @@ notifyOnRideStarted booking ride = do
       driverName = ride.driverName
       serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let entity = Notification.Entity Notification.Product rideId.getId ()
+  let entity = Notification.Entity Notification.Product rideId.getId (TripAssignedData booking.tripCategory)
       dynamicParams = RideStartedParam driverName
   -- finding other booking parties for delivery --
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
