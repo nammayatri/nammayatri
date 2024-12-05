@@ -1,0 +1,1 @@
+UPDATE atlas_app.merchant set rentals_allowed_outside_city = '{Bhubaneshwar}' where short_id = 'NAMMA_YATRI';

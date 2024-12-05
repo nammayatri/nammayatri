@@ -57,6 +57,7 @@ data MerchantT f = MerchantT
     onlinePayment :: B.C f Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     registryUrl :: B.C f Kernel.Prelude.Text,
+    rentalsAllowedOutsideCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Geofencing.GeoRestriction),
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
     shortId :: B.C f Kernel.Prelude.Text,
     signatureExpiry :: B.C f Kernel.Prelude.Int,

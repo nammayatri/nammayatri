@@ -69,6 +69,7 @@ Merchant:
     numOfAllowedEditLocationAttemptsThreshold : Int
     publicMediaFileUrlPattern: Text
     scheduleRideBufferTime: NominalDiffTime
+    rentalsAllowedOutsideCity: Maybe GeoRestriction
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
     kaptureDisposition: Text # deprecated
@@ -175,6 +176,7 @@ Merchant:
     bapUniqueKeyId: text
     bapId: text
     isAvoidToll: boolean
+    rentalsAllowedOutsideCity: text[]
     minimumDriverRatesCount: int
     fcmUrl: text
     fcmJsonPath: text
