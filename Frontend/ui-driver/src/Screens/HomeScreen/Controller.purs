@@ -135,6 +135,7 @@ import Data.Tuple(Tuple(..))
 import Data.String (Pattern(..), contains)
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Components.SwitchButtonView as SwitchButtonView
 
 instance showAction :: Show Action where
   show _ = ""
@@ -316,10 +317,13 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
                     | SwitchPlan ST.PlanCardState ST.HomeScreenState
+                    | GotoHotspotScreen ST.HomeScreenState
                     | GoToRideSummary ST.HomeScreenState
-                    | GoToRideSummaryScreen  ST.HomeScreenState                 
+                    | GoToRideSummaryScreen  ST.HomeScreenState 
                     | UploadParcelImage ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
+                    | UpdateToggleMetroWarriors ST.HomeScreenState
+                    | GoToMetroWarriors ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -346,7 +350,7 @@ data Action = NoAction
             | UpiQrRendered String
             | ModifyRoute String String
             | RetryTimeUpdate
-            | TimeUpdate String String String
+            | TimeUpdate String String String String
             | RideActiveAction RidesInfo (Maybe RidesInfo)
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
@@ -406,6 +410,7 @@ data Action = NoAction
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | AccountBlockedAC PopUpModal.Action
+            | AccountBlockedDueToCancellationsAC PopUpModal.Action
             | UpdateAndNotify Boolean
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
@@ -458,6 +463,7 @@ data Action = NoAction
             | GoToDriverProfile
             | SelectPlansModalAction SelectPlansModal.Action
             | PlanListResponse API.UiPlansResp
+            | OpenHotspotScreen
             | RideSummary
             | UpComingRideDetails (Maybe RidesInfo)
             | RideDetail
@@ -468,6 +474,13 @@ data Action = NoAction
             | CloseDeliveryCallPopup
             | DeliveryCall ST.DeliverCallType
             | NotifyReachedDestination
+            | UpdateRetryRideList Boolean
+            | OnRideAssignedAudioCompleted String
+            | ParcelIntroductionPopup PopUpModal.Action
+            | ToggleMetroWarriors
+            | ClickMetroWarriors
+            | MetroWarriorPopupAC PopUpModal.Action
+            | MetroWarriorSwitchAction SwitchButtonView.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -535,10 +548,16 @@ eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { dat
 
 eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
 
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopupDueToCancellations = false } }
+
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton1Click) state = do 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state 
+
 eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopup = false } }
 
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
-  void $ pure $ showDialer (SC.getSupportNumber "") false 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
   continue state 
 
 eval BookingOptions state = exit $ GoToBookingPreferences state  
@@ -575,7 +594,12 @@ eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state {
 
 eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
 
-eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
+eval (EnableGotoTimerAC PrimaryButtonController.OnClick) state = do
+  let metroWarriorsConfig = RC.metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+  if state.data.isSpecialLocWarrior && metroWarriorsConfig.isMetroWarriorEnabled then do
+    void $ pure $ toggleBtnLoader "EnableGoto" false
+    continue state {props { showMetroWarriorWarningPopup = true }}
+  else updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
 
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
@@ -703,7 +727,18 @@ eval (Notification notificationType) state = do
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
-      exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+    exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+  else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
+    let city = getValueToLocalStore DRIVER_LOCATION
+        metroRideCoinConfig = RC.getMetroCoinsEvent city
+        metroRideCoinData = case notificationType of
+          "TO_METRO_COINS" ->
+              { coinsEarned: metroRideCoinConfig.coinsToMetroRide, metroRideType: API.ToMetro }
+          "FROM_METRO_COINS" ->
+              { coinsEarned: metroRideCoinConfig.coinsFromMetroRide, metroRideType: API.FromMetro }
+          _ ->
+              { coinsEarned: 0, metroRideType: API.None }
+    continue state { data = state.data { endRideData = state.data.endRideData { metroRideCoinData = Just metroRideCoinData } } }
   else continue state
 
 eval CancelGoOffline state = do
@@ -712,7 +747,7 @@ eval CancelGoOffline state = do
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
-  id <- checkPermissionAndUpdateDriverMarker state true
+  id <- checkPermissionAndUpdateDriverMarker true
   pure AfterRender
   ]
 
@@ -1258,47 +1293,55 @@ eval RetryTimeUpdate state = do
   _ <-  pure $ setValueToLocalNativeStore REGISTERATION_TOKEN (getValueToLocalStore REGISTERATION_TOKEN)
   (updateAndExit state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}} $ Refresh state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}})
 
-eval (TimeUpdate time lat lng) state = do
-  let driverLat = getLastKnownLocValue ST.LATITUDE lat
-      driverLong = getLastKnownLocValue ST.LONGITUDE lng
-      geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
-      chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
-      waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
-      nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
-                      ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong
-                      _, _ -> Nothing
-      shouldUpdateGeoHash = isJust nearestZone && state.props.mapRendered
-      newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { specialZoneProps{ nearBySpecialZone = isJust nearestZone } }}
-  void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
-  void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
-  continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" }, mapRendered = true } } [ do
-    if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
-      case nearestZone of
-        Just zone -> do
-          if state.props.specialZoneProps.currentGeoHash /= geoHash then do
-            void $ launchAff $ flowRunner defaultGlobalState $ do
-              push <- liftFlow $ getPushFn Nothing "HomeScreen"
-              _ <- pure $ JB.exitLocateOnMap ""
-              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
+eval (TimeUpdate time lat lng errorCode) state = do
+  let isDriverBlocked = (errorCode == "DRIVER_BLOCKED")
+  if isDriverBlocked then do
+    void $ pure $ setValueToLocalStore DRIVER_STATUS "false"
+    void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Offline" 
+    continue state{ props{ statusOnline = not isDriverBlocked , driverStatusSet = if isDriverBlocked then ST.Offline else state.props.driverStatusSet } }
+  else do
+    let driverLat = getLastKnownLocValue ST.LATITUDE lat
+        driverLong = getLastKnownLocValue ST.LONGITUDE lng
+        geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
+        chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
+        waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
+        nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
+                        ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong
+                        _, _ -> Nothing
+        shouldUpdateGeoHash = isJust nearestZone && state.props.mapRendered
+        newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { specialZoneProps{ nearBySpecialZone = isJust nearestZone } }}
+    void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
+    void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
+    continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" }, mapRendered = true } } [ do
+      if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
+        case nearestZone of
+          Just zone -> do
+            if state.props.specialZoneProps.currentGeoHash /= geoHash then do
+              void $ launchAff $ flowRunner defaultGlobalState $ do
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                _ <- pure $ JB.exitLocateOnMap ""
+                let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
+                pure unit
               pure unit
-            pure unit
-          else pure unit
-          checkPermissionAndUpdateDriverMarker newState false 
-        Nothing -> do
-          _ <- pure $ JB.exitLocateOnMap ""
-          checkPermissionAndUpdateDriverMarker newState true
-    else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
-      true, ST.RideAccepted, false, false, true, _ -> do
-        let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
-            insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) then UpdateAndNotify true else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, ST.RideStarted, _, _, _, ST.Delivery -> do
-        let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.dest_lat state.data.activeRide.dest_lon
-            insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
-    ]
+            else pure unit
+            checkPermissionAndUpdateDriverMarker false 
+          Nothing -> do
+            _ <- pure $ JB.exitLocateOnMap ""
+            checkPermissionAndUpdateDriverMarker true
+      else pure unit
+      case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
+        true, ST.RideAccepted, false, false, true, _ -> do
+          let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
+              insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
+          pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) then UpdateAndNotify true else (UpdateLastLoc driverLat driverLong insideThreshold)
+        _, ST.RideStarted, _, _, _, ST.Delivery -> do
+          let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+              insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
+          pure $ if insideThreshold then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
+        _, _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
+      ]
+
+eval OpenHotspotScreen state = exit $ GotoHotspotScreen state
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
   case Number.fromString lat, Number.fromString lon of
@@ -1375,7 +1418,7 @@ eval (SwitchDriverStatus status) state =
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
           _ <- pure $ toast (getString LT.DEMO_MODE_DISABLED)
           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
-          _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto" true) constructLatLong
+          _ <- getCurrentPosition (showDriverMarker "ny_ic_auto" true) constructLatLong
           pure NoAction
           ]
   else if state.props.driverStatusSet == status then continue state
@@ -1695,29 +1738,53 @@ eval (OnRideBannerCountDownTimer seconds status onRideBannerTimerID) state = do
   else
     continue $ state { data { onRideBannerTimer = (seconds), onRideBannerTimerID = onRideBannerTimerID } }
 
-
-
 eval (UpComingRideDetails  resp) state = do
    let scheduledRide = activeRideDetail state <$> resp
    continue state {data {upcomingRide = scheduledRide} , props {checkUpcomingRide = false, homeScreenBannerVisibility = true , rideRequestPill{pillShimmerVisibility = false}}}
 
 eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
+eval (UpdateRetryRideList retry) state = continue state {props {retryRideList = retry}}
+ 
+eval (ParcelIntroductionPopup action) state = do
+  let newState = state { props { showParcelIntroductionPopup = false } }
+      city = getValueToLocalStore DRIVER_LOCATION
+      parcelConfig = RC.getParcelConfig city
+  case action of
+    PopUpModal.DismissPopup -> continue newState
+    PopUpModal.OnCoverImageClick -> onClick newState parcelConfig.introductionVideo
+    PopUpModal.OnButton1Click -> onClick newState parcelConfig.introductionVideo
+    _ -> continue state
+  where
+    onClick newState parcelIntroductionVideo = do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_parcel_introduction_clicked"
+      void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
+      continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
+
+eval (MetroWarriorSwitchAction SwitchButtonView.OnClick) state = exit $ UpdateToggleMetroWarriors state
+
+eval ClickMetroWarriors state = exit $ GoToMetroWarriors state
+
+eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
+  let newState = state { props { showMetroWarriorWarningPopup = false }}
+  updateAndExit newState $ EnableGoto newState state.data.driverGotoState.selectedGoTo
+
+eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
 
 eval _ state = update state 
 
-checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
-checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
+checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
+checkPermissionAndUpdateDriverMarker toAnimateCamera = do
   conditionA <- isLocationPermissionEnabled unit
   conditionB <- isLocationEnabled unit
   if conditionA && conditionB then do
-    _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side" toAnimateCamera) constructLatLong
+    _ <- getCurrentPosition (showDriverMarker "ic_vehicle_side" toAnimateCamera) constructLatLong
     pure unit
     else do
       _ <- requestLocation unit
       pure unit
 
-showDriverMarker :: ST.HomeScreenState -> String -> Boolean -> ST.Location -> Effect Unit
-showDriverMarker state marker toAnimateCamera location = do
+showDriverMarker :: String -> Boolean -> ST.Location -> Effect Unit
+showDriverMarker marker toAnimateCamera location = do
   case getValueToLocalStore DEMO_MODE_PASSWORD of
     "7891234" -> updateDemoLocationIcon 13.311895563147432 76.93981481869986
     "8917234" -> updateDemoLocationIcon 13.260559676317829 76.4785809882692

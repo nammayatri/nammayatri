@@ -295,6 +295,7 @@ getMl =
     , vehicle_issue: "വാഹന പ്രശ്നം"
     , fare_updated: "നിരക്ക് പുതുക്കി"
     , frequent_cancellations_will_lead_to_less_rides: "പതിവ് റദ്ദാക്കലുകൾ കുറഞ്ഞ സവാരിക്കും കുറഞ്ഞ റേറ്റിംഗിലേക്കും നയിക്കും"
+    , frequent_cancellations_will_lead_to_blocking: "ഇടയ്‌ക്കിടെയുള്ള റദ്ദാക്കലുകൾ തടയുന്നതിനും റേറ്റിംഗ് കുറയുന്നതിനും ഇടയാക്കും"
     , continue: "തുടരുക"
     , confirm_password: "പാസ്സ്‌വേർഡ് സ്ഥിരീകരിക്കുക"
     , demo_mode: "ഡെമോ മോഡ്"
@@ -1192,6 +1193,18 @@ getMl =
     , yatri_points_faqs_ques2_ans1: (\days -> "നേടിയ എല്ലാ യാത്രാ പോയിന്റുകളും കിഴിവാക്കി മാറ്റണം സമ്പാദിച്ച തീയതി മുതൽ " <> days <> " ദിവസങ്ങൾക്കുള്ളിലെ പോയിന്റുകൾ.")
     , yatri_points_faqs_ques2_ans2: (\_ -> "ഡിസ്കൗണ്ട് പോയിന്റുകൾ അതേ കാലയളവിനുള്ളിൽ ഉപയോഗിക്കണം.")
     , yatri_points_faqs_ques2_ans3: "സമയപരിധിക്കുള്ളിൽ പരിവർത്തനമോ ഉപയോഗമോ സംഭവിക്കുന്നില്ലെങ്കിൽ പോയിന്റുകൾ നഷ്‌ടപ്പെടും."
+    , hotspots: "ഹോട്ട്‌സ്‌പോട്ടുകൾ"
+    , very_high: "വളരെ ഉയർന്നത്"
+    , high: "ഉയർന്നത്"
+    , very_high_demand_area: "വളരെ ഉയർന്ന ഡിമാൻഡ് ഏരിയ"
+    , high_demand_area: "ഉയർന്ന ഡിമാൻഡ് ഏരിയ"
+    , moderate: "മിതത്വം"
+    , average_demand_area: "ശരാശരി ഡിമാൻഡ് ഏരിയ"
+    , this_area_is_experiencing_average_searches: "ഈ ഏരിയ ഉപഭോക്താക്കളിൽ നിന്ന് ശരാശരി തിരയലുകൾ നേരിടുന്നു"
+    , this_area_is_experiencing_very_high_searches: "ഈ പ്രദേശം ഉപഭോക്താക്കളിൽ നിന്ന് വളരെയധികം തിരയലുകൾ നേരിടുന്നു"
+    , this_area_is_experiencing_high_searches: "ഈ പ്രദേശം ഉപഭോക്താക്കളിൽ നിന്ന് ധാരാളം തിരയലുകൾ നേരിടുന്നു"
+    , navigate: "നാവിഗേറ്റ് ചെയ്യുക"
+    , hotspots_not_available_currently: "നിലവിൽ ഹോട്ട്‌സ്‌പോട്ടുകൾ ലഭ്യമല്ല, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക!"
     , yatri_points_faqs_ques3: (\_ -> "എങ്ങനെ എനിക്ക് യാത്രി പോയിന്റുകൾ നേടാനാകും?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "ആപ്പിലെ പതിവ് പ്രവർത്തനങ്ങളിലൂടെ യാത്രി പോയിന്റുകൾ നേടാനാകും, റൈഡുകൾ എടുക്കുന്നതും ഉപഭോക്താക്കളെ റഫർ ചെയ്യുന്നതും പോലെ. അതിനായി വേറിട്ട് ഒന്നും ചെയ്യേണ്ടതില്ല.")
     , yatri_points_faqs_ques3_ans2: (\_ -> "നല്ല പെരുമാറ്റം പ്രകടിപ്പിക്കുന്നതിലൂടെ നിങ്ങൾക്ക് അധിക പോയിന്റുകൾ നേടാനാകും, കുറഞ്ഞ റദ്ദാക്കലുകളും, ഉപഭോക്താക്കളിൽ നിന്ന് നല്ല റേറ്റിംഗുകൾ ലഭിക്കുന്നതും പോലെ")
@@ -1533,6 +1546,7 @@ getMl =
     , refresh_payment: "പുതുക്കുക"
     , by: "നിലവില്‍"
     , customers: "ഉപഭോക്താക്കള്‍"
+    , customer: "ഉപഭോക്താവ്"
     , rating: "റേറ്റിംഗ്"
     , cancellation: "റദ്ദാക്കല്‍"
     , i_speak: "ഞാന്‍ സംസാരിക്കുന്നു"
@@ -1663,12 +1677,15 @@ getMl =
     , buy_new_home: "പുതിയ വീടു വാങ്ങുക"
     , favourites: "ഇഷ്ടങ്ങൾ"
     , points_earned_: (\points -> points <> " പോയിൻ്റ് നേടി ✨")
-    , for_metro_ride: "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"
+    , for_metro_pickup_ride: "മെട്രോ പിക്കപ്പ് റൈഡിനായി"
+    , for_metro_drop_ride: "മെട്രോ ഡ്രോപ്പ് റൈഡിനായി"
     , continue_with: (\text -> text <> " തുടരുക")
     , contact_support_for_help: "സഹായത്തിനായി പിന്തുണയെ ബന്ധപ്പെടുക"
     , you_have_switched_city_or_vehicle: "നിങ്ങൾ നിങ്ങളുടെ വാഹനം അല്ലെങ്കിൽ നഗരം മാറ്റിയിരിക്കുന്നു. യാത്രകൾ നേടാൻ ഒരു പദ്ധതി തിരഞ്ഞെടുക്കുക"
     , xl_plus: "XL പ്ലസ്"
     , currently_there_are_no_rides_available: "നിലവിൽ, റൈഡുകളൊന്നും ലഭ്യമല്ല."
+    , due_to_higher_cancellation_rate_you_are_blocked: "ഉയർന്ന റദ്ദാക്കൽ നിരക്ക് കാരണം, ഓൺലൈനിൽ പോകുന്നതിൽ നിന്ന് നിങ്ങളെ തടഞ്ഞിരിക്കുന്നു"
+    , blocked_till: (\time date -> date <> " " <> time <> " വരെ തടഞ്ഞു ⚠️")
     , ride_requests: "റൈഡ് അഭ്യർത്ഥനകൾ"
     , scheduled_ride_accepted: "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് സ്വീകരിച്ചു!"
     , you_can_access_scheduled_rides: "നിങ്ങൾക്ക് ഷെഡ്യൂൾ ചെയ്ത റൈഡുകൾ ആക്സസ് ചെയ്യാൻ കഴിയും"
@@ -1746,4 +1763,20 @@ getMl =
     , parcel_is_inappropriate : "പാഴ്സൽ അനുയോജ്യമല്ല"
     , sender_asking_different_location : "അയച്ചയാള്‍ വ്യത്യസ്ത സ്ഥലം ആവശ്യപ്പെടുന്നു"
     , sender_unavailable_unreachable : "അയച്ചയാള്‍ ലഭ്യമല്ല / എത്തിക്കാനായില്ല"
+    , truck : "ട്രക്ക്"
+    , register_your_truck : "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"
+    , no_plan_selected : "ഒരു പ്ലാൻ തിരഞ്ഞെടുക്കിയില്ല"
+    , a_new_way_to_earn_parcel: "ഉപജിവിക്കാനുള്ള പുതിയ മാർഗം - പാർസൽ 2W"
+    , seamless_earning_experience_click_below: "പ്രയാസമില്ലാതെ ഒരു വരുമാന അനുഭവത്തിന്, താഴെ ക്ലിക്ക് ചെയ്യുക"
+    , metro_warrior_mode : "മെട്രോ വാരിയർ മോഡ്"
+    , choose_metro_station : "ആയിരത്തിൽ നിന്നും മുൻഗണനയുള്ള യാത്രാ അഭ്യർത്ഥനകൾ നേടാൻ ഒരു മെട്രോ സ്റ്റേഷൻ തിരഞ്ഞെടുക്കൂ"
+    , primary_metro_station : "പ്രാഥമിക മെട്രോ സ്റ്റേഷൻ"
+    , primary_station_info : "നിങ്ങളുടെ പ്രിയപ്പെട്ട മെട്രോ സ്റ്റേഷൻ ഇവിടെ സെറ്റ് ചെയ്യാവുന്നതാണ്"
+    , nearby_stations : "സമീപ സ്റ്റേഷനുകൾ"
+    , nearby_station_info : "നിങ്ങളുടെ പ്രാഥമിക സ്റ്റേഷനോട് അടുത്തുള്ള 4 സ്റ്റേഷനുകൾ. ഓരോന്നിനെയും നിങ്ങൾക്ക് ഇഷ്ടമുണ്ടെങ്കിൽ ഓൺ അല്ലെങ്കിൽ ഓഫ് ചെയ്യാം"
+    , change : "മാറ്റം"
+    , disable_metro_warriors_info : "ഗോ ടു മോഡ് സജീവമാക്കുന്നത് മെട്രോ വാരിയർസ് മോഡ് പ്രവർത്തനരഹിതമാക്കും."
+    , choose_preferred_metro : "പ്രിയപ്പെട്ട മെട്രോ തിരഞ്ഞെടുക്കുക"
+    , metro_warriors : "മെട്രോ വാരിയേഴ്സ്"
+    , search : "തിരയുക" 
     }

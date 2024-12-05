@@ -53,7 +53,7 @@ import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateA
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RentalScreenStage(..), RentalScreenState, BookingTime)
-import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
+import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), RentalQuoteAPIDetails(..))
 import Data.Number (fromString)
 import Data.Lens
 import Accessor
@@ -65,6 +65,8 @@ import Data.String as DS
 import Services.FlowCache as FlowCache
 import Components.PopUpModal.Controller as PopUpModal
 import Data.Function.Uncurried (runFn2)
+import Helpers.Utils (isParentView, emitTerminateApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -130,8 +132,7 @@ eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue 
 eval (RequestInfoCardAction (RequestInfoCardController.BackPressed)) state = continue state {props { showRentalPolicy = false}}
 
 eval (UpdateLocAndLatLong lat lon) state =
-  if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
-  else continue state
+  continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
 
 eval BackpressAction state = genericBackPressed state 
 
@@ -241,7 +242,11 @@ genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreen
 genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_PACKAGE -> do 
     if state.props.showRentalPolicy then continue state { props {showRentalPolicy = false}}
-    else exit $ GoToHomeScreen state Nothing
+    else if isParentView FunctionCall 
+      then do 
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+      else exit $ GoToHomeScreen state Nothing
   RENTAL_SELECT_VARIANT -> do 
     if state.props.showRateCard then continue state { props {showRateCard = false}}
     else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}

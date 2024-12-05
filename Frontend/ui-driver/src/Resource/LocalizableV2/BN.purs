@@ -296,6 +296,7 @@ getBn =
     , vehicle_issue: "যানবাহন সমস্যা"
     , fare_updated: "ভাড়া আপডেট হয়েছে"
     , frequent_cancellations_will_lead_to_less_rides: "ঘন ঘন বাতিলকরণগুলি কম রাইড এবং কম রেটিংয়ের দিকে পরিচালিত করবে"
+    , frequent_cancellations_will_lead_to_blocking: "ঘন ঘন বাতিল করা ব্লকিং এবং কম রেটিং এর দিকে পরিচালিত করবে"
     , continue: "চালিয়ে যান"
     , confirm_password: "পাসওয়ার্ড নিশ্চিত করুন"
     , demo_mode: "ডেমো মোড"
@@ -1191,6 +1192,18 @@ getBn =
     , yatri_points_faqs_ques2_ans1: (\days -> "যাত্রী পয়েন্ট যেদিন থেকে উপার্জন করা হয় সেই দিন থেকে " <> days <> " দিনের জন্য বৈধ। এই সময়ের মধ্যে, আপনি সুবিধা পাওয়ার জন্য পয়েন্ট ব্যবহার করতে পারেন।")
     , yatri_points_faqs_ques2_ans2: (\_ -> "ডিসকাউন্ট পয়েন্ট একই সময়ের মধ্যে ব্যবহার করা আবশ্যক.")
     , yatri_points_faqs_ques2_ans3: "এই সময়সীমার মধ্যে রূপান্তর বা ব্যবহার না ঘটলে, পয়েন্টগুলি বাজেয়াপ্ত করা হবে।"
+    , hotspots: "হটস্পট"
+    , very_high: "অনেক উঁচুতে"
+    , high: "উচ্চ"
+    , very_high_demand_area: "খুব উচ্চ চাহিদা এলাকা"
+    , high_demand_area: "উচ্চ চাহিদা এলাকা"
+    , moderate: "পরিমিত"
+    , average_demand_area: "গড় চাহিদা এলাকা"
+    , this_area_is_experiencing_average_searches: "এই এলাকাটি গ্রাহকদের কাছ থেকে গড় সংখ্যক অনুসন্ধানের সম্মুখীন হচ্ছে৷"
+    , this_area_is_experiencing_very_high_searches: "এই এলাকাটি গ্রাহকদের কাছ থেকে খুব বেশি সংখ্যক অনুসন্ধানের সম্মুখীন হচ্ছে৷"
+    , this_area_is_experiencing_high_searches: "এই এলাকাটি গ্রাহকদের কাছ থেকে প্রচুর অনুসন্ধানের সম্মুখীন হচ্ছে৷"
+    , navigate: "নেভিগেট করুন"
+    , hotspots_not_available_currently: "হটস্পটগুলি বর্তমানে উপলব্ধ নয়, অনুগ্রহ করে পরে আবার চেষ্টা করুন!"
     , yatri_points_faqs_ques3: (\_ -> "আমি কিভাবে ইয়াত্রী পয়েন্ট উপার্জন করতে পারি?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "অ্যাপে প্রতিদিনের ক্রিয়াকলাপের মাধ্যমে পয়েন্ট উপার্জন করা হয় যেমন রাইড করা, গ্রাহকদের উল্লেখ করা। আপনার আলাদা কিছু করার দরকার নেই।")
     , yatri_points_faqs_ques3_ans2: (\_ -> "কম বাতিলকরণ, গ্রাহকদের কাছ থেকে ভাল রেটিং পাওয়া ইত্যাদির মতো ভাল আচরণ প্রদর্শন করে আপনি আরও পয়েন্ট উপার্জন করতে পারেন।")
@@ -1533,6 +1546,7 @@ getBn =
     , refresh_payment: "রিফ্রেশ"
     , by: "দ্বারা"
     , customers: "গ্রাহকরা"
+    , customer: "গ্রাহক"
     , rating: "রেটিং"
     , cancellation: "বাতিল"
     , i_speak: "আমি বলি"
@@ -1636,6 +1650,8 @@ getBn =
     , there_might_be_multiple_stops_in_this_rental_ride: (\duration -> "এই ভ্রমণে একাধিক বিরতি থাকতে পারে। এই ভাড়ার ভ্রমণটি বুক করা হয়েছে" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp")
     , rental_ride_accepted: "ভাড়ার যাত্রা গৃহীত হয়েছে"
     , currently_there_are_no_rides_available: "বর্তমানে, কোন রাইড উপলব্ধ নেই."
+    , due_to_higher_cancellation_rate_you_are_blocked: "উচ্চতর বাতিলকরণ হারের কারণে, আপনাকে অনলাইনে যাওয়া থেকে অবরুদ্ধ করা হয়েছে"
+    , blocked_till: (\time date -> date <> ", " <> time <> " পর্যন্ত অবরুদ্ধ ⚠️")
     , ride_requests: "রাইড অনুরোধ"
     , scheduled_ride_accepted: "নির্ধারিত রাইড গৃহীত!"
     , you_can_access_scheduled_rides: "আপনি নির্ধারিত রাইড অ্যাক্সেস করতে পারেন"
@@ -1678,7 +1694,8 @@ getBn =
     , buy_new_home: "নতুন বাড়ি কিনুন"
     , favourites: "পছন্দগুলি"
     , points_earned_: (\points -> points <> " পয়েন্ট অর্জিত ✨")
-    , for_metro_ride: "মেট্রো যাত্রার জন্য"
+    , for_metro_pickup_ride: "মেট্রো পিকআপ রাইডের জন্য"
+    , for_metro_drop_ride: "মেট্রো ড্রপ রাইডের জন্য"
     , continue_with: (\text -> "এর সাথে চালিয়ে যান " <> text)
     , contact_support_for_help: "সহায়তার জন্য সমর্থনের সাথে যোগাযোগ করুন"
     , you_have_switched_city_or_vehicle: "আপনি আপনার গাড়ি বা শহর পরিবর্তন করেছেন। রাইড পেতে একটি পরিকল্পনা নির্বাচন করুন"
@@ -1746,4 +1763,20 @@ getBn =
     , parcel_is_inappropriate : "পার্সেল অনুপযুক্ত"
     , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
+    , truck : "ট্রাক"
+    , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন" 
+    , no_plan_selected : "কোন পরিকল্পনা নির্বাচিত নেই"
+    , a_new_way_to_earn_parcel: "আয়ের নতুন উপায় - পার্সেল 2W"
+    , seamless_earning_experience_click_below: "সহজ আয়ের অভিজ্ঞতার জন্য নিচে ক্লিক করুন"
+    , metro_warrior_mode : "মেট্রো যোদ্ধা মোড"
+    , choose_metro_station : "মেট্রো স্টেশন নির্বাচন করুন যাতে সেখান থেকে এবং সেখান পর্যন্ত অগ্রাধিকার রাইড অনুরোধ পান"
+    , primary_metro_station : "প্রাথমিক মেট্রো স্টেশন"
+    , primary_station_info : "আপনার পছন্দের মেট্রো স্টেশনটি এখানে সেট করতে পারেন"
+    , nearby_stations : "নিকটস্থ স্টেশনগুলি"
+    , nearby_station_info : "আপনার প্রাথমিক স্টেশনের ৪টি কাছাকাছি স্টেশন। আপনি ইচ্ছা করলে প্রতিটি চালু বা বন্ধ করতে পারেন"
+    , change : "পরিবর্তন"
+    , disable_metro_warriors_info : "গো টু মোড সক্রিয় করা মেট্রো ওয়ারিয়র্স মোড নিষ্ক্রিয় করবে।"
+    , choose_preferred_metro : "পছন্দের মেট্রো নির্বাচন করুন"
+    , metro_warriors : "মেট্রো ওয়ারিয়র্স"
+    , search : "অনুসন্ধান করুন"  
     }

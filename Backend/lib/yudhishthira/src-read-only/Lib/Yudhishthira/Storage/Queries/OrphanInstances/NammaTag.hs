@@ -18,7 +18,8 @@ instance FromTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
     pure $
       Just
         Lib.Yudhishthira.Types.NammaTag.NammaTag
-          { category = category,
+          { actionEngine = actionEngine,
+            category = category,
             description = description,
             info = mkTagInfo chakra event tagType validity,
             name = name,
@@ -31,7 +32,8 @@ instance FromTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
 instance ToTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
   toTType' (Lib.Yudhishthira.Types.NammaTag.NammaTag {..}) = do
     Beam.NammaTagT
-      { Beam.category = category,
+      { Beam.actionEngine = actionEngine,
+        Beam.category = category,
         Beam.description = description,
         Beam.chakra = getChakra info,
         Beam.event = getEvent info,

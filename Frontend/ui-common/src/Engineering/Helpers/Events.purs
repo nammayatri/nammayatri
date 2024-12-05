@@ -22,8 +22,11 @@ import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Storage (getValueToLocalStore, KeyStore(..))
 import MerchantConfig.Utils (getMerchant)
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, Milliseconds(..))
 import Common.Types.App as CT
+import RemoteConfig as RC
+import Helpers.Pooling(delay)
+import Log (printLog)
 
 ------------------------------------------------------------------------------
 ------------------------- Namma Yatri Event Pipeline -------------------------
@@ -108,7 +111,12 @@ chunkEvents events chunkSize = go events []
 
 nullToMaybe :: String -> Maybe String
 nullToMaybe "" = Nothing
+nullToMaybe "__failed" = Nothing
 nullToMaybe x = Just x
+
+replaceFailedWithEmpty :: String -> String
+replaceFailedWithEmpty "__failed" = ""
+replaceFailedWithEmpty x = x 
 
 type Event = { 
   name :: String, 
@@ -140,13 +148,21 @@ defaultEventObject eventName =
 mkEventPayload :: Array Event -> Array APITypes.EventsPayload
 mkEventPayload eventArray = map (\event -> (APITypes.EventsPayload
   { module : nullToMaybe event.module,
-    eventName : event.name,
-    clientType : event.clientType,
-    sessionId : event.sessionId,
+    eventName : replaceFailedWithEmpty event.name,
+    clientType : replaceFailedWithEmpty event.clientType,
+    sessionId : replaceFailedWithEmpty event.sessionId,
     payload : nullToMaybe event.payload,
-    source : event.source,
-    userId : event.userId,
-    timestamp : event.timestamp,
+    source : replaceFailedWithEmpty event.source,
+    userId : replaceFailedWithEmpty event.userId,
+    timestamp : replaceFailedWithEmpty event.timestamp,
     vehicleType : nullToMaybe event.vehicleType,
     cityId : nullToMaybe event.cityId
     })) eventArray
+
+runLogTracking :: Flow GlobalState Unit
+runLogTracking = do
+  let eventsConfig = RC.eventsConfig "events_config"
+  void $ delay $ Milliseconds eventsConfig.loggingIntervalInMs
+  let _ = printLog "Logging Onboarding Events for Customer" ""
+  void $ pushEvent eventsConfig.pushEventChunkSize
+  runLogTracking

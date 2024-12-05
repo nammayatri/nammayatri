@@ -31,6 +31,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isSubscriptionEnabledAtCategoryLevel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
+    isVendorSplitEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     numberOfFreeTrialRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     partialDueClearanceMessageKey :: B.C f (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey),

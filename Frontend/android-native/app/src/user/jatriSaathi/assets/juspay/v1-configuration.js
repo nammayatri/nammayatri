@@ -388,12 +388,14 @@ window.getMerchantConfig = function () {
       "enableEditPickupLocation" : true,
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : false,
-      "enableHelpAndSupport" : false,
-      "enableEditDestination" : true
+      "enableHelpAndSupport" : true,
+      "enableEditDestination" : true,
+      "enableBusBooking" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
       "minTripsToBeShown" : 1,
     }
+    , "enableDeliveryService" : true
   })
 }

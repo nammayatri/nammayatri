@@ -296,6 +296,7 @@ getTe =
     , vehicle_issue: "వాహన సమస్య"
     , fare_updated: "ఛార్జీ నవీకరించబడింది"
     , frequent_cancellations_will_lead_to_less_rides: "తరచుగా రద్దు చేయడం వలన తక్కువ రైడ్‌లు మరియు తక్కువ రేటింగ్‌లు వస్తాయి"
+    , frequent_cancellations_will_lead_to_blocking: "తరచుగా రద్దు చేయడం వలన బ్లాక్ చేయడం మరియు రేటింగ్ తగ్గడం జరుగుతుంది"
     , continue: "కొనసాగించు"
     , confirm_password: "పాస్‌వర్డ్‌ని నిర్ధారించండి"
     , demo_mode: "డెమో మోడ్"
@@ -1193,6 +1194,18 @@ getTe =
     , yatri_points_faqs_ques2_ans1: (\days -> "యాత్రి పాయింట్లు సంపాదించిన రోజు నుండి " <> days <> " రోజుల వరకు చెల్లుబాటు అవుతాయి. ఈ కాలంలో, మీరు ప్రయోజనాలను పొందడం కోసం పాయింట్లను ఉపయోగించవచ్చు.")
     , yatri_points_faqs_ques2_ans2: (\_ -> "డిస్కౌంట్ పాయింట్లను అదే వ్యవధిలో ఉపయోగించాలి.")
     , yatri_points_faqs_ques2_ans3: "ఈ సమయ వ్యవధిలో మార్పిడి లేదా వినియోగం జరగకపోతే, పాయింట్లు కోల్పోతాయి."
+    , hotspots: "హాట్‌స్పాట్‌లు"
+    , very_high: "చాలా ఎక్కువ"
+    , high: "అధిక"
+    , very_high_demand_area: "చాలా ఎక్కువ డిమాండ్ ఉన్న ప్రాంతం"
+    , high_demand_area: "అధిక డిమాండ్ ఉన్న ప్రాంతం"
+    , moderate: "మితమైన"
+    , average_demand_area: "సగటు డిమాండ్ ప్రాంతం"
+    , this_area_is_experiencing_average_searches: "ఈ ప్రాంతం కస్టమర్‌ల నుండి సగటు శోధనలను ఎదుర్కొంటోంది"
+    , this_area_is_experiencing_very_high_searches: "ఈ ప్రాంతం కస్టమర్‌ల నుండి అత్యధిక సంఖ్యలో శోధనలను ఎదుర్కొంటోంది"
+    , this_area_is_experiencing_high_searches: "ఈ ప్రాంతం కస్టమర్‌ల నుండి అధిక సంఖ్యలో శోధనలను ఎదుర్కొంటోంది"
+    , navigate: "నావిగేట్ చేయండి"
+    , hotspots_not_available_currently: "ప్రస్తుతం హాట్‌స్పాట్‌లు అందుబాటులో లేవు, దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి!"
     , yatri_points_faqs_ques3: (\_ -> "నేను యాత్రి పాయింట్లను ఎలా సంపాదించగలను?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "యాప్ లో రైడ్ లు తీసుకోవడం మరియు కస్టమర్లను సూచించడం వంటి సాధారణ కార్యకలాపాల ద్వారా యాత్రి పాయింట్లు సంపాదించబడతాయి. భిన్నంగా ఏమీ చేయనవసరం లేదు.")
     , yatri_points_faqs_ques3_ans2: (\_ -> "తక్కువ క్యాన్సిలేషన్ లు మరియు కస్టమర్ ల నుంచి మంచి రేటింగ్ లను అందుకోవడం వంటి మంచి ప్రవర్తనను ప్రదర్శించడం ద్వారా మీరు అదనపు పాయింట్లను సంపాదించవచ్చు.")
@@ -1534,6 +1547,7 @@ getTe =
     , refresh_payment: "రిఫ్రెష్ చేయండి"
     , by: "ద్వారా"
     , customers: "వినియోగదారులు"
+    , customer: "కస్టమర్"
     , rating: "రేటింగ్"
     , cancellation: "రద్దు"
     , i_speak: "నేను మాట్లాడతాను"
@@ -1663,12 +1677,15 @@ getTe =
     , buy_new_home: "కొత్త ఇంటిని కొనండి"
     , favourites: "ఇష్టాలు"
     , points_earned_: (\points -> points <> " సంపాదించిన పాయింట్‌లు ✨")
-    , for_metro_ride: "మెట్రో రైడ్ కోసం"
+    , for_metro_pickup_ride: "మెట్రో పికప్ రైడ్ కోసం"
+    , for_metro_drop_ride: "మెట్రో డ్రాప్ రైడ్ కోసం"
     , continue_with: (\text -> text <> " తో కొనసాగించండి")
     , contact_support_for_help: "సహాయం కోసం మద్దతును సంప్రదించండి"
     , you_have_switched_city_or_vehicle: "మీరు మీ వాహనం లేదా నగరాన్ని మార్చారు. రైడ్లు పొందడానికి ఒక ప్లాన్‌ను ఎంచుకోండి"
     , xl_plus: "XL ప్లస్"
     , currently_there_are_no_rides_available: "ప్రస్తుతం, రైడ్‌లు అందుబాటులో లేవు."
+    , due_to_higher_cancellation_rate_you_are_blocked: "అధిక రద్దు రేటు కారణంగా, మీరు ఆన్‌లైన్‌కి వెళ్లకుండా బ్లాక్ చేయబడ్డారు"
+    , blocked_till: (\time date ->  date <> " " <> time <> " వరకు బ్లాక్ చేయబడింది ⚠️")
     , ride_requests: "రైడ్ అభ్యర్థనలు"
     , scheduled_ride_accepted: "షెడ్యూల్డ్ రైడ్ ఆమోదించబడింది!"
     , you_can_access_scheduled_rides: "మీరు షెడ్యూల్డ్ రైడ్‌లను యాక్సెస్ చేయవచ్చు"
@@ -1746,4 +1763,20 @@ getTe =
     , parcel_is_inappropriate : "పార్సెల్ అననుకూలంగా ఉంది"
     , sender_asking_different_location : "పంపిణీదారు వేరే ప్రదేశానికి రావాలని అడుగుతున్నారు"
     , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
+    , truck : "ట్రక్"
+    , register_your_truck : "మీ ట్రక్‌ను నమోదు చేయండి"
+    , no_plan_selected : "యొక్క యోజన ఎంచుకోలేదు"
+    , a_new_way_to_earn_parcel: "కమాయికి కొత్త మార్గం - పార్సెల్ 2W"
+    , seamless_earning_experience_click_below: "సునాయాసమైన సంపాదన అనుభవం కోసం, కింద క్లిక్ చేయండి"
+    , metro_warrior_mode : "మెట్రో వారియర్ మోడ్"
+    , choose_metro_station : "ప్రాధాన్య రైడ్ అభ్యర్థనలను పొందడానికి మెట్రో స్టేషన్‌ను ఎంచుకోండి"
+    , primary_metro_station : "ప్రాధమిక మెట్రో స్టేషన్"
+    , primary_station_info : "మీ ప్రాధాన్యమైన మెట్రో స్టేషన్‌ను ఇక్కడ సెట్ చేయవచ్చు"
+    , nearby_stations : "సమీప స్టేషన్లు"
+    , nearby_station_info : "మీ ప్రాధమిక స్టేషన్‌కు దగ్గరలోని 4 స్టేషన్లు. మీకు ఇష్టమైన వాటిని ఆన్ లేదా ఆఫ్ చేయవచ్చు"
+    , change : "మార్చండి"
+    , disable_metro_warriors_info : "గో టు మోడ్‌ని ఎంచుకోవడం మెట్రో వారియర్ మోడ్‌ని డిసేబుల్ చేస్తుంది."
+    , choose_preferred_metro : "ప్రాధాన్యమైన మెట్రోను ఎంచుకోండి"
+    , metro_warriors : "మెట్రో వారియర్స్"
+    , search : "వెతకండి"  
     }

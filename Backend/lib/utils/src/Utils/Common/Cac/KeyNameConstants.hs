@@ -23,7 +23,7 @@ data CacKeyType = Transaction | Driver deriving (Eq)
 data CacKey
   = TransactionId (Id 'Transaction)
   | DriverId (Id 'Driver)
-  deriving (Eq)
+  deriving (Eq, Show)
 
 getKeyName :: CacKey -> Text
 getKeyName (TransactionId _) = "transactionId"

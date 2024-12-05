@@ -440,7 +440,7 @@ getEn = Keymap {
 , direct_call: "Direct Call"
 , anonymous_call: "Anonymous Call"
 , your_number_will_not_be_shown_to_the_driver_the_call_will_be_recorded_for_compliance: "Your number will not be shown to the driver. The call will be recorded for compliance."
-, your_number_will_be_visible_to_the_driver_use_if_not_calling_from_registered_number: "Your number will be visible to the driver. Use if not calling from registered number."
+, your_number_will_be_visible_to_the_driver_use_if_not_calling_from_registered_number: "Your number will be visible to the driver. Use when not calling from a registered number or facing connection issues."
 , call_driver_using: "Call Driver using"
 , was_your_call_successful: "Was Your Call Successful"
 , driver_additions: "Driver Additions*"
@@ -1121,6 +1121,7 @@ getEn = Keymap {
 , applicable_toll_charges: "Toll Charges are included in your fare"
 , update_tip_str: "Update Tip"
 , book: (\name -> "Book " <> name)
+, book_for_: (\name -> "Book for " <> name)
 , fare_for: (\limit -> "Fare for " <> limit)
 , waiting_charge_limit: (\timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)")
 , time_taken: "Time Taken"
@@ -1368,6 +1369,7 @@ getEn = Keymap {
 , booking: "Booking"
 , by: "By"
 , customers: "customers"
+, customer : "customer"
 , rating: "Rating"
 , cancellation: "Cancellation"
 , trips: "Trips"
@@ -1681,4 +1683,37 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "Metro Tickets"
+, offers : "Offers"
+, boost_search_instantly : "Boost your search instantly!"
+, add_a_tip : "Add a Tip"
+, updated_fare_str : "Updated Fare"
+, book_any_details : "Book Any Details"
+, boost_search : "Boost Search"
+, bus__ : "Bus"
+, tickets_for_chennai_bus : "Tickets for Chennai Bus"
+, buy_bus_tickets : "Buy Bus Tickets"
+, book_and_pay : "Book & Pay"
+, bus_ticket : "Bus Ticket"
+, check_spelling_and_try_again : "Oops! Please check your spelling and try searching again"
+, book_bus_ticket : "Book Bus Ticket"
+, book_a_one_way_instant_bus_ticket : "Book a one-way instant bus ticket"
+, recent_ticket : "Recent Tickets"
+, experience_hassle_free_bus_bookings_with : "Experience hassle-free bus bookings with"
+, enter_bus_number_or_destination : "Enter Bus No or Destination"
+, destination_stop : "Destination Stop"
+, route_bus_number : "Route/Bus No"
+, pickup_stop : "Pickup Stop"
+, tickets_for_kolkata_bus : "Tickets for Kolkata Bus"
+, ticket_validity_30_minutes : "The ticket is valid for only 30 minutes from the time of booking"
+, fare_commission_free_wbtc : "Fare is commission-free and determined by the WBTC"
+, select_route_number : "Select Route Number"
+, pickup_and_destination_stop : "Pickup and Destination Stop"
+, bus_boarded_confirmation : "Please confirm if you are inside the bus?"
+, towards_station : (\s -> "Towards " <> s)
+, bus_no : (\s -> "Bus No: " <> s)
+, verified : "Verified"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
+, note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
+, here_is_bus_ticket : "Here is your bus ticket"
 }

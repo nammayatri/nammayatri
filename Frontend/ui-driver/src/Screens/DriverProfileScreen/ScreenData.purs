@@ -122,6 +122,8 @@ initData =
     , datePickerState : datePickerState'
     , inputTextState : inputTextState'
       }
+    , driverBlocked : false
+    , blockedExpiryTime : ""
     , favCount : Nothing
     },
 
@@ -161,7 +163,8 @@ initData =
     enableGoto : false,
     isRideActive : false,
     canSwitchToRental : Nothing,
-    canSwitchToInterCity : Nothing
+    canSwitchToInterCity : Nothing,
+    showDriverBlockedPopup : false
    }
 }
 
@@ -253,6 +256,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , bundleVersion         :  Nothing
     , gender                :  Nothing
     , blocked               :  Nothing
+    , blockExpiryTime       :  Nothing
     , numberOfRides         :  Nothing
     , paymentPending        :  false
     , subscribed            :  false
@@ -290,6 +294,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , totalRidesTaken : Nothing
     , subscriptionEnabledForVehicleCategory : Nothing
     , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , isSpecialLocWarrior : Nothing
 }
 
 organizationInfo :: OrganizationInfo

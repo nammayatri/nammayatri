@@ -61,6 +61,7 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -295,7 +296,7 @@ handler ValidatedDSearchReq {..} sReq = do
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
     getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
     getSpecialPickupZoneInfo (Just _) fromLocation = do
-      mbPickupZone <- findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
+      mbPickupZone <- Esq.runInReplica $ findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then pure $ ((.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
         else pure (Nothing, Nothing)
@@ -346,11 +347,14 @@ handler ValidatedDSearchReq {..} sReq = do
     selectFarePolicy distance duration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
+        isValid farePolicy =
+          checkDistanceBounds farePolicy && checkExtendUpto farePolicy
+            && vehicleAllowedOnTollRoute farePolicy
 
-        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then fromMaybe True mbIsAutoRickshawAllowed else True
-
-        bikesAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == BIKE then fromMaybe True mbIsTwoWheelerAllowed else True
+        vehicleAllowedOnTollRoute farePolicy = case farePolicy.vehicleServiceTier of
+          AUTO_RICKSHAW -> fromMaybe True mbIsAutoRickshawAllowed
+          BIKE -> fromMaybe True mbIsTwoWheelerAllowed
+          _ -> True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 
@@ -554,6 +558,7 @@ buildQuote _ searchRequest transporterId pickupTime isScheduled returnTime round
           returnTime,
           roundTrip,
           waitingTime = Nothing,
+          stopWaitingTimes = [],
           actualRideDuration = Nothing,
           vehicleAge = Nothing,
           avgSpeedOfVehicle = Nothing,
@@ -631,6 +636,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
               returnTime,
               roundTrip,
               waitingTime = Nothing,
+              stopWaitingTimes = [],
               actualRideDuration = Nothing,
               vehicleAge = Nothing,
               avgSpeedOfVehicle = Nothing,

@@ -258,6 +258,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             lastACStatusCheckedAt = Nothing,
             hasAdvanceBooking = False,
             tollRelatedIssueCount = Nothing,
+            extraFareMitigationFlag = Nothing,
             forwardBatchingEnabled = False,
             payoutVpa = Nothing,
             isInteroperable = False,
@@ -270,9 +271,16 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             dailyCancellationRateBlockingCooldown = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             blockReasonFlag = Nothing,
-            preferredPrimarySpecialLoc = Nothing,
+            onRideTripCategory = Nothing,
+            preferredPrimarySpecialLocId = Nothing,
             preferredSecondarySpecialLocIds = [],
-            isSpecialLocWarrior = False
+            isSpecialLocWarrior = False,
+            driverTripEndLocation = Nothing,
+            issueBreachCooldownTimes = Nothing,
+            hasRideStarted = Nothing,
+            softBlockExpiryTime = Nothing,
+            softBlockReasonFlag = Nothing,
+            softBlockStiers = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

@@ -81,6 +81,7 @@ getNearestDrivers NearestDriversReq {..} = do
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
+  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show driverInfos
   driverBankAccounts <-
     if onlinePayment
       then QDBA.getDrivers (driverLocs <&> (.driverId))
@@ -89,6 +90,7 @@ getNearestDrivers NearestDriversReq {..} = do
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)
+  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags res----" <> show res
   return res
   where
     linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
@@ -112,12 +114,15 @@ getNearestDrivers NearestDriversReq {..} = do
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
+      let softBlockedTiers = fromMaybe [] info.softBlockStiers
+      let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
       let selectedDriverServiceTiers =
-            if ifUsageRestricted
-              then do
-                (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
-              else do
-                DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
+            removeSoftBlockedTiers $
+              if ifUsageRestricted
+                then do
+                  (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
+                else do
+                  DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if null serviceTiers
         then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
         else do

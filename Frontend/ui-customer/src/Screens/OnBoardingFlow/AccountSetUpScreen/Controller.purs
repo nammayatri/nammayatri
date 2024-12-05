@@ -28,13 +28,14 @@ import Data.String (length, trim)
 import Helpers.Utils (setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))
+import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<), (<>), show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
 import Timers (clearTimerWithId)
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -113,6 +114,7 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
     continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
     else do 
       let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
+      let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_submitted") { module = "onboarding", payload = "name : " <> state.data.name}
       updateAndExit newState $ GoHome newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
@@ -125,7 +127,9 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 
 eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 
-eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
+eval (GenderSelected value) state = do
+  let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_gender_selected") { module = "onboarding", payload = show value}
+  continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
 
 eval (TextChanged value) state = do
   let
@@ -158,21 +162,26 @@ eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
                         else state.data.disabilityOptions{ activeIndex = idx}
                           }}
       isBtnActive = getBtnActive newState 
+      disabilityPayload = if idx == 0 then "NO" else "Yes"
+      _ = EHE.addEvent (EHE.defaultEventObject "profile_details_disability_selected") { module = "onboarding", payload = disabilityPayload}
   continue newState{ props{btnActive = isBtnActive }}
 
-eval (SpecialAssistanceListAC action) state = case action of
-  SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
-  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
-  SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
-  SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
-    _ <- pure $ hideKeyboardOnNavigation true
-    let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
-        selectedDisabilityTag = case selectedDisability of 
-          Just disability -> disability.tag 
-          Nothing -> ""
-        newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
-    updateAndExit newState $ GoHome newState
-  _ -> continue state
+eval (SpecialAssistanceListAC action) state = do 
+  let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_special_assistance_page_loaded") { module = "onboarding"}
+  case action of
+    SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+    SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+    SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
+    SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
+      _ <- pure $ hideKeyboardOnNavigation true
+      let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
+          selectedDisabilityTag = case selectedDisability of 
+            Just disability -> disability.tag 
+            Nothing -> ""
+          newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
+          _ = EHE.addEvent (EHE.defaultEventObject "profile_details_special_assistance_submit_clicked") { module = "onboarding", payload = "name : " <> state.data.name <> "  disability : " <> show selectedDisabilityTag}
+      updateAndExit newState $ GoHome newState
+    _ -> continue state
 
 eval _ state = update state
 

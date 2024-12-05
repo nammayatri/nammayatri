@@ -34,6 +34,7 @@ SearchReqLocation:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   sqlType:
@@ -59,6 +60,7 @@ SearchReqLocation:
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
     instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
     extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:

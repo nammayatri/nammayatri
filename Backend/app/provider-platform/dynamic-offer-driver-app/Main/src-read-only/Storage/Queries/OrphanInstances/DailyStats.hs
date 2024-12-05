@@ -31,7 +31,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
             numRides = numRides,
             payoutOrderId = payoutOrderId,
             payoutOrderStatus = payoutOrderStatus,
-            payoutStatus = Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying payoutStatus,
+            payoutStatus = Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Initialized payoutStatus,
             referralCounts = Kernel.Prelude.fromMaybe 0 referralCounts,
             referralEarnings = getHighPrecMoney referralEarnings,
             tipAmount = Kernel.Prelude.fromMaybe 0 tipAmount,

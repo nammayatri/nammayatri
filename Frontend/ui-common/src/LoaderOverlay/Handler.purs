@@ -16,16 +16,22 @@ module LoaderOverlay.Handler where
 
 import Data.Maybe (Maybe(..))
 import Effect.Class (liftEffect)
-import Prelude (Unit, bind, discard, pure, unit, ($))
+import Prelude (Unit, bind, discard, pure, unit, ($), (>>=))
 import Presto.Core.Flow (Flow)
 import Presto.Core.Types.Language.Flow (doAff, getState)
 import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace, initUIWithScreen)
 import LoaderOverlay.View as LoaderScreen
 import Types.App (GlobalState(..))
+import Engineering.Helpers.Commons (getGlobalPayload)
+import Engineering.Helpers.Accessor
+import Data.Lens ((^.))
 
 loaderScreen :: Flow GlobalState Unit
 loaderScreen  = do
   (GlobalState state) <- getState
-  doAff $ liftEffect $ initUIWithNameSpace "LoaderOverlay" Nothing
+  let globalPayload = getGlobalPayload "__payload"
+  case globalPayload of
+    Nothing -> doAff $ liftEffect $ initUIWithNameSpace "LoaderOverlay" Nothing
+    Just payload -> doAff $ liftEffect $ initUIWithNameSpace "LoaderOverlay" ((payload ^. _payload) ^. _fragmentViewGroups >>= (\a -> a ^. _main))
   _ <- showScreenWithNameSpace ( LoaderScreen.screen state.loaderOverlay)
   pure unit

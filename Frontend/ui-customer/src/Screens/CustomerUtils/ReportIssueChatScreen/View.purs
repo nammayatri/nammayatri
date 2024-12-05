@@ -335,7 +335,7 @@ submitView push state =
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , background Color.brightBlue
+        , background $ state.data.config.submitIssueBtnColor
         , cornerRadius 26.0
         , padding $ PaddingVertical 16 16
         , orientation HORIZONTAL

@@ -229,6 +229,8 @@ castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY"
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 castVariant Variant.DELIVERY_LIGHT_GOODS_VEHICLE = (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
+castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
+castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -258,6 +260,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just Variant.AMBULANCE_AC_OXY
   (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just Variant.AMBULANCE_VENTILATOR
   (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just Variant.DELIVERY_LIGHT_GOODS_VEHICLE
+  (Just "BUS", Just "BUS_NON_AC") -> Just Variant.BUS_NON_AC
+  (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -1361,7 +1365,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorName = Just "Smart Tip Reason",
                       descriptorShortDesc = Nothing
                     },
-              tagValue = show <$> pricing.smartTipReason
+              tagValue = pricing.smartTipReason
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
@@ -1491,6 +1495,8 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
                 Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
                 Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
+                Variant.BUS_AC -> avgSpeed.busAc.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 

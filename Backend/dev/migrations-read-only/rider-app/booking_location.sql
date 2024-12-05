@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.booking_location ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.booking_location ADD COLUMN instructions text ;
 ALTER TABLE atlas_app.booking_location ADD COLUMN extras text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_location ADD COLUMN title text ;

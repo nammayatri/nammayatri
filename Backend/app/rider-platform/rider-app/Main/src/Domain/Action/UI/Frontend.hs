@@ -22,9 +22,9 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.Booking
 import Domain.Action.UI.Quote
+import qualified Domain.Types.Booking as DB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -32,8 +32,6 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -41,7 +39,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
-import TransactionLogs.Types
+import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
   { oldStatus :: Maybe DPFS.FlowStatus,
@@ -76,14 +74,15 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
       if (isJust pollActiveBooking)
         then do
           activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing
-          if null activeBookings.list
+          if not (null activeBookings.list)
             then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
             else do
-              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) Nothing Nothing
+              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing
               case pendingFeedbackBookings.list of
                 [booking] -> do
                   let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
-                  if isRated
+                  let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
+                  if isRated || isSkipped
                     then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
                     else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
                 _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
@@ -101,10 +100,17 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE isValueAddNp
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
-notifyEvent personId req = do
+notifyEvent :: Id DP.Person -> Id DM.Merchant -> NotifyEventReq -> Flow NotifyEventResp
+notifyEvent personId merchantId req = do
   _ <- case req.event of
-    RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
+    RATE_DRIVER_SKIPPED -> do
+      QPFS.updateStatus personId DPFS.IDLE
+      pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing
+      case pendingFeedbackBookings.list of
+        [booking] -> do
+          let mbRideId = booking.rideList & listToMaybe <&> (.id)
+          whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
+        _ -> pure ()
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch

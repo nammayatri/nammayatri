@@ -28,8 +28,8 @@ module Domain.Action.Dashboard.RideBooking.Driver
   )
 where
 
-import qualified API.Types.ProviderPlatform.Fleet.Driver as Common
-import qualified API.Types.ProviderPlatform.RideBooking.Driver as Common
+import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
 import Environment

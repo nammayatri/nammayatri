@@ -30,13 +30,13 @@ createMany = Queries.createMany
 
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [VehicleServiceTier]
 findAllByMerchantOpCityId merchantOpCityId =
-  Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId)) >>= \case
     Just a -> return a
     Nothing -> cacheByMerchantOpCityId merchantOpCityId /=<< Queries.findAllByMerchantOpCityId merchantOpCityId
 
 findByServiceTierTypeAndCityId :: (CacheFlow m r, EsqDBFlow m r) => ServiceTierType -> Id DMOC.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier)
 findByServiceTierTypeAndCityId serviceTier merchantOpCityId =
-  Hedis.safeGet (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet (makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier)) >>= \case
     Just a -> return a
     Nothing -> cacheByMerchantOpCityIdAndServiceTier merchantOpCityId serviceTier /=<< Queries.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
 
@@ -66,6 +66,10 @@ makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId = "CachedQuerie
 
 findBaseServiceTierTypeByCategoryAndCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> m (Maybe VehicleServiceTier)
 findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId = do
-  Hedis.safeGet (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId)) >>= \case
     Just a -> return a
     Nothing -> cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchantOpCityId /=<< Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId
+
+clearCache :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)

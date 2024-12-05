@@ -63,7 +63,6 @@ type MainAPI =
              :> QueryParam "placeId" Text
              :> Juspay.JuspayWebhookAPI
          )
-    :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
@@ -89,7 +88,6 @@ mainServer =
     -- :<|> Beckn.handler  -- TODO : Revert after 2.x release
     -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
     :<|> juspayWebhookHandler
-    :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2

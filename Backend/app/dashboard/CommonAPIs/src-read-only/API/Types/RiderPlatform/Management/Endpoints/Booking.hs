@@ -6,7 +6,7 @@ module API.Types.RiderPlatform.Management.Endpoints.Booking where
 import qualified Dashboard.Common.Booking
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import Kernel.Types.Common
 import Servant

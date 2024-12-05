@@ -1122,6 +1122,7 @@ getMl = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "ദയവായി ശാന്തമായി ഇരുക്കുക, "<> appName <>" സുരക്ഷ ടീമ് അറിയിക്കപ്പെടുന്നു!")
 , indication_to_emergency_contacts: (\appName -> appName <>" നിങ്ങളുടെ എമർജൻസി കോൺടാക്റ്റുകൾക്ക് ഇത് ഒരു പരീക്ഷണ പരിശീലനമായി ഇരിക്കുന്നുവെന്ന് സൂചിപ്പിക്കുന്നു.")
 , book: (\name -> "ബുക്ക് " <> name)
+, book_for_: (\name -> name <> " വരെ ബുക്ക് ചെയ്യുക")
 , fare_for: (\limit -> limit <> " കോടതി")
 , waiting_charge_limit: (\timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)")
 , time_taken: "മൊത്തം സമയം"
@@ -1366,6 +1367,7 @@ getMl = Keymap {
 , booking: "ബുക്കിംഗ്"
 , by: "നിലവില്‍"
 , customers: "ഉപഭോക്താക്കള്‍"
+, customer: "ഉപഭോക്താവ്"
 , rating: "റേറ്റിംഗ്"
 , cancellation: "റദ്ദാക്കല്‍"
 , trips: "യാത്രകള്‍"
@@ -1682,4 +1684,37 @@ getMl = Keymap {
 , confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
 , tickets_for_delhi_metro : "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
 , max_parcel_size : (\l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "മെട്രോ ടിക്കറ്റുകൾ"
+, offers : "ആഫ്സ്"
+, boost_search_instantly : "നിങ്ങളുടെ തിരയൽ തൽക്ഷണം വർദ്ധിപ്പിക്കുക!"
+, add_a_tip : "ഒരു നുറുങ്ങ് ചേർക്കുക"
+, updated_fare_str : "പുതുക്കിയ നിരക്ക്"
+, book_any_details : "ഏത് വിശദാംശങ്ങളും ബുക്ക് ചെയ്യുക"
+, boost_search : "തിരയൽ ബൂസ്റ്റ് ചെയ്യുക"
+, bus__ : "ബസ്"
+, tickets_for_chennai_bus : "ചെന്നൈ ബസ് ടിക്കറ്റുകൾ"
+, buy_bus_tickets : "ബസ് ടിക്കറ്റുകൾ വാങ്ങുക"
+, book_and_pay : "ബുക്ക് ആൻഡ് പേ"
+, bus_ticket : "ബസ് ടിക്കറ്റ്"
+, check_spelling_and_try_again : "വാക്കുകൾ പരിശോധിക്കുക അന്തരിച്ചു ശ്രമിക്കുക"
+, book_bus_ticket : "ബസ് ടിക്കറ്റ് ബുക്ക് ചെയ്യുക"
+, book_a_one_way_instant_bus_ticket : "ഒരു വഴി ഇൻസ്റ്റന്റ് ബസ് ടിക്കറ്റ് ബുക്ക് ചെയ്യുക"
+, recent_ticket : "പുറമെ ടിക്കറ്റ്"
+, experience_hassle_free_bus_bookings_with : "ഹാസിൽ ഫ്രീ ബസ് ബുക്കിംഗ് അനുഭവിക്കുക"
+, enter_bus_number_or_destination : "ബസ് നമ്പർ അല്ലെങ്കിൽ ഗേറ്റ് നൽകുക"
+, destination_stop : "ഗേറ്റ് സ്റ്റോപ്പ്"
+, route_bus_number : "റൂട്ട് ബസ് നമ്പർ"
+, pickup_stop : "പിക്കപ്പ് സ്റ്റോപ്പ്"
+, tickets_for_kolkata_bus : "കൊൽക്കാത്ത ബസ് ടിക്കറ്റുകൾ"
+, ticket_validity_30_minutes : "ಟಿಕೆಟ್‌ವು ಬುಕಿಂಗ್ ಸಮಯದಿಂದ ಕೇವಲ 30 ನಿಮಿಷಗಳ ಕಾಲ ಮಾತ್ರ ಮಾನ್ಯ"
+, fare_commission_free_wbtc : "കൂലി കമ്മീഷനില്ലാതെ WBTC ആണ് നിശ്ചയിക്കുന്നത്"
+, select_route_number : "റൂട്ട് നമ്പർ തിരഞ്ഞെടുക്കുക"
+, pickup_and_destination_stop : "പിക്കപ്പ് അന്റ് ഗേറ്റ് സ്റ്റോപ്പ്"
+, bus_boarded_confirmation : "ദയവായി നിങ്ങൾ ബസിൽ ആണോ എന്ന് ഉറപ്പാക്കുക?"
+, towards_station : (\s -> s <> " ഭാഗത്തേക്ക്")
+, bus_no : (\s -> "ബസ് നമ്പർ: " <> s)
+, verified : "പരിശോധിച്ചു"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " പ്രധാന റൂട്ടുകളിൽ ഞങ്ങളുടെ ബസ് ടിക്കറ്റിംഗ് പൈലറ്റ് ലോഞ്ച് അനുഭവിക്കുക. ഉടൻ കൂടുതൽ റൂട്ടുകൾ വരുന്നു!")
+, note_your_ticket_is_only_valid_for : (\s -> "ഗണ്യമായി: നിങ്ങളുടെ ടിക്കറ്റ് ബുക്കിംഗിന്റെ " <> s <> " വരെ മാത്രമാണ് സാധുവായിരിക്കുക. പ്രാദേശിക സാഹചര്യങ്ങൾ മൂലം ബസുകളുടെ സമയക്രമം മാറ്റമാകാം, അതിനാൽ നിങ്ങൾ ബുക്ക് ചെയ്യുമ്പോൾ സ്റ്റോപ്പിൽ സജ്ജമാകുക.")
+, here_is_bus_ticket : "ഇതാണ് നിങ്ങളുടെ ബസ് ടിക്കറ്റ്"
 }

@@ -36,6 +36,8 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import ConfigProvider 
 import Services.Config (getSupportNumber)
 import Resources.Constants (mailToLink)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Data.Maybe (Maybe(..))
 
 instance showAction :: Show Action where
     show _ = ""
@@ -108,7 +110,13 @@ data ScreenOutput = GoBack TripDetailsGoBackType TripDetailsScreenState | GoToIn
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 
-eval BackPressed state = exit $ GoBack state.props.fromMyRides state
+eval BackPressed state = 
+    if isParentView FunctionCall
+        then do
+            void $ pure $ emitTerminateApp Nothing true
+            continue state
+        else
+            exit $ GoBack state.props.fromMyRides state
 
 eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}}
 

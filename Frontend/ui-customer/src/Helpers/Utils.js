@@ -615,3 +615,25 @@ export const decodeErrorCode = function (a) {
     return " ";
   }
 };
+
+export const isHybridApp = ()=>{
+  try {
+    return (window.__payload.payload.isHybrid === true);
+  } catch (unhandled){
+    return false;
+  }
+}
+
+export const decodeErrorMessage = function (a) {
+  try {
+    const errorMessagee = JSON.parse(a).errorMessage;
+    if(errorMessagee === null)
+    {
+      return "";
+    }
+    return  errorMessagee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};

@@ -46,6 +46,7 @@ import Services.API as API
 import Engineering.Helpers.Utils as EHU
 import Screens.TicketBookingFlow.MetroMyTickets.ComponentConfig as Config
 import Components.PrimaryButton as PrimaryButton 
+import Helpers.FrfsUtils (TicketStatus(..), getTicketStatus)
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
@@ -55,10 +56,8 @@ screen initialState =
   , globalEvents : [
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          void $ lift $ lift $ EHU.toggleLoader true
-          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.props.ticketServiceType) Nothing Nothing
           lift $ lift $ doAff do liftEffect $ push $ MetroBookingListRespAC resp
-          void $ lift $ lift $ EHU.toggleLoader false
         pure $ pure unit
       )
     ]
@@ -83,8 +82,9 @@ view push state =
   , orientation VERTICAL
   , afterRender push $ const AfterRender
   ] [ headerView push state
-    , emptyTicketsView state push (boolToVisibility etvVisibility)
+    , emptyTicketsView state push (boolToVisibility $ etvVisibility && not state.props.showShimmer)
     , scrollableView push state (boolToVisibility$ not etvVisibility)
+    , shimmerView state
     ]
 
 shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
@@ -93,31 +93,22 @@ shimmerView state =
     width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  , background Color.white900
   , visibility $ boolToVisibility state.props.showShimmer
-  ][ 
-    linearLayout [ 
-      width MATCH_PARENT
-    , height (V 235)
-    , margin (Margin 16 15 16 0)
-    , background Color.greyDark
-    , cornerRadius 16.0
-    ] []
-  , linearLayout[
+  ][linearLayout[
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin (MarginTop 258)
+    , margin (MarginTop 15)
     ] (DA.mapWithIndex 
         (\index item ->
             linearLayout
               [ width MATCH_PARENT
-              , height (V 60)
+              , height (V 90)
               , margin (Margin 16 16 16 0)
               , cornerRadius 12.0
               , background Color.greyDark
               ][]
-        ) (1 .. 7)
+        ) (1 .. 4)
       )
     ]
 
@@ -245,11 +236,11 @@ activeTicketsListView push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 13
-    ] $ map (\ ticket -> activeTicketView push ticket) state.data.activeTickets
+    ] $ map (\ ticket -> activeTicketView push ticket (show state.props.ticketServiceType)) state.data.activeTickets
   ]
 
-activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
-activeTicketView push ticketCard = 
+activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> String -> PrestoDOM (Effect Unit) w
+activeTicketView push ticketCard vehicleType= 
   let
     isStatusPending = ticketCard.status == "PAYMENT_PENDING"
   in
@@ -284,7 +275,7 @@ activeTicketView push ticketCard =
           imageView [
             width $ V 41
           , height $ V 41
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard vehicleType)
           ]
         ]
       , linearLayout [
@@ -323,7 +314,7 @@ activeTicketView push ticketCard =
           , textView $ [
               width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ (show ticketCard.noOfTickets) <> " " <> (getString TICKETS)
+            , text $ (show ticketCard.noOfTickets) <> " " <> if ticketCard.noOfTickets > 1 then (getString TICKETS) else (getString TICKET)
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           ]
@@ -406,11 +397,11 @@ pastTicketsListView push state =
     , orientation VERTICAL
     , margin $ MarginTop 13
     , orientation VERTICAL
-    ] $ map (\ticket ->  pastTicketView push ticket) (reverse state.data.pastTickets)
+    ] $ map (\ticket ->  pastTicketView push ticket (show state.props.ticketServiceType)) (reverse state.data.pastTickets)
   ]
 
-pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
-pastTicketView push ticketCard = 
+pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData ->String-> PrestoDOM (Effect Unit) w
+pastTicketView push ticketCard vehicleType= 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -436,7 +427,7 @@ pastTicketView push ticketCard =
         imageView [
           width $ V 30
         , height $ V 30
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard vehicleType)
         ]
       ]
     , linearLayout [
@@ -487,7 +478,7 @@ pastTicketView push ticketCard =
 statusView :: forall w . ST.MetroTicketCardData -> Visibility -> PrestoDOM (Effect Unit) w
 statusView ticketCard statusVisibility = 
   let
-    (Config.StatusConfig statusConfig) = Config.getTicketStatusConfig ticketCard
+    (TicketStatus ticketStatus) = getTicketStatus ticketCard
   in
     linearLayout [
       width WRAP_CONTENT
@@ -499,13 +490,13 @@ statusView ticketCard statusVisibility =
       imageView [
         width $ V 16
       , height $ V 16
-      , imageWithFallback statusConfig.statusIcon
+      , imageWithFallback ticketStatus.statusIcon
       , margin $ MarginRight 4
       ]
     , textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ statusConfig.status
-      , color statusConfig.statusColor
+      , text $ (show ticketStatus.status)
+      , color ticketStatus.statusColor
       ] <> FontStyle.body3 TypoGraphy
     ]

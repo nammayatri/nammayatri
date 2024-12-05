@@ -78,6 +78,7 @@ data Booking = Booking
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
@@ -101,7 +102,12 @@ data BookingDetails
 data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Generic, Show)
 
-data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+data InterCityBookingDetails = InterCityBookingDetails
+  { distance :: Kernel.Types.Common.Distance,
+    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stops :: [Domain.Types.Location.Location],
+    toLocation :: Domain.Types.Location.Location
+  }
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails

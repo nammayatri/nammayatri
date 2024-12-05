@@ -182,12 +182,6 @@ _visitDate = lens (unwrap >>> _.visitDate) (\oldRec newVal -> wrap ((unwrap oldR
 _services :: forall a b c. Newtype a { services :: b | c } => Lens' a b
 _services = lens (unwrap >>> _.services) (\oldRec newVal -> wrap ((unwrap oldRec) { services = newVal }))
 
-_payload :: forall a b c. Newtype a { payload :: b | c } => Lens' a b
-_payload = lens (unwrap >>> _.payload) (\oldRec newVal -> wrap ((unwrap oldRec) { payload = newVal }))
-
-_view_param :: forall a b c. Newtype a { view_param :: b | c } => Lens' a b
-_view_param = lens (unwrap >>> _.view_param) (\oldRec newVal -> wrap ((unwrap oldRec) { view_param = newVal }))
-
 _show_splash :: forall a b c. Newtype a { show_splash :: b | c } => Lens' a b
 _show_splash = lens (unwrap >>> _.show_splash) (\oldRec newVal -> wrap ((unwrap oldRec) { show_splash = newVal }))
 
@@ -333,6 +327,9 @@ _androidId = lens (unwrap >>> _.androidId) (\oldRec newVal -> wrap ((unwrap oldR
 _chatMessageData :: forall a b c. Newtype a { chatMessageData :: b | c } => Lens' a b
 _chatMessageData = lens (unwrap >>> _.chatMessageData) (\oldRec newVal -> wrap ((unwrap oldRec) { chatMessageData = newVal }))
 
+_appToken :: forall a b c. Newtype a { appToken :: b | c } => Lens' a b
+_appToken = lens (unwrap >>> _.appToken) (\oldRec newVal -> wrap ((unwrap oldRec) { appToken = newVal }))
+
 _currency :: forall a b c. Newtype a {currency :: c | b} => Lens' a c
 _currency = lens (unwrap >>> _.currency) (\oldRec newVal -> wrap ((unwrap oldRec) {currency = newVal}))
 
@@ -381,8 +378,5 @@ _end = lens (unwrap >>> _.end) (\oldRec newVal -> wrap ((unwrap oldRec) { end = 
 _requestorPartyRoles :: forall a b c. Newtype a { requestorPartyRoles :: b | c } => Lens' a b
 _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -> wrap ((unwrap oldRec) { requestorPartyRoles = newVal }))
 
-_fragmentViewGroups :: forall a b c. Newtype a { fragmentViewGroups :: b | c } => Lens' a b
-_fragmentViewGroups = lens (unwrap >>> _.fragmentViewGroups) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentViewGroups = newVal }))
-
-_main :: forall a b c. Newtype a { main :: b | c } => Lens' a b
-_main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main = newVal }))
+_vehicleType :: forall a b c. Newtype a { vehicleType :: b | c } => Lens' a b
+_vehicleType = lens (unwrap >>> _.vehicleType) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleType = newVal }))

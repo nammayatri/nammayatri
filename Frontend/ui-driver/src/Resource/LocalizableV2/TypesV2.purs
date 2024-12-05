@@ -16,6 +16,7 @@ newtype Languages
   , tamil :: Keymap
   , kannada :: Keymap
   , telugu :: Keymap
+  , odiya :: Keymap
   }
 
 newtype Keymap
@@ -375,6 +376,7 @@ newtype Keymap
   , vehicle_issue :: String
   , fare_updated :: String
   , frequent_cancellations_will_lead_to_less_rides :: String
+  , frequent_cancellations_will_lead_to_blocking :: String
   , continue :: String
   , confirm_password :: String
   , demo_mode :: String
@@ -1546,6 +1548,7 @@ newtype Keymap
   , refresh_payment :: String
   , by :: String
   , customers :: String
+  , customer :: String
   , rating :: String
   , cancellation :: String
   , i_speak :: String
@@ -1565,6 +1568,18 @@ newtype Keymap
   , yatri_points_faqs_ques1_ans4 :: String -> String
   , yatri_points_tnc :: String
   , yatri_points_faqs_ques2_ans3 :: String
+  , hotspots :: String
+  , very_high :: String
+  , high :: String
+  , very_high_demand_area :: String
+  , high_demand_area :: String
+  , moderate :: String
+  , average_demand_area :: String
+  , this_area_is_experiencing_average_searches :: String
+  , this_area_is_experiencing_very_high_searches :: String
+  , this_area_is_experiencing_high_searches :: String
+  , navigate :: String
+  , hotspots_not_available_currently :: String
   , gst_with_percentage :: String -> String
   , discount_points_upto :: String -> String
   , cannot_detect_pan_card :: String
@@ -1678,7 +1693,8 @@ newtype Keymap
   , buy_new_home :: String
   , favourites :: String
   , points_earned_ :: String -> String
-  , for_metro_ride :: String
+  , for_metro_pickup_ride :: String
+  , for_metro_drop_ride :: String
   , continue_with :: String -> String
   , contact_support_for_help :: String
   , you_have_switched_city_or_vehicle :: String
@@ -1688,6 +1704,8 @@ newtype Keymap
   , you_can_access_scheduled_rides :: String
   , from_your_homescreen :: String
   , currently_there_are_no_rides_available :: String
+  , due_to_higher_cancellation_rate_you_are_blocked :: String
+  , blocked_till :: String -> String -> String
   , cancel_booking :: String
   , go_to_pickup :: String
   , ride_scheduled :: String
@@ -1760,6 +1778,22 @@ newtype Keymap
   , parcel_is_inappropriate :: String
   , sender_asking_different_location :: String
   , sender_unavailable_unreachable :: String
+  , truck :: String
+  , register_your_truck :: String
+  , no_plan_selected :: String
+  , a_new_way_to_earn_parcel :: String
+  , seamless_earning_experience_click_below :: String
+  , metro_warrior_mode :: String
+  , choose_metro_station :: String
+  , primary_metro_station :: String
+  , primary_station_info :: String
+  , nearby_stations :: String
+  , nearby_station_info :: String
+  , change :: String
+  , disable_metro_warriors_info :: String
+  , choose_preferred_metro :: String
+  , metro_warriors :: String
+  , search :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -1768,6 +1802,9 @@ derive instance ntK :: Newtype Keymap _
 
 a :: forall a. Proxy a
 a = Proxy
+
+odiya :: Proxy "odiya"
+odiya = a
 
 hindi :: Proxy "hindi"
 hindi = a
@@ -2839,6 +2876,9 @@ fare_updated = a
 
 frequent_cancellations_will_lead_to_less_rides :: Proxy "frequent_cancellations_will_lead_to_less_rides"
 frequent_cancellations_will_lead_to_less_rides = a
+
+frequent_cancellations_will_lead_to_blocking :: Proxy "frequent_cancellations_will_lead_to_blocking"
+frequent_cancellations_will_lead_to_blocking = a
 
 continue :: Proxy "continue"
 continue = a
@@ -6344,6 +6384,9 @@ by = a
 customers :: Proxy "customers"
 customers = a
 
+customer :: Proxy "customer"
+customer = a
+
 rating :: Proxy "rating"
 rating = a
 
@@ -6400,6 +6443,42 @@ yatri_points_tnc = a
 
 yatri_points_faqs_ques2_ans3 :: Proxy "yatri_points_faqs_ques2_ans3"
 yatri_points_faqs_ques2_ans3 = a
+
+hotspots :: Proxy "hotspots"
+hotspots = a
+
+very_high :: Proxy "very_high"
+very_high = a
+
+high :: Proxy "high"
+high = a
+
+very_high_demand_area :: Proxy "very_high_demand_area"
+very_high_demand_area = a
+
+high_demand_area :: Proxy "high_demand_area"
+high_demand_area = a
+
+moderate :: Proxy "moderate"
+moderate = a
+
+average_demand_area :: Proxy "average_demand_area"
+average_demand_area = a
+
+this_area_is_experiencing_average_searches :: Proxy "this_area_is_experiencing_average_searches"
+this_area_is_experiencing_average_searches = a
+
+this_area_is_experiencing_very_high_searches :: Proxy "this_area_is_experiencing_very_high_searches"
+this_area_is_experiencing_very_high_searches = a
+
+this_area_is_experiencing_high_searches :: Proxy "this_area_is_experiencing_high_searches"
+this_area_is_experiencing_high_searches = a
+
+navigate :: Proxy "navigate"
+navigate = a 
+
+hotspots_not_available_currently :: Proxy "hotspots_not_available_currently"
+hotspots_not_available_currently = a
 
 gst_with_percentage :: Proxy "gst_with_percentage"
 gst_with_percentage = a
@@ -6737,8 +6816,11 @@ favourites = a
 points_earned_ :: Proxy "points_earned_"
 points_earned_ = a
 
-for_metro_ride :: Proxy "for_metro_ride"
-for_metro_ride = a
+for_metro_pickup_ride :: Proxy "for_metro_pickup_ride"
+for_metro_pickup_ride = a
+
+for_metro_drop_ride :: Proxy "for_metro_drop_ride"
+for_metro_drop_ride = a
 
 continue_with :: Proxy "continue_with"
 continue_with = a
@@ -6766,6 +6848,12 @@ from_your_homescreen = a
 
 currently_there_are_no_rides_available :: Proxy "currently_there_are_no_rides_available"
 currently_there_are_no_rides_available = a
+
+due_to_higher_cancellation_rate_you_are_blocked :: Proxy "due_to_higher_cancellation_rate_you_are_blocked"
+due_to_higher_cancellation_rate_you_are_blocked = a
+
+blocked_till :: Proxy "blocked_till"
+blocked_till = a
 
 cancel_booking :: Proxy "cancel_booking"
 cancel_booking = a
@@ -6988,3 +7076,51 @@ sender_asking_different_location = a
 
 sender_unavailable_unreachable :: Proxy "sender_unavailable_unreachable"
 sender_unavailable_unreachable = a
+
+truck :: Proxy "truck"
+truck = a
+
+register_your_truck :: Proxy "register_your_truck"
+register_your_truck = a
+
+no_plan_selected :: Proxy "no_plan_selected"
+no_plan_selected = a
+
+a_new_way_to_earn_parcel :: Proxy "a_new_way_to_earn_parcel"
+a_new_way_to_earn_parcel = a
+
+seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_click_below"
+seamless_earning_experience_click_below = a
+
+metro_warrior_mode :: Proxy "metro_warrior_mode"
+metro_warrior_mode = Proxy
+
+choose_metro_station :: Proxy "choose_metro_station"
+choose_metro_station = Proxy
+
+primary_metro_station :: Proxy "primary_metro_station"
+primary_metro_station = Proxy
+
+primary_station_info :: Proxy "primary_station_info"
+primary_station_info = Proxy
+
+nearby_stations :: Proxy "nearby_stations"
+nearby_stations = Proxy
+
+nearby_station_info :: Proxy "nearby_station_info"
+nearby_station_info = Proxy
+
+change :: Proxy "change"
+change = Proxy
+
+disable_metro_warriors_info :: Proxy "disable_metro_warriors_info"
+disable_metro_warriors_info = Proxy
+
+choose_preferred_metro :: Proxy "choose_preferred_metro"
+choose_preferred_metro = Proxy
+
+metro_warriors :: Proxy "metro_warriors"
+metro_warriors = Proxy
+
+search :: Proxy "search"
+search = Proxy

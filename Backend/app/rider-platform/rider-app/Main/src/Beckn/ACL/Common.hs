@@ -23,7 +23,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
-import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.External.Maps.Types as Maps
@@ -35,6 +34,7 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Servant.Client.Core as SCC
+import SharedLogic.Search as SLS
 import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
@@ -73,7 +73,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-mkLocation :: DSearch.SearchReqLocation -> Search.Location
+mkLocation :: SLS.SearchReqLocation -> Search.Location
 mkLocation info =
   Search.Location
     { gps =

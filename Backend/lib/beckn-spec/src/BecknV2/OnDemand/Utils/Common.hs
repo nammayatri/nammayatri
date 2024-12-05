@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
 import EulerHS.Prelude
 import Kernel.Prelude (intToNominalDiffTime, listToMaybe)
@@ -83,6 +84,17 @@ mapVariantToVehicle = \case
   DTV.SUV_PLUS -> Enums.CAB
   DTV.DELIVERY_BIKE -> Enums.MOTORCYCLE
   DTV.DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
+  DTV.BUS_NON_AC -> Enums.BUS
+  DTV.BUS_AC -> Enums.BUS
+
+castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
+castVehicleCategoryToDomain = \case
+  Enums.CAB -> DVC.CAR
+  Enums.AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
+  Enums.AMBULANCE -> DVC.AMBULANCE
+  Enums.MOTORCYCLE -> DVC.MOTORCYCLE
+  Enums.METRO -> DVC.TRAIN
+  _ -> DVC.CAR -- not used
 
 mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
 mapServiceTierToCategory = \case
@@ -107,6 +119,8 @@ mapServiceTierToCategory = \case
   SUV_PLUS -> Enums.CAB
   DELIVERY_BIKE -> Enums.MOTORCYCLE
   DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
+  BUS_NON_AC -> Enums.BUS
+  BUS_AC -> Enums.BUS
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS]
@@ -115,7 +129,7 @@ getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE, DVST.DELIVERY_BIKE]
 getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE]
 getListOfServiceTireTypes Enums.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
 getListOfServiceTireTypes Enums.METRO = []
-getListOfServiceTireTypes Enums.BUS = []
+getListOfServiceTireTypes Enums.BUS = [DVST.BUS_NON_AC, DVST.BUS_AC]
 getListOfServiceTireTypes Enums.TRUCK = [DVST.DELIVERY_LIGHT_GOODS_VEHICLE]
 
 tripCategoryToFulfillmentType :: TripCategory -> Text

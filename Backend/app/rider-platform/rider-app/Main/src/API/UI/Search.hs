@@ -14,12 +14,13 @@
 
 module API.UI.Search
   ( DSearch.SearchReq (..),
-    DSearch.SearchRes (..),
+    SLS.SearchRes (..),
     DSearch.SearchResp (..),
     DSearch.OneWaySearchReq (..),
     DSearch.RentalSearchReq (..),
-    DSearch.SearchReqLocation (..),
+    SLS.SearchReqLocation (..),
     API,
+    search',
     search,
     handler,
   )
@@ -48,6 +49,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.Search as SLS
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
@@ -70,7 +72,10 @@ handler :: FlowServer API
 handler = search
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
+
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing

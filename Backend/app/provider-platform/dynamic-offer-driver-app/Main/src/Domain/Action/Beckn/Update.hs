@@ -163,7 +163,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id searchReq.id.getId DLM.SEARCH_REQUEST (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForSearchReq
     driverInfo <- QDI.findById person.id >>= fromMaybeM DriverInfoNotFound
-    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
+    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
     let fcmOverlayReq = Notify.mkOverlayReq overlay
     let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, ..}
     Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
@@ -216,7 +216,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let maxEstimatedDist = maybe Nothing (\route -> route.distance) (Maps.getLongestRouteDistance routeResponse)
             estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
             (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
-            logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show duration
+            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "pickedWaypoints: " <> show duration
             let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
             let mapsRouteReqInText = T.pack $ show Maps.GetRoutesReq {waypoints = pickedWaypoints, mode = Just Maps.CAR, calcPoints = True}
             let routeInfoInText = T.pack $ show routeInfo
@@ -225,6 +225,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory
             farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
+            logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed =
                   maybe
@@ -248,6 +249,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     vehicleAge = Nothing,
                     roundTrip = fromMaybe False booking.roundTrip,
                     waitingTime = Nothing,
+                    stopWaitingTimes = [],
                     noOfStops = length booking.stops,
                     actualRideDuration = Nothing,
                     avgSpeedOfVehicle = Nothing,
@@ -257,7 +259,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     customerCancellationDues = booking.fareParams.customerCancellationDues,
                     nightShiftOverlapChecking = False,
                     estimatedDistance = Just estimatedDistance,
-                    estimatedRideDuration = Nothing,
+                    estimatedRideDuration = Just duration,
                     timeDiffFromUtc = Nothing,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
                     currency = booking.currency,
@@ -281,6 +283,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
             when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
             QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
+            QDI.updateTripEndLocation (Just dropLatLong) person.id
             updatePassedThroughDrop person.id
             if transporterConfig.editLocDriverPermissionNeeded
               then do
@@ -301,7 +304,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                           validTill = bookingUpdateReq.validTill
                         }
-                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
                 let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
                     locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
                     actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2

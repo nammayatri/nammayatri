@@ -79,6 +79,7 @@ data ScreenOutput
   = Exit FollowRideScreenState Boolean
   | RestartTracking FollowRideScreenState
   | OpenNavigation FollowRideScreenState
+  | GoToDriverProfiles FollowRideScreenState
 
 data Action
   = AfterRender
@@ -124,6 +125,7 @@ data Action
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
+  DriverInfoCardAction DriverInfoCardController.GoToDriverProfile -> exit $ GoToDriverProfiles state 
   BackPressed -> do 
     case state.data.currentStage of
       ChatWithEM -> continueWithCmd state{data{currentStage = FollowingRide}}

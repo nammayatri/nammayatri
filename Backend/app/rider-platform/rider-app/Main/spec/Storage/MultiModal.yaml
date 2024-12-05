@@ -62,6 +62,9 @@ Journey:
       kvFunction: updateWithKV
       params: [legsDone]
       where: id
+    findBySearchId:
+        kvFunction: findAllWithKV
+        where: searchRequestId
 
   sqlType:
     modes: "text[]"
@@ -177,4 +180,6 @@ WalkLegMultimodal:
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
 

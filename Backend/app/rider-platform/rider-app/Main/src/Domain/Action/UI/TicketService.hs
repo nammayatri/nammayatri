@@ -175,6 +175,7 @@ getTicketPlacesServices _ placeId mbDate = do
             specialDayDescription = (.description) =<< mbSpecialOcc,
             specialDayType = (.specialDayType) <$> mbSpecialOcc,
             operationalDays = maybe service.operationalDays (: []) mbOperationalDay,
+            operationalDate = service.operationalDate,
             categories
           }
 
@@ -253,7 +254,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing
+            metadataGatewayReferenceId = Nothing,
+            splitSettlementDetails = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
@@ -670,7 +672,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
-  if ticketBooking'.status == DTTB.Cancelled || order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+  if ticketBooking'.status == DTTB.Cancelled || ticketBooking'.status == DTTB.Booked
     then do
       return ticketBooking'.status
     else do

@@ -200,3 +200,17 @@ ALTER TABLE atlas_app.ride ADD COLUMN has_stops boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN was_ride_safe boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN feedback_skipped boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_route_call_count integer ;
+
+
+------- SQL updates -------
+

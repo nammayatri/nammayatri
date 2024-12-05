@@ -27,6 +27,7 @@ type Status = Double
 data DBSyncMetric
   = PeekDBCommandError
   | DropDBCommandError
+  | KvConfigDecodeFailure
   | ParseDBCommandError Action ModelName
   | QueryExecutionFailure Action ModelName
   | DuplicateEntryCreate ModelName

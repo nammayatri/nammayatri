@@ -38,6 +38,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,
     getExophone :: Kernel.External.Call.Types.CallService,
+    getFirstPickupRoute :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
     getFrfsAutocompleteDistances :: Kernel.External.Maps.Types.MapsService,
     getMultiModalService :: Kernel.External.MultiModal.Types.MultiModalService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,

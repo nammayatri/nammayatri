@@ -72,6 +72,8 @@ getFavouriteDriverTrips push state = do
       liftFlowBT $ push $ GetFavouriteDriversTripsAPIResponseAction (resp)
       pure unit
     Left _ -> do
+      void $ pure $ JB.toast $ getString NOT_AVAILABLE
+      liftFlowBT $ push $ BackPressed
       pure unit
 
 view :: forall w. (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> PrestoDOM (Effect Unit) w

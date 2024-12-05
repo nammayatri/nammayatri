@@ -22,18 +22,18 @@ import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
-import qualified Domain.Action.UI.Search as DSearch
 import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildSearchReqV2 ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DSearch.SearchRes ->
+  SLS.SearchRes ->
   m Spec.SearchReq
-buildSearchReqV2 res@DSearch.SearchRes {..} = do
+buildSearchReqV2 res@SLS.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId merchant.id "MOBILITY" res.merchantOperatingCityId
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId) -- Using findAll for backward compatibility TODO : Remove findAll and use findOne

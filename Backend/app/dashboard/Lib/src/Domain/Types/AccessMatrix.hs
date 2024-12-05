@@ -18,12 +18,19 @@
 
 module Domain.Types.AccessMatrix where
 
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement as ProviderAppManagement
+import qualified "rider-app" API.Types.Dashboard.AppManagement as RiderAppManagement
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking as ProviderRideBooking
+import qualified "rider-app" API.Types.Dashboard.RideBooking as RiderRideBooking
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
+import qualified "shared-services" API.Types.ProviderPlatform.IssueManagement as ProviderIssueManagement
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as ProviderRideBooking
+import qualified "shared-services" API.Types.RiderPlatform.IssueManagement as RiderIssueManagement
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
+import qualified Data.Aeson as A
 import qualified Data.List
 import Data.Singletons.TH
+import qualified Data.Text as T
 import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
@@ -33,8 +40,6 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import qualified Text.Read
 import qualified Text.Show
-
--- import qualified "dashboard-helper-api" API.Types.RiderPlatform.RideBooking as RiderRideBooking
 
 -------- Possible user action for helper API --------
 
@@ -46,15 +51,19 @@ data UserAccessType
 $(mkBeamInstancesForEnum ''UserAccessType)
 
 newtype UserActionTypeWrapper = UserActionTypeWrapper {getUserActionType :: UserActionType}
-  deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Ord)
+  deriving newtype (ToSchema, Eq, Ord)
 
 instance Text.Show.Show UserActionTypeWrapper where
   show (UserActionTypeWrapper uat) = case uat of
     PROVIDER_FLEET uat1 -> "PROVIDER_FLEET/" <> show uat1
     PROVIDER_MANAGEMENT uat1 -> "PROVIDER_MANAGEMENT/" <> show uat1
+    PROVIDER_APP_MANAGEMENT uat1 -> "PROVIDER_APP_MANAGEMENT/" <> show uat1
+    PROVIDER_ISSUE_MANAGEMENT uat1 -> "PROVIDER_ISSUE_MANAGEMENT/" <> show uat1
     PROVIDER_RIDE_BOOKING uat1 -> "PROVIDER_RIDE_BOOKING/" <> show uat1
     RIDER_MANAGEMENT uat1 -> "RIDER_MANAGEMENT/" <> show uat1
-    -- RIDER_RIDE_BOOKING uat1 -> "RIDER_RIDE_BOOKING/" <> show uat1
+    RIDER_APP_MANAGEMENT uat1 -> "RIDER_APP_MANAGEMENT/" <> show uat1
+    RIDER_ISSUE_MANAGEMENT uat1 -> "RIDER_ISSUE_MANAGEMENT/" <> show uat1
+    RIDER_RIDE_BOOKING uat1 -> "RIDER_RIDE_BOOKING/" <> show uat1
     _ -> show uat -- TODO remove after move all apis to DSL
 
 instance Text.Read.Read UserActionTypeWrapper where
@@ -70,6 +79,14 @@ instance Text.Read.Read UserActionTypeWrapper where
                  | r1 <- stripPrefix "PROVIDER_MANAGEMENT/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ (UserActionTypeWrapper $ PROVIDER_APP_MANAGEMENT v1, r2)
+                 | r1 <- stripPrefix "PROVIDER_APP_MANAGEMENT/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (UserActionTypeWrapper $ PROVIDER_ISSUE_MANAGEMENT v1, r2)
+                 | r1 <- stripPrefix "PROVIDER_ISSUE_MANAGEMENT/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ (UserActionTypeWrapper $ PROVIDER_RIDE_BOOKING v1, r2)
                  | r1 <- stripPrefix "PROVIDER_RIDE_BOOKING/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
@@ -78,10 +95,18 @@ instance Text.Read.Read UserActionTypeWrapper where
                  | r1 <- stripPrefix "RIDER_MANAGEMENT/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
                ]
-            -- ++ [ ( UserActionTypeWrapper $ RIDER_RIDE_BOOKING v1,r2)
-            --      | r1 <- stripPrefix "RIDER_RIDE_BOOKING/" r,
-            --        ( v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
-            --    ]
+            ++ [ (UserActionTypeWrapper $ RIDER_APP_MANAGEMENT v1, r2)
+                 | r1 <- stripPrefix "RIDER_APP_MANAGEMENT/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (UserActionTypeWrapper $ RIDER_ISSUE_MANAGEMENT v1, r2)
+                 | r1 <- stripPrefix "RIDER_ISSUE_MANAGEMENT/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (UserActionTypeWrapper $ RIDER_RIDE_BOOKING v1, r2)
+                 | r1 <- stripPrefix "RIDER_RIDE_BOOKING/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ (UserActionTypeWrapper v1, r2)
                  | (v1, r2) <- Text.Read.readsPrec @UserActionType (app_prec + 1) r
                ]
@@ -89,6 +114,15 @@ instance Text.Read.Read UserActionTypeWrapper where
     where
       app_prec = 9
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+
+instance FromJSON UserActionTypeWrapper where
+  parseJSON = A.withText "uerActionType" $ \str -> do
+    case Text.Read.readEither @UserActionTypeWrapper (T.unpack str) of
+      Left _err -> fail "Could not parse UserActionType"
+      Right uat -> pure uat
+
+instance ToJSON UserActionTypeWrapper where
+  toJSON = A.String . T.pack . Text.Show.show @UserActionTypeWrapper
 
 -- TODO remove old
 data UserActionType
@@ -346,10 +380,14 @@ data UserActionType
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
+  | PROVIDER_APP_MANAGEMENT ProviderAppManagement.AppManagementUserActionType
+  | PROVIDER_ISSUE_MANAGEMENT ProviderIssueManagement.IssueManagementUserActionType
   | PROVIDER_RIDE_BOOKING ProviderRideBooking.RideBookingUserActionType
   | RIDER_MANAGEMENT RiderManagement.ManagementUserActionType
-  -- -- | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+  | RIDER_APP_MANAGEMENT RiderAppManagement.AppManagementUserActionType
+  | RIDER_ISSUE_MANAGEMENT RiderIssueManagement.IssueManagementUserActionType
+  | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
+  deriving (Show, Read, Generic, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionTypeWrapper)
 

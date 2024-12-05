@@ -261,6 +261,14 @@ public  class MyFirebaseMessagingService {
                             }
                         }
                         break;
+                    case NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY :
+                        cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY);
+                        break;
+                    case NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY :
+                        cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY);
+                        break;
+                    case NotificationTypes.DRIVER_STOP_DETECTED :
+                        stopDetectedOverlay(context);
                     case NotificationTypes.TRIGGER_SERVICE:
                         if (merchantType.equals("DRIVER")) {
                             if (title != null && title.equals("You were inactive"))
@@ -549,6 +557,49 @@ public  class MyFirebaseMessagingService {
             Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
         }
     }
+    public static  void stopDetectedOverlay(Context context) {
+        Intent intent = new Intent(context, MessageOverlayService.class);
+        String date = String.valueOf(new Date());
+        intent.putExtra("timestamp", date);
+        intent.putExtra("isStopDetected", true);
+        context.startService(intent);
+    }
+    public static void  cancellationNudgeOverlay(Context context, RemoteMessage remoteMessage, String overlayKey) {
+        try {
+            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                JSONObject driverNotificationModel = new JSONObject(driverNotification);
+                if (driverNotificationModel != null) {
+                    cancellationRateNudgeOverlay(context, driverNotificationModel, overlayKey);
+                }
+            }
+        } catch (JSONException e) {
+            Log.e("MyFirebaseMessagingService", "Error in cancellationNudgeOverlay -> " + overlayKey + " : " + e);
+        }
+    }
+
+    public static void cancellationRateNudgeOverlay(Context context, JSONObject driverNotification, String overlayKey) {
+        try {
+            JSONObject cancellationNudge = new JSONObject();
+            cancellationNudge.put("okButtonText", driverNotification.getString("okButtonText"));
+            cancellationNudge.put("buttonOkVisibility",true);
+            cancellationNudge.put("imageVisibility",true);
+            cancellationNudge.put("imageUrl",driverNotification.getString("imageUrl"));
+            cancellationNudge.put("buttonLayoutVisibility",true);
+            cancellationNudge.put("titleVisibility",true);
+            JSONArray arr = new JSONArray();
+            arr.put(overlayKey);
+            cancellationNudge.put("actions",arr);
+            cancellationNudge.put("title",driverNotification.getString("title"));
+            cancellationNudge.put("description", driverNotification.getString("description"));
+            cancellationNudge.put("descriptionVisibility", driverNotification.getString("descriptionVisibility"));
+            showOverlayMessage(context, cancellationNudge);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in " + overlayKey + " : " + e);
+        }
+    }
+
     public static void startFCMBundleUpdateService(Context context, RemoteMessage remoteMessage, String merchantType) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -796,5 +847,8 @@ public  class MyFirebaseMessagingService {
         public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
         public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
         public static final String SAFETY_ALERT = "SAFETY_ALERT";
+        public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
+        public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
+        public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
     }
 }

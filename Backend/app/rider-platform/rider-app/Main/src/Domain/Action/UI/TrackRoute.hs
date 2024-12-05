@@ -16,6 +16,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Route
 import qualified Domain.Types.RouteStopMapping as DRSM
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import Domain.Types.RouteTripMapping as DRTM
 import qualified Environment
 import qualified EulerHS.Language
 import EulerHS.Prelude hiding (id)
@@ -31,6 +32,7 @@ import Kernel.Utils.Common (fromMaybeM)
 import Servant
 import Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
+import Storage.Queries.RouteTripMapping as RTM
 import Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
@@ -45,10 +47,21 @@ getTrackVehicles ::
   )
 getTrackVehicles (mbPersonId, merchantId) routeCode = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  routeInfoFromRedis :: [(Text, TrackRoute.VehicleInfoForRoute)] <- Redis.withCrossAppRedis $ Redis.hGetAll (makeRouteKey routeCode)
-  let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
+
+  initialRouteInfo :: [(Text, TrackRoute.VehicleInfoForRoute)] <-
+    Redis.withCrossAppRedis $ Redis.hGetAll (makeRouteKey routeCode)
+
+  routeInfoFromRedis <-
+    if null initialRouteInfo
+      then do
+        tripIds <- map DRTM.tripCode <$> RTM.findAllTripIdByRouteCode routeCode
+        concat <$> forM tripIds (\tripId -> Redis.withCrossAppRedis $ Redis.hGetAll (makeTripKey tripId))
+      else pure initialRouteInfo
+
+  let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] =
+        mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
   logDebug $ "got route from redis " <> show routeInfoFromRedis
-  logDebug $ "got route from redis 2 " <> show routeInfoWithLatLong
+  logDebug $ "got route from redis with lat/long " <> show routeInfoWithLatLong
   reqStops <- QRSM.findByRouteCode routeCode
   let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) reqStops
       stopPairs = map (\(x, y) -> (x, y)) (pairWithNext sortedStops)
@@ -70,7 +83,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
                     }
 
             routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
-            reqRouteInfo <- (listToMaybe routeInfo) & fromMaybeM (InvalidRequest "Route not found")
+            reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (InvalidRequest "Route not found")
             let wayPoints = reqRouteInfo.points
             pure (stopPair, wayPoints)
         Redis.set (stopPairRoutePointsKey routeCode) res'
@@ -85,9 +98,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
               pure (highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLong) point)
           let minDistance = minimum (pure distancesFromCurrLocation)
           logDebug $ "distancesFromCurrLocation " <> show distancesFromCurrLocation
-          pure (minDistance, (snd (fst stopPairWithWaypoints)))
+          pure (minDistance, snd (fst stopPairWithWaypoints))
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
-      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, vehicleId = vehicleId_, vehicleInfo = vi}
+      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, nextStopTravelTime = Just $ Seconds 300, vehicleId = vehicleId_, vehicleInfo = vi} -- TODO :: `nextStopTravelTime` should be calculated as (Avg Speed / Distance), where Average speed should be stored by Bus Tracking in VehicleInfo ?
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
 
 mkLatLong :: Double -> Double -> Maps.LatLong
@@ -102,6 +115,9 @@ pairWithNext xs = zip xs (List.tail xs)
 
 makeRouteKey :: Text -> Text
 makeRouteKey routeId = "route:" <> routeId
+
+makeTripKey :: Text -> Text
+makeTripKey tripId = "trip:" <> tripId
 
 stopPairRoutePointsKey :: Text -> Text
 stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId

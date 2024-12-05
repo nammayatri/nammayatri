@@ -42,10 +42,10 @@ onStatus _ req = withFlowHandlerAPI $ do
   withTransactionIdLogTag' transaction_id $ do
     dOnStatusReq <- ACL.buildOnStatusReq req
     Redis.whenWithLockRedis (onConfirmLockKey dOnStatusReq.bppOrderId) 60 $ do
-      (merchant, booking) <- DOnStatus.validateRequest dOnStatusReq
+      (merchant, booking) <- DOnStatus.validateRequest (DOnStatus.Booking dOnStatusReq)
       fork "onStatus request processing" $
         Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnStatusReq.bppOrderId) 60 $
-          DOnStatus.onStatus merchant booking dOnStatusReq
+          DOnStatus.onStatus merchant booking (DOnStatus.Booking dOnStatusReq)
   pure Utils.ack
 
 onConfirmLockKey :: Text -> Text

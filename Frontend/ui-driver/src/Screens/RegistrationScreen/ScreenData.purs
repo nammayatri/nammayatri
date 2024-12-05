@@ -43,6 +43,7 @@ initData = {
         registerationStepsAuto : [],
         registerationStepsBike : [],
         registerationStepsAmbulance : [],
+        registerationStepsTruck : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,

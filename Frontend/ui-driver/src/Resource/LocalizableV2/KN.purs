@@ -296,6 +296,7 @@ getKn =
     , vehicle_issue: "ವಾಹನ ಸಮಸ್ಯೆ"
     , fare_updated: "ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
     , frequent_cancellations_will_lead_to_less_rides: "ಪದೇ ಪದೇ ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ಕಡಿಮೆ ರೈಡ್‌ಗಳು ಮತ್ತು ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗುತ್ತದೆ"
+    , frequent_cancellations_will_lead_to_blocking: "ಅನೇಕ ಬಾರಿ ರದ್ದತಿಗಳು ನಿಷೇಧಕ್ಕೆ ಹಾಗೂ ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗಬಹುದು."
     , continue: "ಮುಂದುವರಿಸಿ"
     , confirm_password: "ಪಾಸ್ವರ್ಡ್ ದೃಢೀಕರಿಸಿ"
     , demo_mode: "ಡೆಮೊ ಮೋಡ್"
@@ -1192,6 +1193,18 @@ getKn =
     , yatri_points_faqs_ques2_ans1: (\days -> "ಎಲ್ಲ ಯಾತ್ರಿ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ಗಳಿಸಿದ ದಿನಾಂಕದಿಂದ " <> days <> " ರಿಯಾಯಿತಿ ಪಾಯಿಂಟ್‌ಗಳಿಗೆ ಪರಿವರ್ತಿಸಬೇಕು")
     , yatri_points_faqs_ques2_ans2: (\_ -> "ರಿಯಾಯಿತಿ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ಅದೇ ಅವಧಿಯಲ್ಲಿ ಉಪಯೋಗಿಸಬೇಕು.")
     , yatri_points_faqs_ques2_ans3: "ಈ ಅವಧಿಯೊಳಗೆ ಪರಿವರ್ತನೆ ಅಥವಾ ಬಳಕೆ ನಡೆಯದಿದ್ದರೆ, ಪಾಯಿಂಟ್‌ಗಳು ತೆಗೆದುಕೊಳ್ಳಲಾಗುತ್ತದೆ."
+    , hotspots: "ಹಾಟ್‌ಸ್ಪಾಟ್‌ಗಳು"
+    , very_high: "ಅತಿ ಹೆಚ್ಚು"
+    , high: "ಹೆಚ್ಚು"
+    , very_high_demand_area: "ಅತಿ ಹೆಚ್ಚು ಬೇಡಿಕೆ ಇರುವ ಪ್ರದೇಶ"
+    , high_demand_area: "ಹೆಚ್ಚಿನ ಬೇಡಿಕೆಯ ಪ್ರದೇಶ"
+    , moderate: "ಮಧ್ಯಮ"
+    , average_demand_area: "ಸರಾಸರಿ ಬೇಡಿಕೆ ಪ್ರದೇಶ"
+    , this_area_is_experiencing_average_searches: "ಈ ಪ್ರದೇಶವು ಗ್ರಾಹಕರಿಂದ ಸರಾಸರಿ ಸಂಖ್ಯೆಯ ಹುಡುಕಾಟಗಳನ್ನು ಅನುಭವಿಸುತ್ತಿದೆ"
+    , this_area_is_experiencing_very_high_searches: "ಈ ಪ್ರದೇಶವು ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚಿನ ಸಂಖ್ಯೆಯ ಹುಡುಕಾಟಗಳನ್ನು ಅನುಭವಿಸುತ್ತಿದೆ"
+    , this_area_is_experiencing_high_searches: "ಈ ಪ್ರದೇಶವು ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚಿನ ಸಂಖ್ಯೆಯ ಹುಡುಕಾಟಗಳನ್ನು ಅನುಭವಿಸುತ್ತಿದೆ"
+    , navigate: "ನ್ಯಾವಿಗೇಟ್"
+    , hotspots_not_available_currently: "ಹಾಟ್‌ಸ್ಪಾಟ್‌ಗಳು ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ!"
     , yatri_points_faqs_ques3: (\_ -> "ಯಾತ್ರಿ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ನಾನು ಹೇಗೆ ಸಂಪಾದಿಸಬಹುದು?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "ಯಾತ್ರಿ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ಆಪ್‌ನಲ್ಲಿ ಸಾಮಾನ್ಯ ಚಟುವಟಿಕೆಗಳಿಂದ, ಉದಾಹರಣೆಗೆ ಪ್ರಯಾಣಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳುವುದು ಮತ್ತು ಗ್ರಾಹಕರನ್ನು ರೆಫರ್ ಮಾಡುವುದು ಮೂಲಕ ಸಂಪಾದಿಸಲಾಗುತ್ತದೆ. ನೀವು ಬೇರೆ ಏನನ್ನೂ ಮಾಡಬೇಕಿಲ್ಲ")
     , yatri_points_faqs_ques3_ans2: (\_ -> "ಕಡಿಮೆ ರದ್ದುಪಡಿಸುವಿಕೆಗಳು ಮತ್ತು ಗ್ರಾಹಕರಿಂದ ಉತ್ತಮ ರೇಟಿಂಗ್‌ಗಳನ್ನು ಪಡೆಯುವುದು ಮುಂತಾದ ಒಳ್ಳೆಯ ವರ್ತನೆಯ ಮೂಲಕ ಹೆಚ್ಚುವರಿ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ಸಂಪಾದಿಸಬಹುದು.")
@@ -1533,6 +1546,7 @@ getKn =
     , refresh_payment: "ರಿಫ್ರೆಶ್ ಮಾಡಿ"
     , by: "ಇವರಿಂದ"
     , customers: "ಗ್ರಾಹಕರು"
+    , customer: "ಗ್ರಾಹಕ"
     , rating: "ಮೌಲ್ಯಮಾಪನ"
     , cancellation: "ರದ್ದತಿ"
     , i_speak: "ನಾನು ಮಾತನಾಡುತ್ತೇನೆ"
@@ -1663,12 +1677,15 @@ getKn =
     , buy_new_home: "ಹೊಸ ಮನೆ ಖರೀದಿಸಿ"
     , favourites: "ಇಷ್ಟಗಳು"
     , points_earned_: (\points -> points <> " ಅಂಕ ಗಳಿಸಿದೆ ✨")
-    , for_metro_ride: "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"
+    , for_metro_pickup_ride: "ಮೆಟ್ರೊ ಪಿಕ್‌ಅಪ್ ರೈಡ್‌ಗಾಗಿ"
+    , for_metro_drop_ride: "ಮೆಟ್ರೊ ಡ್ರಾಪ್ ರೈಡ್‌ಗಾಗಿ"
     , continue_with: (\text -> text <> " ಜೊತೆ ಮುಂದುವರಿಸಿ")
     , contact_support_for_help: "ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
     , you_have_switched_city_or_vehicle: "ನೀವು ನಿಮ್ಮ ವಾಹನ ಅಥವಾ ನಗರವನ್ನು ಬದಲಾಯಿಸಿದ್ದೀರಿ. ಸವಾರಿ ಪಡೆಯಲು ಯೋಜನೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , xl_plus: "XL ಪ್ಲಸ್"
     , currently_there_are_no_rides_available: "ಪ್ರಸ್ತುತ, ಯಾವುದೇ ರೈಡ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ."
+    , due_to_higher_cancellation_rate_you_are_blocked: "ಹೆಚ್ಚಿನ ರದ್ದತಿ ದರದಿಂದಾಗಿ, ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗದಂತೆ ನಿಮ್ಮನ್ನು ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ"
+    , blocked_till: (\time date -> date <> " " <> time <> " ವರೆಗೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ ⚠️")
     , ride_requests: "ಸವಾರಿ ವಿನಂತಿಗಳು"
     , scheduled_ride_accepted: "ನಿಗದಿತ ಸವಾರಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ!"
     , you_can_access_scheduled_rides: "ನೀವು ನಿಗದಿತ ಸವಾರಿಗಳನ್ನು ಪ್ರವೇಶಿಸಬಹುದು"
@@ -1746,4 +1763,20 @@ getKn =
     , parcel_is_inappropriate : "ಪಾರ್ಸೆಲ್ ಅನನುಕೂಲಕರವಾಗಿದೆ"
     , sender_asking_different_location : "ಕಳುಹಿಸುವವರು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಬರಲು ಕೇಳುತ್ತಿದ್ದಾರೆ"
     , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+    , truck : "ಟ್ರಕ್"
+    , register_your_truck : "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
+    , no_plan_selected : "ಯೋಜನೆ ಆಯ್ಕೆಯಾಗಿಲ್ಲ"
+    , a_new_way_to_earn_parcel: "ಸಾಮಾನ್ಯ ಆಮದು ಮಾಡುವ ಹೊಸ ಮಾರ್ಗ - ಪಾರ್ಸೆಲ್ 2W"
+    , seamless_earning_experience_click_below: "ನಿರ್ವಹಣೆಯಲ್ಲದ ಆದಾಯ ಅನುಭವಕ್ಕಾಗಿ, ಕೆಳಗೆ ಕ್ಲಿಕ್ ಮಾಡಿ"
+    , metro_warrior_mode : "ಮೆಟ್ರೋ ವಾರಿಯರ್ ಮೋಡ್"
+    , choose_metro_station : "ಮೆಟ್ರೋ ನಿಲ್ದಾಣವನ್ನು ಆಯ್ಕೆಮಾಡಿ, ಆದ್ಯತೆಯ ಮೆಟ್ರೋ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯಲು ಮೆಟ್ರೋ ನಿಲ್ದಾಣವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , primary_metro_station : "ಪ್ರಾಥಮಿಕ ಮೆಟ್ರೋ ನಿಲ್ದಾಣ"
+    , primary_station_info : "ನಿಮ್ಮ ಇಷ್ಟದ ಮೆಟ್ರೋ ನಿಲ್ದಾಣವನ್ನು ಇಲ್ಲಿ ಸೆಟ್ ಮಾಡಬಹುದು"
+    , nearby_stations : "ಹತ್ತಿರದ ನಿಲ್ದಾಣಗಳು"
+    , nearby_station_info : "ನಿಮ್ಮ ಪ್ರಾಥಮಿಕ ನಿಲ್ದಾಣ ಹತ್ತಿರದ 4 ನಿಲ್ದಾಣಗಳು. ನಿಮ್ಮ ಇಚ್ಛೆಯಂತೆ ಪ್ರತಿಯೊಂದನ್ನೂ ಆನ್ ಅಥವಾ ಆಫ್ ಮಾಡಬಹುದು"
+    , change : "ಬದಲಾಯಿಸಿ"
+    , disable_metro_warriors_info : "ಗೋ ಟು ಮೋಡ್ ಸಕ್ರಿಯಗೊಳಿಸುವುದರಿಂದ ಮೆಟ್ರೋ ವಾರಿಯರ್ಸ್ ಮೋಡ್ ನಿಷ್ಕ್ರಿಯಗೊಳ್ಳುತ್ತದೆ."
+    , choose_preferred_metro : "ಆದ್ಯತೆಯ ಮೆಟ್ರೋಅನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+    , metro_warriors : "ಮೆಟ್ರೋ ವಾರಿಯರ್ಸ್"
+    , search : "ಹುಡುಕಿ"
     }

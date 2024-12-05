@@ -1,6 +1,7 @@
 module Storage.Queries.BookingExtra where
 
 import Control.Applicative
+import Data.List.Extra (notNull)
 import qualified Database.Beam as B
 import Domain.Types
 import Domain.Types.Booking as Domain
@@ -14,9 +15,9 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -38,34 +39,32 @@ import qualified Storage.Queries.Quote ()
 createBooking' :: (MonadFlow m, EsqDBFlow m r) => Booking -> m ()
 createBooking' = createWithKV
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
-create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
-  _ <- case dBooking.bookingDetails of
-    OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    RentalDetails detail -> whenJust detail.stopLocation $ \stopLoc -> void $ whenNothingM_ (QL.findById stopLoc.id) $ do QL.create stopLoc
-    DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    InterCityDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    AmbulanceDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    DeliveryDetails detail -> void $ whenNothingM_ (QL.findById detail.toLocation.id) $ do QL.create detail.toLocation
-  void $ createBooking' dBooking
-
 createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-  mbToLocationMap <- case booking.bookingDetails of
-    DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.RentalDetails detail -> (\loc -> SLM.buildDropLocationMapping loc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)) `mapM` detail.stopLocation
-    DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.InterCityDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.AmbulanceDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.DeliveryDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  processSingleLocation booking.fromLocation SLM.buildPickUpLocationMapping
+  (mbToLocation, stops) <-
+    case booking.bookingDetails of
+      DRB.OneWayDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.RentalDetails detail -> return (detail.stopLocation, [])
+      DRB.DriverOfferDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.OneWaySpecialZoneDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.InterCityDetails detail -> return (Just detail.toLocation, [])
+      DRB.AmbulanceDetails detail -> return (Just detail.toLocation, [])
+      DRB.DeliveryDetails detail -> return (Just detail.toLocation, [])
+  when (notNull stops) $ processMultipleLocations stops
+  whenJust mbToLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  createBooking' booking
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
-  create booking
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+      QLM.createMany locationMappings
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do

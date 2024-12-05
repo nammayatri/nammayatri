@@ -18,6 +18,7 @@ module Screens.SelectContactsFlow.SelectContactsScreen.ScreenData where
 import Prelude (Unit)
 import Data.Maybe (Maybe(..))
 import Screens.Types (NewContacts, NewContactsProp)
+import ConfigProvider
 
 initData :: SelectContactsScreenState
 initData =

@@ -1,0 +1,65 @@
+imports:
+  AuthRes: Domain.Action.UI.Registration
+  OTPChannel: Domain.Action.UI.Registration
+  RegistrationToken: Domain.Types.RegistrationToken
+  AuthVerifyReq: Domain.Action.UI.Registration
+  AuthVerifyRes: Domain.Action.UI.Registration
+  ResendAuthRes: Domain.Action.UI.Registration
+  Person: Domain.Types.Person
+
+importPackageOverrides:
+  Domain.Action.UI.Registration: "rider-app"
+  Domain.Types.RegistrationToken: "rider-app"
+  Domain.Types.Person: "rider-app"
+
+module: Registration
+
+apis:
+  - POST:  # CustomerAuthAPI
+      endpoint: /auth
+      auth: ApiAuthV2
+      request:
+        type: CustomerAuthReq
+      response:
+        type: AuthRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTH
+        endpoint: RegistrationAPI RegistrationAuthEndPoint
+  - POST:  # CustomerVerify
+      endpoint: /{authId}/verify
+      auth: ApiAuthV2
+      params:
+        authId: Id RegistrationToken
+      request:
+        type: AuthVerifyReq
+      response:
+        type: AuthVerifyRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS VERIFY
+        endpoint: RegistrationAPI RegistrationVerifyEndPoint
+  - POST:  # CustomerResend
+      endpoint: /otp/{authId}/resend
+      auth: ApiAuthV2
+      params:
+        authId: Id RegistrationToken
+      response:
+        type: ResendAuthRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS RESEND
+        endpoint: RegistrationAPI RegistrationResendEndPoint
+  - POST:  # CustomerLogout
+      endpoint: /logout/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS LOGOUT
+        endpoint: RegistrationAPI RegistrationLogoutEndPoint
+
+types:
+  CustomerAuthReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otpChannel: Maybe OTPChannel

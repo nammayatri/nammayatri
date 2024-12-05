@@ -41,6 +41,9 @@ imports:
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
+  IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
+  LLMChatCompletionService: ChatCompletion.Types
+  ServiceName: Domain.Types.Extra.MerchantServiceConfig
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -163,6 +166,7 @@ MerchantMessage:
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
     senderHeader: Maybe Text
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -199,9 +203,50 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
    - EXTRA_DOMAIN_TYPE_FILE
+
+LlmPrompt:
+  derives: Generic,Show,'UsageSafety
+  types:
+    PromptKey:
+      enum: AzureOpenAI_DriverProfileGen_1
+    UseCase:
+      enum: DriverProfileGen, DriverSupport
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    serviceName: ServiceName
+    promptTemplate: Text
+    promptKey: PromptKey
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    useCase: UseCase
+  sqlType:
+    serviceName: character varying(255)
+    useCase: character varying(255)
+    promptKey: character varying(255)
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    serviceName: PrimaryKey
+    useCase: PrimaryKey
+    promptKey: PrimaryKey
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName, useCase, promptKey]
 
 MerchantOperatingCity:
   derives: Generic, FromJSON, ToJSON, Show, Eq, ToSchema
@@ -331,6 +376,7 @@ Overlay:
     toastMessage: Maybe Text
     secondaryActions: "Maybe [Text]"
     socialMediaLinks: "Maybe [FCMMediaLink]"
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     showPushNotification: Maybe Bool
 
   excludedFields:
@@ -392,6 +438,22 @@ Overlay:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, overlayKey, language, udf1]
+    deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findAllByLanguageVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language, vehicleCategory]
+    findAllByOverlayKeyUdfVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -468,6 +530,16 @@ MerchantServiceUsageConfig:
     getBankAccount: PaymentService
     backgroundVerification: BackgroundVerificationService
     sdkVerificationService: VerificationService
+    llmChatCompletion: LLMChatCompletionService
+
+  beamType:
+    llmChatCompletion: Maybe LLMChatCompletionService
+
+  fromTType:
+    llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
+
+  toTType:
+    llmChatCompletion: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -506,6 +578,7 @@ MerchantServiceUsageConfig:
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
     backgroundVerification: text
+    llmChatCompletion: character varying(30)
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -520,6 +593,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"
+    llmChatCompletion: "'AzureOpenAI'"
 
   queries:
     findByMerchantOpCityId:
@@ -677,6 +751,8 @@ TransporterConfig:
       blackxl: Kilometers
       suvplus: Kilometers
       deliveryLightGoodsVehicle : Kilometers
+      busAc : Kilometers
+      busNonAc : Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
@@ -699,6 +775,8 @@ TransporterConfig:
       blackxl: Maybe Seconds
       suvplus: Maybe Seconds
       deliveryLightGoodsVehicle : Maybe Seconds
+      busNonAc : Maybe Seconds
+      busAc : Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
@@ -881,6 +959,10 @@ TransporterConfig:
     dailyConditionCooldownTimeHours: Maybe Int
     weeklyConditionCooldownTimeHours: Maybe Int
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
+    otpRideStartRestrictionRadius: Maybe Meters
+    disableListScheduledBookingAPI: Bool
+    issueBreachConfig: Maybe [IssueBreachConfig]
+    recentScheduledBookingsSafeLimit: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -923,6 +1005,9 @@ TransporterConfig:
     demandHotspotsConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
+    disableListScheduledBookingAPI: Maybe Bool
+    issueBreachConfig: Maybe Value
+    recentScheduledBookingsSafeLimit: Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -974,6 +1059,9 @@ TransporterConfig:
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1029,6 +1117,10 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    issueBreachConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1082,6 +1174,7 @@ TransporterConfig:
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
+    issueBreachConfig: json
 
   default:
     mediaFileUrlPattern: |-
@@ -1208,6 +1301,8 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: "10"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
+    disableListScheduledBookingAPI: "false"
+    recentScheduledBookingsSafeLimit: "50"
 
   excludedDefaultQueries:
     - findByPrimaryKey

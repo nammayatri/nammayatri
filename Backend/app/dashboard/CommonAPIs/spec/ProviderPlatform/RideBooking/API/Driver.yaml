@@ -1,4 +1,4 @@
-imports:
+imports: #
   Driver: Dashboard.Common
   Image: Dashboard.Common
   VehicleVariant: Dashboard.Common
@@ -287,6 +287,9 @@ types:
     - driverTag: Maybe [Text]
     - email: Maybe Text
     - blockedInfo : [DriverBlockTransactions]
+    - softBlockStiers: Maybe [Text]
+    - softBlockExpiryTime: Maybe UTCTime
+    - softBlockReasonFlag: Maybe Text
   DriverLicenseAPIEntity:
     - driverLicenseId: Id DriverLicense
     - documentImageId1: Id Image

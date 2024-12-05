@@ -18,6 +18,7 @@ instance FromTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
       Just
         Domain.Types.FareProduct.FareProduct
           { area = area,
+            disableRecompute = disableRecompute,
             enabled = enabled,
             farePolicyId = Kernel.Types.Id.Id farePolicyId,
             id = Kernel.Types.Id.Id id,
@@ -33,6 +34,7 @@ instance ToTType' Beam.FareProduct Domain.Types.FareProduct.FareProduct where
   toTType' (Domain.Types.FareProduct.FareProduct {..}) = do
     Beam.FareProductT
       { Beam.area = area,
+        Beam.disableRecompute = disableRecompute,
         Beam.enabled = enabled,
         Beam.farePolicyId = Kernel.Types.Id.getId farePolicyId,
         Beam.id = Kernel.Types.Id.getId id,

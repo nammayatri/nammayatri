@@ -89,6 +89,7 @@ dependencies:
   - casing
   - vector
   - singletons-th
+  - shared-services
 
 ghc-options:
   - -Wall

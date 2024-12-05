@@ -24,7 +24,7 @@ import Data.String as DS
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Services.API as API
 import Data.Lens((^.))
-import Screens.Types(PeopleCategoriesData, OperationalDaysData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..))
+import Screens.Types(PeopleCategoriesData, OperationalDaysData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..), OperationalDate(..))
 import Data.Array.NonEmpty as DAN
 import Data.Int (ceil)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC)
@@ -150,6 +150,7 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
               isSelected : false,
               peopleCategories : generatePeopleCategories (bhData.category ^. _peopleCategories),
               operationalDays : operationalDaysData,
+              operationalDate : bhData.operationalDate,
               validOpDay : find (\opDay -> selOpDay `elem` opDay.operationalDays) operationalDaysData
           }]
 
@@ -158,6 +159,15 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
       let sortedData = sortBy (\bh1 bh2 -> compare bh1.operationalDays bh2.operationalDays) respArr
           groupedData = groupBy (\bh1 bh2 -> bh1.operationalDays == bh2.operationalDays) sortedData
       in map generateSlotData groupedData
+
+    generateOperationalDateData :: Maybe API.OperationalDateResp -> Maybe OperationalDate
+    generateOperationalDateData res = 
+      case res of
+        Just (API.OperationalDateResp resp) ->
+          Just { startDate : resp.startDate,
+                 endDate : resp.eneDate
+                }
+        Nothing -> Nothing
 
     generateSlotData :: DAN.NonEmptyArray FlattenedBusinessHourData -> OperationalDaysData
     generateSlotData bhs = 
@@ -191,6 +201,7 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
               endTime : bh.endTime,
               specialDayDescription : bh.specialDayDescription,
               specialDayType : bh.specialDayType,
+              operationalDate : generateOperationalDateData bh.operationalDate,
               operationalDays : sortBy (\d1 d2 -> compare d1 d2) bh.operationalDays,
               category : (API.TicketCategoriesResp cat)
             }) bh.categories

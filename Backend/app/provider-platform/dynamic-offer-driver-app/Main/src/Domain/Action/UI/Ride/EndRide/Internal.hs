@@ -65,7 +65,9 @@ import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
-import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
+import qualified Domain.Types.VehicleVariant as Variant
+import qualified Domain.Types.VendorFee as DVF
+import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
@@ -86,6 +88,7 @@ import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import Lib.Types.SpecialLocation
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -115,6 +118,8 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.VendorFee as QVF
+import qualified Storage.Queries.VendorSplitDetails as QVSD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -147,6 +152,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
+  QDI.updateHasRideStarted driverId False
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
@@ -169,7 +175,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   let validRide = isValidRide ride
   sendReferralFCM validRide ride mbRiderDetails thresholdConfig
   when validRide $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams}
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do
@@ -589,10 +595,23 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         Nothing -> do
           createWithMbSibling driverFee lastElderSiblingDriverFee driverFee
           return 1
+      fork "Updating vendor fees" $
+        when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
+          let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
+          vendorSplitDetails <- QVSD.findAllByAreaCityAndVariant (fromMaybe Default booking.area) merchantOpCityId vehicleVariant
+          let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
+              vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
+
+          case lastDriverFee of
+            Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
+            _ -> QVF.createMany vendorFees
+
       plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
       fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
       scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
+    mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
+
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge

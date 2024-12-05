@@ -442,3 +442,33 @@ seashell = "#FFF5EF"
 
 seashellBorder :: Color
 seashellBorder = "#FFECE1"
+
+activeTicketColor :: Color
+activeTicketColor = "#165718"
+
+expiredTicketColor :: Color 
+expiredTicketColor = "#2C2F3A"
+
+backgroundPassengerColor :: Color
+backgroundPassengerColor = "#206423"
+
+abbey :: Color
+abbey = "#47484D"
+
+cloudBurst :: Color
+cloudBurst = "#1D3449"
+
+mutedRed :: Color
+mutedRed = "#E554541A"
+
+amber :: Color
+amber = "#FF85331A"
+
+cosmicLatte :: Color 
+cosmicLatte = "#FFF9EA"
+
+darkGrey :: Color
+darkGrey = "#B9B8B8"
+
+verifiedStateColor :: Color
+verifiedStateColor = "#112F4B"

@@ -90,7 +90,8 @@ data DConfirmRes = DConfirmRes
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    confirmResDetails :: Maybe DConfirmResDetails
+    confirmResDetails :: Maybe DConfirmResDetails,
+    isAdvanceBookingEnabled :: Maybe Bool
   }
   deriving (Show, Generic)
 
@@ -165,7 +166,8 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
-  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
+  unless isScheduled $
+    void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
@@ -184,6 +186,7 @@ confirm DConfirmReq {..} = do
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = Nothing, -- can be removed later
         confirmResDetails,
+        isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         ..
       }
   where
@@ -307,6 +310,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
+          vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,
           serviceTierShortDesc = quote.serviceTierShortDesc,
           clientBundleVersion = quote.clientBundleVersion,
@@ -343,6 +347,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      let stops = searchRequest.stops
       pure DRB.InterCityBookingDetails {..}
     buildOneWayDetails isUpgradedToCab = do
       -- we need to throw errors here because of some redundancy of our domain model

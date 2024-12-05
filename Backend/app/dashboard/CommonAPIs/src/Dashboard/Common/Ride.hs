@@ -11,9 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Dashboard.Common.Ride
   ( module Dashboard.Common.Ride,
@@ -23,21 +20,7 @@ where
 
 import Dashboard.Common as Reexport
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Id
-
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data RideEndpoint
-  = RideStartEndpoint
-  | RideEndEndpoint
-  | RideCancelEndpoint
-  | MultipleRideCancelEndpoint
-  | MultipleRideSyncEndpoint
-  | BookingWithVehicleNumberAndPhoneEndpoint
-  | TicketRideListEndpoint -- moved to DSL only for provider-dashboard
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
-
-derivePersistField "RideEndpoint"
 
 newtype MultipleRideSyncResp = MultipleRideSyncResp
   { list :: [MultipleRideSyncRespItem]

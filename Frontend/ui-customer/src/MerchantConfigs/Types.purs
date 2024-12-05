@@ -10,6 +10,7 @@ type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    submitIssueBtnColor :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
@@ -82,6 +83,7 @@ type AppConfigCustomer a =
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
+  , enableDeliveryService :: Boolean
   | a
   }
 
@@ -210,7 +212,7 @@ type SuggestedDestinationAndTripsConfig = {
 type Language =  {
   name :: String,
   value :: String,
-  subTitle :: String
+  subtitle :: String
  }
 
 type BannerViewState = {
@@ -270,7 +272,8 @@ type Features = {
   enableAcPopup :: Boolean,
   enableRentalReallocation :: Boolean,
   enableEditDestination :: Boolean,
-  enableHelpAndSupport :: Boolean
+  enableHelpAndSupport :: Boolean,
+  enableBusBooking :: Boolean
   }
 
 type RideCompletedCardConfig = {

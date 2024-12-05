@@ -16,8 +16,9 @@
 module Storage.CachedQueries.Merchant.Overlay
   ( create,
     findAllByMerchantOpCityId,
-    findByMerchantOpCityIdPNKeyLangaugeUdf,
     clearMerchantIdPNKeyLangaugeUdf,
+    clearCache,
+    findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory,
   )
 where
 
@@ -25,6 +26,7 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Overlay
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -50,22 +52,34 @@ cacheOverlayForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:Overlay:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
-findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
-  Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory =
+  Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 vehicleCategory) >>= \case
     Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
-    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1
+    Nothing -> do
+      res <- Queries.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory
+      case res of
+        Just a -> do
+          cacheOverlay a
+          return $ Just a
+        Nothing -> case vehicleCategory of
+          Nothing -> return Nothing
+          _ -> findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 Nothing
 
 cacheOverlay :: CacheFlow m r => Overlay -> m ()
 cacheOverlay pn = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantOperatingCityId pn.overlayKey pn.language pn.udf1
+  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantOperatingCityId pn.overlayKey pn.language pn.udf1 pn.vehicleCategory
   Hedis.setExp idKey (coerce @Overlay @(OverlayD 'Unsafe) pn) expTime
 
-makeMerchantIdPNKeyLangaugeUdf :: Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Text
-makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:MerchantOpCityId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
+makeMerchantIdPNKeyLangaugeUdf :: Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> Text
+makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 mbVehicleCategory = "CachedQueries:Overlay:MerchantOpCityId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1 <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory
 
 ------------------------------------------------------
 
-clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m ()
-clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1
+clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> m ()
+clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 vehicleCategory = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 vehicleCategory
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)

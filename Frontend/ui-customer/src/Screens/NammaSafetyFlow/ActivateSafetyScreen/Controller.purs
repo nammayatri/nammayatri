@@ -56,6 +56,8 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Common.Types.App (LazyCheck (..))
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Debug 
 
 instance showAction :: Show Action where
@@ -170,21 +172,28 @@ eval BackPressed state = do
   void $ pure $ clearTimerWithId state.props.recordingTimerId
   let newState = state { props { triggerSiren = false } }
   if state.props.showCallPolice then do
+    void $ pure $ spy "BackPressed ActivateSafetyScreen" "If"
     void $ pure $ clearTimerWithId state.props.policeCallTimerId
     if state.props.isSafetyCenterDisabled 
       then exit $ GoBack newState
       else continue newState { props { showCallPolice = false, policeCallTimerValue = 5} }
   else 
-    continueWithCmd state [do
-    if state.props.isAudioRecordingActive then do
-      void $ runEffectFn1 JB.removeMediaPlayer ""
-      void $ runEffectFn1 JB.stopAudioRecording ""
-      pure unit
-    else
-      pure unit
-
-    pure $ Exit $ GoBack newState
-  ]
+    if isParentView FunctionCall 
+    then do 
+      void $ pure $ spy "BackPressed ActivateSafetyScreen" "Else If"
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else do
+      void $ pure $ spy "BackPressed ActivateSafetyScreen" "else"
+      continueWithCmd state [do
+        if state.props.isAudioRecordingActive then do
+          void $ runEffectFn1 JB.removeMediaPlayer ""
+          void $ runEffectFn1 JB.stopAudioRecording ""
+          pure unit
+        else
+          pure unit
+        pure $ Exit $ GoBack newState
+      ]
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 

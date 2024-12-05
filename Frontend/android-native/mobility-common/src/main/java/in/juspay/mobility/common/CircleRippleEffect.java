@@ -5,16 +5,27 @@ import android.animation.ArgbEvaluator;
 import android.animation.FloatEvaluator;
 import android.animation.ValueAnimator;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PatternItem;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 
 public class CircleRippleEffect {
@@ -24,6 +35,7 @@ public class CircleRippleEffect {
     private final CircleRippleEffectOptions mOptions;
     private final ArgbEvaluator mArgbEvaluator = new ArgbEvaluator();
     private final FloatEvaluator mFloatEvaluator = new FloatEvaluator();
+    private Circle lastClickedCircle = null;
     @Nullable private Circle circle;
     @Nullable private ValueAnimator mAnimator;
 
@@ -38,24 +50,87 @@ public class CircleRippleEffect {
         }
     }
 
-    public void draw(@NonNull GoogleMap googleMap, LatLng center) {
-        ExecutorManager.runOnMainThread(() -> this.circle = googleMap.addCircle(new CircleOptions()
-                .center(center)
-                .fillColor(mOptions.getFillColor())
-                .strokeColor(Color.parseColor(mOptions.getFromStrokeColor()))
-                .strokeWidth(mOptions.getStrokeWidth())
-                .visible(true)
-
-                .radius(mOptions.getRadius())));
+    public void draw(@NonNull GoogleMap googleMap, LatLng center, BridgeComponents bridgeComponents, String callback) {
+        ExecutorManager.runOnMainThread(() -> {
+            this.circle = googleMap.addCircle(new CircleOptions()
+                    .center(center)
+                    .fillColor(mOptions.getFillColor())
+                    .strokeColor(Color.parseColor(mOptions.getFromStrokeColor()))
+                    .strokeWidth(mOptions.getStrokeWidth())
+                    .visible(true)
+                    .radius(mOptions.getRadius()));
+            updateStrokePatternForCircle(mOptions);
+            if (mOptions.getIsCircleClickable()) {
+                this.circle.setClickable(true);
+                googleMap.setOnCircleClickListener(clickedCircle -> {
+                    if (lastClickedCircle != null) {
+                        resetCircleStroke(lastClickedCircle);
+                    }
+                    changeCircleStroke(clickedCircle);
+                    LatLng circleCenter = clickedCircle.getCenter();
+                    String circleColor = "#" + Integer.toHexString(clickedCircle.getFillColor()).substring(2);
+                    lastClickedCircle = clickedCircle;
+                    if (callback != null && bridgeComponents != null) {
+                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, circleCenter.latitude, circleCenter.longitude, circleColor);
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(circleCenter, 14), 400, null);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+            }
+        });
     }
 
+    private void changeCircleStroke(Circle circle) {
+        List<PatternItem> dashedPattern = Arrays.asList(
+                new Dash(10),
+                new Gap(0)
+        );
+        circle.setStrokePattern(dashedPattern);
+    }
+
+    private void resetCircleStroke(Circle circle) {
+        List<PatternItem> dashedPattern = Arrays.asList(
+                new Dash(20),  // Length of dash
+                new Gap(20)    // Length of gap
+        );
+        circle.setStrokePattern(dashedPattern);
+    }
     public void updateCircle (CircleRippleEffectOptions config) {
-        if (circle != null) {
-            if (config.getRadius() != 0) circle.setRadius(config.getRadius());
-            if (!config.getFromStrokeColor().equals("")) circle.setStrokeColor(Color.parseColor(config.getFromStrokeColor()));
-            if (config.getFillColor() != 0) circle.setFillColor(config.getFillColor());
-            circle.setStrokeWidth(config.getStrokeWidth());
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (circle != null) {
+                    if (config.getRadius() != 0) circle.setRadius(config.getRadius());
+                    if (!config.getFromStrokeColor().equals(""))
+                        circle.setStrokeColor(Color.parseColor(config.getFromStrokeColor()));
+                    if (config.getFillColor() != 0) circle.setFillColor(config.getFillColor());
+                    if (config.getStrokeWidth() != 0) circle.setStrokeWidth(config.getStrokeWidth());
+                    updateStrokePatternForCircle(config);
+                }
+            } catch (Exception e) {
+                Log.i("updateCircle error for ", String.valueOf(e));
+            }
+        });
+    }
+
+    public void updateStrokePatternForCircle(CircleRippleEffectOptions config) {
+        CircleRippleEffectOptions.StrokePattern circleStroke = config.getStrokePattern();
+        List<PatternItem> strokePattern = null;
+        switch (circleStroke){
+            case DASHED:
+                strokePattern = Arrays.asList(
+                        new Dash(20),
+                        new Gap(20)
+                );
+                break;
+            case DOTTED:
+                strokePattern = Arrays.asList(
+                        new Dot(),
+                        new Gap(20)
+                );
+                break;
+            default: break;
         }
+        if(strokePattern != null) this.circle.setStrokePattern(strokePattern);
     }
 
     public void startAnimation() {

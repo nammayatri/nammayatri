@@ -43,6 +43,7 @@ import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 import Effect.Unsafe (unsafePerformEffect)
+import Debug
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -138,7 +139,12 @@ eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagNam
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state =
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 
   _ <- pure $ EHU.toggleLoader false
@@ -147,8 +153,7 @@ eval (SavedLocationListAPIResponseAction respList) state = do
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
   continue state{data{savedLocations = home <> work <> otherLocation}, props{apiRespReceived = true}}
 
-eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do 
-  _ <- pure $ EHU.toggleLoader false
+eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do
   continue state{data{favouriteDriversList = getFavouriteDriverList(respList)}}
 
 eval (ChangeView view) state = continue state{data{current = view}} 

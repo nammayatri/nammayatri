@@ -1,0 +1,52 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+@driverId1 = favorit-auto1-0000000000000000000000
+
+###
+
+# @name RideGetPlaceNameAPI
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/maps/getPlaceName/{{driverId1}}
+token: {{juspay_admin}}
+content-type: application/json
+
+{ sessionToken : "",
+  language : "",
+  getBy :
+    { tag : "",
+      contents :
+        { tag : "",
+          contents : PlaceId ""
+        }
+    }
+}
+
+###
+
+# @name RideAutoCompleteAPI
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/maps/autoComplete/{{driverId1}}
+token: {{juspay_admin}}
+content-type: application/json
+
+{ input : "Text",
+  sessionToken : "Nothing",
+  location : "TestLocation",
+  radius : 100,
+  types_ : "Nothing",
+  radiusWithUnit : "Nothing",
+  language : {
+    name :: "En",
+    value :: "1"
+    },
+  strictbounds : "Nothing",
+  origin : "Nothing"
+}
+
+

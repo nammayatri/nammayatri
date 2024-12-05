@@ -23,8 +23,8 @@ module API.UI.Profile
     DProfile.UpdateProfileDefaultEmergencyNumbersResp,
     DProfile.GetProfileDefaultEmergencyNumbersResp (..),
     API,
-    getPersonDetails,
-    updatePerson,
+    getPersonDetails',
+    updatePerson',
     handler,
   )
 where
@@ -83,10 +83,16 @@ handler =
     :<|> getDefaultEmergencyNumbers
 
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) toss tenant context = withFlowHandlerAPI $ DProfile.getPersonDetails (personId, merchantId) toss tenant context
+getPersonDetails (personId, merchantId) toss tenant = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant
+
+getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Flow DProfile.ProfileRes
+getPersonDetails' (personId, merchantId) toss tenant context = DProfile.getPersonDetails (personId, merchantId) toss tenant context
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
+updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . updatePerson' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion
+
+updatePerson' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Flow APISuccess.APISuccess
+updatePerson' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
 
 updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
 updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId

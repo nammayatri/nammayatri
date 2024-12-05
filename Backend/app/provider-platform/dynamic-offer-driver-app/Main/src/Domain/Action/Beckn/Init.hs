@@ -38,6 +38,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Booking
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -72,7 +73,8 @@ data InitReq = InitReq
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     estimateId :: Text,
-    initReqDetails :: Maybe InitReqDetails
+    initReqDetails :: Maybe InitReqDetails,
+    isAdvanceBookingEnabled :: Maybe Bool
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -116,6 +118,8 @@ handler merchantId req validatedReq = do
   let searchRequest = validatedReq.searchRequest
       riderName = req.mbRiderName
       riderPhoneNumber = req.riderPhoneNumber
+  whenJust req.isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
+    QSR.updateIsAdvancedBookingEnabled isAdvanceBookingEnabled' searchRequest.id
   (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
   (booking, driverName, driverId) <-
     case validatedReq.quote of
@@ -123,12 +127,12 @@ handler merchantId req validatedReq = do
         booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
-
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
         booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails
         QRB.createBooking booking
+        when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
   fork "Updating Demand Hotspots on booking" $ do
     let lat = searchRequest.fromLocation.lat

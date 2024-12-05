@@ -1121,6 +1121,7 @@ getTe = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "దయచేసి స్థిరంగా ఉండండి, "<> appName <>" భద్రత టీమ్‌కు అలర్ట్ అయినది!")
 , indication_to_emergency_contacts: (\appName -> appName <>" మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి మీ ఎత్తుచేయుటకు చెందిన మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి సూచనలు ఇవ్వించినది.")
 , book: (\name -> "బుక్ " <> name)
+, book_for_: (\name -> name <> " కి బుక్ చేయండి")
 , fare_for: (\limit -> limit <> " కోసం ధర")
 , waiting_charge_limit: (\timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)")
 , time_taken: "మొత్తం సమయం"
@@ -1365,6 +1366,7 @@ getTe = Keymap {
 , booking: "బుకింగ్"
 , by: "ద్వారా"
 , customers: "వినియోగదారులు"
+, customer: "కస్టమర్"
 , rating: "రేటింగ్"
 , cancellation: "రద్దు"
 , trips: "ప్రయాణాలు"
@@ -1681,4 +1683,37 @@ getTe = Keymap {
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , tickets_for_delhi_metro : "దిల్లీ మెట్రో టికెట్లు"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "మెట్రో టికెట్లు"
+, offers : "ఆఫ్స్"
+, boost_search_instantly : "మీ శోధనను తక్షణమే పెంచుకోండి!"
+, add_a_tip : "టిప్ ను జోడించండి"
+, updated_fare_str : "అప్‌డేట్ చేసిన ఛార్జీ"
+, book_any_details : "బుక్ ఏనీ వివరాలు"
+, boost_search : "శోధనను పెంచండి"
+, bus__ : "బస్"
+, tickets_for_chennai_bus : "చెన్నై బస్ టికెట్లు"
+, buy_bus_tickets : "బస్ టికెట్లు కొనుగోలు"
+, book_and_pay : "బుక్ చేసి చెల్లించండి"
+, bus_ticket : "బస్ టికెట్"
+, check_spelling_and_try_again : "అక్షరాలను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి"
+, book_bus_ticket : "బస్ టికెట్ బుక్ చేయండి"
+, book_a_one_way_instant_bus_ticket : "ఒక వేల బస్ టికెట్ బుక్ చేయండి"
+, recent_ticket : "ఇటీవల టికెట్"
+, experience_hassle_free_bus_bookings_with : "హాసల్ ఫ్రీ బస్ బుకింగ్లతో అనుభవం చేయండి"
+, enter_bus_number_or_destination : "బస్ నంబర్ లేదా గంతవ్యం నమోదు చేయండి"
+, destination_stop : "గంతవ్యం స్టాప్"
+, route_bus_number : "రూట్/బస్ నంబర్"
+, pickup_stop : "పికప్ స్టాప్"
+, tickets_for_kolkata_bus : "కోల్కాటా బస్ టికెట్లు"
+, ticket_validity_30_minutes : "టికెట్ బుకింగ్ సమయం నుండి 30 నిమిషాలపాటు మాత్రమే చెల్లుతుంది"
+, fare_commission_free_wbtc : "ఫేర్ మరియు కమిషన్ ఫ్రీ వెస్ట్ బెంగాల్ ట్రాన్స్పోర్ట్ కార్పొరేషన్ (WBTC)"
+, select_route_number : "రూట్ నంబర్ ఎంచుకోండి"
+, pickup_and_destination_stop : "పికప్ మరియు గంతవ్యం స్టాప్"
+, bus_boarded_confirmation : "మీరు బస్సులో ఉన్నారా అని దయచేసి నిర్ధారించండి?"
+, towards_station : (\s -> s <> " వైపు")
+, bus_no : (\s -> "బస్ నంబర్: " <> s)
+, verified : "ధృవీకరించబడింది"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ప్రధాన మార్గాలలో మా బస్ టికెటింగ్ పైలట్ లాంచ్ అనుభవించండి. మరిన్ని మార్గాలు త్వరలో వస్తున్నాయి!")
+, note_your_ticket_is_only_valid_for : (\s -> "గమనిక: మీ టికెట్ బుకింగ్ చేసిన " <> s <> " మాత్రమే చెల్లుతుంది. స్థానిక పరిస్థితుల కారణంగా బస్సుల సమయం మారవచ్చు, కాబట్టి మీరు బుక్ చేసే సమయానికి స్టాప్ వద్ద సిద్ధంగా ఉండండి।")
+, here_is_bus_ticket : "ఇక్కడ మీ బస్ టికెట్"
 }

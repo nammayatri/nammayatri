@@ -162,6 +162,7 @@ newtype Payload = Payload
   , deepLinkJSON :: Maybe QueryParam
   , chatMessageData :: Maybe ChatFCMData
   , fragmentViewGroups :: Maybe FragmentViewGroup
+  , appToken :: Maybe String
   }
 
 newtype QueryParam = QueryParam {

@@ -32,8 +32,9 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
+import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
--- import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.VehicleVariant (VehicleVariant (..))
 import EulerHS.Prelude hiding (elem, find, id, length, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -103,6 +104,7 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierType :: DVST.ServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleIconUrl :: Maybe Text,
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
@@ -131,7 +133,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driverArrivalTime :: Maybe UTCTime,
     sosStatus :: Maybe DSos.SosStatus,
     driversPreviousRideDropLocLat :: Maybe Double,
-    driversPreviousRideDropLocLon :: Maybe Double
+    driversPreviousRideDropLocLon :: Maybe Double,
+    stopInfo :: [DSI.StopInformation]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -141,7 +144,8 @@ data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
     fromLocation :: Location,
     toLocation :: Maybe Location,
     totalFare :: Maybe Money,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    vehicleVariant :: Maybe VehicleVariant
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -182,6 +186,7 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
 
 data InterCityBookingAPIDetails = InterCityBookingAPIDetails
   { toLocation :: LocationAPIEntity,
+    stops :: [LocationAPIEntity],
     estimatedDistance :: HighPrecMeters,
     otpCode :: Maybe Text,
     estimatedDistanceWithUnit :: Distance
@@ -294,7 +299,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isAlreadyFav = activeRide >>= (.isAlreadyFav),
         favCount = activeRide >>= (.favCount),
         tripCategory = booking.tripCategory,
-        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange)
+        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
+        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -340,6 +346,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance,
+          stops = map SLoc.makeLocationAPIEntity stops,
           ..
         }
     mkAmbulanceAPIDetails AmbulanceBookingDetails {..} =
@@ -383,7 +390,8 @@ makeFavouriteBookingAPIEntity ride = do
       fromLocation = ride.fromLocation,
       toLocation = ride.toLocation,
       totalFare = (.amountInt) <$> ride.totalFare,
-      startTime = ride.rideStartTime
+      startTime = ride.rideStartTime,
+      vehicleVariant = Just ride.vehicleVariant
     }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
@@ -428,7 +436,9 @@ buildBookingAPIEntity booking personId = do
             --------- Need to remove it after fixing the status api polling in frontend ---------
             estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
             return ([], estimatedFareBreakups)
-      Nothing -> return ([], [])
+      Nothing -> do
+        estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
+        return ([], estimatedFareBreakups)
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
@@ -448,6 +458,7 @@ buildBookingAPIEntity booking personId = do
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
+  stopsInfo <- if (fromMaybe False booking.hasStops) then maybe (pure []) (\ride -> QSI.findAllByRideId ride.id) mbActiveRide else return []
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
       driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
@@ -455,7 +466,7 @@ buildBookingStatusAPIEntity booking = do
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -463,7 +474,7 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 -- TODO move to Domain.Types.Ride.Extra
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
 buildRideAPIEntity DRide.Ride {..} = do
-  stopsInfo <- QSI.findAllByRideId id
+  stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt

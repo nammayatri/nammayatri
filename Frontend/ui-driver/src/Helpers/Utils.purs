@@ -28,7 +28,7 @@ import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
+import Common.Types.App (EventPayload(..), LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -51,7 +51,7 @@ import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, n
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastYears, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
-import Foreign.Class (class Decode, class Encode, decode)
+import Foreign.Class (class Decode, class Encode, decode, encode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -75,7 +75,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -118,7 +118,7 @@ type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
-foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
+foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> String -> action)  -> Effect Unit
 foreign import onMarkerClickCallbackMapper :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> String
 foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
@@ -131,6 +131,7 @@ foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
+foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -374,6 +375,7 @@ getVehicleType vehicleType =
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
+    "DELIVERY_LIGHT_GOODS_VEHICLE" -> getString TRUCK
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -418,8 +420,8 @@ rideLabelConfig _ = [
       text = getString ASSISTANCE_REQUIRED,
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_wheelchair,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig
     { label = "Safety",
@@ -427,8 +429,8 @@ rideLabelConfig _ = [
       text = getString SAFETY_IS_OUR_RESPONSIBILITY,
       secondaryText = getString LEARN_MORE,
       imageUrl = fetchImage FF_ASSET  "ny_ic_user_safety_shield",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = fetchImage FF_ASSET  "ic_cancel_prevention"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET  "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig  
     { label = "GOTO",
@@ -447,7 +449,7 @@ rideLabelConfig _ = [
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_location_pin_white,",
       cancelText = "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     }
 ]
 
@@ -729,6 +731,22 @@ splitBasedOnLanguage str =
                 "TE_IN" | len > 6 -> 6
                 _ -> 0
 
+emitTerminateApp :: Maybe String -> Boolean -> Unit
+emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , ride_status : Nothing
+  , trip_id : Nothing
+  , screen : screen
+  , exit_app : exitApp
+  }
+}
+
+isParentView :: LazyCheck -> Boolean
+isParentView lazy = false -- NOTE:: Adding this temporary to pass the build check
+
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =
   let config = getAppConfig appConfig 
@@ -771,6 +789,7 @@ generateLanguageList languages = map getLanguage languages
       "MALAYALAM" -> {name:"മലയാളം", value:"ML_IN", subtitle: "Malayalam"}
       "BENGALI" -> {name:"বাংলা", value:"BN_IN", subtitle: "Bengali"}
       "ENGLISH" -> {name : "English", value: "EN_US", subtitle: "English"}
+      "ODIA" -> {name: "ଓଡିଆ", value: "OD_IN", subtitle: "Odia"}
       _ -> {name : "English", value: "EN_US", subtitle: "English"}
 
 getDriverStatus :: String -> DriverStatus
@@ -1086,6 +1105,7 @@ getVehicleVariantName variant =
                   CarCategory -> getString CAB
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
+                  TruckCategory -> getString TRUCK
                   UnKnown -> ""
 
 getRegisterationStepClickEventName :: ST.RegisterationStep -> String

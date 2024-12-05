@@ -294,6 +294,7 @@ type RegistrationScreenData = {
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
   registerationStepsAmbulance :: Array StepProgress,
+  registerationStepsTruck :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -388,7 +389,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | MANUAL_VERIF
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | UnKnown
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | TruckCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
@@ -479,6 +480,8 @@ type DriverProfileScreenData = {
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
   completingProfileRes :: CompletingProfileRes,
+  driverBlocked :: Boolean,
+  blockedExpiryTime :: String,
   favCount :: Maybe Int
 }
 
@@ -592,7 +595,8 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
-  canSwitchToInterCity :: Maybe Boolean
+  canSwitchToInterCity :: Maybe Boolean,
+  showDriverBlockedPopup :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1090,7 +1094,9 @@ type HomeScreenData =  {
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
+, blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
+, isSpecialLocWarrior :: Boolean
 }
 
 type PlansState = {
@@ -1173,8 +1179,14 @@ type EndRideData = {
     tollAmbigous :: Boolean,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    specialLocationTag :: Maybe String
-  }
+    specialLocationTag :: Maybe String,
+    metroRideCoinData :: Maybe MetroRideCoinData
+}
+
+type MetroRideCoinData = {
+  coinsEarned :: Int,
+  metroRideType :: API.MetroRideType
+}
 
 type PaymentState = {
   rideCount :: Int,
@@ -1365,6 +1377,7 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
+  accountBlockedPopupDueToCancellations :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
@@ -1397,7 +1410,10 @@ type HomeScreenProps =  {
   homeScreenBannerVisibility :: Boolean,
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
-  intercityInfoPopUp :: Boolean
+  intercityInfoPopUp :: Boolean,
+  retryRideList :: Boolean,
+  showParcelIntroductionPopup :: Boolean,
+  showMetroWarriorWarningPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -1942,6 +1958,8 @@ data NotificationType =  DRIVER_REACHED
                       | TRIP_STARTED
                       | EDIT_LOCATION
                       | DRIVER_REACHED_DESTINATION
+                      | TO_METRO_COINS
+                      | FROM_METRO_COINS
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -2612,7 +2630,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations | MetroWarriorWarning
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3231,6 +3249,41 @@ type GullakSDKResp = {
   responseCode :: Int,
   isNewUser :: Boolean
 }
+------------------------------------------------------- HOTSPOT_SCREEN ------------------------------------------------------------------------
+
+type HotspotScreenState = {
+  data :: HotspotScreenData,
+  props :: HotspotScreenProps
+}
+
+type HotspotScreenData = {
+  pointsWithWeight :: Array PointsWithWeight,
+  dataExpiryAt :: String,
+  currentDriverLat :: Number,
+  currentDriverLon :: Number,
+  config :: AppConfig
+}
+
+type HotspotScreenProps = {
+  lastUpdatedTime :: String,
+  showNavigationSheet :: Boolean,
+  refreshAnimation :: Boolean,
+  selectedCircleColor :: String,
+  selectedCircleLatLng :: API.LatLong,
+  isAnyCircleSelected :: Boolean,
+  mapCorners :: {
+    leftPoint :: String,
+    topPoint :: String,
+    rightPoint :: String,
+    bottomPoint :: String
+  }
+}
+
+type PointsWithWeight = {
+  latlong :: API.LatLong,
+  weight :: Number,
+  id :: String
+}
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 
@@ -3251,3 +3304,27 @@ type UploadParcelImageScreenProps = {
   isStartRideActive :: Boolean,
   uploading :: Boolean
 } 
+
+type MetroWarriorsScreenState = {
+  data :: MetroWarriorsScreenData,
+  props :: MetroWarriorsScreenProps
+}
+
+type MetroWarriorsScreenData = {
+  listItem :: Maybe ListItem,
+  stationList :: Array API.SpecialLocation,
+  searchString :: Maybe String,
+  stationData :: MetroWarriorData,
+  remoteConfigData :: RC.MetroWarriorConfigEntity
+}
+
+type MetroWarriorsScreenProps = {
+  showStationList :: Boolean,
+  showShimmer :: Boolean
+}
+
+type MetroWarriorData = {
+  primaryStation :: Maybe API.SpecialLocationWarrior,
+  secondaryStationsData :: Array String,
+  isSpecialLocWarrior :: Boolean
+}

@@ -123,6 +123,7 @@ initData =
           , tripStartTime : Nothing
           , tripEndTime : Nothing
           , specialLocationTag : Nothing
+          , metroRideCoinData : Nothing
           }
       , driverGotoState:
           { gotoCount: 0
@@ -175,6 +176,8 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , blockExpiryTime : ""
+      , isSpecialLocWarrior : false
     }
   , props:
       { isFreeRide: false
@@ -235,6 +238,7 @@ initData =
       , waitTimeStatus: NoStatus
       , isMockLocation: false
       , accountBlockedPopup: false
+      , accountBlockedPopupDueToCancellations: false
       , showCoinsPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
@@ -270,6 +274,9 @@ initData =
       , intercityInfoPopUp : false
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
+      , retryRideList : false
+      , showParcelIntroductionPopup : false
+      , showMetroWarriorWarningPopup : false
       }
   }
 

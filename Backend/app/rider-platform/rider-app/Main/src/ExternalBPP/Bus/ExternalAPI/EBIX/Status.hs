@@ -1,14 +1,17 @@
 module ExternalBPP.Bus.ExternalAPI.EBIX.Status where
 
 import Data.Aeson
+import qualified Domain.Types.FRFSTicket as Ticket
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.Bus.ExternalAPI.EBIX.Auth
+import ExternalBPP.Bus.ExternalAPI.Types
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Servant
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Tools.Error
 import Tools.JSON
 
@@ -68,12 +71,35 @@ type CheckMobTicketsAPI =
 checkMobTicketsAPI :: Proxy CheckMobTicketsAPI
 checkMobTicketsAPI = Proxy
 
-getTicketStatus :: (CoreMetrics m, MonadFlow m, EncFlow m r, CacheFlow m r) => EBIXConfig -> FRFSTicketBooking -> Text -> m Text
-getTicketStatus config _booking txnUUID = do
-  token <- getAuthToken config
-  ticket <-
-    callAPI config.networkHostUrl (ET.client checkMobTicketsAPI (Just token) $ CheckMobTicketsReq txnUUID config.agentId) "createQR" checkMobTicketsAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CREATE_QR_API") config.networkHostUrl)
-  case (listToMaybe ticket._data.ticketDetails) >>= (.wbId) of
-    Just _wbId -> return "CLAIMED"
-    Nothing -> return "UNCLAIMED"
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus config booking = do
+  tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
+  updatedTickets <-
+    mapM
+      ( \ticket -> do
+          if ticket.status == Ticket.ACTIVE
+            then do
+              token <- getAuthToken config
+              ticketStatus <-
+                callAPI config.networkHostUrl (ET.client checkMobTicketsAPI (Just token) $ CheckMobTicketsReq ticket.ticketNumber config.agentId) "createQR" checkMobTicketsAPI
+                  >>= fromEitherM (ExternalAPICallError (Just "CREATE_QR_API") config.networkHostUrl)
+              let qrStatus = mkTicketStatus ticketStatus
+              return $
+                Just $
+                  ProviderTicket
+                    { ticketNumber = ticket.ticketNumber,
+                      qrData = ticket.qrData,
+                      qrStatus,
+                      qrValidity = ticket.validTill,
+                      description = ticket.description,
+                      qrRefreshAt = ticket.qrRefreshAt
+                    }
+            else pure Nothing
+      )
+      tickets
+  return $ catMaybes updatedTickets
+  where
+    mkTicketStatus ticket =
+      case (listToMaybe ticket._data.ticketDetails) >>= (.wbId) of
+        Just _wbId -> "CLAIMED"
+        Nothing -> "UNCLAIMED"

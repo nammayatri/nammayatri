@@ -19,3 +19,13 @@ validateServiceability origin stops person' = do
   if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
     then return nearestOperatingCity.city
     else throwError RideNotServiceable
+
+validateServiceabilityForEditDestination :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, CacheFlow m r) => LatLong -> LatLong -> Person -> m Context.City
+validateServiceabilityForEditDestination origin dest person' = do
+  Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
+  destCityAndState <- Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False dest
+  mbMerchantState <- QMMS.findByMerchantIdAndState person'.merchantId currentCity.state
+  let allowedStates = maybe [currentCity.state] (.allowedDestinationStates) mbMerchantState
+  if destCityAndState.currentCity.state `elem` allowedStates && destCityAndState.currentCity == currentCity
+    then return nearestOperatingCity.city
+    else throwError RideNotServiceable

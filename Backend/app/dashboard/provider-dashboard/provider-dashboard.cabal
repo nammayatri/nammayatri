@@ -32,23 +32,21 @@ library
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
-      API.ProviderPlatform.DynamicOfferDriver.Driver
-      API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
-      API.ProviderPlatform.DynamicOfferDriver.Issue
-      API.ProviderPlatform.DynamicOfferDriver.Maps
-      API.ProviderPlatform.DynamicOfferDriver.Overlay
-      API.ProviderPlatform.DynamicOfferDriver.Ride
-      API.ProviderPlatform.DynamicOfferDriver.Subscription
-      API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.AppManagement.Driver
+      Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
+      Domain.Action.ProviderPlatform.AppManagement.Overlay
+      Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.Driver
       Domain.Action.ProviderPlatform.Management.DriverCoins
       Domain.Action.ProviderPlatform.Management.DriverGoHome
       Domain.Action.ProviderPlatform.Management.DriverReferral
       Domain.Action.ProviderPlatform.Management.DriverRegistration
+      Domain.Action.ProviderPlatform.Management.Media
       Domain.Action.ProviderPlatform.Management.Merchant
       Domain.Action.ProviderPlatform.Management.Message
       Domain.Action.ProviderPlatform.Management.NammaTag
@@ -57,15 +55,24 @@ library
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.System
       Domain.Action.ProviderPlatform.RideBooking.Driver
+      Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
+      Domain.Action.ProviderPlatform.RideBooking.Maps
+      Domain.Action.ProviderPlatform.RideBooking.Ride
+      Domain.Action.ProviderPlatform.RideBooking.Volunteer
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
-      ProviderPlatformClient.DynamicOfferDriver.Operations
-      ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
+      API.Action.ProviderPlatform.AppManagement
+      API.Action.ProviderPlatform.AppManagement.Driver
+      API.Action.ProviderPlatform.AppManagement.DriverSubscription
+      API.Action.ProviderPlatform.AppManagement.Overlay
+      API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.IssueManagement
+      API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.Driver
@@ -73,6 +80,7 @@ library
       API.Action.ProviderPlatform.Management.DriverGoHome
       API.Action.ProviderPlatform.Management.DriverReferral
       API.Action.ProviderPlatform.Management.DriverRegistration
+      API.Action.ProviderPlatform.Management.Media
       API.Action.ProviderPlatform.Management.Merchant
       API.Action.ProviderPlatform.Management.Message
       API.Action.ProviderPlatform.Management.NammaTag
@@ -82,7 +90,13 @@ library
       API.Action.ProviderPlatform.Management.System
       API.Action.ProviderPlatform.RideBooking
       API.Action.ProviderPlatform.RideBooking.Driver
+      API.Action.ProviderPlatform.RideBooking.DriverRegistration
+      API.Action.ProviderPlatform.RideBooking.Maps
+      API.Action.ProviderPlatform.RideBooking.Ride
+      API.Action.ProviderPlatform.RideBooking.Volunteer
+      API.Client.ProviderPlatform.AppManagement
       API.Client.ProviderPlatform.Fleet
+      API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management
       API.Client.ProviderPlatform.RideBooking
   other-modules:
@@ -227,6 +241,7 @@ executable provider-dashboard-exe
     , servant-client
     , servant-openapi3
     , servant-server
+    , shared-services
     , special-zone
     , special-zone-a
     , template-haskell

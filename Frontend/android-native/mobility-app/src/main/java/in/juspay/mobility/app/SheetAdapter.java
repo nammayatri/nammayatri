@@ -72,7 +72,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag;
         CardView locationDestinationPinTag;
         
         public SheetViewHolder(@NonNull View itemView) {
@@ -105,6 +105,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             destinationPinCode = itemView.findViewById(R.id.destinationPinCode);
             accessibilityTag = itemView.findViewById(R.id.accessibilityTag);
             customerTipTag = itemView.findViewById(R.id.customerTipTag);
+            isFavouriteTag = itemView.findViewById(R.id.isFavouriteTag);
             rideTypeTag = itemView.findViewById(R.id.rideTypeTag);
             rideTypeText = itemView.findViewById(R.id.rideTypeText);
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);

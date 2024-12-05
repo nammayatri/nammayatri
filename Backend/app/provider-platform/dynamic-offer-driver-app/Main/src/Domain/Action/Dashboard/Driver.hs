@@ -59,15 +59,12 @@ module Domain.Action.Dashboard.Driver
     fleetTotalEarning,
     fleetVehicleEarning,
     fleetDriverEarning,
-    updateSubscriptionDriverFeeAndInvoice,
     setVehicleDriverRcStatusForFleet,
     fleetRemoveDriver,
     getFleetDriverVehicleAssociation,
     getFleetDriverAssociation,
     getFleetVehicleAssociation,
     getAllDriverForFleet,
-    sendSmsToDriver,
-    SendSmsReq (..),
     VolunteerTransactionStorageReq (..),
     setServiceChargeEligibleFlagInDriverPlan,
     changeOperatingCity,
@@ -88,15 +85,16 @@ module Domain.Action.Dashboard.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    mapServiceName,
   )
 where
 
+import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as DC
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking.Driver as Common
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified Data.ByteString as BS
@@ -107,7 +105,6 @@ import qualified Data.HashSet as HS
 import Data.List (partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
-import qualified Data.Map as M
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
@@ -142,7 +139,6 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
@@ -156,23 +152,19 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
-import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
-import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
-import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import SharedLogic.Allocator
-import qualified SharedLogic.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -180,7 +172,6 @@ import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
@@ -192,7 +183,6 @@ import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
@@ -216,8 +206,6 @@ import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Invoice as QINV
-import qualified Storage.Queries.Message as MQuery
-import qualified Storage.Queries.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
@@ -228,7 +216,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
-import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
@@ -693,6 +680,8 @@ unblockDriver merchantShortId opCity reqDriverId dashboardUserName preventWeekly
       (Nothing, Just _) -> do
         QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
       _ -> pure ()
+  when (isJust driverInf.softBlockStiers) $ do
+    QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -868,7 +857,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
         blockedInfo = blockDetails,
-        email
+        email,
+        softBlockStiers = info.softBlockStiers >>= (pure . map show),
+        softBlockExpiryTime = info.softBlockExpiryTime,
+        softBlockReasonFlag = info.softBlockReasonFlag
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
@@ -1515,6 +1507,8 @@ castVehicleVariantDashboard = \case
   Just DV.SUV_PLUS -> Just Common.SUV_PLUS
   Just DV.DELIVERY_BIKE -> Just Common.DELIVERY_BIKE
   Just DV.DELIVERY_LIGHT_GOODS_VEHICLE -> Just Common.DELIVERY_LIGHT_GOODS_VEHICLE
+  Just DV.BUS_NON_AC -> Just Common.BUS_NON_AC
+  Just DV.BUS_AC -> Just Common.BUS_AC
   _ -> Nothing
 
 ---------------------------------------------------------------------
@@ -1696,98 +1690,6 @@ getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoi
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id, merchantOpCityId) invoiceId.getId serviceName
-
-updateSubscriptionDriverFeeAndInvoice ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Id Common.Driver ->
-  Common.ServiceNames ->
-  Common.SubscriptionDriverFeesAndInvoicesToUpdate ->
-  Flow Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceName' Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  now <- getCurrentTime
-  let serviceName = mapServiceName serviceName'
-  let personId = cast @Common.Driver @DP.Person driverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
-  dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
-  let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
-  mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
-  allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
-  let reqMkDuesToAmount = (mkDuesToAmountWithCurrency <&> (.amount)) <|> mkDuesToAmount
-  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  SMerchant.checkCurrencies currency $ do
-    let driverFeesFields = flip (maybe []) driverFees $
-          concatMap $ \driverFees' ->
-            [ driverFees'.platformFeeWithCurrency,
-              driverFees'.sgstWithCurrency,
-              driverFees'.cgstWithCurrency
-            ]
-    mkDuesToAmountWithCurrency : driverFeesFields
-  if isJust reqMkDuesToAmount
-    then do
-      let amount = maybe 0.0 (/ (fromIntegral $ length dueDriverFees)) reqMkDuesToAmount
-      mapM_ (\fee -> QDF.resetFee fee.id 0 (PlatformFee {fee = amount, cgst = 0.0, sgst = 0.0, currency = fee.currency}) Nothing Nothing now) dueDriverFees
-      return $ mkResponse dueDriverFees
-    else do
-      maybe (pure ()) (updateAccordingToProvidedFeeState currency now) driverFees
-      return $ mkResponse allDriverFeeByIds
-  where
-    mkResponse driverFees' =
-      Common.SubscriptionDriverFeesAndInvoicesToUpdate
-        { driverFees = Just $ mapToDriverFeeToUpdate driverFees',
-          invoices = Nothing,
-          mkDuesToAmount = Nothing,
-          mkDuesToAmountWithCurrency = Nothing,
-          subscribed = Nothing
-        }
-    mapToInvoiceInfoToUpdateAfterParse =
-      map
-        ( \invData -> do
-            let mbInvoiceStatus = (\invs -> readMaybe (T.unpack invs) :: (Maybe INV.InvoiceStatus)) =<< invData.invoiceStatus
-            InvoiceInfoToUpdateAfterParse
-              { invoiceId = cast (Id invData.invoiceId),
-                driverFeeId = cast . Id <$> invData.driverFeeId,
-                invoiceStatus = mbInvoiceStatus
-              }
-        )
-    mapToDriverFeeToUpdate =
-      map
-        ( \dfee ->
-            Common.DriverFeeInfoToUpdate
-              { driverFeeId = dfee.id.getId,
-                mkManualDue = Nothing,
-                mkAutoPayDue = Nothing,
-                mkCleared = Nothing,
-                platformFee = Just $ dfee.platformFee.fee,
-                cgst = Just dfee.platformFee.cgst,
-                sgst = Just dfee.platformFee.sgst,
-                platformFeeWithCurrency = Just $ PriceAPIEntity dfee.platformFee.fee dfee.currency,
-                cgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.cgst dfee.currency,
-                sgstWithCurrency = Just $ PriceAPIEntity dfee.platformFee.sgst dfee.currency
-              }
-        )
-    updateAccordingToProvidedFeeState currency now =
-      mapM_
-        ( \fee -> do
-            let id = cast (Id fee.driverFeeId)
-                platFormFee' = fromMaybe 0 ((fee.platformFeeWithCurrency <&> (.amount)) <|> fee.platformFee)
-                sgst = fromMaybe 0 ((fee.sgstWithCurrency <&> (.amount)) <|> fee.sgst)
-                cgst = fromMaybe 0 ((fee.cgstWithCurrency <&> (.amount)) <|> fee.cgst)
-                platFormFee = PlatformFee {fee = platFormFee', sgst, cgst, currency}
-            QDF.resetFee id 0 platFormFee Nothing Nothing now
-            when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
-            when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
-        )
-
-data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
-  { invoiceId :: Id INV.Invoice,
-    driverFeeId :: Maybe (Id DriverFee),
-    invoiceStatus :: Maybe INV.InvoiceStatus
-  }
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
@@ -2025,17 +1927,6 @@ calculateTimeDifference diffTime = DC.TotalDuration {..}
 
 ------------------------------------------------------------------------------------------------
 
-data SendSmsReq = SendSmsReq
-  { channel :: MediaChannel,
-    messageKey :: Maybe MessageKey,
-    overlayKey :: Maybe Text,
-    messageId :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets SendSmsReq where
-  hideSecrets = identity
-
 data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
   { volunteerId :: Text,
     driverId :: Text,
@@ -2048,78 +1939,6 @@ data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
 
 instance HideSecrets VolunteerTransactionStorageReq where
   hideSecrets = identity
-
-sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> SendSmsReq -> Flow APISuccess
-sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..} = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  -- limit checking
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  void $ checkIfVolunteerSMSSendingLimitExceeded volunteerId transporterConfig.volunteerSmsSendingLimit channel
-  void $ checkIfDriverSMSReceivingLimitExceeded driverId.getId transporterConfig.driverSmsReceivingLimit channel
-
-  let personId = cast @Common.Driver @DP.Person driverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- merchant access check
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  smsCfg <- asks (.smsCfg)
-  mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-  let phoneNumber = countryCode <> mobileNumber
-  withLogTag ("personId_" <> personId.getId) $ do
-    case channel of
-      SMS -> do
-        mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-          >>= Sms.checkSmsResult
-      WHATSAPP -> do
-        mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do
-        merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
-            >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
-        let jsonData = merchantMessage.jsonData
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
-        when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
-      OVERLAY -> do
-        oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
-        manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
-        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
-        let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
-        let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-        let overlay' = overlay{okButtonText, description}
-        TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay'
-      ALERT -> do
-        _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
-        topicName <- asks (.broadcastMessageTopic)
-        message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-        msg <- createMessageLanguageDict message
-        produceMessage (topicName, Just (encodeUtf8 $ getId driverId)) msg
-  -- if the message is sent successfuly then increment the count of both volunteer and driver
-  void $ incrementVolunteerSMSSendingCount volunteerId channel
-  void $ incrementDriverSMSReceivingCount driverId.getId channel
-  pure Success
-  where
-    createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
-    createMessageLanguageDict message = do
-      translations <- B.runInReplica $ MTQuery.findByMessageId message.id
-      pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
-
-    addTranslation Domain.RawMessage {..} trans =
-      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
-
-    getManualDues personId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
-      windowEndTime <- getLocalCurrentTime timeDiffFromUtc
-      let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
-      let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
-      return $
-        if null filteredDriverFees
-          then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
-
-    templateText txt = "{#" <> txt <> "#}"
 
 changeOperatingCity :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ChangeOperatingCityReq -> Flow APISuccess
 changeOperatingCity merchantShortId opCity driverId req = do
@@ -2134,45 +1953,6 @@ changeOperatingCity merchantShortId opCity driverId req = do
   QReg.updateMerchantOperatingCityId merchantOpCityId'.getId personId.getId merchant.id.getId
   DReg.cleanCachedTokens personId
   pure Success
-
-windowLimit :: SWC.SlidingWindowOptions
-windowLimit = SWC.SlidingWindowOptions 24 SWC.Hours
-
-checkIfVolunteerSMSSendingLimitExceeded :: (CacheFlow m r, MonadFlow m) => Text -> Maybe DashboardMediaSendingLimit -> MediaChannel -> m ()
-checkIfVolunteerSMSSendingLimitExceeded volunteerId limitConfig channel = do
-  let limit = case limitConfig of
-        Nothing -> 500
-        Just config -> getLimitAccordingToChannel config channel
-  (currentLimit :: Int) <- fromIntegral <$> SWC.getCurrentWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
-  when (currentLimit >= limit) $ throwError (VolunteerMessageSendingLimitExceeded (show channel)) -- the limit is counted from 0
-
-incrementVolunteerSMSSendingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
-incrementVolunteerSMSSendingCount volunteerId channel = SWC.incrementWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
-
-checkIfDriverSMSReceivingLimitExceeded :: (CacheFlow m r, MonadFlow m) => Text -> Maybe DashboardMediaSendingLimit -> MediaChannel -> m ()
-checkIfDriverSMSReceivingLimitExceeded driverId limitConfig channel = do
-  let limit = case limitConfig of
-        Nothing -> 10
-        Just config -> getLimitAccordingToChannel config channel
-  (currentLimit :: Int) <- fromIntegral <$> SWC.getCurrentWindowCount (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
-  when (currentLimit >= limit) $ throwError (DriverMessageReceivingLimitExceeded (show channel)) -- the limit is counted from 0
-
-incrementDriverSMSReceivingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
-incrementDriverSMSReceivingCount driverId channel = SWC.incrementWindowCount (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
-
-mkVolunteerSMSSendingLimitKey :: Text -> MediaChannel -> Text
-mkVolunteerSMSSendingLimitKey volunteerId channel = "Dashboard:VolunteerId-" <> volunteerId <> ":channel-" <> show channel <> ":SendSMS:HitCount"
-
-mkDriverSMSRecevingLimitKey :: Text -> MediaChannel -> Text
-mkDriverSMSRecevingLimitKey driverId channel = "Dashboard:DriverId-" <> driverId <> ":channel-" <> show channel <> ":SendSMS:ReceiveCount"
-
-getLimitAccordingToChannel :: DashboardMediaSendingLimit -> MediaChannel -> Int
-getLimitAccordingToChannel config channel =
-  case channel of
-    SMS -> config.sms
-    WHATSAPP -> config.whatsapp
-    OVERLAY -> config.overlay
-    ALERT -> config.alert
 
 --------------------------------------------------------------------------------------------------
 
@@ -2242,13 +2022,13 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
+          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just $ fromMaybe "XXXXX" vehicleId) (Just timeStamp) mbReason Nothing (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
@@ -2634,7 +2414,7 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
       transactionId <- fromMaybeM (InternalError "could not find transactionId as Image does not exist !!!!!!") . join $ image1 <&> (.workflowTransactionId) -- these errors will never happen as all hyperverge workflow captured images have transactionId.
       return $
         Common.PanAadharSelfieDetailsListResp
-          { verificationStatus = image1 <&> show . (.verificationStatus),
+          { verificationStatus = image1 >>= (show <$>) . (.verificationStatus),
             imageId1 = image1 <&> getId . (.id),
             imageId2 = image2 <&> getId . (.id),
             failureReason = Nothing,

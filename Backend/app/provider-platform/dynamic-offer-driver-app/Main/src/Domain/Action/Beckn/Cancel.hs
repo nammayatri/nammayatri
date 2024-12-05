@@ -48,8 +48,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.Booking
 import SharedLogic.Cancel
-import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator as FareCalculator
@@ -114,10 +115,10 @@ cancel req merchant booking mbActiveSearchTry = do
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation
+    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-
+    when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
@@ -166,15 +167,15 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason disToPickup currentLocation = do
+    buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
-            rideId = Nothing,
+            rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
             reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
-            driverId = Nothing,
+            driverId = (.driverId) <$> mbRide,
             additionalInfo = Nothing,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,

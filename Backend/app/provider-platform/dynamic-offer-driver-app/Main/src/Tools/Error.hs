@@ -174,7 +174,7 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
-data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
@@ -1418,3 +1418,38 @@ instance IsHTTPError DeliveryErrors where
     DeliveryImageNotFound -> E400
 
 instance IsAPIError DeliveryErrors
+
+data SpecialZoneErrors = DriverLocationOutOfRestictionBounds
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
+
+instance IsBaseError SpecialZoneErrors where
+  toMessage = \case
+    DriverLocationOutOfRestictionBounds -> Just "Driver location out of restriction bounds."
+
+instance IsHTTPError SpecialZoneErrors where
+  toErrorCode = \case
+    DriverLocationOutOfRestictionBounds -> "DRIVER_LOCATION_OUT_OF_RESTRICTION_BOUNDS"
+  toHttpCode = \case
+    DriverLocationOutOfRestictionBounds -> E400
+
+instance IsAPIError SpecialZoneErrors
+
+data LlmPromptError
+  = LlmPromptNotFound Text Text Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LlmPromptError
+
+instance IsBaseError LlmPromptError where
+  toMessage (LlmPromptNotFound merchantOperatingCityId service useCase promptKey) = Just $ "LLMPrompt with merchantOperatingCityId \"" <> merchantOperatingCityId <> "\" service \"" <> service <> "\" useCase \"" <> useCase <> "\" promptKey \"" <> promptKey <> "\" not found."
+
+instance IsHTTPError LlmPromptError where
+  toErrorCode = \case
+    LlmPromptNotFound {} -> "LLM_PROMPT_NOT_FOUND"
+
+  toHttpCode = \case
+    LlmPromptNotFound {} -> E500
+
+instance IsAPIError LlmPromptError

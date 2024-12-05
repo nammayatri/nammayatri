@@ -206,6 +206,7 @@ in  { _output = outputPath
       , GeneratorType.SQL
       , GeneratorType.CACHED_QUERIES
       ]
+    , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI
     , _serverName = None Text
     , _folderName = None Text

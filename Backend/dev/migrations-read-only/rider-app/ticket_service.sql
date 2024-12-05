@@ -19,3 +19,9 @@ ALTER TABLE atlas_app.ticket_service ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_cancellation boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_start_date date ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_end_date date ;

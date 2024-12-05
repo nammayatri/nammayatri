@@ -137,7 +137,7 @@ getDriverLoc rideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   res <-
-    if isValueAddNP
+    if isValueAddNP && isJust ride.trackingUrl
       then CallBPP.callGetDriverLocation ride.trackingUrl
       else do
         withLongRetry $ CallBPP.callTrack booking ride
@@ -194,7 +194,6 @@ getRideStatus ::
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  -- stopsInfo <- QSI.findAllByRideId rideId
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
@@ -255,6 +254,9 @@ editLocation rideId (personId, merchantId) req = do
       when (ride.status /= SRide.NEW) do
         throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
       pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
+      {-
+        Sorting down will sort mapping like this v-2, v-1, LATEST
+      -}
       oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
       initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
       let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
@@ -322,8 +324,8 @@ editLocation rideId (personId, merchantId) req = do
       bookingUpdateReq <- buildbookingUpdateRequest booking
       origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
       let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
-      let stopsLatLong = map (.gps) [destination]
-      void $ Serviceability.validateServiceability sourceLatLong stopsLatLong person
+      -- let stopsLatLong = map (.gps) [destination] -----start using after adding stops
+      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
       QBUR.create bookingUpdateReq
       startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create startLocMap

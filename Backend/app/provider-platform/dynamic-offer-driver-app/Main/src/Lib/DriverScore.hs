@@ -36,7 +36,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
-import qualified SharedLogic.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -86,6 +88,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $
     SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
@@ -131,11 +134,22 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
         else do
           mbBooking <- B.runInReplica $ BQ.findById ride.bookingId
           -- mbBooking <- BQ.findById ride.bookingId
-          let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking -> Just $ fromMaybe 0.0 booking.fareParams.driverSelectedFare + fromMaybe 0.0 booking.fareParams.customerExtraFee) =<< mbBooking
+          let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking' -> Just $ fromMaybe 0.0 booking'.fareParams.driverSelectedFare + fromMaybe 0.0 booking'.fareParams.customerExtraFee) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide fareParameter
           pure (fromMaybe 0.0 ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
+
+    -- for extra fare mitigation --
+    mbMerchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+    whenJust mbMerchantConfig $ \merchantConfig -> do
+      let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION merchantConfig
+      let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
+      let isRideAllowedForCounting = maybe False (\allowedServiceTiers -> null allowedServiceTiers || booking.vehicleServiceTier `elem` allowedServiceTiers) allowedSTiers
+      when isRideAllowedForCounting $
+        whenJust ibConfig $ \config -> do
+          IBM.incrementCompletedBookingCounterForIssueBreach EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
+      IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   where
     isNotBackFilled :: DS.DriverStats -> Bool
     isNotBackFilled driverStats = driverStats.totalEarnings == 0.0 && driverStats.bonusEarned == 0.0 && driverStats.lateNightTrips == 0
@@ -175,7 +189,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 activatedValidRides = 0,
                 referralEarnings = 0.0,
                 referralCounts = 0,
-                payoutStatus = DDS.Verifying,
+                payoutStatus = DDS.Initialized,
                 payoutOrderId = Nothing,
                 payoutOrderStatus = Nothing,
                 tollCharges = fromMaybe 0.0 ride.tollCharges,

@@ -96,11 +96,11 @@ screen initialState =
     if city == ST.Chennai then
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     else
-      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 5 5000.0 initialState push MetroPaymentStatusAction
+      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 40 1000.0 initialState push MetroPaymentStatusAction
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 -- Spy is required to debug the flow
-metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
+metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (FRFSTicketBookingStatusAPIRes -> action) -> Flow GlobalState Unit
 metroPaymentStatusPooling bookingId validUntil delayDuration state push action = do
   let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
@@ -108,7 +108,7 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
     void $ pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetMetroBookingStatusResp resp) -> do
-        let (MetroTicketBookingStatus statusResp) = resp
+        let (FRFSTicketBookingStatusAPIRes statusResp) = resp
         case statusResp.payment of
           Just (FRFSBookingPaymentAPI paymentInfo) -> do
             if paymentInfo.status == "NEW" then do
@@ -133,7 +133,7 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
   else pure unit
 
 
-metroPaymentStatusfinitePooling :: forall action. String -> String -> Int -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
+metroPaymentStatusfinitePooling :: forall action. String -> String -> Int -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (FRFSTicketBookingStatusAPIRes -> action) -> Flow GlobalState Unit
 metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state push action = do
   let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if count > 0 then do
@@ -142,7 +142,7 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
       void $ pure $ spy "metroPaymentStatusfinitePooling" ticketStatus
       case ticketStatus of
         Right (API.GetMetroBookingStatusResp resp) -> do
-          let (MetroTicketBookingStatus statusResp) = resp
+          let (FRFSTicketBookingStatusAPIRes statusResp) = resp
           case statusResp.payment of
             Just (FRFSBookingPaymentAPI paymentInfo) -> do
               if paymentInfo.status == "NEW" then do
@@ -158,14 +158,18 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
                     void $ pure $ spy "case 3" (show diffSec)
                     _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
                     doAff do liftEffect $ push $ action resp
-                  else do
-                    void $ pure $ spy "case 4" bookingId
-                    void $ delay $ Milliseconds delayDuration
-                    metroPaymentStatusfinitePooling bookingId validUntil (count - 1) delayDuration state push action
-            _ -> pure unit
-        Left _ -> pure unit
+                  else
+                    defaultCase
+            _ -> defaultCase
+        Left _ -> defaultCase
     else pure unit
   else pure unit
+  where
+    defaultCase :: Flow GlobalState Unit
+    defaultCase = do
+      void $ pure $ spy "case default" bookingId
+      void $ delay $ Milliseconds delayDuration
+      metroPaymentStatusfinitePooling bookingId validUntil (count - 1) delayDuration state push action
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketStatusScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -291,9 +295,9 @@ copyTransactionIdView state push  =
 bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
   let 
-    (API.MetroTicketBookingStatus resp) = state.data.resp
+    (API.FRFSTicketBookingStatusAPIRes resp) = state.data.resp
     city = getCityNameFromCode $ Just resp.city
-    (CityMetroConfig config) = getMetroConfigFromCity city Nothing
+    (CityMetroConfig config) = getMetroConfigFromCity city Nothing ""
     headerImgConfig = {
                         src : fetchImage FF_COMMON_ASSET config.logoImage
                       , width : V 41
@@ -425,7 +429,7 @@ paymentStatusHeader state push paymentStatus =
       ]
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 17 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 10 CENTER NoAction
-      , copyTransactionView
+      -- , copyTransactionView TODO : no need to show booking id for now
       , refreshStatusBtn
     ]
 
@@ -451,6 +455,7 @@ keyValueView push state key value index =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
+    , visibility $ boolToVisibility (value /= "")
     ][ linearLayout
         [ width MATCH_PARENT
         , margin $ Margin 5 12 5 12
@@ -473,8 +478,9 @@ keyValueView push state key value index =
         , textView $ 
             [ text value
             , color Color.black800
-            , gravity CENTER_VERTICAL
-            , width WRAP_CONTENT
+            , gravity RIGHT
+            , width if copyField then V 160 else WRAP_CONTENT
+            , singleLine true
             , height WRAP_CONTENT
             , ellipsize copyField
             ] <> FontStyle.body6 TypoGraphy

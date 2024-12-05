@@ -155,7 +155,7 @@ public class LocationUpdateService extends Service {
     private static final ArrayList<UpdateTimeCallback> updateTimeCallbacks = new ArrayList<>();
 
     public interface UpdateTimeCallback {
-        void triggerUpdateTimeCallBack(String time, String lat, String lng);
+        void triggerUpdateTimeCallBack(String time, String lat, String lng, String errorCode);
     }
 
     public static void registerCallback(UpdateTimeCallback timeUpdateCallback) {
@@ -172,7 +172,7 @@ public class LocationUpdateService extends Service {
         context = getApplicationContext();
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(notificationServiceId, createNotification());
+                this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             } else{
                 this.startForeground(notificationServiceId, createNotification());
             }
@@ -231,7 +231,7 @@ public class LocationUpdateService extends Service {
         /* Start the service if the driver is active*/
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(notificationServiceId, createNotification());
+                startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             }else {
                 startForeground(notificationServiceId, createNotification());
             }
@@ -809,11 +809,24 @@ public class LocationUpdateService extends Service {
                         Log.d(LOG_TAG, "DriverUpdateLoc API  RespCode - " + apiResponse.getStatusCode() + " RespBody - " + apiResponse.getResponseBody());
 
                         int respCode = apiResponse.getStatusCode();
-
                         if ((respCode < 200 || respCode >= 300) && respCode != 302) {
                             if (respCode >= 400 && respCode < 500)
                                 updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
+                            try {
+                                JSONObject errorPayload = new JSONObject(apiResponse.getResponseBody());
+                                String errorCode = errorPayload.optString("errorCode", "");
+                                if (respCode == 403 && errorCode.equals("DRIVER_BLOCKED")) {
+                                    for (int i = 0; i < updateTimeCallbacks.size(); i++) {
+                                        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                                        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+                                        String getCurrTime = f.format(new Date());
+                                        updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), errorCode);
+                                    }
+                                }
+                            } catch (JSONException e) {
+                                Log.d(LOG_TAG, "exception in decoding errorPayload " + e.getMessage());
+                            }
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
                             Exception exception = new Exception("API Error in callDriverCurrentLocationAPI for ID : " + driverId + " $ Resp Code : " + respCode + " $ Error : " + apiResponse.getResponseBody());
                             FirebaseCrashlytics.getInstance().recordException(exception);
@@ -825,7 +838,7 @@ public class LocationUpdateService extends Service {
                                 final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                 f.setTimeZone(TimeZone.getTimeZone("UTC"));
                                 String getCurrTime = f.format(new Date());
-                                updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude));
+                                updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), "SUCCESS");
                             }
                         }
                         result = apiResponse.getResponseBody();

@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
+import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
@@ -345,7 +346,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideCity = Just $ show city.city,
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
         rideCreatedAt = ride.createdAt,
-        rideStatus = mkCommonRideStatus ride.status
+        rideStatus = mkCommonRideStatus ride.status,
+        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`

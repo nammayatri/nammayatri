@@ -51,6 +51,7 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Timers
 import Locale.Utils
+import Engineering.Helpers.Events as EHE
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -190,7 +191,9 @@ commonTextView state textValue isLink link push isTextFromHtml enableAccessibili
     , accessibility $ if enableAccessibilityHint then ENABLE else DISABLE
     , accessibilityHint accessibilityText
     , onClick (\action -> do
-                when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
+                when isLink $ do
+                  let _ = EHE.addEvent (EHE.defaultEventObject "tnc_clicked") { module = "onboarding"}
+                  JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
               ) (const TermsAndConditions)
     ] <> FontStyle.tags TypoGraphy

@@ -11,6 +11,7 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , submitIssueBtnColor : "#0066FF"
   , estimateConfirmText: "Request a NammaYatri Ride"
   , autoConfirmingLoaderColor: "#80B2FF"
   , quoteListModelBackground: "#2C2F3A"
@@ -270,7 +271,8 @@ config =
     enableAcPopup : false,
     enableRentalReallocation : true,
     enableEditDestination : false,
-    enableHelpAndSupport : true
+    enableHelpAndSupport : true,
+    enableBusBooking : false
   }
 
   , rideCompletedCardConfig : {
@@ -676,7 +678,7 @@ config =
             , rentalWaitingChargeConfig {
                 cabs {
                   freeMinutes = 3.0
-                , perMinCharges = 1.0
+                , perMinCharges = 2.0
                 }
               }
             , intercityWaitingChargeConfig {
@@ -739,23 +741,27 @@ config =
         defaultCityConfig
           { cityName = "Kochi",
             cityCode = "std:0484",
+            enableIntercity = true,
             waitingChargeConfig = keralaWTC
           },
         defaultCityConfig
           { cityName = "Trivandrum",
             cityCode = "std:0471",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           },
         defaultCityConfig
           { cityName = "Thrissur",
             cityCode = "std:0487",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           },
 
         defaultCityConfig
           { cityName = "Kozhikode",
             cityCode = "std:0495",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           }
 
       
@@ -787,6 +793,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
+  , enableDeliveryService : false
 }
 
 defaultCityConfig :: CityConfig
@@ -818,7 +825,7 @@ allCitiesDefCityConfig =
       domain : "https://nammayatri.in",
       customerAppId : "in.juspay.nammayatri"
     },
-    appLogo : "",
+    appLogo : "ic_namma_yatri_logo",
     dashboardUrl : "",
     appLogoLight : "",
     enableAcViews : false,

@@ -244,6 +244,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
+    stopWaitingTimes :: [Minutes],
     returnTime :: Maybe UTCTime,
     vehicleAge :: Maybe Months,
     roundTrip :: Bool,
@@ -396,7 +397,10 @@ calculateFareParameters params = do
             Nothing -> 840
           allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDurationInMins) params.returnTime
           allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
-          extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
+          reservedTime = case params.returnTime of
+            Just rt -> max estimatedDuration (round $ diffUTCTime rt params.rideTime)
+            _ -> estimatedDuration
+          extraMins = max 0 (actualDuration - reservedTime) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
@@ -407,7 +411,8 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          extraHoursSpent = max 0 (fromIntegral (allowanceMins' - defaultWaitTimeAtDestination.getMinutes) / 60.0) :: Double
+          extraTimeSpent = max 0 ((diffUTCTime (fromMaybe params.rideTime params.returnTime) params.rideTime) - intToNominalDiffTime estimatedDuration) / 60
+          extraHoursSpent = max 0 (realToFrac extraTimeSpent - fromIntegral (defaultWaitTimeAtDestination.getMinutes)) / 60.0 :: Double
           fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
 
       let distPercent = case (actualDistance, estimatedDistance) of
@@ -560,10 +565,12 @@ calculateFareParameters params = do
 
     countWaitingCharge :: WaitingChargeInfo -> Maybe HighPrecMoney
     countWaitingCharge waitingChargeInfo = do
-      let waitingTimeMinusFreeWatingTime = params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)
-      let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
+      let waitingTimeMinusFreeWatingTime = max 0 (fromMaybe (Minutes 0) (params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)))
+      let totalStopWaitingTimeMinunFreeWaitingTime = sum $ params.stopWaitingTimes <&> (\wt -> max ((-) wt waitingChargeInfo.freeWaitingTime) 0)
+      let chargedWaitingTime = waitingTimeMinusFreeWatingTime + totalStopWaitingTimeMinunFreeWaitingTime
+      let mbChargedWaitingTime = if chargedWaitingTime == 0 then Nothing else Just chargedWaitingTime
       case waitingChargeInfo.waitingCharge of
-        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> chargedWaitingTime
+        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> mbChargedWaitingTime
         ConstantWaitingCharge charge -> Just $ toHighPrecMoney charge -- Always charged, freeWaitingTime doesn't make sense in this case
     countPlatformFee :: HighPrecMoney -> Maybe PlatformFeeInfo -> Currency -> FareParametersDetails -> FareParametersDetails
     countPlatformFee fullCompleteRideCost platformFeeInfo currency = \case
@@ -614,6 +621,8 @@ calculateFareParameters params = do
             AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
             SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
             DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
+            BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
@@ -701,16 +710,19 @@ timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 36
 utcToIst :: Minutes -> UTCTime -> LocalTime
 utcToIst timeZoneDiff = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) -- IST is UTC + 5:30
 
+minuteOfDay :: TimeOfDay -> Int
+minuteOfDay (TimeOfDay hour minute _) = hour * 60 + minute
+
 -- Calculates hours for a partial day
 hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
 hoursInDay startUtc endUtc start end day
   | startDay == endDay = if startDay == day then diffMins else 0
   | otherwise =
     if day == startDay
-      then 1440 - todMin startTod
+      then 1440 - minuteOfDay startTod
       else
         if day == endDay
-          then todMin endTod
+          then minuteOfDay endTod
           else 1440
   where
     startDay = localDay start

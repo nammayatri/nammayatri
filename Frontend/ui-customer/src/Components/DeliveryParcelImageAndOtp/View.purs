@@ -33,6 +33,8 @@ view push config =
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
+  , gravity CENTER
+  , orientation VERTICAL
   ]
   [ 
     PrestoAnim.animationSet [ translateYAnim translateYAnimConfig ] $

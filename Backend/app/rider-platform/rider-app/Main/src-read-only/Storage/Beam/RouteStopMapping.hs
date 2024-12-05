@@ -11,11 +11,13 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.TimeBound
 import Tools.Beam.UtilsTH
 
 data RouteStopMappingT f = RouteStopMappingT
-  { merchantId :: B.C f Kernel.Prelude.Text,
+  { estimatedTravelTimeFromPreviousStop :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
+    merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     providerCode :: B.C f Kernel.Prelude.Text,
     routeCode :: B.C f Kernel.Prelude.Text,

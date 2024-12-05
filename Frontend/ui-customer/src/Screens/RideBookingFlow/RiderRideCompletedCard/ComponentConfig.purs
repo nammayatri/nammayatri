@@ -25,7 +25,7 @@ primaryButtonConfig state = PrimaryButton.config
         }
     , alpha = if state.ratingCard.recordAudioState.isRecording == true then 0.5 else 1.0
     , background = Color.black900
-    , margin = (Margin 0 0 0 0)
+    , margin = (Margin 0 0 0 20)
     , id = "RateYourDriverButton"
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
     , enableRipple = true

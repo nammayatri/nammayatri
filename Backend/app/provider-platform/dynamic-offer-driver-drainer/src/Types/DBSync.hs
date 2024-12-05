@@ -43,7 +43,8 @@ data Env = Env
     -- _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],
-    _connectionPool :: Pool Connection
+    _connectionPool :: Pool Connection,
+    _esqDBCfg :: EsqDBConfig
   }
 
 data AppCfg = AppCfg

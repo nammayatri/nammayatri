@@ -129,3 +129,7 @@ clearCache FareProduct {..} = Hedis.withCrossAppRedis $ do
     Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
     Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
     Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOperatingCityId = do
+  Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)

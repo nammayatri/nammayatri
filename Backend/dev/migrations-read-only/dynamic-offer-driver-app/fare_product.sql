@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.fare_product ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN search_source text NOT NULL default 'ALL';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN disable_recompute boolean ;

@@ -157,7 +157,7 @@ runSchedulerM schedulerConfig env action = do
         ( forever $ do
             handleExceptions $ do
               kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-              L.setOption KBT.Tables (fromMaybe (KUC.Tables [] [] [] False []) kvConfigs)
+              L.setOption KBT.Tables (fromMaybe KUC.defaultTableData kvConfigs)
             threadDelay (env.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt

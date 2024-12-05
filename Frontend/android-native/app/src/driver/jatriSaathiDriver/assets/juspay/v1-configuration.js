@@ -215,7 +215,7 @@ window.getMerchantConfig = function () {
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
     , "acExplanation" : false
-    , "showMonthlyLeaderboard" : false // Disabled Monthly Leaderboard till September
+    , "showMonthlyLeaderBoard" : true
     , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
@@ -360,7 +360,7 @@ let getAllCityConfig = () => {
     "cityName" : "",
     "mapImage" : "",
     "cityCode" : "",
-    "showSubscriptions" : false,
+    "showSubscriptions" : true,
     "enableAdvancedBooking" : true,
     "advancedRidePopUpYoutubeLink" : "" ,
     "callDriverInfoPost": false, // Dummy link need to change
@@ -375,14 +375,14 @@ let getAllCityConfig = () => {
     "enableYatriCoins" : false,
     "enableGullak": false,
     "vehicleNSImg" : "ny_ic_location_unserviceable",
-    "registration" : {
+  "registration" : {
         "supportWAN" : "918618963188",
         "callSupport" : true,
         "whatsappSupport" : true
     },
     "variantSubscriptionConfig" : {
       "enableVariantBasedSubscription" : false,
-      "variantList" : [],
+      "variantList" : ["CarCategory"],
       "enableCabsSubscriptionView" : false,
       "staticViewPlans" : []
     },
@@ -403,7 +403,7 @@ let getAllCityConfig = () => {
         "perMinCharges" : 1.50
       },
       "bike" : {
-        "freeSeconds" : 300,
+        "freeSeconds" : 180,
         "perMinCharges" : 1.0
       }
     },
@@ -461,9 +461,14 @@ let getAllCityConfig = () => {
       showSubscriptions: true,
       cityLat: 22.5354064,
       cityLong: 88.2649516,
+      registration : {
+        supportWAN : "918088065549",
+        callSupport : true,
+        whatsappSupport : true
+      },
       variantSubscriptionConfig: {
         enableVariantBasedSubscription: true,
-        variantList: ["CarCategory"],
+        variantList: ["CarCategory","BikeCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },
@@ -478,7 +483,7 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
-          perMinCharges: 2.0
+          perMinCharges: 1.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -500,7 +505,7 @@ let getAllCityConfig = () => {
       cityName: "Siliguri",
       mapImage: "ys_ic_siliguri_map",
       cityCode: "std:0353",
-      showSubscriptions: false,
+      showSubscriptions: true,
       cityLat: 26.708845,
       cityLong: 88.434362,
       supportNumber: "08069724949",
@@ -516,7 +521,7 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
-          perMinCharges: 2.0
+          perMinCharges: 1.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -532,17 +537,30 @@ let getAllCityConfig = () => {
           freeSeconds: 180,
           perMinCharges: 2.0
         }
+      },
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
       }
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Asansol",
       mapImage: "ys_ic_asansol_map",
-      cityCode: "std:0353",
-      showSubscriptions: false,
+      cityCode: "std:0341",
+      showSubscriptions: true,
       cityLat: 23.6889,
       cityLong: 86.9661,
       supportNumber: "08069724949",
-      languageKey: "BN_IN"
+      languageKey: "BN_IN",
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -550,7 +568,14 @@ let getAllCityConfig = () => {
       cityCode: "std:0342",
       cityLat: 23.5204,
       cityLong: 87.3119,
-      showSubscriptions: false
+      showSubscriptions: true,
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
+      },
+      enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",

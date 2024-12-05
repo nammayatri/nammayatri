@@ -9,7 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Text
 import qualified Domain.Types.StationType
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types

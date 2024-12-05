@@ -296,6 +296,7 @@ getHi =
     , vehicle_issue: "वाहन का मामला"
     , fare_updated: "किराया अपडेट किया"
     , frequent_cancellations_will_lead_to_less_rides: "बार-बार रद्द करने से सवारी कम होगी और रेटिंग कम होगी"
+    , frequent_cancellations_will_lead_to_blocking: "बार-बार रद्द करने से ब्लॉकिंग और रेटिंग कम हो जाएगी"
     , continue: "जारी रखें"
     , confirm_password: "पासवर्ड की पुष्टि कीजिये"
     , demo_mode: "डेमो मोड"
@@ -1193,6 +1194,18 @@ getHi =
     , yatri_points_faqs_ques2_ans1: (\days -> "यात्री अंक अर्जित होने के दिन से " <> days <> " दिनों की अवधि के लिए वैध होते हैं। इस अवधि के दौरान, आप लाभ प्राप्त करने के लिए अंकों का उपयोग कर सकते हैं।")
     , yatri_points_faqs_ques2_ans2: (\_ -> "डिस्काउंट पॉइंट्स का उपयोग उसी अवधि के भीतर किया जाना चाहिए।")
     , yatri_points_faqs_ques2_ans3: "यदि इस समय सीमा के भीतर रूपांतरण या उपयोग नहीं होता है, तो अंक जब्त कर लिए जाएंगे।"
+    , hotspots: "हॉटस्पॉट्स"
+    , very_high: "बहुत ज्यादा"
+    , high: "ज्यादा"
+    , very_high_demand_area: "बहुत अधिक मांग वाला क्षेत्र"
+    , high_demand_area: "अधिक मांग वाला क्षेत्र"
+    , moderate: "मध्यम"
+    , average_demand_area: "औसत मांग क्षेत्र"
+    , this_area_is_experiencing_average_searches: "इस क्षेत्र में ग्राहकों की ओर से खोजों की औसत संख्या देखी जा रही है"
+    , this_area_is_experiencing_very_high_searches: "इस क्षेत्र में ग्राहकों की ओर से बहुत अधिक संख्या में खोजें की जा रही हैं"
+    , this_area_is_experiencing_high_searches: "इस क्षेत्र में ग्राहकों की ओर से अधिक संख्या में खोजें की जा रही हैं"
+    , navigate: "नेविगेट"
+    , hotspots_not_available_currently: "हॉटस्पॉट फिलहाल उपलब्ध नहीं हैं, कृपया बाद में पुनः प्रयास करें!"
     , yatri_points_faqs_ques3: (\_ -> "मैं यात्री अंक कैसे कमा सकता हूँ?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "यात्री अंक ऐप पर नियमित गतिविधियों के माध्यम से अर्जित किए जाते हैं, जैसे सवारी लेना और ग्राहकों को संदर्भित करना। कुछ अलग करने की जरूरत नहीं है।")
     , yatri_points_faqs_ques3_ans2: (\_ -> "आप अच्छे व्यवहार का प्रदर्शन करके अतिरिक्त अंक अर्जित कर सकते हैं, जैसे कम रद्दीकरण और ग्राहकों से अच्छी रेटिंग प्राप्त करना।")
@@ -1533,6 +1546,7 @@ getHi =
     , refresh_payment: "ताज़ा करना"
     , by: "द्वारा"
     , customers: "ग्राहक"
+    , customer: "ग्राहक"
     , rating: "रेटिंग"
     , cancellation: "रद्दीकरण"
     , i_speak: "मैं बोलता हूँ"
@@ -1663,12 +1677,15 @@ getHi =
     , buy_new_home: "नया घर खरीदें"
     , favourites: "पसंदीदाएँ"
     , points_earned_: (\points -> points <> " अंक अर्जित किये गये ✨")
-    , for_metro_ride: "मेट्रो सवारी के लिए"
+    , for_metro_pickup_ride: "मेट्रो पिकअप राइड के लिए"
+    , for_metro_drop_ride: "मेट्रो ड्रॉप राइड के लिए"
     , continue_with: (\text -> text <> " के साथ जारी रखें")
     , contact_support_for_help: "सहायता के लिए समर्थन से संपर्क करें"
     , you_have_switched_city_or_vehicle: "आपने अपना वाहन या शहर बदल लिया है। राइड्स प्राप्त करने के लिए एक योजना चुनें"
     , xl_plus: "XL प्लस"
     , currently_there_are_no_rides_available: "वर्तमान में, कोई सवारी उपलब्ध नहीं है।"
+    , due_to_higher_cancellation_rate_you_are_blocked: "अधिक रद्दीकरण दर के कारण, आपको ऑनलाइन जाने से रोक दिया गया है"
+    , blocked_till: (\time date -> date <> ", " <> time <> " तक ब्लॉक किया गया ⚠️")
     , ride_requests: "सवारी अनुरोध"
     , scheduled_ride_accepted: "निर्धारित सवारी स्वीकार की गई!"
     , you_can_access_scheduled_rides: "आप निर्धारित सवारी तक पहुंच सकते हैं"
@@ -1746,4 +1763,20 @@ getHi =
     , parcel_is_inappropriate : "पार्सल अनुचित है"
     , sender_asking_different_location : "प्रेषक ने किसी अन्य स्थान पर आने के लिए कहा है"
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
+    , truck : "ट्रक"
+    , register_your_truck : "रेअपने ट्रक को रजिस्टर करें"
+    , no_plan_selected : "कोई योजना चयनित नहीं है"
+    , a_new_way_to_earn_parcel: "कमाई का एक नया ज़रिया, पार्सल 2W"
+    , seamless_earning_experience_click_below: "परेशानी मुक्त अनुभव के लिए क्लिक करें"
+    , metro_warrior_mode : "मेट्रो योद्धा मोड"
+    , choose_metro_station : "ऐसा मेट्रो स्टेशन चुनें जिससे आपको उससे और उसके लिए प्राथमिकता वाले राइड अनुरोध मिलें।"
+    , primary_metro_station : "प्राथमिक मेट्रो स्टेशन"
+    , primary_station_info : "आप यहां अपना पसंदीदा मेट्रो स्टेशन सेट कर सकते हैं"
+    , nearby_stations : "नजदीकी स्टेशन"
+    , nearby_station_info : "आपके प्राथमिक स्टेशन के 4 सबसे नजदीकी स्टेशन। आप प्रत्येक को अपनी इच्छानुसार चालू या बंद कर सकते हैं"
+    , change : "बदलें"
+    , disable_metro_warriors_info : "गो टू मोड सक्षम करने से मेट्रो वॉरियर्स मोड अक्षम हो जाएगा।"
+    , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
+    , metro_warriors : "मेट्रो वॉरियर्स"
+    , search : "खोजें"  
     }

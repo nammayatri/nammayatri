@@ -392,8 +392,8 @@ getKn = Keymap {
 , service_charges: "ಸೇವೆಯ ಶುಲ್ಕ"
 , confirm_and_book: "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ"
 , people: "ಜನರು"
-, search_again_with_a_tip: "ಸಲಹೆಯೊಂದಿಗೆ ಮತ್ತೆ ಹುಡುಕುವುದೇ?"
-, try_again_with_a_tip: "ಸಲಹೆಯೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸುವುದೇ?"
+, search_again_with_a_tip: "ಟಿಪ್ ನೊಂದಿಗೆ ಮತ್ತೆ ಹುಡುಕುವುದೇ?"
+, try_again_with_a_tip: "ಟಿಪ್ ನೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸುವುದೇ?"
 , boost_your_ride_chances_and_help_drivers_with_tips: "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ಸವಾರಿ ಮಾಡುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ನೀವು ಟಿಪ್ ಸೇರಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು."
 , try_again_without_tip: "ಸಲಹೆ ಇಲ್ಲದೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
 , search_again_without_a_tip: "ಯಾವುದೇ ಟಿಪ್ ಇಲ್ಲದೆ ಮತ್ತೆ ಹುಡುಕಿ"
@@ -1121,6 +1121,7 @@ getKn = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "ದಯವಿಟ್ಟು ಶಾಂತವಾಗಿರಿ, "<> appName <>" ಸುರಕ್ಷಾ ತಂಡ ಎಚ್ಚರಿಸಲಾಗಿದೆ!")
 , indication_to_emergency_contacts: (\appName -> appName <>" ನಿಮ್ಮ ಎಮರ್ಜೆನ್ಸಿ ಸಂಪರ್ಕಗಳಿಗೆ ಇದು ಪರೀಕ್ಷೆ ಗಾಯನವಾಗಿದೆ, ನಿಮ್ಮ ಎಮರ್ಜೆನ್ಸಿ ಸಂಪರ್ಕಗಳಿಗೆ ಇದು ತವಕಪಡಿಸದ ಅನುಭವ ಮಾಡುತ್ತದೆ.")
 , book: (\name -> name <> " ಬುಕ್ ಮಾಡಿ")
+, book_for_: (\name -> name <> " ಗೆ ಬುಕ್ ಮಾಡಿ")
 , fare_for: (\limit -> limit <> " ಗಾಗಿ ಶುಲ್ಕ")
 , waiting_charge_limit: (\timeLimit -> "ಕಾಯಿದಾರಿ ಶುಲ್ಕಗಳು ("<> timeLimit <>" ನಿಮಿಷಗಳ ನಂತರ)")
 , time_taken: "ಒಟ್ಟು ಸಮಯ"
@@ -1365,6 +1366,7 @@ getKn = Keymap {
 , booking: "ಬುಕ್"
 , by: "ಇವರಿಂದ"
 , customers: "ಗ್ರಾಹಕರು"
+, customer: "ಗ್ರಾಹಕ"
 , rating: "ಮೌಲ್ಯಮಾಪನ"
 , cancellation: "ರದ್ದತಿ"
 , trips: "ಪ್ರಯಾಣಗಳು"
@@ -1681,4 +1683,37 @@ getKn = Keymap {
 , confirm_contacts : "ಸಂಪರ್ಕಗಳನ್ನು ದೃಢೀಕರಿಸಿ"
 , tickets_for_delhi_metro : "ದೆಹಲಿ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
 , max_parcel_size : (\l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
+, offers : "ಆಫ್ಸ್"
+, boost_search_instantly : "ನಿಮ್ಮ ಹುಡುಕಾಟವನ್ನು ತಕ್ಷಣವೇ ಹೆಚ್ಚಿಸಿ!"
+, add_a_tip : "ಟಿಪ್ ಸೇರಿಸಿ"
+, updated_fare_str : "ನವೀಕರಿಸಿದ ದರ"
+, book_any_details : "ಯಾವುದೇ ವಿವರಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
+, boost_search : "ಹುಡುಕಾಟವನ್ನು ಹೆಚ್ಚಿಸಿ"
+, bus__ : "ಬಸ್"
+, tickets_for_chennai_bus : "ಚென்னை ಪேருந்து டிக்கெட்டுகள்"
+, buy_bus_tickets : "ಬಸ್ ಟಿಕೆಟ್ಗಳನ್ನು ಖರೀದಿಸಿ"
+, book_and_pay : "ಬುಕ್ ಮತ್ತು ಪಾವತಿಸಿ"
+, bus_ticket : "ಬಸ್ ಟಿಕೆಟ್"
+, check_spelling_and_try_again : "ವರ್ಣನೆಯನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸಿ"
+, book_bus_ticket : "ಬಸ್ ಟಿಕೆಟ್ ಬುಕ್ ಮಾಡಿ"
+, book_a_one_way_instant_bus_ticket : "ಒಂದು ದಾರಿಯ ತಕ್ಷಣ ಬಸ್ ಟಿಕೆಟ್ ಬುಕ್ ಮಾಡಿ"
+, recent_ticket : "ಇತ್ತೀಚಿನ ಟಿಕೆಟ್"
+, experience_hassle_free_bus_bookings_with : "ಅನುಭವಿಸಿ ಹಾಸಲ್ ಫ್ರೀ ಬಸ್ ಬುಕ್ಕಿಂಗ್ಗಳನ್ನು"
+, enter_bus_number_or_destination : "ಬಸ್ ಸಂಖ್ಯೆ ಅಥವಾ ಗಮನಾರ್ಹ ನಗರಕ್ಕೆ ನಮೂದಿಸಿ"
+, destination_stop : "ಗಮನಾರ್ಹ ನಿಲ್ದಾಣ"
+, route_bus_number : "ರೂಟ್ / ಬಸ್ ಸಂಖ್ಯೆ"
+, pickup_stop : "ಪಿಕಪ್ ನಿಲ್ದಾಣ"
+, tickets_for_kolkata_bus : "ಕೊಲ್ಕಾತಾ ಬಸ್ ಟಿಕೆಟ್ಗಳು"
+, ticket_validity_30_minutes : "ಟಿಕೆಟ್ ಮಾನ್ಯತೆ: 30 ನಿಮಿಷ"
+, fare_commission_free_wbtc : "ಶುಲ್ಕ ಮತ್ತು ಕಮಿಷನ್ ಫ್ರೀ ಡಬ್ಲ್ಯೂಬಿಟಿಸಿ"
+, select_route_number : "ರೂಟ್ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+, pickup_and_destination_stop : "ಪಿಕಪ್ ಮತ್ತು ಗಮನಾರ್ಹ ನಿಲ್ದಾಣ"
+, bus_boarded_confirmation : "ನೀವು ಬಸ್ಸಿನಲ್ಲಿ ಇದ್ದೀರಾ ಎಂದು ದೃಢೀಕರಿಸಿ?"
+, towards_station : (\s -> s <> " ಕಡೆಗೆ")
+, bus_no : (\s -> "ಬಸ್ ಸಂಖ್ಯೆ: " <> s)
+, verified : "ಪರಿಶೀಲಿತ"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ಪ್ರಮುಖ ಮಾರ್ಗಗಳಲ್ಲಿ ನಮ್ಮ ಬಸ್ ಟಿಕೇಟಿಂಗ್ ಪೈಲಟ್ ಲಾಂಚ್ ಅನುಭವಿಸಿ. ಇನ್ನಷ್ಟು ಮಾರ್ಗಗಳು ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿವೆ!")
+, note_your_ticket_is_only_valid_for : (\s -> "ಗಮನಿಸಿ: ನಿಮ್ಮ ಟಿಕೆಟ್ ಬುಕ್ಕಿಂಗ್‌ನ " <> s <> " ಗಳಿಗಷ್ಟೇ ಮಾನ್ಯವಾಗಿದೆ. ಸ್ಥಳೀಯ ಪರಿಸ್ಥಿತಿಗಳ ಪರಿಣಾಮವಾಗಿ ಬಸ್ಸುಗಳ ಸಮಯ ಬದಲಾಗಬಹುದು, ಆದ್ದರಿಂದ ನೀವು ಬುಕ್ ಮಾಡಿದಾಗ ನಿಲ್ದಾಣದಲ್ಲಿ ಸಿದ್ಧರಾಗಿರಿರಿ.")
+, here_is_bus_ticket : "ಇಲ್ಲಿ ಬಸ್ ಟಿಕೆಟ್ ಇದೆ"
 }

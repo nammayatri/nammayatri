@@ -72,8 +72,16 @@ screen initialState =
     , name: "RiderRideCompletedScreen"
     , globalEvents: [(\push ->  globalEvents' push initialState)]
     , eval:
-        ( \state action -> do
-            eval (spy "RiderRideCompletedCard state -> " state) (spy "RiderRideCompletedCard action -> " action)
+        ( \action state -> do
+            let
+              _ = spy "RiderRideCompletedCard action" action
+              _ = spy "RiderRideCompletedCard state" state
+            void $ case action of 
+              FeedbackChanged _ _ -> pure unit
+              _ -> do 
+                  let _ = JB.hideKeyboardOnNavigation true
+                  pure unit
+            eval action state
         ) 
     }
     where
@@ -202,11 +210,11 @@ priceAndDistanceUpdateView state push =
             , width MATCH_PARENT
             , weight 1.0
             , gravity CENTER
+            , margin $ MarginLeft if state.showSafetyCenter then 60 else 0
             ][ imageView
                 [ width $ V 55
                 , height $ V 47
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick" 
-                , margin $ MarginLeft 70
                 ]
             ]
           , linearLayout[
@@ -871,6 +879,7 @@ rideRatingView state push =
         , clickable true
         , background Color.white900
         , fillViewport true
+        , id (getNewIDWithTag "RideCompletedScrollView")
         ] $ [  
             linearLayout
               [ height MATCH_PARENT
@@ -983,7 +992,7 @@ profile state push =
           , textView $
               [ 
                 accessibilityHint $ "liked by customers"
-              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> getString CUSTOMERS
+              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> if state.driverInfoCardState.favCount > 1 then getString CUSTOMERS else getString CUSTOMER
               , color Color.blue800
               , maxLines 1
               , gravity CENTER
@@ -1258,7 +1267,8 @@ editTextView state push =
       , pattern "[^\n]*,255"
       , singleLine true 
       , margin $ MarginTop 20
-      , onChange push FeedbackChanged 
+      , onChange push (FeedbackChanged ( EHC.getNewIDWithTag "reviewBox-editText")) 
+      , id $ getNewIDWithTag "reviewBox-editText"
       ]  <> FontStyle.body1 TypoGraphy
   , linearLayout[
       height MATCH_PARENT

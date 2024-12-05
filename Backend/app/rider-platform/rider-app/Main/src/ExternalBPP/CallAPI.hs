@@ -36,8 +36,8 @@ search :: Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch
 search merchant merchantOperatingCity bapConfig searchReq = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
-    (METRO, Nothing) -> do
-      fork "FRFS ONDC METRO SearchReq" $ do
+    (_, Nothing) -> do
+      fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
         bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation merchantOperatingCity.city
@@ -141,5 +141,20 @@ status merchantId merchantOperatingCity bapConfig booking = do
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
     processOnStatus onStatusReq = do
-      (merchant', booking') <- DOnStatus.validateRequest onStatusReq
-      DOnStatus.onStatus merchant' booking' onStatusReq
+      let bookingOnStatusReq = DOnStatus.Booking onStatusReq
+      (merchant', booking') <- DOnStatus.validateRequest bookingOnStatusReq
+      DOnStatus.onStatus merchant' booking' bookingOnStatusReq
+
+verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> Flow ()
+verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
+  case (bapConfig.vehicleCategory, integratedBPPConfig) of
+    (BUS, Just config) -> do
+      onStatusReq <- BusFlow.verifyTicket merchantId merchantOperatingCity config bapConfig encryptedQrData
+      processOnStatus onStatusReq
+    _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
+  where
+    processOnStatus onStatusReq = do
+      let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
+      (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
+      DOnStatus.onStatus merchant' booking' verificationOnStatusReq

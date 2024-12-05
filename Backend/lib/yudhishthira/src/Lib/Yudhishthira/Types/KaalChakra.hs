@@ -21,7 +21,8 @@ data NammaTagChakra = NammaTagChakra
     tagPossibleValues :: TagValues,
     tagChakra :: Chakra,
     tagValidity :: Maybe Hours,
-    tagRule :: TagRule
+    tagRule :: TagRule,
+    actionEngine :: Maybe Value
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

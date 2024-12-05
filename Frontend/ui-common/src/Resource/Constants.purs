@@ -29,5 +29,11 @@ locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 maxImageUploadInIssueReporting :: Int  
 maxImageUploadInIssueReporting = 4
 
+earthRadius :: Number
+earthRadius = 6378137.0
+
+metersPerDegreeLat :: Number
+metersPerDegreeLat = 111320.0
+
 secondsInOneYear :: Int 
 secondsInOneYear = 31536000

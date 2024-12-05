@@ -37,6 +37,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber, round)
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -174,6 +175,7 @@ view push state =
     , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
+    , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -440,6 +442,8 @@ manageVehicleItem state vehicle push =
       "ny_ic_bike_side"
     else if category == ST.AmbulanceCategory then
       "ny_ic_ambulance_side"
+    else if category == ST.TruckCategory then
+      "ny_ic_truck_side"
     else
       "ny_ic_silhouette"
 
@@ -453,6 +457,8 @@ manageVehicleItem state vehicle push =
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 profileView push state =
+  let driverBlockedHeaderVisibility = state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
+  in
   PrestoAnim.animationSet [ Anim.fadeIn (not state.props.openSettings) ]
     $ linearLayout
         [ height MATCH_PARENT
@@ -462,6 +468,28 @@ profileView push state =
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
         [ headerView state push
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background Color.red900
+            , padding $ Padding 16 16 16 16
+            , gravity LEFT
+            , visibility $ boolToVisibility driverBlockedHeaderVisibility
+            ]
+            [ textView $ 
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , color Color.white900
+                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+                , weight 1.0
+                ] <> FontStyle.subHeading3 TypoGraphy
+            , imageView 
+                [ height $ V 24
+                , width $ V 24
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
+                , onClick push $ const ShowDrvierBlockedPopup
+                ]
+            ]
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -753,6 +781,7 @@ tabImageView state push =
       "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
       "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
       "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.TruckCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
     per = (state.data.completingProfileRes.completed*100)/4
@@ -871,6 +900,7 @@ tabImageView state push =
       ST.CarCategory -> "ny_ic_sedan"
       ST.BikeCategory -> "ny_ic_bike_side"
       ST.AmbulanceCategory -> "ny_ic_ambulance_side"
+      ST.TruckCategory -> "ny_ic_truck_side"
       _ -> "ny_ic_silhouette"
 
   getAutoImage :: CityConfig -> String
@@ -1647,7 +1677,7 @@ profileOptionsLayout state push =
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
     GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]) -- Temporary Fix until Ambulance Ride Flow is complete
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"]) -- Temporary Fix until Ambulance Ride Flow is complete
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1786,7 +1816,7 @@ vehicleListItem state push vehicle =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 8.0
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.AmbulanceCategory)
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory `elem` [ST.AmbulanceCategory, ST.TruckCategory])
         , padding $ Padding 16 8 16 8
         , margin $ MarginTop 16
         , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
@@ -1819,6 +1849,8 @@ vehicleListItem state push vehicle =
       "ny_ic_bike_side"
     else if category == ST.AmbulanceCategory then
       "ny_ic_ambulance_side"
+    else if category == ST.TruckCategory then
+      "ny_ic_truck_side"
     else
       "ny_ic_silhouette"
 
@@ -2466,6 +2498,15 @@ deleteRcPopUpView push state =
     , width MATCH_PARENT
     ]
     [ PopUpModal.view (push <<< DeleteRcPopUpModalAction) (deleteRcPopUpConfig state) ]
+
+driverBlockedPopupView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverBlockedPopupView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< DriverBLockedPopupAction) (driverBLockedPopup state) ]
+
 
 rcActiveOnAnotherDriverProfilePopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcActiveOnAnotherDriverProfilePopUpView push state =

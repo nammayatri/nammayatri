@@ -213,21 +213,21 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToRideSelectionScreen CategoryListType HelpAndSupportScreenState
                   | GoToChatScreen CategoryListType HelpAndSupportScreenState
                   | GoToSelectFaqScreen CategoryListType HelpAndSupportScreenState
-                  | GoToHelpAndSupportScreen HelpAndSupportScreenState 
-                  | ConfirmDeleteAccount HelpAndSupportScreenState 
+                  | GoToHelpAndSupportScreen HelpAndSupportScreenState
+                  | ConfirmDeleteAccount HelpAndSupportScreenState
                   | GoToOldChatScreen IssueInfo HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
-eval (BackPressed _ ) state = 
+eval (BackPressed _ ) state =
   if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
   else if state.props.isCallConfirmation then continue state{props{isCallConfirmation = false}}
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
   else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
-  else 
-    if isParentView FunctionCall 
-      then do 
+  else
+    if isParentView FunctionCall
+      then do
         void $ pure $ emitTerminateApp Nothing true
         continue state
       else exit $ GoBack state
@@ -260,31 +260,33 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 eval ViewRides state = exit $ GoToMyRides state
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
-  let email = if isEmailPresent FunctionCall then 
-                getValueToLocalStore USER_EMAIL 
-              else 
+  let email = if isEmailPresent FunctionCall then
+                getValueToLocalStore USER_EMAIL
+              else
                 ""
-      updatedState = state { 
+      updatedState = state {
                         data {
-                          email = email
+                          email = email,
+                          isLoading = false
                         }
                       }
   case status of
       "success" -> do
                     let list = myRideListTransform state (rideList ^._list)
-                    if null list then 
-                      continue 
+                    if null list then
+                      continue
                         updatedState {
-                          data { 
-                            isNull = true 
+                          data {
+                            isNull = true
                           }
-                        , props { 
+                        , props {
                             apiFailure = false
                           }
                         }
                     else do
-                      let newState = (myRideListTransform state (rideList ^._list))!!0
-                      updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
+                      let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+                          newState = fromMaybe initData $ (myRideListTransform state (rideList ^._list))!!0
+                      continue newState{data{email=email}}
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
 
@@ -301,7 +303,7 @@ eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryB
 
 eval (EmailEditTextAC (PrimaryEditText.TextChanged _ a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9 && validateEmail a}}
 
-eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do
   let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
   continue state{data {description = a},props{btnActive = length email > 0 && (strLenWithSpecificCharacters (trim a) "[a-zA-Z]")  > 9 && validateEmail email}}
 
@@ -315,11 +317,11 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continue state{ data { accountStatus = CONFIRM_REQ} }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
   exit $ ConfirmDeleteAccount state{data{email=email}}
 
-eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoHome state {data{accountStatus = ACTIVE}, props {showDeleteAccountView = false}} 
+eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoHome state {data{accountStatus = ACTIVE}, props {showDeleteAccountView = false}}
 
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList

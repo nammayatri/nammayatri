@@ -820,7 +820,7 @@ noVpaView config =
     , cornerRadius 16.0
     , gravity CENTER
     , padding $ Padding 16 16 16 16
-    , margin $ MarginBottom 24
+    , margin $ MarginVertical 10 10
     ][
         imageView
         [ height $ V 24

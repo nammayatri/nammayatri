@@ -195,6 +195,9 @@ homeScreen = do
     SwitchPlan plan updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_FROM_HS plan updatedState)
+    GotoHotspotScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_HOTSPOT_SCREEN updatedState)
     GoToRideReqScreen updatedState -> do
       LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon updatedState.data.currentDriverLat updatedState.data.currentDriverLon 700 false true
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
@@ -211,3 +214,9 @@ homeScreen = do
     NotifyDriverReachedDestination updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFY_DRIVER_REACHED_DESTINATION updatedState)
+    UpdateToggleMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_METRO_WARRIOR updatedState)
+    GoToMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_WARRIOR updatedState)

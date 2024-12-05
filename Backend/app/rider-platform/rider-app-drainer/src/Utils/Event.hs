@@ -50,6 +50,11 @@ rider_process_latency =
     .& lbl @"process_name" @Text
     .& build
 
+eider_kv_config_decode_failure :: PromRep 'Counter "eider_kv_config_decode_failure" '[]
+eider_kv_config_decode_failure =
+  counter #eider_kv_config_decode_failure
+    .& build
+
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
 drainer_query_executes =
   counter #drainer_query_executes

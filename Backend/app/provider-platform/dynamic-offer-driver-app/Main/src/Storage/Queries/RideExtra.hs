@@ -10,6 +10,7 @@ import Data.Either
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int
 import Data.List (zip7)
+import Data.List.Extra (notNull)
 import Data.Maybe
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -32,7 +33,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (all, elem, id, length, null, sum, traverse_, whenJust)
+import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
 import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -78,20 +79,23 @@ data DatabaseWith4 table1 table2 table3 table4 f = DatabaseWith4
 createRide' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 createRide' = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
-create ride = do
-  void $ whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  whenJust ride.toLocation $ \toLocation -> whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
-  createRide' ride
-
 createRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
-  QLM.create fromLocationMap
-  whenJust ride.toLocation $ \toLocation -> do
-    toLocationMaps <- SLM.buildDropLocationMapping toLocation.id ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
-    QLM.create toLocationMaps
-  create ride
+  processSingleLocation ride.fromLocation SLM.buildPickUpLocationMapping
+  when (notNull ride.stops) $ processMultipleLocations ride.stops
+  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  createRide' ride
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
+      QLM.createMany locationMappings
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
