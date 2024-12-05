@@ -16,7 +16,7 @@ To build or develop the project, you need to install the following.
     - You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
 1. Enter the Nix devshell by running `ln -s .envrc.backend .envrc && direnv allow` in the project directory.
 
-[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup binary cache manually, using `cachix use nammayatri`.
+[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup binary cache manually.
 
 ### Building
 
@@ -58,7 +58,7 @@ direnv allow                 # Run this only once.
 
 [^de-ns]: If you are not using `direnv` and if you know what you are doing, you could manually start the [nix shell][nix-shell] using `nix develop .#backend`.
 
-**🚧 Warning 🚧**: Entering the nix develop shell (using `direnv allow`, for example) should not compile anything and it should finish in a matter of minutes (after downloading the binaries from nammayatri.cachix.org). If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
+**🚧 Warning 🚧**: Entering the nix develop shell (using `direnv allow`, for example) should not compile anything and it should finish in a matter of minutes (after downloading the binaries from our Nix cache). If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
 
 This will drop you into a [shell environment][nix-shell] containing all project dependencies. Inside the nix shell, run `,` to see the available commands specific to nammayatri development.
 
