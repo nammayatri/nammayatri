@@ -14,6 +14,7 @@
 
 module Common where
 
+import qualified "rider-app" API.Types.UI.Search as AppBESearchAPI
 import qualified API.UI.Quote as AbeQuoteAPI
 import qualified "rider-app" API.UI.Search as AppBESearch
 import qualified Data.Aeson as J
@@ -58,7 +59,7 @@ searchServices ::
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Maybe Bool ->
-  ClientM AppBESearch.SearchResp
+  ClientM AppBESearchAPI.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM AbeQuoteAPI.GetQuotesRes

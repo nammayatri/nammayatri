@@ -1,0 +1,62 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  SearchRequest: Domain.Types.SearchRequest
+  Version: Kernel.Types.Version
+  Client: Domain.Types.Client
+  RiderPreferredOption: Domain.Types.SearchRequest
+  LocationAddress: Domain.Types.LocationAddress
+  LatLong: Kernel.External.Maps.Types
+  DriverIdentifier: Domain.Types.RefereeLink
+  RouteInfo: Tools.Maps
+
+module: Search
+types:
+  SearchResp:
+    searchId: Id SearchRequest
+    routeInfo: Maybe RouteInfo
+    searchExpiry: UTCTime
+    derive: "Show"
+
+  SearchReqLocation:
+    gps: LatLong
+    address: LocationAddress
+    derive: "Eq, Show"
+
+  SearchReqV2:
+    origin: SearchReqLocation
+    stops: [SearchReqLocation]
+    isSourceManuallyMoved: Maybe Bool
+    isDestinationManuallyMoved: Maybe Bool           # Specific to OneWay and InterCity
+    isSpecialLocation: Maybe Bool
+    startTime: UTCTime                               # Required for all
+    returnTime: Maybe UTCTime                        # Specific to InterCity
+    roundTrip: Maybe Bool                            # Specific to InterCity
+    estimatedRentalDistance: Maybe Meters            # Specific to Rental
+    estimatedRentalDuration: Maybe Seconds           # Specific to Rental
+    isReallocationEnabled: Maybe Bool
+    quotesUnifiedFlow: Maybe Bool
+    sessionToken: Maybe Text                         # Specific to OneWay and InterCity
+    placeNameSource: Maybe Text
+    driverIdentifier: Maybe DriverIdentifier      # Specific to OneWay
+    riderPreferredOption: RiderPreferredOption
+
+apis:
+  # POST /rideSearch/v2
+  - POST:
+      endpoint: /rideSearch/v2
+      auth: TokenAuth
+      headers:
+        - "x-bundle-version":  Version
+        - "x-config-version":  Version
+        - "x-client-version":  Version
+        - "client-id":  (Id Client)
+        - "x-device":  Text
+        - "is-dashboard-request":  Bool
+      request:
+        type: API.Types.UI.Search.SearchReqV2
+      response:
+        type: API.Types.UI.Search.SearchResp
+
+
+

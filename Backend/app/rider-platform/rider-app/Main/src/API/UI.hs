@@ -29,6 +29,7 @@ import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
+import qualified API.Action.UI.Search as SearchV2
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
@@ -119,6 +120,7 @@ type API =
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
+           :<|> SearchV2.API
        )
 
 handler :: FlowServer API
@@ -171,3 +173,4 @@ handler =
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
+    :<|> SearchV2.handler

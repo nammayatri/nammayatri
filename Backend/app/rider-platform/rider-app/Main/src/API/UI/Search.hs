@@ -14,11 +14,8 @@
 
 module API.UI.Search
   ( DSearch.SearchReq (..),
-    SLS.SearchRes (..),
-    DSearch.SearchResp (..),
     DSearch.OneWaySearchReq (..),
     DSearch.RentalSearchReq (..),
-    SLS.SearchReqLocation (..),
     API,
     search',
     search,
@@ -26,6 +23,7 @@ module API.UI.Search
   )
 where
 
+import API.Types.UI.Search
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
@@ -34,24 +32,15 @@ import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Kernel.External.Slack.Flow as SF
-import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.Utils.SlidingWindowLimiter
-import Kernel.Utils.Version
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Search as SLS
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Person as Person
 import Tools.Auth
 
 -------- Search Flow --------
@@ -66,15 +55,15 @@ type API =
     :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Header "is-dashboard-request" Bool
-    :> Post '[JSON] DSearch.SearchResp
+    :> Post '[JSON] SearchResp
 
 handler :: FlowServer API
 handler = search
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow SearchResp
 search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
@@ -84,31 +73,4 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  return $ DSearch.SearchResp dSearchRes.searchId dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
-
-checkSearchRateLimit ::
-  ( Redis.HedisFlow m r,
-    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
-    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]
-  ) =>
-  Id Person.Person ->
-  m ()
-checkSearchRateLimit personId = do
-  let key = searchHitsCountKey personId
-  hitsLimit <- asks (.searchRateLimitOptions.limit)
-  limitResetTimeInSec <- asks (.searchRateLimitOptions.limitResetTimeInSec)
-  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
-    msgTemplate <- asks (.searchLimitExceedNotificationTemplate)
-    let message = T.replace "{#cust-id#}" (getId personId) msgTemplate
-    _ <- SF.postMessage message
-    throwError $ HitsLimitError limitResetTimeInSec
-
-searchHitsCountKey :: Id Person.Person -> Text
-searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
-
-updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
-updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  deploymentVersion <- asks (.version)
-  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+  return $ SearchResp dSearchRes.shortestRouteInfo dSearchRes.searchRequestExpiry dSearchRes.searchId

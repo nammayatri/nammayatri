@@ -1,11 +1,12 @@
 imports:
   Person: Domain.Types.Person
   SearchReq: API.UI.Search
-  SearchResp: API.UI.Search
+  SearchResp: API.Types.UI.Search
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
   API.UI.Search: "rider-app"
+  API.Types.UI.Search: "rider-app"
 
 module: Search
 

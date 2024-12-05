@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Common where
 
+import API.Types.UI.Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
@@ -34,7 +35,6 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Servant.Client.Core as SCC
-import SharedLogic.Search as SLS
 import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
@@ -73,7 +73,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-mkLocation :: SLS.SearchReqLocation -> Search.Location
+mkLocation :: SearchReqLocation -> Search.Location
 mkLocation info =
   Search.Location
     { gps =

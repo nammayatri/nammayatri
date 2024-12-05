@@ -8,6 +8,7 @@ module API.Action.Dashboard.RideBooking.Search
 where
 
 import qualified API.Types.Dashboard.RideBooking.Search
+import qualified "this" API.Types.UI.Search
 import qualified "this" API.UI.Search
 import qualified Domain.Action.Dashboard.RideBooking.Search as Domain.Action.Dashboard.RideBooking.Search
 import qualified Domain.Types.Merchant
@@ -23,5 +24,5 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.RideBooking.Search.API)
 handler merchantId city = postSearchRide merchantId city
 
-postSearchRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> Environment.FlowHandler API.UI.Search.SearchResp)
+postSearchRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> Environment.FlowHandler API.Types.UI.Search.SearchResp)
 postSearchRide a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Search.postSearchRide a4 a3 a2 a1
