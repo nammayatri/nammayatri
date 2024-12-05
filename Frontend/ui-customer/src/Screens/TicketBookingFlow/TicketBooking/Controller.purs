@@ -13,6 +13,8 @@ import Screens.Types (OperationalDaysData, PeopleCategoriesData, FlattenedBusine
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 import Debug (spy)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
@@ -141,7 +143,11 @@ eval BackPressed state = do
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
-                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
