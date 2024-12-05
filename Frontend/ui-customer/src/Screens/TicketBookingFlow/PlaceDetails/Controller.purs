@@ -9,6 +9,8 @@ import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), Ti
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 import Screens.Types (OperationalDaysData, PeopleCategoriesData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton

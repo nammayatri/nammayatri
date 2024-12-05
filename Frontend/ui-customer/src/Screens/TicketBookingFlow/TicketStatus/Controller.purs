@@ -8,6 +8,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Effect.Uncurried (runEffectFn2)
+import Common.Types.App (LazyCheck(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
