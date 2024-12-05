@@ -44,8 +44,11 @@ jobs:
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
           echo "Label check result: ${has_backend}"
   build:
+    strategy:
+      matrix:
+        system: [x86_64-linux, aarch64-darwin]
     needs: [process-labels]
-    runs-on: x86_64-linux
+    runs-on: ${{ matrix.system }}
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
@@ -69,18 +72,20 @@ jobs:
       - name: Docker tasks
         id: docker
         if: |
+          matrix.system == 'x86_64-linux' && (
           github.ref == 'refs/heads/main' || 
           github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true
+          github.event.pull_request.merged == true)
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image tarball
         if: |
+          matrix.system == 'x86_64-linux' && (
           github.ref == 'refs/heads/main' || 
           github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true
+          github.event.pull_request.merged == true)
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
