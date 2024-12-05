@@ -48,7 +48,7 @@ jobs:
       matrix:
         system: [x86_64-linux, aarch64-darwin]
     needs: [process-labels]
-    runs-on: ${{ matrix.system }}
+    runs-on: ny-ci-nixos
     #if: |
     #  needs.process-labels.outputs.has-backend == 'true' && 
     #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
@@ -63,8 +63,9 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       
       - name: Build all flake outputs
-        run: om ci
-      
+        run: om ci run --systems "${{ matrix.system }}"
+
+      # TODO: Change this to use new cachix-push, for multiplatform push.
       - name: Push to cachix
         if: github.ref == 'refs/heads/main' || github.event.pull_request.merged == true
         run: nix run .#cachix-push
