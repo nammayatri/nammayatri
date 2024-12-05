@@ -282,7 +282,7 @@ handler ValidatedDSearchReq {..} sReq = do
   (estimates', quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
-  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = (maxFare <= autFare) && VehicleVariant.castServiceTierToVehicleCategory vehicleServiceTier == DVC.CAR, ..}) estimates') mbAutoMaxFare
+  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
 
   QEst.createMany estimates
   for_ quotes QQuote.create
