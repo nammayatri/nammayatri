@@ -199,7 +199,7 @@ _:
             (port: ''
               # Get the process ID using lsof for the specified port
               set +e
-              pid=$(${lib.getExe pkgs.lsof} -ti:${builtins.toString port})
+              pid=$(${pkgs.lsof}/bin/lsof -ti:${builtins.toString port})
               set -e
 
               # Check if lsof returned any process ID
@@ -226,7 +226,7 @@ _:
           cp -r ./app/example-service ./app/"''${name}"
           echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
           rm ./app/"''${name}"/example-service.cabal
-          ${lib.getExe pkgs.tree} ./app/"''${name}"
+          ${pkgs.tree}/bin/tree ./app/"''${name}"
         '';
       };
 

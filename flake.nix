@@ -1,4 +1,11 @@
 {
+  nixConfig = {
+    # Workaround https://github.com/nammayatri/nammayatri/pull/9493#issuecomment-2506672419
+    max-call-depth = "1000000";
+    # Nix cache
+    extra-substituters = "https://ny-ci-nixos.betta-gray.ts.net/";
+    extra-trusted-public-keys = "ny-ci-nixos.betta-gray.ts.net:tjYdPZNppaGd6L9m7cMGzib4kkch1zAuR660dYp1DiY=";
+  };
   inputs = {
     common.url = "github:nammayatri/common";
     nixpkgs.follows = "common/nixpkgs";
@@ -71,23 +78,5 @@
         ./Backend/default.nix
         ./Frontend/default.nix
       ];
-
-      perSystem = { self', ... }: {
-        cachix-push = {
-          pathsToCache = {
-            ny-backend-shell = self'.devShells.backend;
-            ny-frontend-shell = self'.devShells.frontend;
-          };
-        };
-      };
-
-      flake = {
-        # Configuration for https://github.com/juspay/nix-browser/tree/main/crates/nix_health#nix-health
-        nix-health.default = {
-          caches.required = [ "https://nammayatri.cachix.org" ];
-          direnv.required = true;
-          system.min_ram = "24G";
-        };
-      };
     };
 }

@@ -1,56 +1,99 @@
 name: CI
-
 on:
   push:
     branches: ["main", "prodHotPush-Common"]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     branches: ["main", "prodHotPush-Common"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
 jobs:
+  process-labels:
+    runs-on: ubuntu-latest
+    # Skip this job for PR close events without merge
+    if: github.event.pull_request.merged == true || github.event_name != 'pull_request' || github.event.action != 'closed'
+    outputs:
+      has-backend: ${{ steps.check-labels.outputs.has_backend }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Apply labels
+        uses: actions/labeler@v4
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      
+      - name: Check for backend label
+        id: check-labels
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            sleep 5 # Small delay to ensure labels are applied
+            response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels")
+            has_backend=$(echo "$response" | jq 'map(select(.name == "backend")) | length > 0')
+          else
+            # For direct pushes to main/prodHotPush-Common, assume backend changes
+            has_backend=true
+          fi
+          echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
+          echo "Label check result: ${has_backend}"
   build:
-    runs-on: x86_64-linux
+    strategy:
+      matrix:
+        system: [x86_64-linux]
+    needs: [process-labels]
+    runs-on: ny-ci-nixos
+    if: |
+      needs.process-labels.outputs.has-backend == 'true' && 
+      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/cachix-action@v15
-        with:
-          name: nammayatri
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          skipPush: true
-
+      
       - name: Build all flake outputs
-        run: om ci
-
-      # Push and pin whitelisted paths to cachix
-      - name: Push to cachix
-        if: github.ref == 'refs/heads/main'
-        run: nix run .#cachix-push
+        run: om ci run --systems "${{ matrix.system }}"
 
       - name: Docker tasks
         id: docker
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+        if: |
+          matrix.system == 'x86_64-linux' && (
+          github.ref == 'refs/heads/main' || 
+          github.ref == 'refs/heads/prodHotPush-Common' || 
+          github.event.pull_request.merged == true)
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
-
+      
       - name: Upload Docker image tarball
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+        if: |
+          matrix.system == 'x86_64-linux' && (
+          github.ref == 'refs/heads/main' || 
+          github.ref == 'refs/heads/prodHotPush-Common' || 
+          github.event.pull_request.merged == true)
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: docker-image.tgz
 
   push-docker:
-    needs: build
+    needs: [build, process-labels]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
+      needs.process-labels.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4
         with:
           name: docker-image
+      
       - name: Load and push Docker image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

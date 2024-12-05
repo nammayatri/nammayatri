@@ -20,8 +20,7 @@ To build or develop the project, you need to install the following.
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
 1. Run `nix --accept-flake-config run github:juspay/omnix health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
 
-[^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
-[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
+[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup binary cache manually.
 
 ### Building
 
@@ -63,7 +62,7 @@ direnv allow                 # Run this only once.
 
 [^de-ns]: If you are not using `direnv` and if you know what you are doing, you could manually start the [nix shell][nix-shell] using `nix develop .#backend`.
 
-**🚧 Warning 🚧**: Entering the nix develop shell (using `direnv allow`, for example) should not compile anything and it should finish in a matter of minutes (after downloading the binaries from nammayatri.cachix.org). If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
+**🚧 Warning 🚧**: Entering the nix develop shell (using `direnv allow`, for example) should not compile anything and it should finish in a matter of minutes (after downloading the binaries from our Nix cache). If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
 
 This will drop you into a [shell environment][nix-shell] containing all project dependencies. Inside the nix shell, run `,` to see the available commands specific to nammayatri development.
 

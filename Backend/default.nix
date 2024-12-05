@@ -134,10 +134,10 @@
           gdal
           postgis
           newman
+          config.mission-control.wrapper
         ];
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [
-          config.mission-control.devShell
           config.pre-commit.devShell
           config.haskellProjects.default.outputs.devShell
           config.flake-root.devShell
