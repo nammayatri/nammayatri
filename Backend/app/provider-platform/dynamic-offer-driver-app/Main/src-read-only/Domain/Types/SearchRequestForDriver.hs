@@ -10,6 +10,7 @@ import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
 import qualified Domain.Types.VehicleVariant
@@ -55,6 +56,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,
     keepHiddenForSeconds :: Kernel.Types.Common.Seconds,
+    lastRideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

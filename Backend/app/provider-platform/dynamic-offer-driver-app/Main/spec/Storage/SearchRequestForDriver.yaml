@@ -15,6 +15,7 @@ imports:
   LocalTime: Data.Time
   Months: Kernel.Types.Time
   Value: Data.Aeson
+  Ride: Domain.Types.Ride
 
 
 SearchRequestForDriver:
@@ -95,6 +96,7 @@ SearchRequestForDriver:
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
     isFavourite : Maybe Bool
+    lastRideId : Maybe (Id Ride)
 
   beamType:
     clientBundleVersion: Maybe Text
