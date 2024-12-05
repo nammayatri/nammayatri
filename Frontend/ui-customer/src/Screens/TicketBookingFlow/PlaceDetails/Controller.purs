@@ -14,7 +14,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR,isParentView,emitTerminateApp)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
@@ -30,6 +30,7 @@ import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.TicketBookingFlow.PlaceDetails.Transformer (selectByDefaultOneServiceCategory, transformRespToStateDatav2)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
