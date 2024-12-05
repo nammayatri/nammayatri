@@ -30,6 +30,7 @@ import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""

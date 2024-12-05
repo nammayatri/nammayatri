@@ -470,6 +470,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
+        "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -7182,6 +7183,8 @@ fcmHandler notification state notificationBody= do
           currentUtcAfterScheduledTime = EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
           timeDiff =  EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = fromMaybe "null" notificationBody.bookingId
+          _ = spy "Printing for checking" notificationBody
+      when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
       if (fcmBookingId /= state.props.bookingId && state.props.bookingId /= "") then do
         currentFlowStatus false
       else if (fcmBookingId /= state.props.bookingId && state.props.bookingId == "" && timeDiff > 0) then do

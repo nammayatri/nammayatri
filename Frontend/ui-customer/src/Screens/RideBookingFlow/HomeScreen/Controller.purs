@@ -1044,7 +1044,8 @@ eval BackPressed state = do
                             pure NoAction
                           ]
                           else do
-                              pure $ terminateApp state.props.currentStage true
+                              pure $ minimizeApp ""
+                              -- pure $ terminateApp state.props.currentStage true
                               continue state{props{showShimmer = false}}
 
 eval GoBackToSearchLocationModal state = do
