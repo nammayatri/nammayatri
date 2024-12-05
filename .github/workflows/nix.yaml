@@ -57,19 +57,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: cachix/cachix-action@v15
-        with:
-          name: nammayatri
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      
       - name: Build all flake outputs
         run: om ci run --systems "${{ matrix.system }}"
 
-      # TODO: Change this to use new cachix-push, for multiplatform push.
-      - name: Push to cachix
-        if: github.ref == 'refs/heads/main' || github.event.pull_request.merged == true
-        run: nix run .#cachix-push
-      
       - name: Docker tasks
         id: docker
         if: |
