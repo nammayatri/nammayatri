@@ -51,6 +51,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     onlinePayment :: Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: Kernel.Prelude.Text,
     registryUrl :: Kernel.Types.Common.BaseUrl,
+    rentalsAllowedOutsideCity :: Kernel.Prelude.Maybe Kernel.Types.Geofencing.GeoRestriction,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     signatureExpiry :: Kernel.Prelude.Int,
