@@ -202,6 +202,7 @@ export const storeCallBackForNotification = function (cb) {
       try {
         const callback = callbackMapper.map(function (notificationType) {
           if (window.whitelistedNotification.has(notificationType)) {
+						window.notificationType = notificationType;
             cb(action(notificationType))();
           }
         });
