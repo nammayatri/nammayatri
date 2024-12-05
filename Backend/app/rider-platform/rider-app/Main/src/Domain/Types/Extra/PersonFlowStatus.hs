@@ -28,7 +28,8 @@ data FlowStatus
       { estimateId :: Id DE.Estimate,
         otherSelectedEstimates :: Maybe [Id DE.Estimate],
         validTill :: UTCTime,
-        providerId :: Maybe Text
+        providerId :: Maybe Text,
+        tripCategory :: Maybe TripCategory
       }
   | WAITING_FOR_DRIVER_ASSIGNMENT
       { bookingId :: Id DB.Booking,
