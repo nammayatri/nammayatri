@@ -141,7 +141,7 @@ screen initialState (GlobalState globalState) =
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-              case (activeRideResponse.list DA.!! 0) of
+              case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
                 Just ride -> do
                   let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
                   lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride advancedRide
@@ -156,7 +156,7 @@ screen initialState (GlobalState globalState) =
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "false" "UPCOMING" "null"
-              case (activeRideResponse.list DA.!! 0) of
+              case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
                 Just ride -> do
                   liftFlowBT $ triggerHomeScreenBannerTimer push ride
                   liftFlowBT $ push $ UpComingRideDetails (Just ride)
@@ -279,6 +279,8 @@ screen initialState (GlobalState globalState) =
                                 when pushPlayAudioAndLaunchMap.shouldPush $ do 
                                   void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
                                   void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps initialState OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant initialState.data.activeRide.estimatedTollCharges initialState.data.activeRide.specialLocationTag
+
+                                when initialState.props.triggerGMapsIntent $ push TriggerMaps
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
@@ -294,6 +296,14 @@ screen initialState (GlobalState globalState) =
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
+                                case HU.getStopToDepart initialState.data.activeRide.stops of
+                                  Just (APITypes.Stop stop) -> do
+                                    let stopWaitingTime = maybe (getCurrentUTC "") (\(APITypes.StopInformation sInfo) -> sInfo.waitingTimeStart) stop.stopInfo
+                                        startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") stopWaitingTime)
+                                    push $ UpdateWaitTime ST.PostTriggered
+                                    void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
+                                  Nothing -> pure unit
+                                
             _                -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
                                 when (initialState.props.currentStage == RideCompleted) $ do
@@ -331,7 +341,7 @@ getActiveRideDetails push delayTime retryCount = do
   lift $ lift $ doAff $ liftEffect $ push $ UpdateRetryRideList false
   if retryCount > 0 then do
     (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-    case (activeRideResponse.list DA.!! 0) of
+    case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
       Just ride -> do
         let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
         lift $ lift $ doAff $ liftEffect $ push $ RideActiveAction ride advancedRide
@@ -467,6 +477,7 @@ view push state =
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
+      , if state.props.showEndRideWithStopPopup then endRideWithStopPopup push state else dummyTextView 
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -1794,7 +1805,7 @@ pillView state push =
     , margin $ MarginLeft 6
     , cornerRadius 22.0
     , onClick push $ const RideRequestsList
-    , clickable $ state.data.upcomingRide == Nothing 
+    , clickable $ isNothing state.data.upcomingRide
     , alpha $ if isNothing state.data.upcomingRide then 1.0 else 0.5
     , background Color.white900
     , padding $ Padding 16 11 16 11
@@ -2691,7 +2702,7 @@ in
     , margin $ Margin 15 15 15 15  
     , cornerRadius 12.0
     , background Color.blue800
-    , visibility $ boolToVisibility $ state.props.homeScreenBannerVisibility && state.data.upcomingRide /= Nothing && state.props.currentStage == HomeScreen
+    , visibility $ boolToVisibility $ state.props.homeScreenBannerVisibility && isJust state.data.upcomingRide && state.props.currentStage == HomeScreen
     , onClick push $ const ScheduledRideBannerClick
 
   ][
@@ -2849,7 +2860,7 @@ onRideScreenBannerView state push  =
     height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ Margin 20 10 20 0  
-  , visibility $ boolToVisibility $ differenceBetween2UTCs <= twoHrsInSec && checkOnRideStage state && state.data.upcomingRide /= Nothing
+  , visibility $ boolToVisibility $ differenceBetween2UTCs <= twoHrsInSec && checkOnRideStage state && isJust state.data.upcomingRide
   ][
     linearLayout[
       height WRAP_CONTENT
@@ -2922,7 +2933,7 @@ triggerOnRideBannerTimer push state = do
         ridestartTime  = ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide  )
         currentTime = HU.getCurrentUTC ""
         difference  =  (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
-      if (pushOnRideBannerTimer.shouldPush && difference > 0 && difference <= twoHrsInSec && state.data.upcomingRide /= Nothing && (checkOnRideStage state) ) then do 
+      if (pushOnRideBannerTimer.shouldPush && difference > 0 && difference <= twoHrsInSec && isJust state.data.upcomingRide && (checkOnRideStage state) ) then do 
         startTimer difference  id "1" push OnRideBannerCountDownTimer 
       else
         pure unit
@@ -3128,3 +3139,11 @@ metroWarriorsToggleView push state =
 
     switchButtonView push isActive = 
       SwitchButtonView.view (push <<< MetroWarriorSwitchAction) $ SwitchButtonView.config {isActive = isActive}
+    
+endRideWithStopPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+endRideWithStopPopup push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< RideEndWithStopsPopupAction) (rideEndStopsWarningPopup state) ]

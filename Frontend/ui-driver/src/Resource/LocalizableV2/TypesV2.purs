@@ -1794,6 +1794,9 @@ newtype Keymap
   , choose_preferred_metro :: String
   , metro_warriors :: String
   , search :: String
+  , resume_ride :: String
+  , end_ride_with_stops :: String
+  , stop :: String -> String 
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7124,3 +7127,12 @@ metro_warriors = Proxy
 
 search :: Proxy "search"
 search = Proxy
+
+resume_ride :: Proxy "resume_ride"
+resume_ride = a
+
+end_ride_with_stops :: Proxy "end_ride_with_stops"
+end_ride_with_stops = a
+
+stop :: Proxy "stop"
+stop = a 

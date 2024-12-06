@@ -47,7 +47,7 @@ import Effect.Uncurried(runEffectFn1, runEffectFn2)
 import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag, getCurrentUTC, convertUTCtoISC) as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City (..))
 import Components.LocationTagBarV2 as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -62,7 +62,7 @@ import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer, getCityFromString, getDistanceString)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer, getDistanceString)
 import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker, handleLocateOnMapCallback, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -77,7 +77,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig,noStopRouteConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..), City (..), RideType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..), RideType(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..), FRFSRouteAPI(..), FRFSStationAPI(..))
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
@@ -93,6 +93,7 @@ import Screens (getScreen, ScreenName(..))
 import PrestoDOM.List as PList
 import Data.Function(flip)
 import Helpers.FrfsUtils (getSortedStops)
+import Engineering.Helpers.Utils as EHU
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -610,7 +611,7 @@ verticalSeparatorView hght margin' =
     ][]
 
 footerArray state = do
-  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  let city = EHU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   case state.props.actionType of 
     MetroStationSelectionAction -> 
       if city == Delhi

@@ -277,6 +277,8 @@ initData =
       , retryRideList : false
       , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
+      , showEndRideWithStopPopup : false
+      , triggerGMapsIntent : false
       }
   }
 
@@ -361,6 +363,7 @@ dummyRideData = {
       , senderPersonDetails : Nothing
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
+      , stops : []
       }
 
 initialParkingData :: ParkingData

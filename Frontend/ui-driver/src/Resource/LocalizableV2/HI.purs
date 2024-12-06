@@ -1779,4 +1779,7 @@ getHi =
     , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
     , metro_warriors : "मेट्रो वॉरियर्स"
     , search : "खोजें"  
+    , resume_ride : "यात्रा फिर से शुरू करें"
+    , end_ride_with_stops : "आपके पास और स्टॉप हैं। फिर भी यात्रा समाप्त करें?"
+    , stop: (\n -> "स्टॉप " <> n)
     }

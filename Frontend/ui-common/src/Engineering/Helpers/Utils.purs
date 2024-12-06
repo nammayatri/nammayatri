@@ -15,7 +15,7 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), City(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
@@ -52,7 +52,7 @@ import Data.Tuple (Tuple(..), fst, snd)
 import ConfigProvider
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Data.Number (fromString)
-import JBridge (toast, setKeyInSharedPref)
+import JBridge (toast, setKeyInSharedPref, getResourceIdentifier)
 import Language.Strings (getString)
 import Language.Types
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -502,3 +502,59 @@ checkConditionToShowInternetScreen lazy =
     else 
       let _ = setKeyInWindow "noInternetCount" count
       in false
+
+getCitySpecificMarker :: City -> String -> Maybe String -> String
+getCitySpecificMarker city variant currentStage = 
+    let isDeliveryImagePresent = (getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
+        variantImage = case variant of
+            "AUTO_RICKSHAW" -> getAutoImage city
+            "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
+            "SUV"           -> "ny_ic_suv_nav_on_map"
+            "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+            "BIKE"          -> if currentStage == Just "RideStarted" then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
+            "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
+            "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
+            _               -> "ny_ic_vehicle_nav_on_map"
+    in variantImage
+
+getAutoImage :: City -> String
+getAutoImage city = case city of
+    Hyderabad -> "ny_ic_black_yellow_auto"
+    _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_koc_auto_on_map"
+    _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_black_yellow_auto"
+    _         -> "ic_auto_nav_on_map"
+
+getCityFromString :: String -> City
+getCityFromString cityString =
+  case cityString of 
+    "Bangalore" -> Bangalore
+    "Kolkata" -> Kolkata
+    "Paris" -> Paris
+    "Kochi" -> Kochi
+    "Delhi" -> Delhi
+    "Hyderabad" -> Hyderabad
+    "Mumbai" -> Mumbai
+    "Chennai" -> Chennai
+    "Coimbatore" -> Coimbatore
+    "Pondicherry" -> Pondicherry
+    "Goa" -> Goa
+    "Pune" -> Pune
+    "Mysore" -> Mysore
+    "Tumakuru" -> Tumakuru
+    "Noida" -> Noida
+    "Gurugram" -> Gurugram
+    "Siliguri" -> Siliguri
+    "Trivandrum" -> Trivandrum
+    "Thrissur" -> Thrissur
+    "Kozhikode" -> Kozhikode
+    "Vellore" -> Vellore
+    "Hosur" -> Hosur
+    "Madurai" -> Madurai
+    "Thanjavur" -> Thanjavur
+    "Tirunelveli" -> Tirunelveli
+    "Salem" -> Salem
+    "Trichy" -> Trichy
+    "Bhubaneswar" -> Bhubaneswar
+    "Cuttack" -> Cuttack
+    "Puri" -> Puri
+    _ -> AnyCity

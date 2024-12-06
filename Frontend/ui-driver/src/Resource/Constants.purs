@@ -205,7 +205,8 @@ constructLocationInfo (latitude) (longitude) =
                         areaCode :  Just "",
                         lon : longitude',
                         instructions : Nothing,
-                        extras : Nothing
+                        extras : Nothing,
+                        id : Nothing
                 }
         _,_ -> Nothing
 
@@ -224,7 +225,8 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
                 areaCode :  areaCode,
                 lon : lon,
                 instructions : Nothing,
-                extras : Nothing
+                extras : Nothing,
+                id : Nothing
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage

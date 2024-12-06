@@ -373,6 +373,7 @@
       "ny_ic_drop_indicator" : true,
       "ny_ic_drop_loc_marker" : true,
       "ny_ic_drop_red_indicator" : true,
+      "ny_ic_earn_through_parcel" : true,
       "ny_ic_edit" : true,
       "ny_ic_edit_dest" : true,
       "ny_ic_edit_pickup" : true,
@@ -732,6 +733,7 @@
       "ny_ic_suv_plus_side" : true,
       "ny_ic_suv_shadow" : true,
       "ny_ic_switch_active" : true,
+      "ny_ic_switch_filled_blue" : true,
       "ny_ic_switch_inactive" : true,
       "ny_ic_test_drill_carousel" : true,
       "ny_ic_test_request_icon_white" : true,
@@ -826,6 +828,7 @@
       "zone_curve" : true,
       "ny_ic_earn_through_parcel" : true,
       "ny_ic_bike_delivery_nav_on_map": true,
-      "ny_ic_qr_code_expired" : true
+      "ny_ic_qr_code_expired" : true,
+      "zone_curve" : true
    }
 }

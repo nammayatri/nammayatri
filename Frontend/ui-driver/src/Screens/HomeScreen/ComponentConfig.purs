@@ -161,6 +161,7 @@ rideActionModalConfig state =
   , delivery = if isDelivery then getDeliveryDetails state else Nothing
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
+  , stops = rideData.stops
   }
   in rideActionModalConfig'
   where 
@@ -3007,5 +3008,41 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
       background = Color.white900,
       strokeColor = Color.white900,
       width = MATCH_PARENT
+    }
+  }
+  
+rideEndStopsWarningPopup :: ST.HomeScreenState -> PopUpModal.Config
+rideEndStopsWarningPopup state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = true,
+    optionButtonOrientation = "HORIZONTAL",
+    buttonLayoutMargin = MarginBottom 10,
+    dismissPopup = true,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString END_RIDE_WITH_STOPS,
+      textStyle = Heading2,
+      margin = Margin 16 0 16 10},
+    secondaryText { visibility = GONE },
+    option1 {
+      text = getString END_RIDE,
+      color = Color.black700,
+      background = Color.white900,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = Color.black500
+    },
+    option2 {
+      text = getString CANCEL,
+      color = Color.yellow900,
+      background = Color.black900,
+      strokeColor = Color.black900
+    },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_more_stops_left"
+    , visibility = VISIBLE
+    , margin = MarginVertical 20 24
+    , width = MATCH_PARENT
+    , height = V 190
     }
   }

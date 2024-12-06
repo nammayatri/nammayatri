@@ -40,7 +40,7 @@ import Data.Either (Either(..), hush, either)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), split, take) as DS
@@ -70,7 +70,7 @@ import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
@@ -112,7 +112,8 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
-
+import Data.Tuple as DT
+import Resource.Constants (decodeAddress)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -1091,7 +1092,8 @@ dummyLocationInfo = SA.LocationInfo {
       areaCode : Nothing,
       lon : 0.0,
       extras : Nothing,
-      instructions : Nothing
+      instructions : Nothing,
+      id : Nothing
   }
 
 vehicleVariantImage :: String -> String
@@ -1218,3 +1220,53 @@ getHvErrorMsg errorCode =
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
+
+checkIfStopsLeft :: Array SA.Stop -> Boolean
+checkIfStopsLeft stops = 
+  DA.any (\(SA.Stop item) -> maybe true (\(SA.StopInformation stopInfo) -> isNothing stopInfo.stopEndLatLng) item.stopInfo) stops
+
+getStopToDepart :: Array SA.Stop -> Maybe SA.Stop
+getStopToDepart stops = 
+  DA.find (\(SA.Stop item) -> maybe false (\(SA.StopInformation stopInfo) -> isNothing stopInfo.stopEndLatLng) item.stopInfo) stops
+
+getUpcomingStop :: Array SA.Stop -> Maybe SA.Stop
+getUpcomingStop stops = DA.find (\(SA.Stop item) ->isNothing item.stopInfo) stops
+
+getSrcDestConfig :: HomeScreenState -> ST.UpdateRouteSrcDestConfig
+getSrcDestConfig state = do
+  let hasStops = not $ DA.null state.data.activeRide.stops
+  if state.props.currentStage == ST.RideAccepted then
+    {
+      srcLat : state.data.currentDriverLat,
+      srcLon : state.data.currentDriverLon,
+      destLat : state.data.activeRide.src_lat,
+      destLon : state.data.activeRide.src_lon,
+      source : "",
+      destination : state.data.activeRide.source
+    }
+  else if state.data.activeRide.tripType == ST.Rental then
+    {
+      srcLat : fromMaybe state.data.activeRide.src_lat state.data.activeRide.lastStopLat,
+      srcLon : fromMaybe state.data.activeRide.src_lon state.data.activeRide.lastStopLon,
+      destLat : fromMaybe 0.0 state.data.activeRide.nextStopLat,
+      destLon : fromMaybe 0.0 state.data.activeRide.nextStopLon,
+      source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
+      destination : fromMaybe "" state.data.activeRide.nextStopAddress
+    }
+  else {
+      srcLat : if hasStops then state.data.currentDriverLat else state.data.activeRide.src_lat,
+      srcLon : if hasStops then state.data.currentDriverLon else state.data.activeRide.src_lon,
+      destLat : state.data.activeRide.dest_lat,
+      destLon : state.data.activeRide.dest_lon,
+      source : state.data.activeRide.source,
+      destination : fromMaybe "" state.data.activeRide.destination
+  }
+
+getStopName :: SA.Stop -> DT.Tuple String String
+getStopName (SA.Stop stopData) = do
+  let source = decodeAddress stopData.location true
+      (SA.LocationInfo location) = stopData.location
+      sourcePrefix = fromMaybe "" ((DS.split (DS.Pattern ",") source) DA.!! 0)
+      sourceArea = maybe sourcePrefix identity location.area
+      description = maybe source (\item -> item <> ", " <> source) location.extras
+  DT.Tuple sourceArea description

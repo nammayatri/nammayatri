@@ -33,6 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Debug
+import Data.Array as DA 
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -95,7 +96,11 @@ sourceToDestinationConfig state = let
       }
     , overrideSeparatorCount = 6
     , showDestination = tripType /= ST.Rental
-
+    , stops = state.data.stops
+    , stopsImageConfig {
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_stop_grey"
+    }
+    , showSourceDestWithStops = true
     }
   in sourceToDestinationConfig'
 

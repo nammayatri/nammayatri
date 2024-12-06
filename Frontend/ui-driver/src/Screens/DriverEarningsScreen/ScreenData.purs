@@ -81,8 +81,9 @@ initData =
             tripStartTime : Nothing,
             tripEndTime : Nothing,
             acRide : Nothing,
-            vehicleServiceTier : ""
-        , parkingCharge : 0.0
+            vehicleServiceTier : "",
+            parkingCharge : 0.0,
+            stops : []
         }
       , logField : empty
       , coinInfoRes : Nothing

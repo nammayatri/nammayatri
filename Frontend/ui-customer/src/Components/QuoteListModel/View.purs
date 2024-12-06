@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, quoteModalVariantImage)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
@@ -35,7 +35,7 @@ import Language.Types (STR(..))
 import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, (*), negate, (-))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha, horizontalScrollView, scrollBarX, disableKeyboardAvoidance)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..), QuoteListItemState(..), City(..), TipViewStage(..), FareProductType(..))
+import Screens.Types (Stage(..), QuoteListItemState(..), TipViewStage(..), FareProductType(..))
 import Storage 
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
@@ -61,6 +61,7 @@ import Resources.LocalizableV2.Types
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Helpers.TipConfig
 import Common.RemoteConfig (fetchRemoteConfigString)
+import Engineering.Helpers.Utils (getCityFromString)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =

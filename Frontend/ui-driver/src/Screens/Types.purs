@@ -875,7 +875,8 @@ type IndividualRideCardState =
     tripEndTime :: Maybe String,
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
-    parkingCharge :: Number
+    parkingCharge :: Number,
+    stops :: Array API.Stop
   }
 
 
@@ -1317,7 +1318,8 @@ type ActiveRide = {
   receiverInstructions :: Maybe String,
   senderPersonDetails :: Maybe API.PersonDetails,
   receiverPersonDetails :: Maybe API.PersonDetails,
-  notifiedReachedDestination :: Boolean
+  notifiedReachedDestination :: Boolean,
+  stops :: Array API.Stop
 }
 
 type HomeScreenProps =  {
@@ -1413,7 +1415,9 @@ type HomeScreenProps =  {
   intercityInfoPopUp :: Boolean,
   retryRideList :: Boolean,
   showParcelIntroductionPopup :: Boolean,
-  showMetroWarriorWarningPopup :: Boolean
+  showMetroWarriorWarningPopup :: Boolean,
+  showEndRideWithStopPopup :: Boolean,
+  triggerGMapsIntent :: Boolean
  }
 
 type RideRequestPill = {
@@ -1570,7 +1574,8 @@ type TripDetailsScreenData =
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
     parkingCharge :: Number,
-    tripType :: TripType
+    tripType :: TripType,
+    stops :: Array String
   }
 
 type TripDetailsScreenProps =

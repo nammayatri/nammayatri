@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
@@ -146,8 +147,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag || model.isFavourite()) {
+            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0;
+            if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
@@ -167,6 +168,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
+                holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
+                holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
@@ -232,6 +235,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
+            holder.stopsInfo.setText(getString(model.getTollCharges() > 0 ? R.string.stops : R.string.stops_info , model.getStops()));
+            holder.stopsInfo.setVisibility(model.getStops() > 0? View.VISIBLE : View.GONE);
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
             handlePinCode(model, holder);
@@ -654,7 +659,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
                     Boolean isFavourite = rideRequestBundle.getBoolean("isFavourite");
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
-                   
+                    int stops = rideRequestBundle.getInt("middleStopCount", 0);
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
                     }
@@ -703,7 +708,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             isThirdPartyBooking,
                             isFavourite,
                             parkingCharge,
-                            getCurrTime
+                            getCurrTime,
+                            stops
                     );
 
                     if (floatyView == null) {

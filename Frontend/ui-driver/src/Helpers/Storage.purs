@@ -164,6 +164,8 @@ data KeyStore = USER_NAME
                 | GO_TO_PLANS_PAGE
                 | SHOW_PARCEL_INTRODUCTION_POPUP
                 | METRO_STATIONS_LIST
+                | POINTS_FACTOR
+                | ACCURACY_THRESHOLD
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

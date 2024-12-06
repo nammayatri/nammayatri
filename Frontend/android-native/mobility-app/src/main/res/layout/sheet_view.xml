@@ -353,6 +353,34 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/stopsTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginLeft="5dp"
+                                    android:background="@drawable/ic_stops_bg"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_stops" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:id="@+id/stopsTagText"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
                             </LinearLayout>
                         </HorizontalScrollView>
                     </LinearLayout>
@@ -807,6 +835,22 @@
                                     android:paddingHorizontal="8dp"
                                     android:paddingVertical="6dp"
                                     android:text="@string/toll_text"
+                                    android:lineHeight="20dp"
+                                    android:textColor="#2C2F3A"
+                                    android:textSize="16dp"
+                                    android:visibility="gone"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/stopsInfo"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="85dp"
+                                    android:background="@drawable/ic_roundcorner_overlay"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/stops_info"
                                     android:lineHeight="20dp"
                                     android:textColor="#2C2F3A"
                                     android:textSize="16dp"

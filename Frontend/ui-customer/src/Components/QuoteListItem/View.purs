@@ -18,7 +18,7 @@ module Components.QuoteListItem.View where
 import Common.Types.App
 
 import Animation (translateInXForwardAnim)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -44,7 +44,7 @@ import Types.App (defaultGlobalState)
 import Timers
 import Debug
 import Engineering.Helpers.Commons (liftFlow)
-import Screens.Types (QuoteListItemState(..), City(..))
+import Screens.Types (QuoteListItemState(..))
 import Locale.Utils
 import JBridge(getWidthFromPercent)
 import Data.String

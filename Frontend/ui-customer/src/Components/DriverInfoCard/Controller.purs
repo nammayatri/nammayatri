@@ -17,13 +17,13 @@ module Components.DriverInfoCard.Controller where
 
 import MerchantConfig.Types
 
-import Common.Types.App (RentalBookingConfig)
+import Common.Types.App (RentalBookingConfig, City(..))
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType, PersonDeliveryDetails(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType, PersonDeliveryDetails(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types

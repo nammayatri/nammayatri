@@ -8,7 +8,7 @@ import Data.Maybe
 import Data.String as DS
 import Helpers.Utils as HU
 import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (City(..), TipViewProps(..), TipViewStage(..), TipViewData(..))
+import Screens.Types (TipViewProps(..), TipViewStage(..), TipViewData(..))
 import Locale.Utils
 import MerchantConfig.Types
 import Effect (Effect)
@@ -16,7 +16,7 @@ import Foreign.Class (class Encode)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (City(..), LazyCheck(..))
 import RemoteConfig (getTipConfigRC)
 import Debug (spy)
 

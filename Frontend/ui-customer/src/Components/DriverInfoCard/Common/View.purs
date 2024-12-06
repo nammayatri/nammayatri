@@ -4,7 +4,7 @@ import Prelude
 import Components.DriverInfoCard.Common.Types
 import Common.Types.App
 import Animation (fadeIn, fadeInWithDelay, scaleYAnimWithDelay)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..),PersonDeliveryDetails(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),PersonDeliveryDetails(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor

@@ -2,14 +2,14 @@ module Screens.RideBookingFlow.HomeScreen.BannerConfig where
 
 import Prelude
 
-import Common.Types.App (LazyCheck(..), ProviderType(..), CustomerIssueTypes(..))
+import Common.Types.App (LazyCheck(..), ProviderType(..), CustomerIssueTypes(..), City)
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink, getCommonAssetLink, getMetroConfigFromCity, CityMetroConfig(..), getCityConfig, getMetroConfigFromAppConfig)
 import Language.Types (STR(..))
-import Screens.Types (City, HomeScreenState)
+import Screens.Types (HomeScreenState)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color

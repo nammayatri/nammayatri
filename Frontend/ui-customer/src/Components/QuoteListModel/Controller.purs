@@ -18,7 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
-import Screens.Types (TipViewProps, QuoteListItemState(..), City(..), FareProductType(..))
+import Screens.Types (TipViewProps, QuoteListItemState(..), FareProductType(..))
 import MerchantConfig.Types (AppConfig)
 import Components.TipsView as TipsView
 import Components.ProviderModel as PM
@@ -28,6 +28,7 @@ import ConfigProvider
 import Prelude
 import Data.Maybe
 import Data.Array (length)
+import Common.Types.App as CTA
 
 data Action = GoBack
             | NoAction TipViewProps
@@ -62,7 +63,7 @@ type QuoteListModelState = {
   , progress :: Number
   , appConfig :: AppConfig
   , vehicleVariant :: String
-  , city :: City
+  , city :: CTA.City
   , customerTipArray :: Array String
   , customerTipArrayWithValues :: Array Int
   , providerSelectionStage :: Boolean

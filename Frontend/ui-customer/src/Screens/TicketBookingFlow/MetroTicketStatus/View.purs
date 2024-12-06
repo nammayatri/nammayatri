@@ -64,6 +64,7 @@ import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Data.Ord (comparing)
 import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent)
@@ -92,8 +93,8 @@ screen initialState =
   }
   where
   getMetroStatusEvent push = do
-    let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    if city == ST.Chennai then
+    let city = EHU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    if city == Chennai then
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     else
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 40 1000.0 initialState push MetroPaymentStatusAction

@@ -1779,4 +1779,7 @@ getEn =
     , choose_preferred_metro : "Choose preferred metro"
     , metro_warriors : "Metro Warriors"
     , search : "Search"
+    , resume_ride : "Resume ride"
+    , end_ride_with_stops : "You have more stops until drop End Ride anyway?"
+    , stop: (\n -> "Stop " <> n)
     }
