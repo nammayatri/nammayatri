@@ -115,7 +115,7 @@ view push state =
         ]
         [ separatorView Color.greySmoke
         , linearLayout
-          [ weight 1.0
+          [ height MATCH_PARENT
           , width MATCH_PARENT
           , background Color.white900
           ][  linearLayout
@@ -332,6 +332,7 @@ bookingConfirmationActions state push paymentStatus =
      [ width $ MATCH_PARENT
      , height WRAP_CONTENT
      , onClick push $ const GoHome
+      , padding $ PaddingBottom 20
      , gravity CENTER
      ][commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome]
   ]]

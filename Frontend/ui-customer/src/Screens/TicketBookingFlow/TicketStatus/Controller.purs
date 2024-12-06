@@ -81,11 +81,7 @@ eval BackPressed state = do
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
-                    else if isParentView FunctionCall
-                      then do
-                          void $ pure $ emitTerminateApp Nothing true
-                          continue state
-                      else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
