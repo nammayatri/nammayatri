@@ -77,6 +77,7 @@ sourceToDestinationConfig state = let
       , ellipsize = true
       }
     , overrideSeparatorCount = 2
+    , separatorLayoutMargin = (MarginTop 14)
     }
   in sourceToDestinationConfig'
 
