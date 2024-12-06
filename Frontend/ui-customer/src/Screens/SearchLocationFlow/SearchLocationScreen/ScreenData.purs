@@ -61,7 +61,6 @@ initData = {
         , latLonOnMap : dummyLocationInfo
         , defaultGate : ""
         , nearByGates : []
-        , activeRideIndex : 0
         , specialZoneCoordinates : ""
         , confirmLocCategory : NOZONE
         , metroStations : []

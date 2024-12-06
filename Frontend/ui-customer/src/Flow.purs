@@ -5488,7 +5488,6 @@ searchLocationFlow = do
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT (show state.data.ticketServiceType) currentCity (show globalState.homeScreen.props.sourceLat <> "," <> show globalState.homeScreen.props.sourceLong) (Just input) "10" Nothing
      if null routeStopresponse.routes && null routeStopresponse.stops then do
-      -- modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> searchPlaceFlow input state)    
@@ -5500,10 +5499,7 @@ searchLocationFlow = do
               then ROUTES
               else state.data.rideType
             activeRideTypeIndex = if rideType == ROUTES then 0 else 1
-        modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { activeRideIndex = activeRideTypeIndex, rideType = rideType ,srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
-    --  else do
-    --     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-    --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing , routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { rideType = rideType ,srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
      searchLocationFlow
     SearchLocationController.AddFavLoc state tag -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
@@ -7529,18 +7525,15 @@ busTicketBookingFlow = do
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing "10" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
      let rideType = 
             if null routeStopresponse.stops && null routeStopresponse.routes then
-              let (decodedCachedStops :: (Array FRFSStationAPI)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore RECENT_BUS_STOPS)) Nothing)
-              in  if null decodedCachedStops then ROUTES
-                  else STOP
-            else if null routeStopresponse.stops then ROUTES 
-            else STOP
+              let (decodedCachedRoutes :: (Array FRFSRouteAPI)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore RECENT_BUS_ROUTES)) Nothing)
+              in  if null decodedCachedRoutes then STOP
+                  else ROUTES
+            else if null routeStopresponse.routes then STOP
+            else ROUTES
          sortedStops = getSortedStops routeStopresponse.stops
-     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
+     modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
-      -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
-      ----------------------------
       void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.getMetroStatus bookingId
       case res of

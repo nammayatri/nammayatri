@@ -2430,7 +2430,6 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    activeRideIndex :: Int,
     confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station,
