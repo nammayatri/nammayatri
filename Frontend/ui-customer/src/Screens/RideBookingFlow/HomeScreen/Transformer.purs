@@ -626,7 +626,7 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       preferredServiceTier = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
       userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
       isPreferredBookAny  = RC.getPreferredOrderInBookAny userCity
-      allSelectedServices =     if preferredServiceTier /= "Auto" && isPreferredBookAny  then (getServiceNames estimates preferredServiceTier) else  RC.getBookAnySelectedServices userCity 
+      allSelectedServices =     if isPreferredBookAny  then (getServiceNames estimates preferredServiceTier) else  RC.getBookAnySelectedServices userCity 
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig userCity
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -1063,6 +1063,6 @@ getFareProductType fareProductType =
 
 getServiceNames :: Array EstimateAPIEntity -> String -> Array String
 getServiceNames estimate  prefervariant =
-  let filter = if prefervariant == "Auto" then  ["Auto" , "Non-AC Mini"] else ["Sedan", "Non-AC Mini", "AC Mini"]
+  let filter = if prefervariant == "Auto" then  ["Auto" , "Non-AC Mini", "AC Mini"] else ["Sedan", "Non-AC Mini", "AC Mini"]
       array  =  foldl (\acc (EstimateAPIEntity  estimate) -> if  DA.elem (fromMaybe "" estimate.serviceTierName) filter then acc <> [fromMaybe "" estimate.serviceTierName] else acc ) [] estimate 
   in array
