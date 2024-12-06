@@ -641,14 +641,14 @@ navbarlayout state push =
     , visibility $ boolToVisibility $ (checkPredictionList state) && state.props.actionType == BusSearchSelectionAction
     , background Color.white900
     ]
-    ( DA.mapWithIndex
-        ( \index item -> navpillView state item push index
+    ( map
+        ( \item -> navpillView state item push state.data.rideType
         )
         [ROUTES , STOP]
     )
 
-navpillView :: SearchLocationScreenState -> RideType -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
-navpillView state item push idx = 
+navpillView :: SearchLocationScreenState -> RideType -> (Action -> Effect Unit) -> RideType -> forall w. PrestoDOM (Effect Unit) w
+navpillView state item push activeItem = 
   linearLayout
     [ height WRAP_CONTENT
     , gravity CENTER
@@ -656,18 +656,18 @@ navpillView state item push idx =
     , padding $ Padding 5 8 5 8
     , weight 1.0
     , cornerRadius 18.0
-    , onClick push $ const $ RideTypeSelected item idx
-    , background if idx == state.data.activeRideIndex then Color.black900 else Color.white900
+    , onClick push $ const $ RideTypeSelected item activeItem
+    , background if item == activeItem then Color.black900 else Color.white900
     , rippleColor Color.rippleShade
     ]
     [ imageView  
         [ width $ V 18  
         , height $ V 18  
         , imageWithFallback $ fetchImage COMMON_ASSET $ if item == ROUTES then
-                                                          if state.data.activeRideIndex == 0 then "ny_ic_bus_white"
+                                                          if activeItem == ROUTES then "ny_ic_bus_white"
                                                           else "ny_ic_black_bus"
                                                         else
-                                                          if state.data.activeRideIndex == 1 then "ny_ic_location_white"
+                                                          if activeItem == STOP then "ny_ic_location_white"
                                                           else "ny_ic_black_location"
         , margin $ MarginRight 8
         ]
@@ -676,7 +676,7 @@ navpillView state item push idx =
           , height WRAP_CONTENT
           , text  (show item )
           , textSize FontSize.a_13
-          , color if idx == state.data.activeRideIndex then Color.white900 else Color.black900
+          , color if item == activeItem then Color.white900 else Color.black900
           ]
         <> FontStyle.tags TypoGraphy
     ]

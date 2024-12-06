@@ -119,7 +119,7 @@ data Action = NoAction
             | SetListItem PList.ListItem
             | StationOnClick Int
             | BusRouteAction
-            | RideTypeSelected RideType Int
+            | RideTypeSelected RideType RideType
             | NoStopNoRoutePopUp PopUpModalController.Action
             
 
@@ -150,7 +150,7 @@ eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLo
 
 eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
 
-eval (RideTypeSelected item idx  )state = continue state {data { activeRideIndex = idx , rideType = item }}
+eval (RideTypeSelected item activeItem)state = continue state {data { rideType = item }}
 
 eval (MapReady _ _ _) state = do 
   if state.props.searchLocStage == PredictionSelectedFromHome then 
