@@ -20,7 +20,7 @@ import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Services.API as API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..), Confidence(..))
+import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..), Confidence(..), TripCategory(..), TripCategoryTag(..))
 import Common.Types.App as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -262,6 +262,7 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
+  void $ pure $ spy "DEBUG: gPayload" gPayload
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   if tokenValidity then
@@ -839,8 +840,8 @@ currentFlowStatus prioritizeRating = do
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   liftFlowBT $ markPerformance "RIDE_LIST_CALL_API"
   case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
-    DRIVER_OFFERED_QUOTE currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false currentStatus.tripCategory
+    DRIVER_OFFERED_QUOTE currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true Nothing
     WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus
     RIDE_ASSIGNED _ -> checkRideStatus true prioritizeRating
     PENDING_RATING _ -> do
@@ -854,7 +855,7 @@ currentFlowStatus prioritizeRating = do
   if globalState.homeScreen.props.currentStage == RideCompleted then riderRideCompletedScreenFlow else homeScreenFlow
 
   where
-  goToConfirmingQuotesStage :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String } -> FlowBT String Unit
+  goToConfirmingQuotesStage :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String, tripCategory :: Maybe TripCategory } -> FlowBT String Unit
   goToConfirmingQuotesStage currentStatus = do
     let
       currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
@@ -885,6 +886,12 @@ currentFlowStatus prioritizeRating = do
                         , destination = flowStatusData.destination.place
                         , sourceAddress = flowStatusData.sourceAddress
                         , destinationAddress = flowStatusData.destinationAddress
+                        , fareProductType = case currentStatus.tripCategory of
+                            Nothing -> homeScreen.data.fareProductType
+                            Just (TripCategory tripCategory) -> 
+                              if tripCategory.tag == CTA.Delivery then FPT.DELIVERY 
+                              else if tripCategory.tag == CTA.Rental then FPT.RENTAL 
+                              else homeScreen.data.fareProductType
                         }
                       }
                 )
@@ -988,8 +995,8 @@ currentFlowStatus prioritizeRating = do
     else
       pure unit
 
-  goToFindingQuotesStage :: String -> Maybe Boolean -> Maybe (Array String) -> Boolean -> FlowBT String Unit
-  goToFindingQuotesStage estimateId mbIsValueAddNP otherSelectedEstimates driverOfferedQuote = do
+  goToFindingQuotesStage :: String -> Maybe Boolean -> Maybe (Array String) -> Boolean -> Maybe TripCategory -> FlowBT String Unit
+  goToFindingQuotesStage estimateId mbIsValueAddNP otherSelectedEstimates driverOfferedQuote tripCategory = do
     let
       providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
     removeChatService ""
@@ -1022,6 +1029,13 @@ currentFlowStatus prioritizeRating = do
           selectedEstimate = case selectedVariant of 
                                 "BOOK_ANY" -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.vehicleVariant == "BOOK_ANY") estimates
                                 _ -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.id == estimateId) estimates
+          fareProductType = case tripCategory of
+            Nothing -> currentState.homeScreen.data.fareProductType
+            Just (TripCategory tripCategory') -> 
+              if tripCategory'.tag == CTA.Delivery then FPT.DELIVERY 
+              else if tripCategory'.tag == CTA.Rental then FPT.RENTAL 
+              else currentState.homeScreen.data.fareProductType
+
         case (getFlowStatusData "LazyCheck") of
           Just (FlowStatusData flowStatusData) -> do
             modifyScreenState
@@ -1051,6 +1065,7 @@ currentFlowStatus prioritizeRating = do
                           , destinationAddress = flowStatusData.destinationAddress
                           , specialZoneQuoteList = estimates
                           , selectedEstimatesObject = selectedEstimate {vehicleVariant = selectedVariant, providerType = providerType}
+                          , fareProductType = fareProductType
                           }
                         }
                   )
@@ -1058,12 +1073,18 @@ currentFlowStatus prioritizeRating = do
       else
         updateFlowStatus SEARCH_CANCELLED
 
-  goToConfirmRide :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String } -> FlowBT String Unit
+  goToConfirmRide :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String, tripCategory :: Maybe TripCategory } -> FlowBT String Unit
   goToConfirmRide currentStatus =
     let
       bookingId = currentStatus.bookingId
       _ = spy "inside gotoconfirmride" currentStatus
-      fareProductType = currentStatus.fareProductType
+      fareProductType = case currentStatus.tripCategory of
+        Nothing -> currentStatus.fareProductType
+        Just (TripCategory tripCategory) -> 
+          if tripCategory.tag == CTA.Delivery then Just "DELIVERY"
+          else if tripCategory.tag == CTA.Rental then Just "RENTAL"
+          else currentStatus.fareProductType
+      
     in
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
         checkRideStatus false false
