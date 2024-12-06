@@ -222,6 +222,8 @@ let AllocatorJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
+      | UnblockSoftBlockedDriver
+      | SoftBlockNotifyDriver
       >
 
 let jobInfoMapx =
@@ -260,6 +262,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.MonthlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = True }
+      , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

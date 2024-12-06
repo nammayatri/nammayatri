@@ -1,5 +1,6 @@
 module Domain.Action.Dashboard.RideBooking.Search (postSearchRide) where
 
+import qualified API.Types.UI.Search
 import qualified API.UI.Search
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -14,7 +15,7 @@ postSearchRide ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   API.UI.Search.SearchReq ->
-  Environment.Flow API.UI.Search.SearchResp
+  Environment.Flow API.Types.UI.Search.SearchResp
 postSearchRide merchantShortId _opCity personId req = do
   m <- findMerchantByShortId merchantShortId
   API.UI.Search.search' (personId, m.id) req Nothing Nothing Nothing Nothing Nothing (Just True)

@@ -14,6 +14,7 @@
 
 module Mobility.Fixtures.Routes where
 
+import "rider-app" API.Types.UI.Search
 import "rider-app" API.UI.Search
 import Data.List.NonEmpty as NE
 import "rider-app" Domain.Types.LocationAddress
@@ -24,10 +25,10 @@ defaultSearchReq :: SearchReq
 defaultSearchReq =
   OneWaySearch $
     OneWaySearchReq
-      { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
-        destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
+      { origin = SearchReqLocation defaultSearchReqAddress (LatLong 10.0739 76.2733),
+        destination = SearchReqLocation defaultSearchReqAddress (LatLong 10.5449 76.4356),
         isSourceManuallyMoved = Nothing,
-        stops = Just [SearchReqLocation (LatLong 10.0749 76.2733) defaultSearchReqAddress],
+        stops = Just [SearchReqLocation defaultSearchReqAddress (LatLong 10.0749 76.2733)],
         startTime = Nothing,
         isSpecialLocation = Nothing,
         isReallocationEnabled = Nothing,
@@ -90,10 +91,10 @@ searchReqFromUpdatesList updList =
       req =
         OneWaySearch $
           OneWaySearchReq
-            { origin = SearchReqLocation (NE.head $ NE.head updList) defaultSearchReqAddress,
-              destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
+            { origin = SearchReqLocation defaultSearchReqAddress (NE.head $ NE.head updList),
+              destination = SearchReqLocation defaultSearchReqAddress (NE.last $ NE.last updList),
               isSourceManuallyMoved = Nothing,
-              stops = Just $ NE.toList $ (\x -> SearchReqLocation x defaultSearchReqAddress) <$> NE.head updList,
+              stops = Just $ NE.toList $ SearchReqLocation defaultSearchReqAddress <$> NE.head updList,
               isSpecialLocation = Nothing,
               isReallocationEnabled = Nothing,
               startTime = Nothing,
@@ -110,8 +111,8 @@ mkSearchReqFromLocations origin destination =
   let req =
         OneWaySearch $
           OneWaySearchReq
-            { origin = SearchReqLocation origin defaultSearchReqAddress,
-              destination = SearchReqLocation destination defaultSearchReqAddress,
+            { origin = SearchReqLocation defaultSearchReqAddress origin,
+              destination = SearchReqLocation defaultSearchReqAddress destination,
               stops = Nothing,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,

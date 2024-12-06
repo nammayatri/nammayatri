@@ -497,6 +497,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
+      API.Action.UI.Search
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.TicketService
@@ -539,6 +540,7 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
+      API.Types.UI.Search
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.TicketService

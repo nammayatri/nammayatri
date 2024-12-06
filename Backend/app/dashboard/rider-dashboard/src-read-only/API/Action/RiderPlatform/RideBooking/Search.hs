@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Search
+import qualified "rider-app" API.Types.UI.Search
 import qualified "rider-app" API.UI.Search
 import qualified Domain.Action.RiderPlatform.RideBooking.Search
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -35,5 +36,5 @@ type PostSearchRide =
       :> API.Types.Dashboard.RideBooking.Search.PostSearchRide
   )
 
-postSearchRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> Environment.FlowHandler API.UI.Search.SearchResp)
+postSearchRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> Environment.FlowHandler API.Types.UI.Search.SearchResp)
 postSearchRide merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Search.postSearchRide merchantShortId opCity apiTokenInfo customerId req

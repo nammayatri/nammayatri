@@ -15,6 +15,7 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import API.Types.UI.Search
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
@@ -40,7 +41,6 @@ import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.VehicleConfig as CQVC
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
@@ -49,7 +49,7 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
+mkStops :: SearchReqLocation -> [SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
 mkStops origin stops startTime =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
@@ -387,7 +387,7 @@ mkIntermediateStop stop id parentStopId =
           stopParentStopId = Just $ show parentStopId
         }
 
-mkIntermediateStopSearch :: SLS.SearchReqLocation -> Int -> Int -> Spec.Stop
+mkIntermediateStopSearch :: SearchReqLocation -> Int -> Int -> Spec.Stop
 mkIntermediateStopSearch stop id parentStopId =
   let gps = Gps.Gps {lat = stop.gps.lat, lon = stop.gps.lon}
    in Spec.Stop

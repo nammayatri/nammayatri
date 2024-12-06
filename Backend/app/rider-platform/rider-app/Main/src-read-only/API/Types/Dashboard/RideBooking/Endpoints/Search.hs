@@ -3,6 +3,7 @@
 
 module API.Types.Dashboard.RideBooking.Endpoints.Search where
 
+import qualified "this" API.Types.UI.Search
 import qualified "this" API.UI.Search
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
@@ -17,9 +18,14 @@ import Servant.Client
 
 type API = ("search" :> PostSearchRide)
 
-type PostSearchRide = (Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "rideSearch" :> ReqBody '[JSON] API.UI.Search.SearchReq :> Post '[JSON] API.UI.Search.SearchResp)
+type PostSearchRide =
+  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "rideSearch" :> ReqBody '[JSON] API.UI.Search.SearchReq
+      :> Post
+           '[JSON]
+           API.Types.UI.Search.SearchResp
+  )
 
-newtype SearchAPIs = SearchAPIs {postSearchRide :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> EulerHS.Types.EulerClient API.UI.Search.SearchResp}
+newtype SearchAPIs = SearchAPIs {postSearchRide :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> EulerHS.Types.EulerClient API.Types.UI.Search.SearchResp}
 
 mkSearchAPIs :: (Client EulerHS.Types.EulerClient API -> SearchAPIs)
 mkSearchAPIs searchClient = (SearchAPIs {..})
