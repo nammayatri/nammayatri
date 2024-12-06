@@ -45,6 +45,7 @@ type Config =
   , horizontalSeperatorConfig :: SeparatorConfig
   , pillsConfig :: PillsConfig
   , showDestination :: Boolean
+  , separatorLayoutMargin :: Margin
   }
 
 type PillsConfig = {
@@ -191,4 +192,5 @@ config = {
   , id : Nothing
   , overrideSeparatorCount : 0
   , showDestination : true
+  , separatorLayoutMargin : Margin 0 0 0 0
   }

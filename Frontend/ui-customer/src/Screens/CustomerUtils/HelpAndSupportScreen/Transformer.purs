@@ -151,6 +151,8 @@ myRideListTransform state listRes =
                   , status: (ride.status)
                   , isNull: false
                   , rideStartTime: (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A")
+                  , rideStartTimeUTC: fromMaybe "" ride.rideStartTime
+                  , rideEndTimeUTC: fromMaybe "" ride.rideEndTime
                   , rideEndTime: (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A")
                   , vehicleNumber: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleNumber)
                   , rideId: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _id)
