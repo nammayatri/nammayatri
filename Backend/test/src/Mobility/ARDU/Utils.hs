@@ -151,7 +151,7 @@ getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
   pollFilteredList
     "get on_search estimates"
     (\p -> p.agencyName == transporterName)
-    $ callBAP (getQuotes searchId appToken)
+    $ callBAP (getQuotes searchId appToken Nothing)
       <&> (.estimates)
 
 select :: Text -> Id AppEstimate.Estimate -> ClientsM ()

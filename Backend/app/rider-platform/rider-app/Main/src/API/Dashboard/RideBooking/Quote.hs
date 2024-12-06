@@ -44,4 +44,4 @@ handler = callGetQuotes
 callGetQuotes :: ShortId DM.Merchant -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
 callGetQuotes merchantId req personId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UQ.getQuotes req (personId, m.id)
+  UQ.getQuotes req (personId, m.id) Nothing
