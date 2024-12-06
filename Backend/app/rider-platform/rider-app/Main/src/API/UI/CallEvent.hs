@@ -25,6 +25,7 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -34,10 +35,14 @@ type API =
   "callEvent"
     :> TokenAuth
     :> ReqBody '[JSON] DCE.CallEventReq
+    :> Header "x-bundle-version" Version
+    :> Header "x-client-version" Version
+    :> Header "x-config-version" Version
+    :> Header "x-device" Text
     :> Post '[JSON] APISuccess.APISuccess
 
 handler :: FlowServer API
 handler = logCallEvent
 
-logCallEvent :: (Id Person.Person, Id Merchant.Merchant) -> DCE.CallEventReq -> FlowHandler APISuccess.APISuccess
-logCallEvent (_, _) = withFlowHandlerAPI . DCE.logCallEvent
+logCallEvent :: (Id Person.Person, Id Merchant.Merchant) -> DCE.CallEventReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
+logCallEvent (_, _) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . DCE.logCallEvent req mbBundleVersion mbClientVersion mbClientConfigVersion
