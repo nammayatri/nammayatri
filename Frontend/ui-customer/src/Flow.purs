@@ -243,6 +243,7 @@ import Screens.TicketBookingFlow.BusTrackingScreen.Transformer (getStationsFromB
 import Screens.AadhaarVerificationScreen.ScreenData as AadhaarVerificationScreenData
 import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScreenData
 import Helpers.FrfsUtils (getFirstRoute, getAllFirstRoutes, getSortedStops)
+import DecodeUtil (decodeForeignAny,parseJSON)
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -469,6 +470,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
+        "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -7181,6 +7183,8 @@ fcmHandler notification state notificationBody= do
           currentUtcAfterScheduledTime = EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
           timeDiff =  EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = fromMaybe "null" notificationBody.bookingId
+          _ = spy "Printing for checking" notificationBody
+      when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
       if (fcmBookingId /= state.props.bookingId && state.props.bookingId /= "") then do
         currentFlowStatus false
       else if (fcmBookingId /= state.props.bookingId && state.props.bookingId == "" && timeDiff > 0) then do
@@ -7499,7 +7503,13 @@ busTicketBookingFlow = do
        searchLocationState = currentState.searchLocationScreen
      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing "10" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
-     let rideType = if null routeStopresponse.stops then ROUTES else STOP
+     let rideType = 
+            if null routeStopresponse.stops && null routeStopresponse.routes then
+              let (decodedCachedStops :: (Array FRFSStationAPI)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore RECENT_BUS_STOPS)) Nothing)
+              in  if null decodedCachedStops then ROUTES
+                  else STOP
+            else if null routeStopresponse.stops then ROUTES 
+            else STOP
          sortedStops = getSortedStops routeStopresponse.stops
      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })

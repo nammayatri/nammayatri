@@ -120,6 +120,7 @@ import Helpers.SplashUtils as HS
 import Resource.Constants
 import RemoteConfig as RC
 import Components.SwitchButtonView as SwitchButtonView
+import DecodeUtil (getFromWindowString)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -295,6 +296,12 @@ screen initialState (GlobalState globalState) =
                                   else pure unit
             _                -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
+                                when (initialState.props.currentStage == RideCompleted) $ do
+                                  let mbVal = runFn3 getFromWindowString "notificationType" Nothing Just 
+                                  case mbVal of
+                                    Just "FROM_METRO_COINS" -> push $ Notification "FROM_METRO_COINS"
+                                    Just "TO_METRO_COINS" -> push $ Notification "TO_METRO_COINS"
+                                    _ -> pure unit 
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
                                 _ <- pure $ JB.removeAllPolylines ""
@@ -982,8 +989,8 @@ seeNearbyHotspots state push =
   ]
   [ lottieAnimationView
     [ id (EHC.getNewIDWithTag "goToHotspotsLottie")
-    , height $ V $ pillLayoutBounds.height + 12
-    , width $ V $ pillLayoutBounds.width + 12
+    , height $ V $ (HU.getDefaultPixelSize $ pillLayoutBounds.height) + 12
+    , width $ V $ (HU.getDefaultPixelSize $ pillLayoutBounds.width) + 12
     , afterRender (\_-> do
                     void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "blue_pulse_animation.json", lottieId = (EHC.getNewIDWithTag "goToHotspotsLottie"), speed = 1.0, scaleType = "CENTER_CROP" }
                   )(const NoAction)

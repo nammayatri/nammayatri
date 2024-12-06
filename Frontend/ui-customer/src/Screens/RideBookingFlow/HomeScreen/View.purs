@@ -922,15 +922,15 @@ driverCallPopUp push state =
             , width MATCH_PARENT
             , orientation VERTICAL
             ]
-            ( map
-                ( \item ->
+            ( mapWithIndex
+                ( \index item ->
                     linearLayout
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
                       ]
                       [ trackingCardCallView push state item
-                      , if(item.type == ANONYMOUS_CALLER) then linearLayout
+                      , if (index == 0) then linearLayout
                           [ height $ V 1
                           , width MATCH_PARENT
                           , background Color.grey900
@@ -947,15 +947,15 @@ driverCallPopUp push state =
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
-  [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
-    , type: ANONYMOUS_CALLER
-    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
-    }
-  , { text: (getString DIRECT_CALL)
+  [ { text: (getString DIRECT_CALL)
     , imageWithFallback: fetchImage FF_ASSET "ic_direct_call"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
+    }
+  , { text: (getString ANONYMOUS_CALL)
+    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
+    , type: ANONYMOUS_CALLER
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   ]
 
@@ -1670,7 +1670,7 @@ topLeftIconView state push =
       isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, EditPickUpLocation, DistanceOutsideLimits ])
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
       isEditDestination = any (_ == state.props.currentStage) [EditingDestinationLoc, ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
-      isVisible = state.data.config.showHamMenu && not isEditDestination && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen]) && not (isParentView FunctionCall)
+      isVisible = state.data.config.showHamMenu && not isEditDestination && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen]) && (not ((isParentView FunctionCall) &&  any (_ == state.props.currentStage)[ RideAccepted , RideStarted]))
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
   in
   linearLayout

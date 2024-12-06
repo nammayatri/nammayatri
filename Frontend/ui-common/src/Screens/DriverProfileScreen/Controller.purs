@@ -5,6 +5,7 @@ import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonSt
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Services.Common.Backend
+import Mobility.Prelude (startsWith)
 import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons 
 import Services.Common.API
@@ -80,11 +81,10 @@ eval GoBack state = do
       let mBPayload = getGlobalPayload Constants.globalPayload
       case mBPayload of 
         Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
-          Just screen -> case screen of
-            "driverprofile" -> do 
-              void $ pure $ emitTerminateApp Nothing true
-              continue state
-            _ -> exit $ GoToBack
+          Just screen -> if startsWith "driverprofile" screen then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                            else exit $ GoToBack
           _ -> exit $ GoToBack
         Nothing -> exit $ GoToBack
     else exit $ GoToBack

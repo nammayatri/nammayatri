@@ -8,12 +8,14 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Effect.Uncurried (runEffectFn2)
+import Common.Types.App (LazyCheck(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
@@ -29,6 +31,7 @@ import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -57,16 +60,32 @@ eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBoo
 
 eval BackPressed state = do
   case state.props.currentStage of 
-    DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
+    DescriptionStage -> if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
     ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
-    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+    ViewTicketStage -> if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
-                                else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                                else if isParentView FunctionCall
+                                  then do
+                                      void $ pure $ emitTerminateApp Nothing true
+                                      continue state
+                                  else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
-                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else if isParentView FunctionCall
+                      then do
+                          void $ pure $ emitTerminateApp Nothing true
+                          continue state
+                      else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
@@ -75,7 +94,11 @@ eval (GetBookingInfo bookingShortId bookingStatus) state = do
 eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
   case state.props.paymentStatus of
    PP.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId Booked)]
-   PP.Failed -> exit $ GoToHomeScreen state
+   PP.Failed -> if isParentView FunctionCall
+                      then do
+                          void $ pure $ emitTerminateApp Nothing true
+                          continue state
+                      else exit $ GoToHomeScreen state
    _ -> continue state
 
 eval (PaymentStatusAction status) state =

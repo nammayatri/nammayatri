@@ -36,12 +36,12 @@ import Screens.Types (BottomNavBarIcon(..))
 import Screens.Types (Stage(HomeScreen, RideAccepted, ReAllocated))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..), ParcelAction(..))
 import Data.Array (elem)
+import Common.Types.App as Common
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
-  isHybridApp' <- liftFlowBT HU.isHybridApp
-  if isHybridApp' && state.homeScreen.props.currentStage == HomeScreen then do
+  if (HU.isParentView Common.FunctionCall) && state.homeScreen.props.currentStage == HomeScreen then do
       void $ pure $ HU.emitTerminateApp Nothing true
       pure HybridAppExit
       else homeScreen'

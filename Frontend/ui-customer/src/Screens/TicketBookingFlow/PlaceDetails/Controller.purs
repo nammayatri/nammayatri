@@ -9,12 +9,14 @@ import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), Ti
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 import Screens.Types (OperationalDaysData, PeopleCategoriesData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR,isParentView,emitTerminateApp)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
@@ -30,6 +32,7 @@ import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.TicketBookingFlow.PlaceDetails.Transformer (selectByDefaultOneServiceCategory, transformRespToStateDatav2)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -125,16 +128,32 @@ eval (UpdatePlacesData placeData mbServiceData) state = do
 
 eval BackPressed state = do
   case state.props.currentStage of 
-    DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
+    DescriptionStage -> if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
     ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
-    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+    ViewTicketStage -> if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
-                                else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                                else if isParentView FunctionCall
+                                  then do
+                                      void $ pure $ emitTerminateApp Nothing true
+                                      continue state
+                                  else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
-                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (SelectServiceCategory serviceId selCategory) state =
   let modifiedServicesData = map modifyService state.data.servicesInfo

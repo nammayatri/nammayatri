@@ -63,6 +63,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     isForwardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPartOfIntelligentPool :: B.C f Kernel.Prelude.Bool,
     keepHiddenForSeconds :: B.C f Kernel.Types.Common.Seconds,
+    lastRideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

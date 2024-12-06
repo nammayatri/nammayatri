@@ -50,9 +50,7 @@ import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.TransporterConfig as DTMT
-import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
-import qualified Domain.Types.VehicleVariant as VehicleVariant
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import EulerHS.Prelude ((+||), (||+))
@@ -282,7 +280,7 @@ handler ValidatedDSearchReq {..} sReq = do
   (estimates', quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
-  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = (maxFare <= autFare) && VehicleVariant.castServiceTierToVehicleCategory vehicleServiceTier == DVC.CAR, ..}) estimates') mbAutoMaxFare
+  let estimates = maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
 
   QEst.createMany estimates
   for_ quotes QQuote.create

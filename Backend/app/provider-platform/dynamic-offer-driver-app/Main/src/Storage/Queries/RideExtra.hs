@@ -677,3 +677,6 @@ updatePassedThroughDestination rideId passedThroughDrop = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+findLatestRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
+findLatestRideByDriverId (Id driverId) = findAllWithKVAndConditionalDB [Se.Is BeamR.driverId $ Se.Eq driverId] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
