@@ -2546,7 +2546,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVe
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.ServicesOnClick config item))) state = do
   let updatedServices = if elem item config.selectedServices then delete item config.selectedServices else insert item config.selectedServices
-  if length updatedServices < 1 then continue state
+  if length updatedServices < 2 then continue state
   else do
     let selectedEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) updatedServices then acc <> [item.id] else acc) [] state.data.specialZoneQuoteList
         estimateId = if config.vehicleVariant == "BOOK_ANY" then fromMaybe "" (head selectedEstimates) else config.id
