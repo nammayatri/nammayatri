@@ -38,14 +38,15 @@ type API =
     :> Capture "searchId" (Id SSR.SearchRequest)
     :> TokenAuth
     :> "results"
+    :> QueryParam "allowMultiple" Bool
     :> Get '[JSON] DQuote.GetQuotesRes
 
 handler :: FlowServer API
 handler =
   getQuotes
 
-getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId = withFlowHandlerAPI . getQuotes' searchRequestId
+getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
+getQuotes searchRequestId token = withFlowHandlerAPI . getQuotes' searchRequestId token
 
-getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Flow DQuote.GetQuotesRes
-getQuotes' searchRequestId _ = DQuote.getQuotes searchRequestId
+getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
+getQuotes' searchRequestId _ mbAllowMultiple = DQuote.getQuotes searchRequestId mbAllowMultiple

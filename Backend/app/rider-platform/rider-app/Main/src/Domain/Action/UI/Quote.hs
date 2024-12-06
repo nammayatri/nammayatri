@@ -238,11 +238,12 @@ instance ToSchema OfferRes where
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id SSR.SearchRequest -> m GetQuotesRes
-getQuotes searchRequestId = do
+getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id SSR.SearchRequest -> Maybe Bool -> m GetQuotesRes
+getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-  whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
+  unless (mbAllowMultiple == Just True) $ do
+    activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
+    whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   journeyData <- getJourneyData searchRequestId
   let lockKey = estimateBuildLockKey searchRequestId.getId
