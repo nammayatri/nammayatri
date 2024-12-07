@@ -321,7 +321,7 @@ window.getMerchantConfig = function () {
       , "showNearByDrivers": true
       , "enableBookingPreference" : false
       , "showInfoIcon" : true
-      , "genericLoaderLottie" : "ic_vehicle_processing,https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
+      , "genericLoaderLottie" : "ic_vehicle_processing,https://assets.moving.tech/beckn/jatrisaathi/user/lottie/ny_ic_generic_loader.json"
       , "variantInfo" : {
           "hatchback" : {
             "name" : "Hatchback",

@@ -343,14 +343,15 @@ eval (UpdateRepeatTrips rideList) state = do
 
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
-eval (MarkerLabelOnClick markerName) state =
+eval (MarkerLabelOnClick markerName) state = do
+  let isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
   if state.props.currentStage == SettingPrice then do
     void $ pure $ updateLocalStage SearchLocationModel
     let isSource = Just (markerName == "ny_ic_src_marker")
     let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
     continue updatedState
-  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation then continueWithCmd state [pure $ EditLocation ST.Source]
-  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) then continueWithCmd state [pure $ EditLocation ST.Destination]
+  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation && not isHybridFlowParcel then continueWithCmd state [pure $ EditLocation ST.Source]
+  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) && not isHybridFlowParcel then continueWithCmd state [pure $ EditLocation ST.Destination]
   else continue state
 
 eval (Scroll item) state = do

@@ -3092,6 +3092,7 @@ updateRecentTrips action push response = do
 driverLocationTracking :: (Action -> Effect Unit) -> (String -> RideBookingRes -> Action) -> (String -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction driverReachedDestinationAction updateState duration trackingId state routeState expCounter = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
+  let hideMarkerCallback = not (state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall)
   (GlobalState gbState) <- getState
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId
@@ -3211,7 +3212,7 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                                 routeDurationAdvanced = fromMaybe 0 routeDuration
                                 distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
                                 driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
-                                callback = runFn2 getMarkerCallback push MarkerLabelOnClick
+                                callback = if hideMarkerCallback then "" else runFn2 getMarkerCallback push MarkerLabelOnClick
                                 destMarkerPrimaryText = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.source else state.data.driverInfoCardState.destination
                                 srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
                                 srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
@@ -3229,7 +3230,7 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                             driverLocationTracking push action driverArrivedAction driverReachedDestinationAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
                           Just (Route routes), Nothing, false -> do
                             rentalPoints <- if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then getRentalPoints routeState dstLat dstLon state rideId else pure Nothing
-                            let callback = runFn2 getMarkerCallback push MarkerLabelOnClick
+                            let callback = if hideMarkerCallback then "" else runFn2 getMarkerCallback push MarkerLabelOnClick
                                 distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
                                 driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
                                 destMarkerPrimaryText = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.source else state.data.driverInfoCardState.destination
@@ -3282,7 +3283,7 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                                                         else
                                                           specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                                   mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
-                                  callback = runFn2 getMarkerCallback push MarkerLabelOnClick
+                                  callback = if hideMarkerCallback then "" else runFn2 getMarkerCallback push MarkerLabelOnClick
                                   destMarkerConfig =  defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, markerCallback = callback, actionImage = getMarkerActionImageConifg state driverWithinPickupThreshold}
                                   eta = if not hasCurrentLocAndPrevDropLoc || any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then getMarkerPrimaryText (locationResp.distance + fromMaybe 0 (fromString $  getValueToLocalStore ADVANCED_ROUTE_DISTANCE)) else ""
                               void $ pure $ setValueToLocalStore DRIVER_WITHIN_PICKUP_THRESHOLD $ if driverWithinPickupThreshold then "true" else "false"

@@ -733,6 +733,7 @@ riderRideCompletedScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { fromScreen = "RideCompleted" } })
       flowRouter HelpAndSupportScreenFlow
     HOME_SCREENS -> do
+      void $ lift $ lift $ fork $ Remote.notifyFlowEvent $ Remote.makeNotifyFlowEventReq "RATE_DRIVER_SKIPPED"
       setValueToLocalStore RATING_SKIPPED "true"
       (GlobalState state) <- getState
       when (isLocalStageOn FindingQuotes)

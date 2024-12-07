@@ -14,7 +14,7 @@ import Timers(clearTimerWithId, waitingCountdownTimerV2)
 import Components.RecordAudioModel as RecordAudioModel
 import Effect (Effect)
 import Data.Maybe
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons as EHC
 import Components.PrimaryButton as PrimaryButton
 import Types.EndPoint as EndPoint
 import Data.Function.Uncurried (runFn1, runFn2, runFn3)
@@ -34,6 +34,9 @@ import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
 import Data.Int (fromString)
 import Helpers.Utils (isParentView,emitTerminateApp)
+import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
+import Services.Backend as Remote
 
 data Action =
               RideDetails
@@ -180,7 +183,12 @@ eval (Back) state = do
 
 eval (Skip) state = if isParentView FunctionCall then do 
                         void $ pure $ emitTerminateApp Nothing true
-                        continue state
+                        continueWithCmd state [ do
+                          void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                            void $ Remote.notifyFlowEvent $ Remote.makeNotifyFlowEventReq "RATE_DRIVER_SKIPPED"
+                            pure unit
+                          pure NoAction
+                        ]
                     else exit $ HomeScreen state
 
 eval (SelectPill feedbackItem id) state = do
@@ -226,7 +234,7 @@ eval (UpdateRecordModelPlayer url) state = do
 
 eval (OnClickDone) state =
   continueWithCmd state { ratingCard { recordAudioState { isUploading = true, pauseLootie = true } } } [do
-    void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
+    void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (EHC.getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
     void $ pure $ clearTimerWithId state.timerId
     case state.ratingCard.recordAudioState.recordedFile of
       Just url -> do
@@ -299,7 +307,7 @@ eval (KeyboardCallback keyBoardState) state = do
                     "onKeyboardOpen" -> true
                     "onKeyboardClose" -> false
                     _ -> false 
-  when(keyBoardState == "onKeyboardOpen") $ void $ pure $ JB.scrollToEnd (getNewIDWithTag "RideCompletedScrollView") true
+  when(keyBoardState == "onKeyboardOpen") $ void $ pure $ JB.scrollToEnd (EHC.getNewIDWithTag "RideCompletedScrollView") true
   continue state{isKeyBoardOpen = isOpen}
 
 eval _ state = update state

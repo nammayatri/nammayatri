@@ -2427,8 +2427,9 @@ scheduledRideExistsPopUpConfig state =
 
 getMarkerActionImageConifg :: ST.HomeScreenState -> Boolean -> JB.ActionImageConfig 
 getMarkerActionImageConifg state driverWithinPickupThreshold = do
-  let conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold
-      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY])
+  let isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
+      conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold && not isHybridFlowParcel
+      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) && not isHybridFlowParcel
       imageName = if conditionForPickupImage then "ic_edit_pencil_white" else if conditionForDestinationImage then "ic_pencil_blue" else ""
       bgForPickupMarker = if EHC.os == "IOS" then Color.blue800 else "ic_blue_bg"
       bgForDestMarker = if EHC.os == "IOS" then Color.blue600 else "ic_blue600_bg"
