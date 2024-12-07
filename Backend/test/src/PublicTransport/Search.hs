@@ -99,7 +99,7 @@ testSearch = do
   searchRequest.id `shouldBe` searchId
   threadDelay $ 3 * kafkaConsumerTimeoutMilliseconds * 1000
   pollDesc "Expected EKM-ABC and EKM-EMB trips in the search results" $ do
-    quotes <- (.quotes) <$> callRiderApp (getQuotes searchId userToken)
+    quotes <- (.quotes) <$> callRiderApp (getQuotes searchId userToken Nothing)
     ekmAbcQuote <- maybe (expectationFailure "No EKM-ABC trip found") pure $ findEkmAbcQuote quotes
     ekmEmbQuote <- maybe (expectationFailure "No EKM-EMB trip found") pure $ findEkmEmbQuote quotes
     pure $ Just (ekmAbcQuote, ekmEmbQuote)

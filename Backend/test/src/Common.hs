@@ -61,7 +61,7 @@ searchServices ::
   ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 
-getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM AbeQuoteAPI.GetQuotesRes
+getQuotes :: Id BSearchRequest.SearchRequest -> Text -> Maybe Bool -> ClientM AbeQuoteAPI.GetQuotesRes
 getQuotes = client (Proxy :: Proxy AbeQuoteAPI.API)
 
 gatewayBaseUrl :: BaseUrl
