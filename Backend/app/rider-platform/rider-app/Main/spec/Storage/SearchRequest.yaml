@@ -64,6 +64,7 @@ SearchRequest:
     clientBundleVersion: Maybe Version
     clientSdkVersion: Maybe Version
     clientConfigVersion: Maybe Version
+    clientReactNativeVersion: Maybe Text
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text

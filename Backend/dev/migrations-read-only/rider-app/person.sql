@@ -113,3 +113,13 @@ ALTER TABLE atlas_app.person ADD COLUMN customer_namma_tags text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN client_react_native_version text ;
+
+
+------- SQL updates -------
+

@@ -91,8 +91,8 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
-appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
+appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -135,7 +135,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing
+initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

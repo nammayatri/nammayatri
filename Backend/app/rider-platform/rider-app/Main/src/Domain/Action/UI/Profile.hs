@@ -189,18 +189,27 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getPersonDetails ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context = do
+getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let device = getDeviceFromText mbDevice
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
+  when ((decPerson.clientBundleVersion /= mbBundleVersion || decPerson.clientSdkVersion /= mbClientVersion || decPerson.clientConfigVersion /= mbClientConfigVersion || decPerson.clientReactNativeVersion /= mbRnVersion || decPerson.clientDevice /= device) && isJust device) do
+    deploymentVersion <- asks (.version)
+    void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
@@ -258,8 +267,8 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
-updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
@@ -278,6 +287,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       req.notificationToken
       req.language
       req.gender
+      mbRnVersion
       (mbClientVersion <|> req.clientVersion)
       (mbBundleVersion <|> req.bundleVersion)
       mbClientConfigVersion

@@ -131,3 +131,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN pricing_id text ;
 
 ALTER TABLE atlas_app.search_request ADD COLUMN driver_identifier_value text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN driver_identifier_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN client_react_native_version text ;

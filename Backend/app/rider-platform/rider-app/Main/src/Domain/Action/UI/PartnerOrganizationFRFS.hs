@@ -174,10 +174,11 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
       notificationToken = Nothing
       mbBundleVersion = Nothing
       mbClientVersion = Nothing
+      mbRnVersion = Nothing
       mbClientConfigVersion = Nothing
       mbDevice = Nothing
       authReq = buildPartnerAuthReq identifierType notificationToken
-  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant (Just partnerOrgId)
+  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant (Just partnerOrgId)
   return (person, True)
   where
     buildPartnerAuthReq identifierType notificationToken =
