@@ -46,4 +46,4 @@ handler =
   getQuotes
 
 getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId token mbAllowMultiple = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId token mbAllowMultiple
+getQuotes searchRequestId _ mbAllowMultiple = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId mbAllowMultiple
