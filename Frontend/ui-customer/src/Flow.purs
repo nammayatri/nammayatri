@@ -1087,7 +1087,6 @@ currentFlowStatus prioritizeRating = do
           if tripCategory.tag == CTA.Delivery then Just "DELIVERY"
           else if tripCategory.tag == CTA.Rental then Just "RENTAL"
           else currentStatus.fareProductType
-      
     in
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
         checkRideStatus false false
@@ -1298,7 +1297,6 @@ homeScreenFlow = do
               , data { currentCityConfig = currentCityConfig, famousDestinations = famousDestinations , latestScheduledRides = resp }
               }
         )
-  liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case flow of
@@ -2546,6 +2544,7 @@ homeScreenFlow = do
       let
         updatedRecents = getUpdatedLocationList state.data.recentSearchs.predictionArray state.data.saveFavouriteCard.selectedItem.placeId
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { locationList = updatedLocationList, recentSearchs { predictionArray = updatedRecents }, savedLocations = (AddNewAddress.getSavedLocations savedLocationResp.list) } })
+      when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
       homeScreenFlow
     GO_TO_REFERRAL referralType -> do
       let
@@ -7190,9 +7189,11 @@ fcmHandler notification state notificationBody= do
               )
         riderRideCompletedScreenFlow
       else if (not isPersonDeliveryInitiator) then do
+        when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         homeScreenFlow
       else if (not isPersonDeliveryInitiator) then do
+        when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         homeScreenFlow
       else
