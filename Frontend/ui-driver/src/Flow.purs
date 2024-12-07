@@ -3870,8 +3870,7 @@ updateBannerAndPopupFlags = do
     
     isCoinPopupNotShownToday = (isYesterday (getValueToLocalStore COINS_POPUP_SHOWN_DATE)) || (getValueToLocalStore COINS_POPUP_SHOWN_DATE == "__failed")
     showCoinPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0
-        && appConfig.feature.enableYatriCoins
-        && cityConfig.enableYatriCoins
+        && coinsConfig.coinFeatureEnabled
         && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE)  == false 
         && fromMaybe 0 (fromString $ getValueToLocalStore INTRODUCING_YATRI_POINTS_POPUP_LIMIT) < coinsConfig.rideMoreEarnCoinPopupMaxLimit
         && isCoinPopupNotShownToday
@@ -3958,7 +3957,7 @@ callGetPastDaysData appConfig hsState = do
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
-      checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
+      checkCoinIsEnabled = coinsConfig.coinFeatureEnabled
       vehicleVariant = hsState.data.vehicleType 
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
   if ((isPopupShownToday coinPopupInfo.rideMoreEarnCoin && (STR.null coinPopupInfo.rideMoreEarnCoin || (runFn2 isDateNDaysAgo coinPopupInfo.rideMoreEarnCoin coinsConfig.rideMoreEarnCoinIntervalLimit))) && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do

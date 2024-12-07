@@ -80,6 +80,7 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
+import Screens.DriverEarningsScreen.Transformer (checkIfVariantIsCoinEnabled)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback)
@@ -121,6 +122,7 @@ import Resource.Constants
 import RemoteConfig as RC
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
+import Data.Traversable (for_)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -297,11 +299,17 @@ screen initialState (GlobalState globalState) =
             _                -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
                                 when (initialState.props.currentStage == RideCompleted) $ do
-                                  let mbVal = runFn3 getFromWindowString "notificationType" Nothing Just 
-                                  case mbVal of
-                                    Just "FROM_METRO_COINS" -> push $ Notification "FROM_METRO_COINS"
-                                    Just "TO_METRO_COINS" -> push $ Notification "TO_METRO_COINS"
-                                    _ -> pure unit 
+                                  let notificationDataString  = runFn3 getFromWindowString "notificationData" Nothing Just 
+                                  case notificationDataString of
+                                    Just val -> do
+                                      let (notificationData :: Array {notificationType :: String, entityData :: String}) = DU.decodeForeignAny (DU.parseJSON val) []
+                                      for_ notificationData $
+                                        \item -> do
+                                          case item.notificationType, item.entityData of
+                                              "COINS_SUCCESS", _ -> push $ Notification "COINS_SUCCESS" "" item.entityData
+                                              _, _ -> pure unit
+                                    _ -> pure unit
+                                  pure unit
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
                                 _ <- pure $ JB.removeAllPolylines ""
@@ -1511,7 +1519,7 @@ statsModel push state =
     ]
     where 
       showStatsModel = not ((DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) && not state.props.isStatsModelExpanded)
-      coinsEnabled = state.data.config.feature.enableYatriCoins && state.data.cityConfig.enableYatriCoins
+      coinsEnabled = checkIfVariantIsCoinEnabled ""
 
 expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 expandedStatsModel push state =
@@ -2485,7 +2493,7 @@ enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
 
 
-rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (DA.any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithCustomer]) then do
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null" --- needs review here
@@ -2499,7 +2507,7 @@ rideStatusPolling pollingId duration state push action = do
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
             if isLocalStageOn HomeScreen then pure unit
-              else doAff do liftEffect $ push $ action "CANCELLED_PRODUCT"
+              else doAff do liftEffect $ push $ action "CANCELLED_PRODUCT" "" ""
       Left err -> pure unit
     else pure unit
 
@@ -2543,7 +2551,7 @@ rentalRideStatusPolling pollingId duration state push action = do
         Nothing,Nothing  -> true
         _,_ -> false
 
-rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Flow GlobalState Unit
 rideRequestPolling pollingId count duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideRequested then do
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
@@ -2557,7 +2565,7 @@ rideRequestPolling pollingId count duration state push action = do
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
             if isLocalStageOn RideAccepted then pure unit
-              else doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT"
+              else doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT" "" ""
       Left err -> pure unit
     else pure unit
 
@@ -2577,7 +2585,7 @@ paymentStatusPooling orderId count delayDuration state push action = do
       Left err -> pure unit
     else pure unit
 
-checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> HomeScreenState -> Flow GlobalState Unit
+checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> String -> String -> action) -> HomeScreenState -> Flow GlobalState Unit
 checkCurrentRide push action initialState = do
   activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
   case activeRideResponse of
@@ -2586,7 +2594,7 @@ checkCurrentRide push action initialState = do
           pure unit
           else do
             case (rideList.list DA.!! 0) of
-              Just ride -> doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT"
+              Just ride -> doAff do liftEffect $ push $ action "DRIVER_ASSIGNMENT" "" ""
               Nothing -> pure unit
       Left err -> pure unit
 

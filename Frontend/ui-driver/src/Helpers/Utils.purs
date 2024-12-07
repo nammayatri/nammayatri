@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), VehicleCategory(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), VehicleCategory(..), NotificationBodyType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -57,7 +57,8 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=), negate)
+import Data.Boolean (otherwise)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=), negate, (||))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
@@ -75,7 +76,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location, toast)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -87,6 +88,7 @@ import Storage (getValueToLocalStore)
 import Services.Config (getWhatsAppSupportNo, getSupportNumber)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
+import Foreign (typeOf, unsafeToForeign)
 import ConfigProvider
 import Screens.Types as ST
 import MerchantConfig.Types as MCT
@@ -107,12 +109,11 @@ import Common.Types.Config as CTC
 import Common.Resources.Constants (assetDomain)
 import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
-import DecodeUtil (getAnyFromWindow)
+import DecodeUtil (getAnyFromWindow, parseJSON)
 import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
-
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -133,7 +134,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
-foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
@@ -206,6 +207,13 @@ generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ 
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
+
+dummyNotificationBody :: ST.NotificationBodyType 
+dummyNotificationBody = NotificationBodyType {
+  title : "",
+  msg : "",
+  entityData : Nothing
+}
 
 type Period
   = { period :: Int
@@ -1081,6 +1089,41 @@ driverVehicleToVechicleServiceTier vehicle =
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
 checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification
+
+data CoinNotyBody = CoinNotyBody
+  { coins :: Int
+  , event :: SA.DriverCoinsFunctionType
+  }
+
+derive instance genericCoinNotyBody :: Generic CoinNotyBody _
+instance decodeCoinNotyBody :: Decode CoinNotyBody where decode = defaultDecode
+
+checkCoinEvent :: String -> Array SA.DriverCoinsFunctionType -> Maybe ST.MetroRideCoinData
+checkCoinEvent entityData coinTypes
+  | entityData == "null" || entityData == "" = Nothing -- Handle null or empty entityData
+  | otherwise = do
+      let ads = decodeEntityData $ parseJSON entityData
+      case ads of
+        Just (CoinNotyBody { coins, event }) ->
+          case event of
+            SA.MetroRideCompleted contents ->
+              if DA.any (\coinType -> matchesMetroRideType contents coinType) coinTypes
+              then Just {coinsEarned : coins, metroRideType : contents}
+              else Nothing
+            SA.FiveStarRating -> Just {coinsEarned : coins, metroRideType : SA.None}
+            _ -> Nothing
+        Nothing -> Nothing
+  where
+    decodeEntityData :: Foreign -> Maybe CoinNotyBody
+    decodeEntityData object = case runExcept $ decode object of
+      Right decodedObj -> Just decodedObj
+      Left err -> do
+        void $ pure $ toast $ "Error while decoding notification enitity data"
+        Nothing
+
+    matchesMetroRideType :: SA.MetroRideType -> SA.DriverCoinsFunctionType -> Boolean
+    matchesMetroRideType contents (SA.MetroRideCompleted expectedType) = contents == expectedType
+    matchesMetroRideType _ _ = false
 
 dummyLocationInfo :: SA.LocationInfo
 dummyLocationInfo = SA.LocationInfo {

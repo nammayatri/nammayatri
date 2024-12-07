@@ -34,6 +34,7 @@ import Screens.Types as ST
 import Services.API as API
 import RemoteConfig.Utils
 import Debug
+import Data.Array as DA
 
 getEventName :: DriverEarningsScreenState -> API.DriverCoinsFunctionType -> Maybe API.BulkCoinTitleTranslations -> String
 getEventName state event bulkUploadTitle = do 
@@ -82,10 +83,10 @@ checkPopupShowToday :: ST.CoinEarnedPopupType -> AppConfig -> ST.HomeScreenState
 checkPopupShowToday popupType appConfig hsState = do
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       coinsConfig = getCoinsConfigData $ STR.toLower $ getValueToLocalStore DRIVER_LOCATION
-      checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
+      checkCoinIsEnabled = coinsConfig.coinFeatureEnabled
       coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
       coinBalance = hsState.data.coinBalance
-      vehicleVariant = hsState.data.vehicleType 
+      vehicleVariant = hsState.data.vehicleType
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
   case popupType of
     ST.EIGHT_RIDE_COMPLETED ->
@@ -128,3 +129,11 @@ checkPopupShowToday popupType appConfig hsState = do
 
 isPopupShownToday :: String -> Boolean
 isPopupShownToday popupInfoDate = not (isToday popupInfoDate) || STR.null popupInfoDate
+
+checkIfVariantIsCoinEnabled :: String -> Boolean
+checkIfVariantIsCoinEnabled _ =
+    let coinsConfig = getCoinsConfigData $ STR.toLower $ getValueToLocalStore DRIVER_LOCATION
+        coinsEnabled = coinsConfig.coinFeatureEnabled
+        vehicleCategory = getValueToLocalStore VEHICLE_CATEGORY
+    in
+    coinsEnabled && DA.elem vehicleCategory coinsConfig.availableVehCategory

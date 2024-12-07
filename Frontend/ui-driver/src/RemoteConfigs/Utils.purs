@@ -225,10 +225,12 @@ defaultCoinsConfig = {
   driverToCustomerRefCoinEvent : false,
   coinConversionPopupLottie : "",
   driverToCustomerRefPopupEndDate : "",
-  rideMoreEarnCoinIntervalLimit : 7, 
+  rideMoreEarnCoinIntervalLimit : 7,
   rideMoreEarnCoinPopupMaxLimit : 2,
   monsoonOfferDate : "",
-  coinsValidTill : 150
+  coinsValidTill : 150,
+  availableVehCategory : ["AutoCategory"],
+  coinFeatureEnabled : false
 }
 
 defaultLocationUpdateServiceConfig :: LocationUpdateServiceConfig
@@ -252,7 +254,7 @@ getLocationUpdateServiceConfig stage = do
       value = decodeForeignAny (parseJSON config) $ []
       configForStage = DA.find(\item -> item.stage == stage) value
   fromMaybe defaultLocationUpdateServiceConfig configForStage
-  
+
 eventsConfig :: String -> Types.EventsConfig
 eventsConfig key =
     let stringifiedConf = fetchRemoteConfigString key

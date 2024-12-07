@@ -72,7 +72,7 @@ data Action
   | ScrollStateChanged ScrollState
   | Loader
   | OnFadeComplete String
-  | Notification String
+  | Notification String String String
   | UpdateCurrentLocation String String
 
 
@@ -177,7 +177,7 @@ eval (OnFadeComplete _ ) state = do
               }
   }
 
-eval (Notification notificationType) state = do
+eval (Notification notificationType _ _) state = do
     if (HU.checkNotificationType notificationType ST.DRIVER_ASSIGNMENT ) then do
       exit $ FcmNotifications notificationType state
     else continue state

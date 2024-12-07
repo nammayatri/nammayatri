@@ -1836,6 +1836,18 @@ type PopUpScreenData = {
 
 type PopUpScreenProps = {}
 
+newtype NotificationBodyType = NotificationBodyType {
+  title :: String,
+  msg :: String,
+  entityData :: Maybe { event :: API.DriverCoinsFunctionType }
+}
+
+derive instance genericNotificationBodyType :: Generic NotificationBodyType _
+derive instance newtypeNotificationBodyType :: Newtype NotificationBodyType _
+instance showNotificationBodyType :: Show NotificationBodyType where show = genericShow
+instance decodeNotificationBodyType :: Decode NotificationBodyType where decode = defaultDecode
+instance encodeNotificationBodyType :: Encode NotificationBodyType where encode = defaultEncode
+
 type AllocationData = {
   searchRequestValidTill :: String,
   searchRequestId :: String,
@@ -1958,13 +1970,11 @@ data NotificationType =  DRIVER_REACHED
                       | TRIP_STARTED
                       | EDIT_LOCATION
                       | DRIVER_REACHED_DESTINATION
-                      | TO_METRO_COINS
-                      | FROM_METRO_COINS
+                      | COINS_SUCCESS
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
 instance eqNotificationType :: Eq NotificationType where eq = genericEq
-
 
 ------------------------------------- NotificationScreen ------------------------------
 type NotificationsScreenState = {

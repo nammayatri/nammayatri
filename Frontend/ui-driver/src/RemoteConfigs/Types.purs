@@ -121,7 +121,9 @@ type CoinsConfig = {
   rideMoreEarnCoinIntervalLimit :: Int,
   rideMoreEarnCoinPopupMaxLimit :: Int,
   monsoonOfferDate :: String,
-  coinsValidTill :: Int
+  coinsValidTill :: Int,
+  availableVehCategory :: Array String,
+  coinFeatureEnabled :: Boolean
 }
 type EventsConfig = {
   enabled :: Boolean,
