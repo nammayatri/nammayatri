@@ -198,7 +198,7 @@ notifyOnDriverOfferIncoming ::
   [DBppDetails.BppDetails] ->
   m ()
 notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList = do
-  isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+  isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
       notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
   dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty
