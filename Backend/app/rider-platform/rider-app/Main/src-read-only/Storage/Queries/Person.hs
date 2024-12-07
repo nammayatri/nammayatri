@@ -137,6 +137,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientReactNativeVersion clientReactNativeVersion,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),

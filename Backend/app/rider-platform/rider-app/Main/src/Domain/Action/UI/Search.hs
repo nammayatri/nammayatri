@@ -278,12 +278,13 @@ search ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Bool ->
   Maybe JPT.JourneySearchData ->
   Flow SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ journeySearchData = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -329,6 +330,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       bundleVersion
       clientVersion
       clientConfigVersion_
+      mbRnVersion
       device
       shortestRouteDuration
       shortestRouteStaticDuration
@@ -354,7 +356,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
   when (riderConfig.makeMultiModalSearch && isNothing journeySearchData) $ do
     case req of
-      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance originCity
+      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance originCity
       _ -> pure ()
 
   return $
@@ -513,6 +515,7 @@ multiModalSearch ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Bool ->
@@ -521,7 +524,7 @@ multiModalSearch ::
   Meters ->
   Context.City ->
   Flow ()
-multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId maximumWalkDistance originCity = do
+multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ searchRequest merchantOperatingCityId maximumWalkDistance originCity = do
   now <- getCurrentTime
 
   let transitRoutesReq =
@@ -571,7 +574,7 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             logDebug $ "journey for multi-modal: " <> show journey
 
             -- when (idx == 0) $ do
-            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance originCity
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ now maximumWalkDistance originCity
       )
       allRoutes.routes
 
@@ -586,6 +589,7 @@ makeChildSearchReqs ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Bool ->
@@ -593,7 +597,7 @@ makeChildSearchReqs ::
   Meters ->
   Context.City ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
   now <- getCurrentTime
   void $
     mapWithIndex
@@ -635,7 +639,7 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                           driverIdentifier = Nothing
                         }
               fork "child searchReq for multi-modal" . withShortRetry $ do
-                dSearchRes <- search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ (Just journeySearchData)
+                dSearchRes <- search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ (Just journeySearchData)
                 becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
                 let generatedJson = encode becknTaxiReqV2
                 logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
@@ -708,6 +712,7 @@ buildSearchRequest ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Seconds ->
   Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
@@ -720,7 +725,7 @@ buildSearchRequest ::
   Maybe JPT.JourneySearchData ->
   Maybe (DRL.DriverIdentifier, Seconds) ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -746,6 +751,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         hasStops,
         clientBundleVersion = bundleVersion,
         clientSdkVersion = clientVersion,
+        clientReactNativeVersion = clientRnVersion,
         clientDevice = getDeviceFromText device,
         clientConfigVersion = clientConfigVersion,
         backendConfigVersion = Nothing,

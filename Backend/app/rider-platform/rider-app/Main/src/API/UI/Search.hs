@@ -63,6 +63,7 @@ type API =
     :> Header "x-bundle-version" Version
     :> Header "x-client-version" Version
     :> Header "x-config-version" Version
+    :> Header "x-rn-version" Text
     :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Header "is-dashboard-request" Bool
@@ -71,14 +72,14 @@ type API =
 handler :: FlowServer API
 handler = search
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
-  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
+  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
@@ -107,8 +108,8 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
-updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
+updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   deploymentVersion <- asks (.version)
-  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion

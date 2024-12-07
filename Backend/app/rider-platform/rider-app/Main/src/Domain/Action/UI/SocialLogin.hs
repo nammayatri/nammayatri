@@ -77,7 +77,7 @@ postSocialLogin req = do
             (,True) <$> do
               merchant <- CQMOC.findById req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getId)
               let authReq = buildAuthReq info.email
-              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing merchant Nothing
+              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId req.merchantId.getId
       _ <- QR.create token

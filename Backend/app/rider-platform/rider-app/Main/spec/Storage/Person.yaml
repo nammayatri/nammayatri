@@ -88,6 +88,7 @@ Person:
     customerReferralCode: Maybe Text
     clientSdkVersion : Maybe Version
     clientBundleVersion : Maybe Version
+    clientReactNativeVersion : Maybe Text
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text

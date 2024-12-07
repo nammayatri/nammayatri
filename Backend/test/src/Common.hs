@@ -55,6 +55,7 @@ searchServices ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Maybe Bool ->

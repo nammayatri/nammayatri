@@ -33,6 +33,7 @@ data SearchRequest = SearchRequest
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
+    clientReactNativeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
