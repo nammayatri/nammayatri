@@ -33,6 +33,7 @@ Estimate:
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
+      tipOptions: Maybe [Int]
       isScheduled: Bool
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
@@ -60,6 +61,7 @@ Estimate:
 
     sqlType:
       farePolicyId: character varying(36)
+      tipOptions: integer[]
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool

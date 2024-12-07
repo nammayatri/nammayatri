@@ -132,6 +132,7 @@ data EstimateInfo = EstimateInfo
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
+    tipOptions :: Maybe [Int],
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text
   }

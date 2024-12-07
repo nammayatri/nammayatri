@@ -35,6 +35,7 @@ data Estimate = Estimate
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,

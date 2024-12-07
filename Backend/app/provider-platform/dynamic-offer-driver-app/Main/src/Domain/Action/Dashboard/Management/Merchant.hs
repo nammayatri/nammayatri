@@ -970,6 +970,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     maxAllowedTripDistance :: Text,
     serviceCharge :: Text,
     tollCharges :: Text,
+    tipOptions :: Text,
     govtCharges :: Text,
     farePolicyType :: Text,
     description :: Text,
@@ -1051,6 +1052,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "max_allowed_trip_distance"
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
+      <*> r .: "tip_options"
       <*> r .: "govt_charges"
       <*> r .: "fare_policy_type"
       <*> r .: "description"
@@ -1331,6 +1333,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
+      let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
