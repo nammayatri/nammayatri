@@ -63,6 +63,7 @@ data Estimate = Estimate
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.Estimate.EstimateStatus,
+    tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
     totalFareRange :: Domain.Types.Estimate.FareRange,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,

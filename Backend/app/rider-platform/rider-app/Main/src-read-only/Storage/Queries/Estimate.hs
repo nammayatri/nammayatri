@@ -95,6 +95,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.status status,
+      Se.Set Beam.tipOptions tipOptions,
       Se.Set Beam.tollCharges (tollChargesInfo <&> ((.amount) . (.tollCharges))),
       Se.Set Beam.tollNames (tollChargesInfo <&> (.tollNames)),
       Se.Set Beam.currency (Kernel.Prelude.Just $ (.currency) estimatedFare),

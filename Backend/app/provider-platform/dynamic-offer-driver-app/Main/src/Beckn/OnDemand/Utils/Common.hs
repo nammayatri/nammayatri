@@ -93,6 +93,7 @@ data Pricing = Pricing
     fulfillmentType :: Text,
     distanceToNearestDriver :: Maybe Meters,
     tollNames :: Maybe [Text],
+    tipOptions :: Maybe [Int],
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
@@ -1287,6 +1288,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipOptions = Nothing,
       ..
     }
 
@@ -1310,6 +1312,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipOptions = Nothing,
       ..
     }
 
@@ -1332,6 +1335,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
             <> isBlockedRouteSingleton pricing.isBlockedRoute
             <> tollNamesSingleton pricing.tollNames
+            <> tipOptionSingleton pricing.tipOptions
             <> durationToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
@@ -1456,6 +1460,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorShortDesc = Nothing
                     },
               tagValue = show <$> tollNames
+            }
+    tipOptionSingleton tipOptions
+      | isNothing tipOptions || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.TIP_OPTIONS,
+                      descriptorName = Just "Tip Options",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> tipOptions
             }
     durationToNearestDriverTagSingleton
       | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing

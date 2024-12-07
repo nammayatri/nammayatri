@@ -676,6 +676,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
         currency,
         fareParams = Just maxFareParams, -- Todo: fix it
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
+        tipOptions = fullFarePolicy.tipOptions,
         specialLocationTag = specialLocationTag,
         isScheduled = isScheduled,
         tollNames = if isTollApplicable then tollNames else Nothing,
