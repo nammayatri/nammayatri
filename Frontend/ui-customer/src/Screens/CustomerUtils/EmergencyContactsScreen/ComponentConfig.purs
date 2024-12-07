@@ -135,7 +135,7 @@ primaryButtonConfigManualContactDummy state =
           -- , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = false
-        , width = if EHC.os == "IOS" then (V 360) else (MATCH_PARENT)
+        , width = (MATCH_PARENT)
         , margin = (Margin 16 16 16 16)
         , id = "ConfirmEmergencyContactsButtonDumm"
         , enableRipple = true
@@ -156,7 +156,7 @@ primaryButtonConfigManualContact state =
           -- , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = state.props.validManualContact
-        , width = if EHC.os == "IOS" then (V 360) else (MATCH_PARENT)
+        , width = (MATCH_PARENT)
         , margin = (Margin 16 16 16 16)
         , id = "ConfirmEmergencyContactsButtonManual"
         , enableRipple = true
@@ -179,7 +179,7 @@ primaryButtonConfig state =
           , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true
-        , width = if EHC.os == "IOS" then (V 360) else (MATCH_PARENT)
+        , width = (MATCH_PARENT)
         , margin = (MarginBottom 0)
         , id = "ConfirmEmergencyContactsButton"
         , enableRipple = true

@@ -472,9 +472,6 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
         "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
-        "emergencyContactScreen" -> do 
-          modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen {props{saveEmergencyContacts = true}})
-          hideSplashAndCallFlow emergencyScreenFlow
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -522,6 +519,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
           modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
           hideSplashAndCallFlow busTicketBookingFlow
         _ -> do
+          let _ = spy "startwith" screen
           if startsWith "safetytools" screen then do
             let safetyParam = DS.split (DS.Pattern "$$") screen
                 rideId = fromMaybe "" $ safetyParam !! 1
@@ -567,6 +565,30 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                 rideId = fromMaybe "" $ safetyParam !! 1
             modifyScreenState $ DriverProfileScreenCommonStateType ( \driverProfileScreen -> driverProfileScreen { props { rideId = rideId } } )
             driverProfileScreenFlow
+          else if startsWith "emergencyContactScreen" screen then do 
+            (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
+            let
+              contacts =
+                getDefaultPriorityList
+                  $ map
+                      ( \(ContactDetails item) ->
+                          { number: item.mobileNumber
+                          , name: item.name
+                          , isSelected: true
+                          , enableForFollowing: fromMaybe false item.enableForFollowing
+                          , enableForShareRide: fromMaybe false item.enableForShareRide
+                          , shareTripWithEmergencyContactOption: EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption
+                          , onRide: fromMaybe false item.onRide
+                          , priority: fromMaybe 1 item.priority
+                          , contactPersonId : item.contactPersonId
+                          , isFollowing : Nothing
+                          , notifiedViaFCM : item.notifiedViaFCM
+                          }
+                      )
+                      res.defaultEmergencyNumbers
+            let emergencyContactLength = Arr.length contacts
+            modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ selectedContacts = contacts,  emergencyContactsList = contacts },props { showDropDown = false, fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = emergencyContactLength > 0 } })
+            emergencyScreenFlow
           else
             case breakPrefixAndId screen of
               Just ( Tuple "metroBooking" bookingId )-> do
