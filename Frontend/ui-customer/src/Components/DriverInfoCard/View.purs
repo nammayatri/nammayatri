@@ -1612,15 +1612,17 @@ getTripDetails state = {
   , backgroundColor : Color.white900
   , enablePaddingBottom : true
   , fareProductType : state.data.fareProductType
-  , enableEditDestination : state.data.config.feature.enableEditDestination
+  , enableEditDestination : state.data.config.feature.enableEditDestination && not isHybridFlowParcel
   , editingDestinationLoc : EditingLocation ST.Destination
   , rideAccepted : state.props.currentStage == RideAccepted
   , editingPickupLocation : EditingLocation ST.Source
-  , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation
+  , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation && not isHybridFlowParcel
   , isOtpRideFlow : state.props.isOtpRideFlow
   , senderDetails : state.data.senderDetails
   , receiverDetails : state.data.receiverDetails
-}
+  }
+  where 
+    isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
 driverPickUpStatusText state _ = 
