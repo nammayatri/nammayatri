@@ -593,6 +593,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
 qrCodeView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 qrCodeView push state = 
   let 
+    (Config.StatusPillConfig config) = Config.getStatusPillConfig state
     currentTicket = state.data.ticketsInfo !! state.props.currentTicketIndex
     qrString = case currentTicket of 
                 Just ticket -> ticket.qrString
@@ -602,9 +603,7 @@ qrCodeView push state =
                   <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
                   <> ticketStr
     qrAplha = if isTicketExpired then 0.25 else 1.0
-    isTicketExpired = case currentTicket of 
-                        Just ticket -> ticket.status == "EXPIRED"
-                        Nothing -> false
+    isTicketExpired = config.ticketStatus == "EXPIRED"
   in 
     linearLayout [
       width MATCH_PARENT
@@ -654,7 +653,6 @@ qrCodeView push state =
         , id $ getNewIDWithTag "metro_ticket_qr_code"
         , cornerRadius 24.0
         , visibility $ boolToVisibility $ isTicketExpired
-        -- , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
         , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_qr_code_expired"
         ]
       , linearLayout [
