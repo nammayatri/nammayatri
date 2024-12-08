@@ -168,6 +168,16 @@ instance Show PER_KM_STEP_FARE where
   show (PER_KM_STEP_FARE startDist (Just endDist)) = "PER_KM_STEP_FARE" <> show startDist <> "_" <> show endDist
   show (PER_KM_STEP_FARE startDist Nothing) = "PER_KM_STEP_FARE" <> show startDist <> "_Above"
 
+data PER_KM_ROUND_TRIP_STEP_FARE = PER_KM_ROUND_TRIP_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PER_KM_ROUND_TRIP_STEP_FARE where
+  show (PER_KM_ROUND_TRIP_STEP_FARE startDist (Just endDist)) = "PER_KM_ROUND_TRIP_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (PER_KM_ROUND_TRIP_STEP_FARE startDist Nothing) = "PER_KM_ROUND_TRIP_STEP_FARE" <> show startDist <> "_Above"
+
 data BASE_STEP_FARE = BASE_STEP_FARE
   { startThreshold :: Int,
     endThreshold :: Maybe Int

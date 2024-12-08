@@ -20,7 +20,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPICDPS
+import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as QueriesFPICDPS
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyInterCityDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
@@ -28,26 +30,31 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyInterCityDetails -> m ()
 create farePolicyInterCityDetails = do
   mapM_ QueriesFPICDPS.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).pricingSlabs))
+  mapM_ QueriesFPPDP.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).perKmRateSections))
   createWithKV farePolicyInterCityDetails
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPICDPS.delete farePolicyId
+  deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
   deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   fromTType' farePolicyInterCityDetails = do
+    fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
     fullFPICDPS <- QueriesFPICDPS.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
     fPICDPS <- fromMaybeM (InternalError "No pricing slab found for intercity") (NE.nonEmpty fullFPICDPS) -- check it
-    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+    fPPDP <- fromMaybeM (InternalError "No progressive rates found for intercity") (NE.nonEmpty fullFPPDP)
+    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS fPPDP
 
 fromTTypeFarePolicyInterCityDetails ::
   BeamFPRD.FarePolicyInterCityDetails ->
   NonEmpty BeamFPICDPS.FullFarePolicyInterCityDetailsPricingSlabs ->
+  NonEmpty BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection ->
   Domain.FullFarePolicyInterCityDetails
-fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
+fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS fullFPPDP =
   ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails {pricingSlabs = snd <$> fPICDPS, ..}
+    Domain.FPInterCityDetails {pricingSlabs = snd <$> fPICDPS, perKmRateSections = snd <$> fullFPPDP, ..}
   )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
