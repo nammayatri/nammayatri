@@ -7391,7 +7391,6 @@ parcelDeliveryFlow = do
         mkInstruction :: ST.PersonDeliveryDetails -> API.InstructionAndAddress
         mkInstruction details = API.InstructionAndAddress { instructions : details.instructions, extras : details.extras}
     ParcelDeliveryScreenController.GoToSelectContact state -> do
-      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
       selectContactsFlow (\contacts -> do
         case contacts !! 0 of
           Just contact -> do
@@ -7405,6 +7404,7 @@ parcelDeliveryFlow = do
                             , data { receiverDetails { name = contact.name, phone = contact.number } } }
             modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> updatedState)
           Nothing -> pure unit
+        parcelDeliveryFlow
         ) [] 1
       parcelDeliveryFlow
     _ -> pure unit
