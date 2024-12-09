@@ -1399,9 +1399,8 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
         scheduledTime = uBooking.startTime
         pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
     void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
-    maxShards <- asks (.maxShards)
     let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
-    createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
+    createJobIn @_ @'ScheduledRideAssignedOnUpdate (Just merchant.id) (Just booking.merchantOperatingCityId) jobScheduledTime $
       ScheduledRideAssignedOnUpdateJobData
         { driverId = driver.id,
           bookingId = uBooking.id,

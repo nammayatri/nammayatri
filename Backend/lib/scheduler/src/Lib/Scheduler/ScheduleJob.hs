@@ -34,29 +34,33 @@ import Lib.Scheduler.Types
 createJob ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   (AnyJob t -> m ()) ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJob uuid createJobFunc maxShards jobEntry = do
+createJob merchantId merchantOperatingCityId uuid createJobFunc maxShards jobEntry = do
   now <- getCurrentTime
-  createJobImpl uuid createJobFunc now maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc now maxShards jobEntry
 
 createJobIn ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobIn uuid createJobFunc diff maxShards jobEntry = do
+createJobIn merchantId merchantOperatingCityId uuid createJobFunc diff maxShards jobEntry = do
   now <- getCurrentTime
   when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
   let scheduledAt = addUTCTime diff now
-  createJobImpl uuid createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry
 
 -- createJobIn' ::
 --   forall t (e :: t) m.
@@ -75,13 +79,15 @@ createJobIn uuid createJobFunc diff maxShards jobEntry = do
 createJobByTime ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobByTime uuid createJobFunc scheduledAt maxShards jobEntry = do
+createJobByTime merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry = do
   now <- getCurrentTime
   when (scheduledAt <= now) $
     throwError $
@@ -89,18 +95,20 @@ createJobByTime uuid createJobFunc scheduledAt maxShards jobEntry = do
         "job can only be scheduled for the future\
         \ using createJobByTime, for scheduling for\
         \ now use createJobIn function instead"
-  createJobImpl uuid createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry
 
 createJobImpl ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobImpl uuid createJobFunc scheduledAt maxShards JobEntry {..} = do
+createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards JobEntry {..} = do
   when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   let id = Id uuid
@@ -121,7 +129,9 @@ createJobImpl uuid createJobFunc scheduledAt maxShards JobEntry {..} = do
           updatedAt = currentTime,
           currErrors = 0,
           status = Pending,
-          parentJobId = id
+          parentJobId = id,
+          merchantId,
+          merchantOperatingCityId
         }
 
 -- createJobImpl' ::

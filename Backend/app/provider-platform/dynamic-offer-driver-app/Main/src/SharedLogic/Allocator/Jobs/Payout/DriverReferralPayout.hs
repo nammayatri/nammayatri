@@ -93,8 +93,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         case reschuleTimeDiff of
           Just timeDiff' -> do
             logDebug $ "Rescheduling the Job for Next Day"
-            maxShards <- asks (.maxShards)
-            createJobIn @_ @'DriverReferralPayout timeDiff' maxShards $
+            createJobIn @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
               DriverReferralPayoutJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = merchantOpCityId,

@@ -140,8 +140,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           SBooking.cancelBooking booking Nothing merchant
   where
     scheduleBatching searchTry inTime = do
-      maxShards <- asks (.maxShards)
-      JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+      JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
             estimatedRideDistance = searchReq.estimatedDistance

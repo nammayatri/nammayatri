@@ -164,7 +164,10 @@ postNammaTagRunJob ::
   Kernel.Types.Beckn.Context.City ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
-postNammaTagRunJob _merchantShortId _opCity req = do
+postNammaTagRunJob merchantShortId opCity req = do
+  mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+  let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+  let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
   -- Logic for complete old jobs works only for DbBased jobs
   whenJust req.completeOldJob $ \oldJobId -> do
     mbOldJob :: Maybe (AnyJob AllocatorJobType) <- QDBJ.findById oldJobId
@@ -177,7 +180,7 @@ postNammaTagRunJob _merchantShortId _opCity req = do
         QDBJ.markAsComplete oldJobId
 
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob (Handle.kaalChakraHandle mbMerchantId mbMerchantOpCityId) req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -186,12 +189,11 @@ postNammaTagRunJob _merchantShortId _opCity req = do
         Lib.Yudhishthira.Types.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
-      maxShards <- asks (.maxShards)
       case req.chakra of
-        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly scheduledTime maxShards jobData
+        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly mbMerchantId mbMerchantOpCityId scheduledTime jobData
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}

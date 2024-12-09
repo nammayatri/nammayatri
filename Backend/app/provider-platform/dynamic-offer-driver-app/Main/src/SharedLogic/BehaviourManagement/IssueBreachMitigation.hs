@@ -108,9 +108,8 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
       let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
       mbPendingIssueBreachNotificationEntity <- Redis.get isNotificationPendingKey
       whenJust mbPendingIssueBreachNotificationEntity $ \entity -> do
-        maxShards <- asks (.maxShards)
         let notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral config.ibNotifyInMins) * 60
-        JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
+        JC.createJobIn @_ @'SoftBlockNotifyDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) notifyDriverJobTs $
           SoftBlockNotifyDriverRequestJobData
             { driverId = driverInfo.driverId,
               pendingNotificationRedisKey = isNotificationPendingKey,
@@ -160,14 +159,13 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
           canApplyBlock = rule && maybe True (<= now) cooldownTime
       when canApplyBlock $ do
         let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
-        maxShards <- asks (.maxShards)
         let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
             notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral ibNotifyInMins) * 60
         case ibBlockType of
           IBSoft -> do
             logInfo $ "Soft Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
             QDriverInformation.updateSoftBlock (Just allowedSTiers) (Just expiryTime) (Just $ show blockReasonFlag) driverInfo.driverId
-            JC.createJobIn @_ @'UnblockSoftBlockedDriver unblockDriverJobTs maxShards $
+            JC.createJobIn @_ @'UnblockSoftBlockedDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) unblockDriverJobTs $
               UnblockSoftBlockedDriverRequestJobData
                 { driverId = driverInfo.driverId
                 }
@@ -182,7 +180,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
             if not driverInfo.onRide
               then do
                 void $
-                  JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
+                  JC.createJobIn @_ @'SoftBlockNotifyDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) notifyDriverJobTs $
                     SoftBlockNotifyDriverRequestJobData
                       { driverId = driverInfo.driverId,
                         pendingNotificationRedisKey = isNotificationPendingKey,
@@ -194,7 +192,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
             QDriverInformation.updateDynamicBlockedStateWithActivity driverInfo.driverId (Just $ "ISSUE_BREACH_" <> show issueType) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
             void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId expiryTime
-            JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+            JC.createJobIn @_ @'UnblockDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) unblockDriverJobTs $
               UnblockDriverRequestJobData
                 { driverId = driverInfo.driverId
                 }

@@ -216,7 +216,6 @@ scheduleOverlay :: ShortId DM.Merchant -> Context.City -> ScheduleOverlay -> Flo
 scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  maxShards <- asks (.maxShards)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let scheduledTime = UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)
@@ -224,7 +223,7 @@ scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
         if scheduledTime < now
           then diffUTCTime (addUTCTime 86400 (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime))) now
           else diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
-  createJobIn @_ @'SendOverlay jobScheduledTime maxShards $
+  createJobIn @_ @'SendOverlay (Just merchant.id) (Just merchantOpCityId) jobScheduledTime $
     SendOverlayJobData
       { merchantId = merchant.id,
         rescheduleInterval = req.rescheduleInterval,
