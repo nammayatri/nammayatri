@@ -195,10 +195,11 @@ select2 personId estimateId req@DSelectReq {..} = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   tag <- case (person.hasDisability, temporaryNotDisable) of
     (Just True, Just False) -> fmap (.tag) <$> PD.findByPersonId personId
+    (Just True, Nothing) -> fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
-  when (temporaryNotDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
+  when (temporaryNotDisable /= Just True) $ QSearchRequest.updateDisability searchRequest.id tag
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
