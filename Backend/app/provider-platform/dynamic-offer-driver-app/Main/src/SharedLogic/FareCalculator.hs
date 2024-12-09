@@ -188,7 +188,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           extraTimeCaption = show Enums.EXTRA_TIME_FARE
           extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
 
-      catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
+          stateEntryPermitChargesCaption = show Enums.STATE_ENTRY_PERMIT_CHARGES
+          mbStateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . mkPrice <$> det.stateEntryPermitCharges
+
+      catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem, mbStateEntryPermitChargesItem]
 
     checkIfZero fare =
       if fare > 0
@@ -436,7 +439,8 @@ calculateFareParameters params = do
               pickupCharge = deadKmFare,
               extraDistanceFare,
               extraTimeFare,
-              currency = params.currency
+              currency = params.currency,
+              ..
             }
         )
 
@@ -649,7 +653,7 @@ countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare + fromMaybe 0.0 det.rideDurationFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
-  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)
+  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
   DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
 
 addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
