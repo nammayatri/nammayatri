@@ -1,4 +1,4 @@
-name: CI
+name: Nix CI
 on:
   push:
     branches: ["main", "prodHotPush-Common"]
@@ -47,6 +47,11 @@ jobs:
     strategy:
       matrix:
         system: [x86_64-linux, aarch64-darwin]
+        isMain:
+          - ${{ contains(github.ref, 'main') }}
+        exclude:
+          - system: aarch64-darwin
+            isMain: false
     needs: [process-labels]
     runs-on: ny-ci-nixos
     if: |
