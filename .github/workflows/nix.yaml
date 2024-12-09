@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Build all flake outputs
-        run: om ci run --systems "${{ matrix.system }}" -- -vvv
+        run: om ci run --systems "${{ matrix.system }}" -- -vv
 
       - name: Docker tasks
         id: docker
