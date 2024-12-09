@@ -310,18 +310,17 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   pure Success
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
-postMerchantSchedulerTrigger merchantShortId _ req = do
+postMerchantSchedulerTrigger merchantShortId opCity req = do
   void $ findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  maxShards <- asks (.maxShards)
   case req.scheduledAt of
     Just utcTime -> do
       let diffTimeS = diffUTCTime utcTime now
-      triggerScheduler req.jobName maxShards req.jobData diffTimeS
+      triggerScheduler req.jobName req.jobData diffTimeS
     _ -> throwError $ InternalError "invalid scheduled at time"
   where
-    triggerScheduler :: Maybe Common.JobName -> Int -> Text -> NominalDiffTime -> Flow APISuccess
-    triggerScheduler jobName maxShards jobDataRaw diffTimeS = do
+    triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> Flow APISuccess
+    triggerScheduler jobName jobDataRaw diffTimeS = do
       case jobName of
         Just Common.DriverFeeCalculationTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
@@ -334,7 +333,7 @@ postMerchantSchedulerTrigger merchantShortId _ req = do
               merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
               when (serviceName == Plan.YATRI_RENTAL) $ do
                 SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
-              createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
+              createJobIn @_ @'CalculateDriverFees (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: CalculateDriverFeesJobData)
               setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId serviceName diffTimeS
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
               pure Success
@@ -343,21 +342,24 @@ postMerchantSchedulerTrigger merchantShortId _ req = do
           let jobData' = decodeFromText jobDataRaw :: Maybe BadDebtCalculationJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'BadDebtCalculation diffTimeS maxShards (jobData :: BadDebtCalculationJobData)
+              createJobIn @_ @'BadDebtCalculation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: BadDebtCalculationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.ReferralPayoutTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe DriverReferralPayoutJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'DriverReferralPayout diffTimeS maxShards (jobData :: DriverReferralPayoutJobData)
+              createJobIn @_ @'DriverReferralPayout (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: DriverReferralPayoutJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.SupplyDemandCalculation -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe SupplyDemandRequestJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'SupplyDemand diffTimeS maxShards (jobData :: SupplyDemandRequestJobData)
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              createJobIn @_ @'SupplyDemand mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: SupplyDemandRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

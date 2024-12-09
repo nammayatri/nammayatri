@@ -479,11 +479,10 @@ onUpdate = \case
     safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
     when (safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure) $ do
       logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
-      maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.ivrTriggerDelay
           safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
       logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
+      createJobIn @_ @'SafetyIVR (Just booking.merchantId) (Just merchantOperatingCityId) scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing Nothing

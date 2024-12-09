@@ -39,13 +39,30 @@ import Lib.Scheduler.Environment
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> Int -> JobContent e -> m ()
-createJob uuid maxShards jobData = do
-  void $ ScheduleJob.createJob @t @e uuid createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJob ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  Int ->
+  JobContent e ->
+  m ()
+createJob merchantId merchantOperatingCityId uuid maxShards jobData = do
+  void $ ScheduleJob.createJob @t @e merchantId merchantOperatingCityId uuid createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
-createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn uuid inTime maxShards jobData = do
-  void $ ScheduleJob.createJobIn @t @e uuid createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobIn ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  NominalDiffTime ->
+  Int ->
+  JobContent e ->
+  m ()
+createJobIn merchantId merchantOperatingCityId uuid inTime maxShards jobData = do
+  void $ ScheduleJob.createJobIn @t @e merchantId merchantOperatingCityId uuid createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => AnyJob t -> m ()
 createJobFunc (AnyJob job) = do
@@ -59,9 +76,18 @@ getShardKey = do
   myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
   return $ setName <> "{" <> show myShardId <> "}"
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
-createJobByTime uuid byTime maxShards jobData = do
-  void $ ScheduleJob.createJobByTime @t @e uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobByTime ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  UTCTime ->
+  Int ->
+  JobContent e ->
+  m ()
+createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
+  void $ ScheduleJob.createJobByTime @t @e merchantId merchantOperatingCityId uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = return []

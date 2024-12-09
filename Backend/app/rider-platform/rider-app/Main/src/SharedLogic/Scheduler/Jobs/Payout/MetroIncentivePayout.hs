@@ -17,8 +17,8 @@ module SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout where
 import qualified Domain.Action.Internal.Payout as DAP
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FRFSTicketBooking
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
+import Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PayoutConfig
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Juspay
@@ -72,8 +72,7 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         case rescheduleTimeDiff of
           Just timeDiff' -> do
             logDebug "Rescheduling the Job for Next Day"
-            maxShards <- asks (.maxShards)
-            createJobIn @_ @'MetroIncentivePayout timeDiff' maxShards $
+            createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
               MetroIncentivePayoutJobData
                 { merchantOperatingCityId = merchantOpCityId,
                   toScheduleNextPayout = toScheduleNextPayout,
@@ -100,8 +99,8 @@ callPayout ::
     EsqDBFlow m r,
     SchedulerFlow r
   ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   FRFSTicketBooking ->
   Maybe PayoutConfig ->
   CashbackStatus ->

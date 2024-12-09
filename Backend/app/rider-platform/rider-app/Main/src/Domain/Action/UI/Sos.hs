@@ -414,12 +414,11 @@ incidentReportHandler person merchantId merchantOpCityId rideId token coordinate
   where
     scheduleIncidentFollowUp :: IncidentReportRes -> Flow ()
     scheduleIncidentFollowUp res = do
-      maxShards <- asks (.maxShards)
       let scheduleAfter = max 2 riderConfig.policeTriggerDelay
           callPoliceAPIJobData = CallPoliceApiJobData {rideId, personId = person.id, jmCode = res.incidentData.jmCode}
       logDebug $ "Scheduling safety alert police call after : " <> show scheduleAfter
       Redis.withCrossAppRedis $ Redis.setExp (mkRideCallPoliceAPIKey rideId) (1 :: Int) riderConfig.hardLimitForSafetyJobs
-      createJobIn @_ @'CallPoliceApi scheduleAfter maxShards callPoliceAPIJobData
+      createJobIn @_ @'CallPoliceApi (Just merchantId) (Just merchantOpCityId) scheduleAfter callPoliceAPIJobData
       pure ()
 
 sendUnattendedSosTicketAlert :: Text -> Flow ()

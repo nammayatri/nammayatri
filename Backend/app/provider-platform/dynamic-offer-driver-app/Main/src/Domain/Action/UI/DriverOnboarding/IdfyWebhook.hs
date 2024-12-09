@@ -146,9 +146,8 @@ onVerify resp respDump = do
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do
-  maxShards <- asks (.maxShards)
   let scheduleTime = calculateScheduleTime (fromMaybe 0 verificationReq.retryCount)
-  createJobIn @_ @'RetryDocumentVerification scheduleTime maxShards $
+  createJobIn @_ @'RetryDocumentVerification verificationReq.merchantId verificationReq.merchantOperatingCityId scheduleTime $
     RetryDocumentVerificationJobData
       { requestId = verificationReq.requestId
       }

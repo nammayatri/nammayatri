@@ -527,11 +527,10 @@ blockDriverWithReason merchantShortId opCity reqDriverId dashboardUserName req =
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
-  maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
       let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-      JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+      JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
         UnblockDriverRequestJobData
           { driverId = driverId
           }

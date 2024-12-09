@@ -20,7 +20,9 @@ data SchedulerJobT f = SchedulerJobT
     maxErrors :: B.C f Int,
     currErrors :: B.C f Int,
     status :: B.C f ST.JobStatus,
-    parentJobId :: B.C f Text
+    parentJobId :: B.C f Text,
+    merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
