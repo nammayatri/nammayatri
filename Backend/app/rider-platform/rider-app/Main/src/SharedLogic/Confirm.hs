@@ -154,8 +154,7 @@ confirm DConfirmReq {..} = do
     when (scheduleAfter > 0) $ do
       let dfCalculationJobTs = max 2 scheduleAfter
           scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
-      maxShards <- asks (.maxShards)
-      createJobIn @_ @'ScheduledRidePopupToRider dfCalculationJobTs maxShards (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
+      createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-

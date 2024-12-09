@@ -71,6 +71,8 @@ genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType
 
 instance JobProcessor AllocatorJobType where
+  type MerchantType AllocatorJobType = DM.Merchant
+  type MerchantOperatingCityType AllocatorJobType = DMOC.MerchantOperatingCity
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData

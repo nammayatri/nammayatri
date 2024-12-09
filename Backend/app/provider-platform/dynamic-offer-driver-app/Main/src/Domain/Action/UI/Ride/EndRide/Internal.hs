@@ -163,9 +163,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
   when (thresholdConfig.subscription) $ do
-    maxShards <- asks (.maxShards)
     let serviceName = YATRI_SUBSCRIPTION
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams maxShards driverInfo booking serviceName
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -547,12 +546,11 @@ createDriverFee ::
   Maybe HighPrecMoney ->
   Currency ->
   DFare.FareParameters ->
-  Int ->
   DI.DriverInformation ->
   SRB.Booking ->
   ServiceNames ->
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams maxShards driverInfo booking serviceName = do
+createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
   unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     freeTrialDaysLeft' <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
@@ -610,7 +608,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
 
       plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
       fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
-      scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
+      scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
   where
     mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
 
@@ -656,8 +654,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
       QDF.create driverFeeToCreate
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
-scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now = do
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
+scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   void $
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
@@ -668,7 +666,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
           case isDfCaclculationJobScheduled of
             ----- marker ---
             Nothing -> do
-              createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
+              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
                 CalculateDriverFeesJobData
                   { merchantId = merchantId,
                     merchantOperatingCityId = Just merchantOpCityId,
