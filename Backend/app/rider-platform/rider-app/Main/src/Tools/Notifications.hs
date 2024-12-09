@@ -360,10 +360,9 @@ notifyOnRideCompleted booking ride otherParties = do
     riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
-      maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
           postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
-      createJobIn @_ @'PostRideSafetyNotification scheduleAfter maxShards (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
+      createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
 
 -- title = "Trip finished!"
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"

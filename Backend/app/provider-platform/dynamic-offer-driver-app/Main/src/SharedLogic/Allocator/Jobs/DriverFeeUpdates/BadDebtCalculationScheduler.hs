@@ -38,8 +38,7 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       now <- getCurrentTime
       let diffTime = diffUTCTime scheduledTime now
       let dfCalculationJobTs = diffTime + transporterConfig.badDebtSchedulerTime
-      maxShards <- asks (.maxShards)
-      createJobIn @_ @'BadDebtCalculation dfCalculationJobTs maxShards $
+      createJobIn @_ @'BadDebtCalculation (Just merchantId) (Just opCityId) dfCalculationJobTs $
         BadDebtCalculationJobData
           { merchantId = merchantId,
             merchantOperatingCityId = opCityId

@@ -2,11 +2,14 @@ module SharedLogic.KaalChakra.Chakras where
 
 import qualified Data.Map as M
 import Domain.Action.Dashboard.Management.NammaTag (kaalChakraHandle)
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWCT
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
@@ -56,9 +59,11 @@ mkRunKaalChakraUpdateTagJobReq chakra LYT.UpdateKaalBasedTagsData {..} = LYT.Upd
 
 runKaalChakraAndResheduleJob ::
   ChakraJobs m r c =>
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.RunKaalChakraJobReq ->
   m ExecutionResult
-runKaalChakraAndResheduleJob req = do
+runKaalChakraAndResheduleJob merchantId merchantOperatingCityId req = do
   eventResult <- Event.kaalChakraEvent req
   now <- getCurrentTime
   case eventResult.chakraBatchState of
@@ -66,51 +71,53 @@ runKaalChakraAndResheduleJob req = do
       pure $ ReSchedule $ addUTCTime (fromIntegral shortDelayTime) now
     LYT.Completed -> do
       void $ Event.clearEventData req.chakra Nothing --- passing Nothing will only clear the batch number key, which is required for the next job from 0 again
-      whenJust eventResult.eventId $ \eventId -> kaalChakraHandle.createUpdateUserTagDataJob req eventId (addUTCTime 60 now) -- starting updateTags job after 60 seconds of caching UserData
+      whenJust eventResult.eventId $ \eventId -> Event.createUpdateUserTagDataJob (kaalChakraHandle merchantId merchantOperatingCityId) req eventId (addUTCTime 60 now) -- starting updateTags job after 60 seconds of caching UserData
       pure Complete
 
 runDailyJob ::
   ChakraJobs m r c =>
   Job 'Daily ->
   m ExecutionResult
-runDailyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Daily Job"
   let req = mkRunKaalChakraJobReq LYT.Daily jobInfo.jobData
-  runKaalChakraAndResheduleJob req
+  runKaalChakraAndResheduleJob merchantId merchantOperatingCityId req
 
 runWeeklyJob ::
   ChakraJobs m r c =>
   Job 'Weekly ->
   m ExecutionResult
-runWeeklyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Weekly Job"
   let req = mkRunKaalChakraJobReq LYT.Weekly jobInfo.jobData
-  runKaalChakraAndResheduleJob req
+  runKaalChakraAndResheduleJob merchantId merchantOperatingCityId req
 
 runQuarterlyJob ::
   ChakraJobs m r c =>
   Job 'Quarterly ->
   m ExecutionResult
-runQuarterlyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Quarterly Job"
   let req = mkRunKaalChakraJobReq LYT.Quarterly jobInfo.jobData
-  runKaalChakraAndResheduleJob req
+  runKaalChakraAndResheduleJob merchantId merchantOperatingCityId req
 
 runMonthlyJob ::
   ChakraJobs m r c =>
   Job 'Monthly ->
   m ExecutionResult
-runMonthlyJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Monthly Job"
   let req = mkRunKaalChakraJobReq LYT.Monthly jobInfo.jobData
-  runKaalChakraAndResheduleJob req
+  runKaalChakraAndResheduleJob merchantId merchantOperatingCityId req
 
 runKaalChakraUpdateTagsJob ::
   ChakraJobs m r c =>
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.UpdateKaalBasedTagsJobReq ->
   m ExecutionResult
-runKaalChakraUpdateTagsJob req = do
-  eventResult <- Event.updateUserTagsHandler kaalChakraHandle req
+runKaalChakraUpdateTagsJob merchantId merchantOperatingCityId req = do
+  eventResult <- Event.updateUserTagsHandler (kaalChakraHandle merchantId merchantOperatingCityId) req
   now <- getCurrentTime
   case eventResult.chakraBatchState of
     LYT.Continue shortDelayTime -> do
@@ -118,7 +125,7 @@ runKaalChakraUpdateTagsJob req = do
     LYT.Completed -> do
       void $ Event.clearEventData req.chakra eventResult.eventId
       let newScheduleTime = getNextChakraTime now req.chakra
-      kaalChakraHandle.createFetchUserDataJob req newScheduleTime
+      Event.createFetchUserDataJob (kaalChakraHandle merchantId merchantOperatingCityId) req newScheduleTime
       pure Complete
 
 -- for now keeping the rescheduling of ckahra job to be at night 12:00 + some delta based on chakra type
@@ -139,34 +146,34 @@ runDailyUpdateTagJob ::
   ChakraJobs m r c =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
-runDailyUpdateTagJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Daily Job"
   let req = mkRunKaalChakraUpdateTagJobReq LYT.Daily jobInfo.jobData
-  runKaalChakraUpdateTagsJob req
+  runKaalChakraUpdateTagsJob merchantId merchantOperatingCityId req
 
 runWeeklyUpdateTagJob ::
   ChakraJobs m r c =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
-runWeeklyUpdateTagJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Weekly Job"
   let req = mkRunKaalChakraUpdateTagJobReq LYT.Weekly jobInfo.jobData
-  runKaalChakraUpdateTagsJob req
+  runKaalChakraUpdateTagsJob merchantId merchantOperatingCityId req
 
 runQuarterlyUpdateTagJob ::
   ChakraJobs m r c =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
-runQuarterlyUpdateTagJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Quarterly Job"
   let req = mkRunKaalChakraUpdateTagJobReq LYT.Quarterly jobInfo.jobData
-  runKaalChakraUpdateTagsJob req
+  runKaalChakraUpdateTagsJob merchantId merchantOperatingCityId req
 
 runMonthlyUpdateTagJob ::
   ChakraJobs m r c =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
-runMonthlyUpdateTagJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Monthly Job"
   let req = mkRunKaalChakraUpdateTagJobReq LYT.Monthly jobInfo.jobData
-  runKaalChakraUpdateTagsJob req
+  runKaalChakraUpdateTagsJob merchantId merchantOperatingCityId req

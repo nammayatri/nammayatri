@@ -157,9 +157,8 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       RiderConfig ->
       m ()
     createSafetyCSAlertJob person ride riderConfig = do
-      maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.csAlertTriggerDelay
           safetyCSAlertJobData = SafetyCSAlertJobData {rideId = ride.id, personId = person.id}
       logDebug $ "CS Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyCSAlert scheduleAfter maxShards (safetyCSAlertJobData :: SafetyCSAlertJobData)
+      createJobIn @_ @'SafetyCSAlert ride.merchantId ride.merchantOperatingCityId scheduleAfter (safetyCSAlertJobData :: SafetyCSAlertJobData)
       pure ()

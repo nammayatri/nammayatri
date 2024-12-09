@@ -185,10 +185,9 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
           logInfo $ "Blocking driver based on cancellation rate, driverId: " <> driver.id.getId
           QDriverInformation.updateDynamicBlockedStateWithActivity driver.id (Just "BLOCKED_BASED_ON_CANCELLATION_RATE") (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
           let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
-          void $ LTS.blockDriverLocationsTill (driver.merchantId) (driver.id) expiryTime
-          maxShards <- asks (.maxShards)
+          void $ LTS.blockDriverLocationsTill driver.merchantId driver.id expiryTime
           let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
-          JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+          JC.createJobIn @_ @'UnblockDriver (Just driver.merchantId) (Just driver.merchantOperatingCityId) unblockDriverJobTs $
             UnblockDriverRequestJobData
               { driverId = driver.id
               }
