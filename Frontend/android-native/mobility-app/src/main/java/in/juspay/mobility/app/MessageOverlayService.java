@@ -51,6 +51,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
     ImageView stopSuggestion1ImageView = null;
     ImageView stopSuggestion2ImageView = null;
     ImageView stopSuggestion3ImageView = null;
+    ImageView headerSuffixImage = null;
     TextView suggestion1SentTextView = null;
     TextView suggestion2SentTextView = null;
     TextView suggestion3SentTextView = null;
@@ -221,6 +222,8 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 suggestion1SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion1_sent_text);
                 suggestion2SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion2_sent_text);
                 suggestion3SentTextView = stopDetectedOverlayView.findViewById(R.id.suggestion3_sent_text);
+                headerSuffixImage = stopDetectedOverlayView.findViewById(R.id.header_suffix_image);
+                if (headerSuffixImage != null) headerSuffixImage.setOnClickListener(this);
                 headerTextView.setText(R.string.customer_is_waiting);
                 bodyTextView.setText(R.string.please_start_moving_towards_the_pickup_location);
 
@@ -235,6 +238,9 @@ public class MessageOverlayService extends Service implements View.OnClickListen
             }
 
             suggestions = getDefaultSuggestions();
+            if (suggestions == null) {
+                suggestions = new Suggestions("driverStopDetectedOverlay1BP", "driverStopDetectedOverlay2BP", "driverStopDetectedOverlay3BP");
+            }
 
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String language = sharedPref.getString("LANGUAGE_KEY", "null");
@@ -262,15 +268,15 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 }
                 if (stopDetectedSuggestion1View != null && stopSuggestion1TextView != null && stopSuggestion1ImageView != null && suggestion1SentTextView != null && !suggestion1.equals("")) {
                     setStopSuggestionImageAndText(stopDetectedSuggestion1View, stopSuggestion1TextView, stopSuggestion1ImageView, suggestion1, typeface, suggestion1SentTextView);
-                    setImageDimensions(stopSuggestion1ImageView, 84, 84);
+                    setImageDimensions(stopSuggestion1ImageView, 64, 64);
                 }
                 if (stopDetectedSuggestion2View != null && stopSuggestion2TextView != null && stopSuggestion2ImageView != null && suggestion2SentTextView != null && !suggestion2.equals("")) {
                     setStopSuggestionImageAndText(stopDetectedSuggestion2View, stopSuggestion2TextView, stopSuggestion2ImageView, suggestion2, typeface, suggestion2SentTextView);
-                    setImageDimensions(stopSuggestion2ImageView, 84, 84);
+                    setImageDimensions(stopSuggestion2ImageView, 64, 64);
                 }
                 if (stopDetectedSuggestion3View != null && stopSuggestion3TextView != null && stopSuggestion3ImageView != null && suggestion3SentTextView != null && !suggestion3.equals("")) {
                     setStopSuggestionImageAndText(stopDetectedSuggestion3View, stopSuggestion3TextView, stopSuggestion3ImageView, suggestion3, typeface, suggestion3SentTextView);
-                    setImageDimensions(stopSuggestion3ImageView, 84, 84);
+                    setImageDimensions(stopSuggestion3ImageView, 64, 64);
                 }
             }
         } catch (Exception e) {
@@ -314,7 +320,7 @@ public class MessageOverlayService extends Service implements View.OnClickListen
         } else if (id == R.id.suggestion3) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
                 sendMessage(cb,suggestions.s3);
-        }
+        } else if (id == R.id.header_suffix_image) stopDetectedOverlayView.setVisibility((View.GONE));
         if (stopDetectedOverlay) {
             stopDetectedOverlay = false;
             sendMessageViewForStopsOverlay(id);
@@ -406,12 +412,14 @@ public class MessageOverlayService extends Service implements View.OnClickListen
         }
     }
 
-    private static Suggestions getFallBackSuggestions (Context context) {
+    private Suggestions getFallBackSuggestions (Context context) {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String isDriverAtPickup = sharedPref.getString("IS_DRIVER_AT_PICKUP", "null");
             String language = sharedPref.getString("LANGUAGE_KEY", "null");
-            if(isDriverAtPickup.equals("true")) {
+            if (stopDetectedOverlay) {
+                return new Suggestions(getFallBackSuggestion("driverStopDetectedOverlay1BP", language), getFallBackSuggestion("driverStopDetectedOverlay2BP", language), getFallBackSuggestion("driverStopDetectedOverlay3BP", language));
+            } else if(isDriverAtPickup.equals("true")) {
                 return new Suggestions(getFallBackSuggestion("dols1AP", language), getFallBackSuggestion("dols2AP", language), getFallBackSuggestion("dols3AP", language));
             } else {
                 return new Suggestions(getFallBackSuggestion("dols1BP", language), getFallBackSuggestion("dols2BP", language), getFallBackSuggestion("dols3BP", language));
@@ -422,9 +430,14 @@ public class MessageOverlayService extends Service implements View.OnClickListen
         }
     }
 
-    private static String getFallBackSuggestion (String key, String language) {
+    private String getFallBackSuggestion (String key, String language) {
         try {
-            JSONObject suggestions = defaultSuggestions();
+            JSONObject suggestions = new JSONObject();
+            if (stopDetectedOverlay) {
+                suggestions = defaultStopSuggestions();
+            } else {
+                suggestions = defaultSuggestions();
+            }
             JSONObject suggestion = suggestions.getJSONObject(key);
             if(suggestion.has(language.toLowerCase())) return suggestion.getString(language.toLowerCase());
             else return suggestion.getString("en_us");
@@ -455,6 +468,45 @@ public class MessageOverlayService extends Service implements View.OnClickListen
             return null;
         }
     }
+
+    private static JSONObject defaultStopSuggestions () {
+        try {
+            JSONObject suggestions = new JSONObject();
+            suggestions.put("driverStopDetectedOverlay1BP", new JSONObject()
+                    .put("en_us", "On my way, hold tight!")
+                    .put("ta_in", "வந்துகொண்டு இருக்கிறேன், சற்று காத்திருங்கள்!")
+                    .put("kn_in", "ಸರಿ ಬರುತ್ತಿದ್ದೇನೆ, ಸ್ವಲ್ಪ ಕಾಯಿರಿ")
+                    .put("hi_in", "रास्ते में हूँ, थोड़ा इंतजार करें!")
+                    .put("ml_in", "ഞാൻ വരുന്നു, കുറച്ച് സമയം കാത്തിരിക്കൂ!")
+                    .put("bn_in", "রাস্তায় আছি, একটু অপেক্ষা করুন!")
+                    .put("te_in", "మార్గ మధ్యంలో ఉన్నాను,కాసేపు ఆగండి")
+            );
+            suggestions.put("driverStopDetectedOverlay2BP", new JSONObject()
+                    .put("en_us", "Traffic ahead, few mins delay")
+                    .put("ta_in", "போக்குவரத்து நெரிசலாக உள்ளது, சில நிமிடங்கள் தாமதமாகும்")
+                    .put("kn_in", "ಟ್ರಾಫಿಕ್ ಇದೆ, ಸ್ವಲ್ಪ ಸಮಯ ತಡೆಯಿರಿ")
+                    .put("hi_in", "आगे ट्रैफिक है, कुछ मिनट देरी होगी")
+                    .put("ml_in", "ട്രാഫിക് ഉണ്ട്, കുറച്ച് നേരം വൈകും")
+                    .put("bn_in", "সামনের দিকে ট্রাফিক আছে, কয়েক মিনিট দেরি")
+                    .put("te_in", "ముందు ట్రాఫిక్ ఉంది, కొద్దిసేపు ఆలస్యం అవుతుంది.")
+            );
+            suggestions.put("driverStopDetectedOverlay3BP", new JSONObject()
+                    .put("en_us", "Struggling with location, one sec!")
+                    .put("ta_in", "இடத்தை கண்டுபிடிக்க சிரமமாக உள்ளது, ஒரு நொடி!")
+                    .put("kn_in", "ಸ್ಥಳ ಸಿಗುವುದರಲ್ಲಿ ತೊಂದರೆ, ಒಂದು ಕ್ಷಣ!")
+                    .put("hi_in", "स्थान ढूंढने में मुश्किल हो रही है, एक सेकंड!")
+                    .put("ml_in", "ലൊക്കേഷൻ കണ്ടെത്താൻ ബുദ്ധിമുട്ടുന്നു, ഒരു സെക്കന്റ്!")
+                    .put("bn_in", "লোকেশন খুঁজতে অসুবিধা হচ্ছে, এক সেকেন্ড!")
+                    .put("te_in", "లొకేషన్ కనుగొనుటలో ఇబ్బందిఉంది, ఒక సెకండ్ ఆగండి!")
+            );
+            return suggestions;
+        } catch (Exception e){
+            Log.e("MessageOverlay", "Error in defaultStopSuggestions " + e);
+            return null;
+        }
+    }
+
+
 
     @Nullable
     @Override
