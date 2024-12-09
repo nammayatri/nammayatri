@@ -29,43 +29,40 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
                     android:gravity="center">
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:layout_marginRight="12dp"
-                        android:layout_gravity="center_vertical"
-                        android:src="@drawable/ic_floating_widget"
-                        android:visibility="gone"
-                        android:id="@+id/header_prefix_image">
-                    </ImageView>
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:gravity="center"
                         android:layout_gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ny_ic_close"
+                            android:visibility="invisible"
+                            android:id="@+id/header_prefix_image">
+                        </ImageView>
                         <TextView
                             android:id="@+id/HeaderTextView"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1.0"
                             android:textSize="18dp"
                             android:gravity="center"
-                            android:layout_marginTop="16dp"
                             android:textColor="@color/Black800"
                             android:fontFamily="@font/plus_jakartasans_semibold"
                             android:includeFontPadding="true"
                             android:text="Customer is waiting!"
                             android:textFontWeight="700">
                         </TextView>
-
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ny_ic_close"
+                            android:id="@+id/header_suffix_image">
+                        </ImageView>
                     </LinearLayout>
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginHorizontal="12dp"
-                        android:src="@drawable/ny_ic_chevron_right"
-                        android:visibility="gone"
-                        android:id="@+id/header_suffix_image">
-                    </ImageView>
                 </LinearLayout>
                 <TextView
                     android:id="@+id/BodyTextView"
