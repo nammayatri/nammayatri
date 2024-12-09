@@ -1373,35 +1373,35 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
   when booking.isScheduled $ removeBookingFromRedis booking
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
-  when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
-  isBookingCancelled' <- CS.isBookingCancelled booking.id
-  when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
-  CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
-  unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
-  whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-  handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
-  when uBooking.isScheduled $ do
-    now <- getCurrentTime
-    let scheduledPickup = uBooking.fromLocation
-        scheduledTime = uBooking.startTime
-        pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
-    void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
-    maxShards <- asks (.maxShards)
-    let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
-    createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
-      ScheduledRideAssignedOnUpdateJobData
-        { driverId = driver.id,
-          bookingId = uBooking.id,
-          rideId = ride.id
-        }
-  CS.markBookingAssignmentCompleted uBooking.id
+  lockedBooking <- Redis.tryLockRedis (acceptStaticOfferBookingKey booking.id) 120
+  when lockedBooking $ do
+    isBookingCancelled' <- CS.isBookingCancelled booking.id
+    when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
+    CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
+    unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
+    whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
+    (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing
+    uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+    handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
+    when uBooking.isScheduled $ do
+      now <- getCurrentTime
+      let scheduledPickup = uBooking.fromLocation
+          scheduledTime = uBooking.startTime
+          pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
+      void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
+      maxShards <- asks (.maxShards)
+      let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
+      createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
+        ScheduledRideAssignedOnUpdateJobData
+          { driverId = driver.id,
+            bookingId = uBooking.id,
+            rideId = ride.id
+          }
+      CS.markBookingAssignmentCompleted uBooking.id
   return driverFCMPulledList
   where
     errHandler uBooking exc

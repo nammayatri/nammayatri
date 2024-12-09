@@ -330,6 +330,9 @@ editDestinationUpdatedLocGeohashKey driverId = "Driver:EditDes:GeoHash:DId-" <> 
 offerQuoteLockKeyWithCoolDown :: Id Person -> Text
 offerQuoteLockKeyWithCoolDown driverId = "Driver:OffQuote:CD:DId-" <> driverId.getId
 
+acceptStaticOfferBookingKey :: Id DBooking.Booking -> Text
+acceptStaticOfferBookingKey bookingId = "Driver:OffQuote:BookingId-" <> bookingId.getId
+
 updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe DRide.Ride -> m ()
 updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
   lockAcquired <- case mbRide of
