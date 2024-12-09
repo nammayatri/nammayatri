@@ -1035,7 +1035,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     perDayMaxAllowanceInMins :: Text,
     defaultWaitTimeAtDestination :: Text,
     enabled :: Text,
-    disableRecompute :: Text
+    disableRecompute :: Text,
+    stateEntryPermitCharges :: Text
   }
   deriving (Show)
 
@@ -1119,6 +1120,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "default_wait_time_at_destination"
       <*> r .: "enabled"
       <*> r .: "disable_recompute"
+      <*> r .: "state_entry_permit_charges"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1501,6 +1503,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             perDayMaxAllowanceInMins :: Minutes <- readCSVField idx row.perDayMaxAllowanceInMins "Per Day Max Allowance In Mins"
             perKmRateRoundTrip :: HighPrecMoney <- readCSVField idx row.perKmRateRoundTrip "Per Km Rate Round Trip"
             defaultWaitTimeAtDestination :: Minutes <- readCSVField idx row.defaultWaitTimeAtDestination "Default Wait Time At Destination"
+            let stateEntryPermitCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.stateEntryPermitCharges "State Entry Permit Charges"
             let mbPerDayMaxAllowanceInMins = Just perDayMaxAllowanceInMins
             -- InterCityPricingSlabs
             timePercentage :: Int <- readCSVField idx row.timePercentage "Time Percentage"

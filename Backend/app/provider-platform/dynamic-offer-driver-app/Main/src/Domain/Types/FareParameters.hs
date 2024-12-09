@@ -102,6 +102,7 @@ data FParamsInterCityDetails = FParamsInterCityDetails
     pickupCharge :: HighPrecMoney,
     currency :: Currency,
     extraDistanceFare :: HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     extraTimeFare :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
