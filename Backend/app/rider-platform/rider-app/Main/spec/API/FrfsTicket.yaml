@@ -49,6 +49,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSDiscountRes:
     code: Text
@@ -57,6 +58,7 @@ types:
     description: Text
     tnc: Text
     eligibility: Bool
+    derive: "Show"
 
   FRFSDiscountReq:
     code: Text
@@ -84,6 +86,7 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    googleWalletJWTUrl: Maybe Text
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType

@@ -131,6 +131,11 @@ dependencies:
   - text-format
   - scientific
   - resource-pool
+  - jose
+  - HsOpenSSL
+  - RSA >= 2.4.1
+  - mtl
+  - jwt
 
 ghc-options:
   - -fwrite-ide-info

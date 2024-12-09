@@ -248,7 +248,7 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
-
+    googleWalletJWTUrl : Maybe Text
   default:
     customerCancelled: "false"
 
@@ -354,6 +354,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

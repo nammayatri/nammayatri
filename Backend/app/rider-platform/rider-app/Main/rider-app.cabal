@@ -129,6 +129,7 @@ library
       Beckn.OnDemand.Utils.OnSearch
       Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.GWLink
       Domain.Action.Beckn.FRFS.OnCancel
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
@@ -946,7 +947,9 @@ library
       TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
-      aeson
+      HsOpenSSL
+    , RSA >=2.4.1
+    , aeson
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -979,11 +982,14 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , jose
     , json-logic-hs
+    , jwt
     , lens
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , payment
@@ -1079,7 +1085,9 @@ executable rider-app-exe
       TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
-      aeson
+      HsOpenSSL
+    , RSA >=2.4.1
+    , aeson
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -1109,11 +1117,14 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , jose
     , json-logic-hs
+    , jwt
     , lens
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , persistent
