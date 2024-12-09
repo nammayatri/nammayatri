@@ -83,4 +83,6 @@
     <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
     <string name="parking_charges">%1$.0f₹ पार्किंग</string>
     <string name="includes">शामिल</string>
+    <string name="stops_info">%1$d स्टॉप्स (स्टॉप चार्ज सहित)</string>
+    <string name="stops">%1$d स्टॉप्स</string>
 </resources>

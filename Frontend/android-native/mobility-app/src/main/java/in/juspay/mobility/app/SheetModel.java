@@ -29,6 +29,7 @@ public class SheetModel {
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
     private final int tollCharges;
+    private final int stops;
 
     private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
@@ -80,7 +81,8 @@ public class SheetModel {
                       Boolean isThirdPartyBooking,
                       Boolean isFavourite,
                       double parkingCharge,
-                      String renderedAt
+                      String renderedAt,
+                      int stops
                       ){
 
         this.srcLat = srcLat;
@@ -135,6 +137,7 @@ public class SheetModel {
         this.isFavourite = isFavourite;
         this.parkingCharge = parkingCharge;
         this.renderedAt = renderedAt;
+        this.stops = stops;
     }
 
     public String getRenderedAt(){
@@ -377,6 +380,8 @@ public class SheetModel {
     public double getParkingCharges() {
         return parkingCharge;
     }
+
+    public int getStops() { return stops; }
 
     private boolean initialIncButtonToggle(){
         if (offeredPrice <= 0){

@@ -78,4 +78,6 @@
     <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
     <string name="parking_charges">%1$.0f₹ പാർക്കിംഗ്</string>
     <string name="includes">ഉൾപ്പെടുന്നു</string>
+    <string name="stops_info">%1$d സ്റ്റോപ്പുകൾ (സ്റ്റോപ്പ് ചാർജ് ഉൾപ്പെടെ)</string>
+    <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
 </resources>
