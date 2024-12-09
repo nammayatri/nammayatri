@@ -54,9 +54,9 @@ jobs:
             isMain: false
     needs: [process-labels]
     runs-on: ny-ci-nixos
-    #if: |
-    #  needs.process-labels.outputs.has-backend == 'true' && 
-    #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
+    if: |
+      needs.process-labels.outputs.has-backend == 'true' && 
+      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
