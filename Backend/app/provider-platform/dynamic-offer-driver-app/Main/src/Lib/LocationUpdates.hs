@@ -102,7 +102,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
       whenJust oldMultipleRoutes $ \allRoutes -> do
         Redis.setExp key allRoutes 3600
         Redis.del oldKey
-      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
+      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key -- even though multiple routes are coming in key there is only route, FIX ME
       case multipleRoutes of
         Just routes -> do
           isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
@@ -189,15 +189,16 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
 
-updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow (Bool, Bool)
+updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow (Bool, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))
 updateTollRouteDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
-  return (False, False)
+  return (False, Nothing)
 updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
   let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
-  isTollPresentOnCurrentRoute <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
-  when (isTollPresentOnCurrentRoute && not driverDeviatedToTollRoute) $ do
-    QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
+  isTollPresentOnCurrentRoute <- TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+  let isTollPresentOnCurrentRoute' = isJust isTollPresentOnCurrentRoute
+  when (isTollPresentOnCurrentRoute' && not driverDeviatedToTollRoute) $ do
+    QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute'
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
 getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], Bool, Maybe Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))

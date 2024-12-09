@@ -74,7 +74,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m (),
     updateTollChargesAndNames :: Id person -> HighPrecMoney -> [Text] -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool, Bool),
+    updateRouteDeviation :: Id person -> [LatLong] -> m (Bool, Bool, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool)),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool)),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
     sendTollCrossedNotificationToDriver :: Id person -> m (),
@@ -176,8 +176,12 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           _ -> waypoints
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
-  (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  when (isTollApplicable && enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
+  (routeDeviation, tollRouteDeviation, mbisTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  whenJust mbisTollPresentOnCurrentRoute $ \(tollCharges, tollNames, _, _) -> do
+    void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
+    void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
+    Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
+  when (isTollApplicable && enableTollCrossedNotifications && isJust mbisTollPresentOnCurrentRoute) $
     fork "Toll Crossed OnUpdate" $ do
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
@@ -195,7 +199,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
             tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
             whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNames driverId tollCharges tollNames
         else do
-          (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist ((,,False,Just False) <$> estTollCharges <*> estTollNames)
+          (distanceToBeUpdated, tollChargesInfo) <- getTravelledDistanceAndTollInfo driverId estDist ((,,False,Just False) <$> estTollCharges <*> estTollNames) -- checking tolls here one last time ig
           updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0 (Just 0) calculationFailed
           whenJust tollChargesInfo $ \(tollCharges, tollNames, _, _) ->
             when isTollApplicable $
@@ -254,6 +258,11 @@ recalcDistanceBatchStep ::
 recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailureUsing isTollApplicable driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   (distance, interpolatedWps, servicesUsed, snapToRoadFailed, mbTollChargesAndNames) <- interpolatePointsAndCalculateDistanceAndToll rectifyDistantPointsFailureUsing isTollApplicable driverId batchWaypoints
+  logDebug $ "distance ----------------------------------------->" <> show distance
+  logDebug $ "interpolatedWps --------------------------------->" <> show interpolatedWps
+  logDebug $ "servicesUsed ------------------------------------->" <> show servicesUsed
+  logDebug $ "snapToRoadFailed --------------------------------->" <> show snapToRoadFailed
+  logDebug $ "mbTollChargesAndNames --------------------------->" <> show mbTollChargesAndNames
   whenJust mbTollChargesAndNames $ \(tollCharges, tollNames, _, _) -> do
     void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
@@ -275,6 +284,8 @@ recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailur
 
 redisOnRideKeysCleanup :: (HedisFlow m env) => Id person -> m ()
 redisOnRideKeysCleanup driverId = do
+  mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
+  logDebug $ "FINAL END RIDE TIME mbTollCharges ------------------------------------->" <> show mbTollCharges
   Redis.del (lastTwoOnRidePointsRedisKey driverId)
   Redis.del (onRideSnapToRoadStateKey driverId)
   Redis.del (onRideTollChargesKey driverId)
@@ -294,7 +305,7 @@ mkRideInterpolationHandler ::
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> m ()) ->
-  (Id person -> [LatLong] -> m (Bool, Bool, Bool)) ->
+  (Id person -> [LatLong] -> m (Bool, Bool, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))) ->
   (Maybe (Id person) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))) ->
   (Id person -> Meters -> Maybe (HighPrecMoney, [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))) ->
   Bool ->
