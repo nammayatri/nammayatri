@@ -13,7 +13,7 @@
 -}
 
 module SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
-  ( softBlockNotifyToDriver,
+  ( softBlockNotifyDriver,
   )
 where
 
@@ -28,7 +28,7 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Notifications
 
-softBlockNotifyToDriver ::
+softBlockNotifyDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
@@ -36,7 +36,7 @@ softBlockNotifyToDriver ::
   ) =>
   Job 'SoftBlockNotifyDriver ->
   m ExecutionResult
-softBlockNotifyToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+softBlockNotifyDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       driverId = jobData.driverId
       entity = jobData.entityData
