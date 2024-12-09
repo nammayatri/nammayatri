@@ -43,6 +43,9 @@ mkIssueBreachCounterKey breachType driverId = "driver-offer:issue-breach:" <> sh
 mkCompletedBookingCounterKey :: IssueBreachType -> Text -> Text
 mkCompletedBookingCounterKey breachType driverId = "driver-offer:issue-breach:" <> show breachType <> ":completed-booking-counter-dId:" <> driverId
 
+mkNotificationSendKey :: IssueBreachType -> Text -> Text
+mkNotificationSendKey breachType driverId = "driver-offer:issue-breach:" <> show breachType <> ":pending-notify-entity:" <> driverId
+
 incrementCompletedBookingCounterForIssueBreach ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
@@ -100,6 +103,19 @@ issueBreachMitigation ::
 issueBreachMitigation issueType transporterConfig driverInfo = when (isJust transporterConfig.issueBreachConfig && not driverInfo.blocked) $ do
   let issueBreachConfigOfIssueType = getIssueBreachConfig issueType transporterConfig
   whenJust issueBreachConfigOfIssueType $ \config -> do
+    -- checking if notification not send and sending if ride finished --
+    when (config.ibBlockType == IBSoft && (isJust driverInfo.softBlockStiers) && not driverInfo.onRide) $ do
+      let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
+      mbPendingIssueBreachNotificationEntity <- Redis.get isNotificationPendingKey
+      whenJust mbPendingIssueBreachNotificationEntity $ \entity -> do
+        maxShards <- asks (.maxShards)
+        let notifyDriverJobTs = secondsToNominalDiffTime (fromIntegral config.ibNotifyInMins) * 60
+        JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
+          SoftBlockNotifyDriverRequestJobData
+            { driverId = driverInfo.driverId,
+              entityData = entity
+            }
+        Redis.del isNotificationPendingKey
     when ((config.ibBlockType == IBHard && not driverInfo.onRide) || (config.ibBlockType == IBSoft && (isNothing driverInfo.softBlockStiers))) $ do
       now <- getCurrentTime
       let (blockReasonDaily, blockReasonWeekly) = getBlockReasonFlag issueType
@@ -154,17 +170,24 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
               UnblockSoftBlockedDriverRequestJobData
                 { driverId = driverInfo.driverId
                 }
-            JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
-              SoftBlockNotifyDriverRequestJobData
-                { driverId = driverInfo.driverId,
-                  entityData =
-                    IssueBreachEntityData
-                      { ibName = "ISSUE_BREACH_" <> show issueType,
-                        blockExpirationTime = expiryTime,
-                        blockedReasonFlag = show blockReasonFlag,
-                        blockedSTiers = allowedSTiers
+            let notificationEntityData =
+                  IssueBreachEntityData
+                    { ibName = "ISSUE_BREACH_" <> show issueType,
+                      blockExpirationTime = expiryTime,
+                      blockedReasonFlag = show blockReasonFlag,
+                      blockedSTiers = allowedSTiers
+                    }
+            if not driverInfo.onRide
+              then do
+                void $
+                  JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
+                    SoftBlockNotifyDriverRequestJobData
+                      { driverId = driverInfo.driverId,
+                        entityData = notificationEntityData
                       }
-                }
+              else do
+                let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
+                void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
           IBHard -> do
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
             QDriverInformation.updateDynamicBlockedStateWithActivity driverInfo.driverId (Just $ "ISSUE_BREACH_" <> show issueType) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
