@@ -247,6 +247,7 @@ import DecodeUtil (decodeForeignAny,parseJSON)
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
+   
   when callInitUI $ initUIWrapper ""
   let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
       hybridInit = fromMaybe true $ gPayload ^. _payload ^. _show_splash
@@ -449,6 +450,7 @@ handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
   handleExternalLocations mBGlobalPayload
+  (GlobalState getstate)<- getState
   case mBGlobalPayload of
     Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
       Just screen -> case screen of
@@ -516,7 +518,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
               homeScreenFlow
         "bt" -> do
           setValueToLocalStore SESSION_ID (generateSessionId unit)
-          modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
+          modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS} , props {srcLat =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) , srcLong = (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON)}})
           hideSplashAndCallFlow busTicketBookingFlow
         _ -> do
           let _ = spy "startwith" screen
