@@ -160,6 +160,7 @@ type instance JobContent 'UnblockSoftBlockedDriver = UnblockSoftBlockedDriverReq
 
 data SoftBlockNotifyDriverRequestJobData = SoftBlockNotifyDriverRequestJobData
   { driverId :: Id DP.Driver,
+    pendingNotificationRedisKey :: Text,
     entityData :: Notify.IssueBreachEntityData
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
