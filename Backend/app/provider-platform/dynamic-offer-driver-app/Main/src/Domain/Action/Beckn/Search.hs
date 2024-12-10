@@ -122,6 +122,7 @@ data DSearchReq = DSearchReq
     customerLanguage :: Maybe Maps.Language,
     customerNammaTags :: Maybe [Text],
     isReallocationEnabled :: Maybe Bool,
+    disabilityTag :: Maybe Text,
     dropLocation :: Maybe LatLong,
     dropAddrress :: Maybe BA.Address,
     routeDistance :: Maybe Meters,
@@ -517,7 +518,6 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         stops = stops',
         hasStops = Just . not $ null stops',
         driverIdForSearch = fst <$> mbDriverInfo,
-        disabilityTag = Nothing,
         ..
       }
 

@@ -312,12 +312,12 @@ mkDisabilityDisableTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.CUSTOMER_DISABILITY,
+                      { descriptorCode = Just $ show Tags.CUSTOMER_DISABILITY_DISABLE,
                         descriptorName = Just "Disability Disable Flag",
                         descriptorShortDesc = Nothing
                       },
                 tagDisplay = Just False,
-                tagValue = show <$> res.disabilityTag
+                tagValue = Just $ show res.disabilityDisable
               }
           ]
     }

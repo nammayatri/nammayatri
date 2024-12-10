@@ -54,13 +54,13 @@ data DSelectReq = DSelectReq
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
-    disabilityTag :: Maybe Text
+    disabilityDisable :: Maybe Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
-  QSR.updateDisabilityTag searchReq.id sReq.disabilityTag
+  when (sReq.disabilityDisable == Just True) $ QSR.updateDisabilityTag searchReq.id Nothing
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
