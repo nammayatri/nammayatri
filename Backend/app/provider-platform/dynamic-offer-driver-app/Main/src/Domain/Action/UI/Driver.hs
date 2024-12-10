@@ -342,7 +342,10 @@ data DriverInformationRes = DriverInformationRes
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool,
     isSpecialLocWarrior :: Bool,
-    blockedReasonFlag :: Maybe BlockReasonFlag
+    blockedReasonFlag :: Maybe BlockReasonFlag,
+    softBlockStiers :: Maybe [ServiceTierType],
+    softBlockExpiryTime :: Maybe UTCTime,
+    softBlockReasonFlag :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -397,7 +400,10 @@ data DriverEntityRes = DriverEntityRes
     totalRidesTaken :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool,
-    isSpecialLocWarrior :: Bool
+    isSpecialLocWarrior :: Bool,
+    softBlockStiers :: Maybe [ServiceTierType],
+    softBlockExpiryTime :: Maybe UTCTime,
+    softBlockReasonFlag :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -938,6 +944,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         payoutVpaBankAccount = driverInfo.payoutVpaBankAccount,
         subscriptionEnabledForVehicleCategory = isEnabledForCategory,
         isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
+        softBlockStiers = driverInfo.softBlockStiers,
+        softBlockExpiryTime = driverInfo.softBlockExpiryTime,
+        softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         ..
       }
 
