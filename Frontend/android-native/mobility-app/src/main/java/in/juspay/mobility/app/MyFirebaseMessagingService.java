@@ -211,6 +211,9 @@ public  class MyFirebaseMessagingService {
                 }
                 notificationData.put("title", title)
                         .put("msg", body);
+                if (entityDataString != null) {
+                    notificationData.put("entityData", entityDataString.replace("\"", "\\\""));
+                }
                 NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
                 switch (notificationType) {
                     case NotificationTypes.EDIT_STOP:
