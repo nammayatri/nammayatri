@@ -883,6 +883,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
+    minDistanceForStopFcm: HighPrecMeters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -926,6 +927,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
+    minDistanceForStopFcm: Maybe HighPrecMeters
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -978,6 +980,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    minDistanceForStopFcm: Just minDistanceForStopFcm|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1034,6 +1037,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1087,6 +1091,7 @@ TransporterConfig:
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
+    minDistanceForStopFcm: double precision
 
   default:
     mediaFileUrlPattern: |-
@@ -1214,6 +1219,7 @@ TransporterConfig:
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
+    minDistanceForStopFcm: "100"
 
   excludedDefaultQueries:
     - findByPrimaryKey

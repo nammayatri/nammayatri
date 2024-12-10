@@ -12,7 +12,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
@@ -32,11 +34,13 @@ stopDetection :: StopDetectionReq -> Flow APISuccess
 stopDetection StopDetectionReq {..} = do
   logDebug $ "Stopdetected for driverId:" <> driverId.getId
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  when (ride.status == NEW) $ do
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let distance = distanceBetweenInMeters location (LatLong booking.fromLocation.lat booking.fromLocation.lon)
+  when (ride.status == NEW && distance >= transporterConfig.minDistanceForStopFcm) $ do
     oldStopCount :: Maybe Int <- Redis.safeGet $ mkStopCountDuringPickupRedisKey rideId.getId
     let currStopCount = 1 + fromMaybe 0 oldStopCount
     Redis.setExp (mkStopCountDuringPickupRedisKey ride.id.getId) currStopCount 1200 --20 mins
-    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
     vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityId booking.vehicleServiceTier booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
     case (vehicleServiceTier.stopFcmThreshold, vehicleServiceTier.stopFcmSuppressCount) of
       (Just threshold, Just suppressCount) -> do
