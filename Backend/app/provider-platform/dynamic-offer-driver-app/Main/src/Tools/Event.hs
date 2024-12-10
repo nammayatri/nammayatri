@@ -27,6 +27,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.SearchTry
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.EventStream
 import Lib.SessionizerMetrics.Types.Event
@@ -67,7 +68,9 @@ data Payload
         callSid :: Maybe Text,
         status :: Maybe Text,
         exophoneNumber :: Maybe Text,
-        rideId :: Maybe (Id DRide.Ride)
+        rideId :: Maybe (Id DRide.Ride),
+        bundleVersion :: Maybe Version,
+        clientVersion :: Maybe Version
       }
   | SDK Text
   | EventTrackerPayLoad
@@ -128,7 +131,9 @@ data ExophoneEventData = ExophoneEventData
     merchantId :: Maybe (Id Merchant),
     triggeredBy :: EventTriggeredBy,
     personId :: Maybe (Id Person),
-    exophoneNumber :: Maybe Text
+    exophoneNumber :: Maybe Text,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
 
 data SDKEventData = SDKEventData

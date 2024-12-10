@@ -30,6 +30,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -50,19 +51,19 @@ data CallEventReq = CallEventReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-logCallEvent :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => CallEventReq -> m APISuccess.APISuccess
-logCallEvent CallEventReq {..} = do
+logCallEvent :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => CallEventReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+logCallEvent CallEventReq {..} bundleVersion clientVersion _ _ = do
   callOnClickTracker rideId
-  sendCallDataToKafka Nothing (Just rideId) (Just "ANONYMOUS_CALLER") Nothing Nothing User (Just exophoneNumber)
+  sendCallDataToKafka Nothing (Just rideId) (Just "ANONYMOUS_CALLER") Nothing Nothing User (Just exophoneNumber) bundleVersion clientVersion
   pure APISuccess.Success
 
-sendCallDataToKafka :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
-sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber = do
+sendCallDataToKafka :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> Maybe Version -> Maybe Version -> m ()
+sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber bundleVersion clientVersion = do
   case mRideId of
     Just rideId -> do
       ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-      triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just ride.driverId) exophoneNumber
-    Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber
+      triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just ride.driverId) exophoneNumber bundleVersion clientVersion
+    Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber bundleVersion clientVersion
 
 callOnClickTracker :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => Id Ride.Ride -> m ()
 callOnClickTracker rideId = do

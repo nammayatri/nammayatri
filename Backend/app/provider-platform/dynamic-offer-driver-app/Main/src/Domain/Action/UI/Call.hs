@@ -280,7 +280,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
           updateCallStatus callStatus.id newCallStatus Nothing callDuration callAttemptStatus
           throwError CallStatusDoesNotExist
         else updateCallStatus callStatus.id newCallStatus Nothing callDuration callAttemptStatus
-  DCE.sendCallDataToKafka (Just "EXOTEL") (Id <$> callStatus.entityId) (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
+  DCE.sendCallDataToKafka (Just "EXOTEL") (Id <$> callStatus.entityId) (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing Nothing Nothing
   return Ack
   where
     updateCallStatus id callStatus url callDuration callAttemptStatus = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
@@ -327,7 +327,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
 
   requestorPhone <- decrypt riderDetails.mobileNumber
   QCallStatus.updateCallStatusInformation dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService) id'
-  DCE.sendCallDataToKafka (Just "EXOTEL") (Just activeRide.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
+  DCE.sendCallDataToKafka (Just "EXOTEL") (Just activeRide.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to) Nothing Nothing
 
   return requestorPhone
   where
