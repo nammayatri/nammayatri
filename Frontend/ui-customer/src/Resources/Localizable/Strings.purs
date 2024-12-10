@@ -20,7 +20,6 @@ import Language.Types (STR)
 import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
 import Prelude (($))
 import Data.Maybe (Maybe(..))
-import Debug (spy)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
 import Resources.Localizable.BN (getBN)
 import Resources.Localizable.EN (getEN)
@@ -30,6 +29,7 @@ import Resources.Localizable.ML (getML)
 import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TA (getTA)
 import Resources.Localizable.TE (getTE)
+import Resources.Localizable.OD (getOd)
 import Locale.Utils
 import Data.String as DS
 
@@ -57,6 +57,7 @@ getStringFromLocal language key =
     "FR_FR" -> getFR key
     "TA_IN" -> getTA key
     "TE_IN" -> getTE key
+    "OD_IN" -> getOd key
     _       -> getEN key
 
 getStringWithoutNewLine :: STR -> String

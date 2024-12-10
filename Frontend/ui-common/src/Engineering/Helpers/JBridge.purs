@@ -298,7 +298,7 @@ foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 foreign import getAndroidId :: Unit -> String
-foreign import getAppName :: String
+foreign import getAppName :: Unit -> String
 foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) ShakeListenerConfig Unit
 foreign import unregisterShakeListener :: Unit -> Unit
 foreign import registerShakeListener :: Unit -> Unit

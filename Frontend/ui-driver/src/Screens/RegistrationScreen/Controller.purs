@@ -182,7 +182,7 @@ eval BackPressed state = do
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
-           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs $ JB.getAppName unit)
            _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
