@@ -140,6 +140,7 @@ data TransporterConfigT f = TransporterConfigT
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
