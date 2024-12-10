@@ -515,8 +515,10 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
               })
               homeScreenFlow
         "bt" -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { sourceLong =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) ,sourceLat =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)  } })
+          (GlobalState getstate)<- getState
           setValueToLocalStore SESSION_ID (generateSessionId unit)
-          modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS}})
+          modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { data {ticketServiceType = BUS} , props {srcLat =  getstate.homeScreen.props.sourceLat , srcLong = getstate.homeScreen.props.sourceLong}})
           hideSplashAndCallFlow busTicketBookingFlow
         _ -> do
           let _ = spy "startwith" screen
@@ -5520,7 +5522,6 @@ searchLocationFlow = do
               else if null routeStopresponse.stops
               then ROUTES
               else state.data.rideType
-            activeRideTypeIndex = if rideType == ROUTES then 0 else 1
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { rideType = rideType ,srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
      searchLocationFlow
     SearchLocationController.AddFavLoc state tag -> do
@@ -5560,7 +5561,7 @@ searchLocationFlow = do
       modifyScreenState $ BusTicketBookingScreenStateType (\bookingState -> bookingState{ data{ ticketServiceType = state.data.ticketServiceType } })
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
     SearchLocationController.BusRouteStopSearchScreen state -> do
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{ props{ actionType = BusSearchSelectionAction, focussedTextField = Just SearchLocPickup, canSelectFromFav = false, routeSearch = true } })
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props{ actionType = BusSearchSelectionAction, focussedTextField = Just SearchLocPickup, canSelectFromFav = false, routeSearch = true }, data{ rideType = slsState.data.rideType } })
       pure $ setText (getNewIDWithTag (show SearchLocPickup)) $ ""
       searchLocationFlow
     SearchLocationController.GO_TO_BUS_SEARCH state -> do

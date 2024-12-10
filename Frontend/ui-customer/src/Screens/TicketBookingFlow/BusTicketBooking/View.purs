@@ -78,8 +78,12 @@ busTicketBookingScreen initialState =
     getTicketBookingListEvent push =
       if (isNothing initialState.data.ticketDetailsState) then do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
-          lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
+          resp <- lift $ lift $ Remote.getMetroBookingStatusList (show initialState.data.ticketServiceType) (Just "5") (Just "0")
+          let bookingList = 
+                case resp of
+                  Right (GetMetroBookingListResp res) -> res
+                  Left _ -> []
+          lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC bookingList
         pure $ pure unit
       else pure $ pure unit
 
@@ -254,14 +258,15 @@ dummyIllustrationView push state =
   let busConfig = RCU.getBusFlowConfigs (getValueToLocalStore CUSTOMER_LOCATION)
   in
   linearLayout
-  [ height MATCH_PARENT
+  [ height WRAP_CONTENT
+  , weight 1.0
   , width MATCH_PARENT
   , orientation VERTICAL
-  , layoutGravity "center_vertical"
+  , gravity CENTER_HORIZONTAL
   , margin $ Margin 24 48 24 0
   , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
   ]
-  [ imageView
+  [ imageView $
     [ width $ V $ 280
     , height $ V 280
     , gravity CENTER_HORIZONTAL

@@ -554,19 +554,20 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
         [ relativeLayout
             [ height MATCH_PARENT
             , gravity CENTER
+            -- , width WRAP_CONTENT
             ]
             [ verticalLineView push ("verticalLineView2" <> show showOnlyBullet <> show index) (if stopType == NORMAL_STOP then showOnlyBullet else false) Mb.Nothing
             , linearLayout
               [ height MATCH_PARENT
               , gravity CENTER
+              , width WRAP_CONTENT
               ]
-              [ imageView
+              [ imageView $
                 [ height $ V imageDimension
                 , width $ V imageDimension
                 , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET (getStopImage stopType)
-                , margin $ MarginLeft (if stopType == NORMAL_STOP then 6 else 2)
                 , visibility $ boolToVisibility showOnlyBullet
-                ]
+                ] <> if EHC.os == "IOS" then [gravity CENTER] else [margin $ MarginLeft (if stopType == NORMAL_STOP then 6 else 2)]
               ]
             ]
           , textView
