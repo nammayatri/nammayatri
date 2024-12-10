@@ -100,8 +100,8 @@ data RideInfo = RideInfo
     driver :: DPerson.Person
   }
 
-handler :: DM.Merchant -> DConfirmReq -> ValidatedQuote -> Flow DConfirmResp
-handler merchant req validatedQuote = do
+handler :: DM.Merchant -> DConfirmReq -> ValidatedQuote -> (DRB.Booking -> Maybe DPerson.Person -> DM.Merchant -> Flow ()) -> Flow DConfirmResp
+handler merchant req validatedQuote canceBookingCb = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   now <- getCurrentTime
@@ -117,9 +117,8 @@ handler merchant req validatedQuote = do
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide)
+      (ride, _, vehicle, uBooking2) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) canceBookingCb
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
-      uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do

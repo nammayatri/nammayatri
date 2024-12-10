@@ -17,10 +17,12 @@ module SharedLogic.Ride where
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
 import qualified Domain.Types.Person as DPerson
@@ -73,8 +75,9 @@ initializeRide ::
   Maybe Bool ->
   Maybe (Id DC.Client) ->
   Maybe Bool ->
-  Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide = do
+  (DRB.Booking -> Maybe DPerson.Person -> DM.Merchant -> Flow ()) ->
+  Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle, DRB.Booking)
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide cancelBookingCb = do
   let merchantId = merchant.id
   otpCode <-
     case mbOtpCode of
@@ -99,7 +102,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   QRideD.create rideDetails
-  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
+  wasLockSuccess <- Redis.withWaitOnLockRedisWithExpiryAndReturn (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
     when (not booking.isScheduled) $ do
       whenJust (booking.toLocation) $ \toLoc -> do
         QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
@@ -107,6 +110,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
+  uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- fetching updated booking here as if above lock is not accuired below callback requires updated booking. For the rest existing booking will work as per existing logic.
+  unless wasLockSuccess $ cancelBookingCb uBooking (Just driver) merchant >> throwError (InternalError $ "Failed to acquire lock on onRide state of the driver with id : " <> show driver.id <> " during ride creation of booking with Id : " <> show booking.id)
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
@@ -122,7 +127,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
 
-  return (ride, rideDetails, vehicle)
+  return (ride, rideDetails, vehicle, uBooking) -- returning updated booking as anyways it will be required to form Confirm response.
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
