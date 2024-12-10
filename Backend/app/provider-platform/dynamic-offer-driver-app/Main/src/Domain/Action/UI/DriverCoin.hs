@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
 import Domain.Types.TransporterConfig ()
+import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -46,6 +47,7 @@ import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
 import Storage.Queries.TranslationsExtra as SQT
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
@@ -247,6 +249,10 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   let istTime = addUTCTime timeDiffFromUtc now
       currentDate = show $ utctDay istTime
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
+  vehCategory <-
+    QVeh.findById driverId
+      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+      <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
   if coinBalance >= coins
     then do
       let history =
@@ -260,7 +266,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 currency,
                 createdAt = now,
                 updatedAt = now,
-                title = "converted from coins"
+                title = "converted from coins",
+                vehicleCategory = Just vehCategory
               }
       histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
       let result = accumulateCoins coins histories
@@ -293,12 +300,16 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
   pure $ RideStatusPastDaysRes {rideCountPopupValue = ridesExceedThreshold}
 
 getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinInfoRes
-getCoinsInfo (driverId, merchantId_, merchantOpCityId) = do
+getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId_.getId
+  unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId.getId
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  vehCategory <-
+    QVeh.findById driverId
+      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+      <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
   let language = fromMaybe ENGLISH (driver.language)
-  activeConfigs <- SQCC.getConfigBasedOnMerchantAndCity merchantId_ merchantOpCityId
+  activeConfigs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
   coinConfigRes <-
     mapM
       ( \activeConfg -> do

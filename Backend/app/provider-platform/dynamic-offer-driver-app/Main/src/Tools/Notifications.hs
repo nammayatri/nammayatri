@@ -43,6 +43,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
+import Lib.DriverCoins.Types
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import Storage.Cac.TransporterConfig
@@ -1117,3 +1119,78 @@ runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification
       case merchantNotificationServiceConfig.serviceConfig of
         DMSC.NotificationServiceConfig nsc -> pure nsc
         _ -> throwError $ InternalError "Unknow Service Config"
+
+data CoinsNotificationData = CoinsNotificationData
+  { coins :: Int,
+    event :: DCT.DriverCoinsFunctionType
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+sendCoinsNotification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  CoinsNotificationData ->
+  m ()
+sendCoinsNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig Nothing (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.COINS_SUCCESS,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId driver.id,
+          fcmEntityData = entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.COINS_SUCCESS Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCM.FCMNotificationTitle notificationTitle
+    body =
+      FCMNotificationBody message
+
+-- This function is to be removed after next apk deployment
+sendCoinsNotificationV3 ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  CoinsNotificationData ->
+  MetroRideType ->
+  m ()
+sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToken entityData metroRideType = do
+  logDebug $ "We are in metro notification"
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig Nothing (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
+  where
+    fcmNotificationType = case metroRideType of
+      ToMetro -> FCM.TO_METRO_COINS
+      FromMetro -> FCM.FROM_METRO_COINS
+      _ -> COINS_SUCCESS
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = fcmNotificationType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId driver.id,
+          fcmEntityData = entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body fcmNotificationType Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCM.FCMNotificationTitle notificationTitle
+    body =
+      FCMNotificationBody message
