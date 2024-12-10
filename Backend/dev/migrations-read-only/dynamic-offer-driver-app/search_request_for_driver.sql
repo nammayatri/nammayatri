@@ -138,3 +138,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN middle_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN last_ride_id character varying(36) ;
+
+
+------- SQL updates -------
+
