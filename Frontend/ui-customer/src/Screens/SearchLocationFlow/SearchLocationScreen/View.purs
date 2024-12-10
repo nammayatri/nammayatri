@@ -655,12 +655,17 @@ navpillView state item push activeItem =
     , orientation HORIZONTAL
     , padding $ Padding 5 8 5 8
     , weight 1.0
+    , width WRAP_CONTENT
     , cornerRadius 18.0
     , onClick push $ const $ RideTypeSelected item activeItem
     , background if item == activeItem then Color.black900 else Color.white900
     , rippleColor Color.rippleShade
     ]
-    [ imageView  
+    [ linearLayout
+    [ height WRAP_CONTENT
+          , gravity CENTER
+    , width WRAP_CONTENT
+    ][ imageView  
         [ width $ V 18  
         , height $ V 18  
         , imageWithFallback $ fetchImage COMMON_ASSET $ if item == ROUTES then
@@ -680,6 +685,7 @@ navpillView state item push activeItem =
           ]
         <> FontStyle.tags TypoGraphy
     ]
+  ]
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 

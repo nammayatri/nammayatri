@@ -1318,6 +1318,13 @@ getMetroBookingStatusListBT vehicleType limit offset = do
         errorHandler _ = do
             BackT $ pure GoBack
 
+getMetroBookingStatusList :: String -> Maybe String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetMetroBookingListResp)
+getMetroBookingStatusList vehicleType limit offset = do 
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingList vehicleType limit offset) unwrapResponse $ callAPI headers (GetMetroBookingListReq vehicleType limit offset)
+  where
+    unwrapResponse x = x
+
 
 retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
 retryMetroTicketPaymentBT quoteId = do

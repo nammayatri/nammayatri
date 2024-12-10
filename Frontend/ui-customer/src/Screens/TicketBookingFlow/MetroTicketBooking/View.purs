@@ -58,7 +58,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT, getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Control.Monad.Trans.Class (lift)
 import Storage 
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, layoutWithWeight)
 import Components.Banner as Banner
 import ConfigProvider (getAppConfig)
 import Constants
@@ -556,7 +556,7 @@ incrementDecrementView push state metroConfig busClicked=
           ][ imageView
               [ height $ V 24  
               , width $ V 24  
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_passengers"
+              , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_passengers"
               , margin $ MarginRight 8  
               ]
             , textView $
@@ -690,16 +690,22 @@ locationSelectionView push state =
     ][ ]
   , destTextView push state
 ]
-  , imageView $ 
-      [ height $ V 32
-      , width $ V 32
-      , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_src_dest_edit"
-      , cornerRadius 10.0 
-      , margin $ Margin 0 46 16 0
-      , visibility $ boolToVisibility (not state.props.isRepeatRide)
-      , onClick push $ const (SelectLocation Src)
-      , alignParentRight "true,-1"
-      ]
+  , linearLayout[
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    ][ layoutWithWeight, 
+        imageView $ 
+       [ height $ V 32
+       , width $ V 32
+       , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_src_dest_edit"
+       , cornerRadius 10.0 
+       , margin $ Margin 0 46 16 0
+       , visibility $ boolToVisibility (not state.props.isRepeatRide)
+       , onClick push $ const (SelectLocation Src)
+       , alignParentRight "true,-1"
+       , gravity RIGHT
+       ]
+    ]
 ]
 srcTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 srcTextView push state = textViewForLocation (getString FROM) Src push state
