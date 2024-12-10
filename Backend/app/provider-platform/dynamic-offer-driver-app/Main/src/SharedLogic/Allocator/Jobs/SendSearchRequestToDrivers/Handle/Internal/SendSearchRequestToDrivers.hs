@@ -57,7 +57,6 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Ride as QSRD
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -209,8 +208,6 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
           farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure tripQuoteDetail.baseFare
-      lastRideId' <- QSRD.findLatestRideByDriverId dpRes.driverId
-      let lastRideId = lastRideId' <&> (.id)
       deploymentVersion <- asks (.version)
       isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
       let searchRequestForDriver =
