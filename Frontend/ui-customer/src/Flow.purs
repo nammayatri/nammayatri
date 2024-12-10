@@ -591,6 +591,30 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             let emergencyContactLength = Arr.length contacts
             modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ selectedContacts = contacts,  emergencyContactsList = contacts },props { showDropDown = false, fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = emergencyContactLength > 0 } })
             emergencyScreenFlow
+          else if startsWith "reportIssue" screen then do 
+            let issueParam = DS.split (DS.Pattern "$$") screen
+                rideId = fromMaybe "" (issueParam !! 1)
+            let
+              language = fetchLanguage $ getLanguageLocale languageKey
+            (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0" "" rideId ""
+            let
+              getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
+
+              messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
+
+              chats' =
+                map
+                  ( \(Message currMessage) ->
+                      Chat
+                        { chatId: currMessage.id
+                        , chatType: "IssueMessage"
+                        , timestamp: (getCurrentUTC "")
+                        }
+                  )
+                  getOptionsRes.messages
+            void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
+            modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.SafetyScreen, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : "Safety Related Issue", categoryId : "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing} , options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+            flowRouter IssueReportChatScreenFlow
           else
             case breakPrefixAndId screen of
               Just ( Tuple "metroBooking" bookingId )-> do
