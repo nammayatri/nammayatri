@@ -21,6 +21,7 @@ flavorsY = ["yatriUserProd"]
 flavorsYP = ["yatriDriverProd"]
 flavoursNYP = ["nyDriverProd"]
 flavorsMYP = ["myDriverProd"]
+flavorsOYP = ["oyDriverProd"]
 
 platform :android do
   desc "Runs all the tests"
@@ -181,6 +182,31 @@ platform :android do
         package_name: 'in.mobility.manayatripartner',
         metadata_path: 'fastlane/metadata/',
         aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "myDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "OdishaYatri Partner Release"
+  lane :release_oyp do
+    flavorsOYP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.mobility.odishayatripartner',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "oyDriver-prod" + "-release.aab",
         skip_upload_apk: true,
         skip_upload_metadata: true,
         skip_upload_images: true,

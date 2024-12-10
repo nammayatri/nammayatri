@@ -6,7 +6,6 @@ on:
       - main
       - hotpushAPK-*
 
-
 jobs:
   deploy:
     if: "contains(github.event.head_commit.message, '[RELEASE-APK-DRIVER]')"
@@ -40,13 +39,13 @@ jobs:
             config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
           - name: OdishaYatriPartner
             keystore: ANDROID_KEYSTORE_FILE_OYP
-            fastlane_cm: YP
+            fastlane_cm: OYP
             key_alias: KEYSTORE_KEY_ALIAS_OYP
             key_alias_password: KEYSTORE_STORE_PASSWORD_OYP
-            local_properties: LOCAL_PROPERTIES_MYP
+            local_properties: LOCAL_PROPERTIES_OYP
             config_path: app/src/driver/odishaYatriPartner/assets/juspay
             config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
-          # Add more variants as needed
+          # Add more variants as needed 
     defaults:
       run:
         working-directory: Frontend/android-native
@@ -122,7 +121,7 @@ jobs:
           ANDROID_KEYSTORE_FILE: ${{ secrets[matrix.variant.keystore] }}
           KEYSTORE_KEY_ALIAS: ${{ secrets[matrix.variant.key_alias] }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets[matrix.variant.key_alias_password] }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets[matrix.variant.key_alias_password] }}
 
       - name: Create Google Services Config file
         run: |
