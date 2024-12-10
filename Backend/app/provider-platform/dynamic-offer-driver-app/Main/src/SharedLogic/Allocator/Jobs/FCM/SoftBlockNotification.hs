@@ -20,10 +20,12 @@ where
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Notifications
@@ -39,7 +41,18 @@ softBlockNotifyDriver ::
 softBlockNotifyDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       driverId = jobData.driverId
+      redisKey = jobData.pendingNotificationRedisKey
       entity = jobData.entityData
   driver <- BF.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  notifySoftBlocked driver entity
-  return Complete
+  driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  if driverInfo.onRide
+    then do
+      now <- getCurrentTime
+      let diffTime = diffUTCTime entity.blockExpirationTime now
+      when (diffTime > 0) $ do
+        let expiryTime = round (realToFrac diffTime :: Double)
+        Redis.setExp redisKey entity expiryTime
+      return $ Terminate "On ride so can't send for customer safety"
+    else do
+      notifySoftBlocked driver entity
+      return Complete

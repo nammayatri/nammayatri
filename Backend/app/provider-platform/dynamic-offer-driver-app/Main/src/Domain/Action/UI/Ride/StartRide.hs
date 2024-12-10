@@ -47,8 +47,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
-import SharedLogic.BehaviourManagement.IssueBreach
-import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -194,10 +192,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
 
-  fork "reset driver extra fare ask" $ do
-    let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION transporterConfig
-        allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
-    when (fromMaybe False driverInfo.extraFareMitigationFlag && maybe True (\stiers -> null stiers || booking.vehicleServiceTier `elem` stiers) allowedSTiers) $ QDI.updateExtraFareMitigation (Just False) driverId
+  fork "reset driver extra fare ask" $ when (fromMaybe False driverInfo.extraFareMitigationFlag) $ QDI.updateExtraFareMitigation (Just False) driverId
   fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
   fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
 
