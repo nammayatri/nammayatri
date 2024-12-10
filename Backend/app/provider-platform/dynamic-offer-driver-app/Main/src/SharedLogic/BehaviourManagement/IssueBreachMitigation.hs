@@ -165,7 +165,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
         case ibBlockType of
           IBSoft -> do
             logInfo $ "Soft Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-            QDriverInformation.updateSoftBlock (Just allowedSTiers) (Just expiryTime) (Just $ "ISSUE_BREACH_" <> show issueType) driverInfo.driverId
+            QDriverInformation.updateSoftBlock (Just allowedSTiers) (Just expiryTime) (Just $ show blockReasonFlag) driverInfo.driverId
             JC.createJobIn @_ @'UnblockSoftBlockedDriver unblockDriverJobTs maxShards $
               UnblockSoftBlockedDriverRequestJobData
                 { driverId = driverInfo.driverId
