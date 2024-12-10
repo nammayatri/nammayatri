@@ -141,3 +141,8 @@ castServiceTierToVehicleCategory = \case
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)
+
+getVehicleCategoryFromVehicleVariantDefault :: Maybe VehicleVariant -> DVC.VehicleCategory
+getVehicleCategoryFromVehicleVariantDefault = maybe defaultCategory castVehicleVariantToVehicleCategory
+  where
+    defaultCategory = DVC.AUTO_CATEGORY

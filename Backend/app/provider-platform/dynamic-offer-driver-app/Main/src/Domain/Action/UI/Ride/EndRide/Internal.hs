@@ -219,9 +219,10 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
             let referralMessage = "Congratulations!"
-            let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
+                referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId)
+            fork "DriverToCustomerReferralCoin Event : " $ do
+              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")

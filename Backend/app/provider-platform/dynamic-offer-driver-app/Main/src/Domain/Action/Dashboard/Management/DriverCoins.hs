@@ -27,6 +27,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.PurchaseHistory as PurchaseHistory
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -44,6 +45,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 postDriverCoinsBulkUploadCoins :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> Flow APISuccess
@@ -82,6 +84,10 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
+      vehCategory <-
+        QVeh.findById driverId
+          >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -96,10 +102,11 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 expirationAt = expiryTime,
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
-                entityId = entityId
+                entityId = entityId,
+                vehicleCategory = Just vehCategory
               }
       CHistory.updateCoinEvent driverCoinEvent
-      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue
+      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
       pure ()
 
 postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> Flow APISuccess
@@ -139,6 +146,10 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
           status_ = if coinsValue > 0 then Remaining else Used
+      vehCategory <-
+        QVeh.findById driverId
+          >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+          <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -153,7 +164,8 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
                 expirationAt = expiryTime,
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
-                entityId = entityId
+                entityId = entityId,
+                vehicleCategory = Just vehCategory
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction

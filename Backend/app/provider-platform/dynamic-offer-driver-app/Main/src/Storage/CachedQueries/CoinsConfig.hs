@@ -19,6 +19,7 @@ import Data.Text (pack)
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -26,17 +27,29 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.Queries.Coins.CoinsConfig as Queries
 
-fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
-fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId =
-  Hedis.safeGet (makeCoinConfigKey eventType merchantOpCityId) >>= \case
+fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
+fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory =
+  Hedis.safeGet (makeCoinConfigKey eventType merchantOpCityId vehicleCategory) >>= \case
     Just a -> return a
-    Nothing -> cacheCoinConfig eventType merchantOpCityId /=<< Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId
+    Nothing -> do
+      result <- Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
+      result' <-
+        if null result
+          then Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing
+          else return result
+      void $ cacheCoinConfig eventType merchantOpCityId vehicleCategory result
+      return result'
 
-cacheCoinConfig :: CacheFlow m r => DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> [CoinsConfig] -> m ()
-cacheCoinConfig eventType merchantOpCityId coinsConfig = do
+cacheCoinConfig :: CacheFlow m r => DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [CoinsConfig] -> m ()
+cacheCoinConfig eventType merchantOpCityId vehicleCategory coinsConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeCoinConfigKey eventType merchantOpCityId) coinsConfig expTime
+  Hedis.setExp (makeCoinConfigKey eventType merchantOpCityId vehicleCategory) coinsConfig expTime
 
-makeCoinConfigKey :: DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> Text
-makeCoinConfigKey eventType merchantOpCityId =
-  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-" <> pack (show eventType)
+makeCoinConfigKey :: DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Text
+makeCoinConfigKey eventType merchantOpCityId vehicleCategory =
+  "cachedQueries:Coins:MocId-"
+    <> merchantOpCityId.getId
+    <> ":EventType-"
+    <> pack (show eventType)
+    <> ":vehicleCategory-"
+    <> (show vehicleCategory)

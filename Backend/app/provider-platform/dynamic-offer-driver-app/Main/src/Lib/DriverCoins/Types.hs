@@ -18,6 +18,7 @@ module Lib.DriverCoins.Types
     DCoins.DriverCoinsFunctionType (..),
     DCoins.CoinMessage (..),
     DCoins.CoinStatus (..),
+    DCoins.MetroRideType (..),
   )
 where
 
@@ -29,14 +30,14 @@ import qualified Text.Show (show)
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
-  | EndRide {isDisabled :: Bool, ride :: Ride, metroRide :: Bool}
+  | EndRide {isDisabled :: Bool, ride :: Ride, metroRideType :: DCoins.MetroRideType}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Generic)
+  deriving (Generic, ToJSON, FromJSON)
 
 driverCoinsEventTypeToString :: DriverCoinsEventType -> String
 driverCoinsEventTypeToString = \case
