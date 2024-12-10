@@ -20,6 +20,9 @@ case $var1 in
   "YP")
     bundle exec fastlane release_yp
     ;;
+  "OYP")
+    bundle exec fastlane release_oyp
+    ;;
   *)
     bundle exec fastlane
     ;;

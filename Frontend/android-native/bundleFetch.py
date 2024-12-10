@@ -104,6 +104,11 @@ elif param == "YP":
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"
     appName = "in.yatri.provider"
     print(f"URL YP :::::: " + url)
+elif param == "OYP":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
+    appName = "in.yatri.provider"
+    print(f"URL OYP :::::: " + url)
 
 
 # Define the directory to save the config files
