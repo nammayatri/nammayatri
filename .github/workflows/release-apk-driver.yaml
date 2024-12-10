@@ -6,6 +6,7 @@ on:
       - main
       - hotpushAPK-*
 
+
 jobs:
   deploy:
     if: "contains(github.event.head_commit.message, '[RELEASE-APK-DRIVER]')"
