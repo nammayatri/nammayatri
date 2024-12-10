@@ -325,3 +325,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN issue_breach_co
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recent_scheduled_bookings_safe_limit integer  default 50;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_for_stop_fcm double precision  default 100;

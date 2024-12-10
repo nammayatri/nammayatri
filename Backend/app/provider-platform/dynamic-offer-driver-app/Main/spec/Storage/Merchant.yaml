@@ -963,6 +963,8 @@ TransporterConfig:
     disableListScheduledBookingAPI: Bool
     issueBreachConfig: Maybe [IssueBreachConfig]
     recentScheduledBookingsSafeLimit: Int
+    minDistanceForStopFcm: HighPrecMeters
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1008,6 +1010,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Maybe Bool
     issueBreachConfig: Maybe Value
     recentScheduledBookingsSafeLimit: Maybe Int
+    minDistanceForStopFcm: Maybe HighPrecMeters
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1062,6 +1065,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
+    minDistanceForStopFcm: Just minDistanceForStopFcm|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1121,6 +1125,7 @@ TransporterConfig:
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
+    minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1175,6 +1180,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     issueBreachConfig: json
+    minDistanceForStopFcm: double precision
 
   default:
     mediaFileUrlPattern: |-
@@ -1303,6 +1309,7 @@ TransporterConfig:
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
+    minDistanceForStopFcm: "100"
 
   excludedDefaultQueries:
     - findByPrimaryKey

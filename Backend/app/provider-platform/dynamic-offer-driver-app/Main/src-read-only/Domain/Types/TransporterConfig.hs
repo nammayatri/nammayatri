@@ -142,6 +142,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    minDistanceForStopFcm :: Kernel.Types.Common.HighPrecMeters,
     minLocationAccuracy :: Kernel.Prelude.Double,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
