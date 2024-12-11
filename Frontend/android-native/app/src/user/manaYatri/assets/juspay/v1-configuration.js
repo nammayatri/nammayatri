@@ -221,8 +221,8 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
     , "estimateAndQuoteConfig" : 
-      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
+      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"] ]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY", "DELIVERY_BIKE"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -268,7 +268,12 @@ window.getMerchantConfig = function () {
           "name" : "XL Plus",
           "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
-        }
+        },
+        "deliveryBike" : {
+            "name" : "2 Wheeler",
+            "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,"
+          }
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false
