@@ -14,6 +14,7 @@
 
 module SharedLogic.SearchTry where
 
+import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -28,6 +29,7 @@ import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
@@ -53,7 +55,7 @@ import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
-getNextScheduleTime ::
+fetchAndUpdateScheduleTime ::
   ( MonadFlow m,
     Metrics.CoreMetrics m,
     CacheFlow m r,
@@ -63,7 +65,7 @@ getNextScheduleTime ::
   DSR.SearchRequest ->
   UTCTime ->
   m (Maybe NominalDiffTime)
-getNextScheduleTime driverPoolConfig searchRequest now = do
+fetchAndUpdateScheduleTime driverPoolConfig searchRequest now = do
   mbScheduleTryTimes <- getKey
   scheduleTryTimes <-
     case mbScheduleTryTimes of
@@ -87,7 +89,7 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
         else return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now))
   where
     scheduleSearchKey = "ScheduleSearch-" <> searchRequest.id.getId
-    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
+    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 1800
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
 initiateDriverSearchBatch ::
@@ -118,32 +120,70 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just (TransactionId (Id searchReq.transactionId))) searchReq
   goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
-  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   now <- getCurrentTime
+  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
       instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
   if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
     then do
+      let remainingTime = diffUTCTime searchReq.startTime now
+          lastScheduledTime = fromMaybe 1800 (findPrevScheduleTime remainingTime scheduleTryTimes)
+          buffer = intToNominalDiffTime (driverPoolConfig.maxNumberOfBatches * driverPoolConfig.singleBatchProcessTime.getSeconds) + singleBatchProcessingTempDelay
+      when (diffUTCTime now (addUTCTime (- lastScheduledTime) searchTry.startTime) < buffer) $ triggerPoolNow driverPoolConfig searchTry goHomeCfg searchReq.driverIdForSearch singleBatchProcessingTempDelay
+      scheduleJobIfPossible remainingTime driverPoolConfig.scheduleTryTimes searchTry now
+    else do
+      mbScheduleTime <- fetchAndUpdateScheduleTime driverPoolConfig searchReq now
+      case mbScheduleTime of
+        Just scheduleTime -> scheduleBatching searchTry.id scheduleTime
+        Nothing -> cancelBooking searchTry
+  where
+    cancelBooking searchTry = do
+      booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
+      QST.updateStatus DST.CANCELLED searchTry.id
+      SBooking.cancelBooking booking Nothing merchant
+
+    getPoolTriggerScheduledKey :: CacheFlow m r => Id DSR.SearchRequest -> Int -> m (Maybe Bool)
+    getPoolTriggerScheduledKey searchReqId nextSchedule = Hedis.get (mkPoolTriggerScheduledKey searchReqId nextSchedule)
+
+    mkPoolTriggerScheduledKey :: Id DSR.SearchRequest -> Int -> Text
+    mkPoolTriggerScheduledKey searchReqId nextSchedule = "DriverPoolTrigger:SearchReqId:" <> searchReqId.getId <> ":ScheduleBeforeSeconds:" <> show nextSchedule
+
+    setPoolTriggerScheduledKey :: CacheFlow m r => Id DSR.SearchRequest -> Int -> m ()
+    setPoolTriggerScheduledKey searchReqId nextSchedule = Hedis.setExp (mkPoolTriggerScheduledKey searchReqId nextSchedule) True 1800
+
+    scheduleJobIfPossible remainingTime scheduleTryTimes searchTry now = case findNextScheduleTime remainingTime scheduleTryTimes of
+      Just nextSchedule -> do
+        isPoolTriggerScheduled <- getPoolTriggerScheduledKey searchReq.id (round nextSchedule)
+        unless (isJust isPoolTriggerScheduled) $ do
+          let delay = max 2 (diffUTCTime (addUTCTime (- nextSchedule) searchReq.startTime) now)
+          scheduleBatching searchTry.id delay
+          setPoolTriggerScheduledKey searchReq.id (round nextSchedule)
+      _ -> cancelBooking searchTry
+
+    triggerPoolNow driverPoolConfig searchTry goHomeCfg driverIdForSearch singleBatchProcessingTempDelay = do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
-      case (res, isJust searchReq.driverIdForSearch) of
+      case (res, isJust driverIdForSearch) of
         (_, True) -> return ()
-        (ReSchedule _, _) -> scheduleBatching searchTry inTime
+        (ReSchedule _, _) -> scheduleBatching searchTry.id inTime
         _ -> return ()
-    else do
-      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
-      case mbScheduleTime of
-        Just scheduleTime -> scheduleBatching searchTry scheduleTime
-        Nothing -> do
-          booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
-          QST.updateStatus DST.CANCELLED searchTry.id
-          SBooking.cancelBooking booking Nothing merchant
-  where
-    scheduleBatching searchTry inTime = do
+
+    findNextScheduleTime remainingTime scheduleTimes =
+      let nominalTimes = secondsToNominalDiffTime . Seconds <$> scheduleTimes
+       in case dropWhile (remainingTime >) nominalTimes of
+            (next : _) -> Just next
+            [] -> Nothing
+
+    findPrevScheduleTime _ [] = Nothing
+    findPrevScheduleTime remainingTime (x : xs)
+      | x >= remainingTime = findPrevScheduleTime remainingTime xs <|> Just x
+      | otherwise = Nothing
+
+    scheduleBatching searchTryId inTime = do
       maxShards <- asks (.maxShards)
       JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
-          { searchTryId = searchTry.id,
+          { searchTryId = searchTryId,
             estimatedRideDistance = searchReq.estimatedDistance
           }
 
