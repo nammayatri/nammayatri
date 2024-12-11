@@ -59,6 +59,7 @@ data PaymentOrderT f = PaymentOrderT
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
     serviceProvider :: B.C f (Maybe Payment.PaymentService),
+    sdkPayloadDump :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantOperatingCityId :: B.C f (Maybe Text)

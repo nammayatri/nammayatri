@@ -54,6 +54,7 @@ data PaymentOrderE e = PaymentOrder
     bankErrorMessage :: Maybe Text,
     bankErrorCode :: Maybe Text,
     serviceProvider :: Payment.PaymentService,
+    sdkPayloadDump :: Maybe Value,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)

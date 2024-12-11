@@ -1790,7 +1790,8 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
-  (dueDriverFees, mKey) <- do
+  now <- getCurrentTime
+  (dueDriverFees', mKey) <- do
     case clearSelectedReq of
       Just req -> do
         dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
@@ -1802,6 +1803,13 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       Nothing -> do
         dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
         return (dfees, Nothing)
+
+  --------- to crub up cases related to double debit ----------
+  successfulInvoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.SUCCESS)) dueDriverFees'
+  let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
+  forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
+  let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
+  ----------------------------------------------------------
   invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
