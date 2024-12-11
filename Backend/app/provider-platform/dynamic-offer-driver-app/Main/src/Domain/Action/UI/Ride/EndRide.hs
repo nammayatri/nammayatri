@@ -608,14 +608,14 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff)
-  let thresholdChecks = distanceDiff > thresholdConfig.actualRideDistanceDiffThresholdIfWithinPickupDrop && thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
+  let thresholdChecks = thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
     when (thresholdConfig.toNotifyDriverForExtraKmsLimitExceed && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + maxUpwardBuffer
   if not pickupDropOutsideOfThreshold
     then
-      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms && shouldRecompute
+      if thresholdChecks && checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms
         then recalculateFareForDistance handle booking ride (roundToIntegral $ min ride.traveledDistance maxDistance) thresholdConfig False tripEndPoint
         else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig False tripEndPoint
     else
@@ -689,6 +689,6 @@ shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
       recomputeDistanceThreshold = listToMaybe $ sortBy (comparing \distanceThreshold -> distanceThreshold.estimatedDistanceUpper - estimatedDistance) filteredThresholds
   case recomputeDistanceThreshold of
     Just distanceThreshold -> do
-      let shouldRecompute = distanceDiff < distanceThreshold.minThresholdDistance && distanceDiff.getMeters < (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
+      let shouldRecompute = distanceDiff > distanceThreshold.minThresholdDistance && distanceDiff.getMeters > (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
       pure shouldRecompute
     Nothing -> pure False
