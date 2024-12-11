@@ -159,3 +159,5 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_special_loc_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_ride_started boolean ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN special_loc_warrior_enabled_at timestamp with time zone ;
+
