@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutRetryAllWithStatus,
     postPayoutPayoutPendingPayout,
     postPayoutPayoutDeleteVPA,
+    postPayoutPayoutDriversSetBlockState,
   )
 where
 
@@ -280,7 +281,7 @@ postPayoutPayoutPendingPayout _merchantShortId _opCity req = do
   payoutConfig <- CPC.findByPrimaryKey person.merchantOperatingCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) person.merchantOperatingCityId.getId)
   dInfo <- QDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest $ "Vpa is not available for person: " <> personId.getId
-  when payoutConfig.isPayoutEnabled $ do
+  when (payoutConfig.isPayoutEnabled && dInfo.isBlockedForReferralPayout /= Just True) $ do
     Payout.processPreviousPayoutAmount (cast personId) dInfo.payoutVpa person.merchantOperatingCityId
   pure Success
 
@@ -288,6 +289,12 @@ postPayoutPayoutDeleteVPA :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 postPayoutPayoutDeleteVPA _merchantShortId _opCity req = do
   let driverIds = map cast req.driverIds
   void $ QDI.updatePayoutVpaAndStatusByDriverIds Nothing Nothing driverIds
+  pure Success
+
+postPayoutPayoutDriversSetBlockState :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.SetDriversBlockStateReq -> Environment.Flow APISuccess
+postPayoutPayoutDriversSetBlockState _merchantShortId _opCity req = do
+  let driverIds = map cast req.driverIds
+  void $ QDI.updateIsBlockedForReferralPayout driverIds req.blockState
   pure Success
 
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()

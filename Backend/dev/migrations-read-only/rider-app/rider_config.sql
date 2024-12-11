@@ -162,4 +162,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_program boolean  d
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referrel_start_date timestamp with time zone  default '2024-12-20 12:00:00.000000+00';
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_start_date timestamp with time zone  default '2024-12-20 12:00:00.000000+00';

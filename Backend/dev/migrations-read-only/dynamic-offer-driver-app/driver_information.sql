@@ -176,3 +176,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_expi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN special_loc_warrior_enabled_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_referral_payout boolean ;
