@@ -47,12 +47,23 @@ fromTTypeFarePolicyInterCityDetails ::
   Domain.FullFarePolicyInterCityDetails
 fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
   ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails {pricingSlabs = snd <$> fPICDPS, ..}
+    Domain.FPInterCityDetails
+      { pricingSlabs = snd <$> fPICDPS,
+        waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              },
+        ..
+      }
   )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPInterCityDetails {..}) =
     BeamFPRD.FarePolicyInterCityDetailsT
       { farePolicyId = farePolicyId,
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         ..
       }

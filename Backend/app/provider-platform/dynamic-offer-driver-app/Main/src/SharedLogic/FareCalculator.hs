@@ -431,7 +431,7 @@ calculateFareParameters params = do
       ( [],
         baseFare_,
         nightShiftCharge,
-        Nothing,
+        waitingChargeInfo,
         DFParams.InterCityDetails $
           DFParams.FParamsInterCityDetails
             { timeFare = fareByTime_,
