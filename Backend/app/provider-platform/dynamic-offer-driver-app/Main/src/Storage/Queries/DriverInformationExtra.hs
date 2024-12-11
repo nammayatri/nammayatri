@@ -371,3 +371,12 @@ updateHasRideStarted driverId hasRideStarted = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateIsBlockedForReferralPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> Bool -> m ()
+updateIsBlockedForReferralPayout driverIds isBlocked = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.isBlockedForReferralPayout (Just isBlocked),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
