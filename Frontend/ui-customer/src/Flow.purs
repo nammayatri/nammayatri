@@ -4150,8 +4150,7 @@ cancelEstimate bookingId = do
         else do
           void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
           void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { autoScroll = false, currentStage = HomeScreen } })
-          homeScreenFlow
+          currentFlowStatus false
 
 getGenderValue :: Maybe Gender.Gender -> Maybe String
 getGenderValue gender = case gender of
