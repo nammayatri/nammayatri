@@ -411,6 +411,9 @@ Booking:
       params:
         - isBookingUpdated
       where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
 
 BookingPartiesLink:
   fields:
