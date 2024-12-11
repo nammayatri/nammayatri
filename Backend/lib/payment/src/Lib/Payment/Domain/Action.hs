@@ -226,6 +226,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             isRetried = False,
             isRetargeted = False,
             retargetLink = Nothing,
+            sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId
@@ -397,7 +398,8 @@ createOrderService merchantId mbMerchantOpCityId personId createOrderReq createO
                       id = existingOrder.paymentServiceOrderId,
                       order_id = existingOrder.shortId.getShortId,
                       payment_links = Just existingOrder.paymentLinks,
-                      sdk_payload
+                      sdk_payload,
+                      sdk_payload_json = existingOrder.sdkPayloadDump
                     }
             Nothing -> return Nothing
   where
@@ -497,6 +499,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
         isRetried = False,
         isRetargeted = False,
         retargetLink = Nothing,
+        sdkPayloadDump = resp.sdk_payload_json,
         createdAt = now,
         updatedAt = now,
         merchantOperatingCityId = mbMerchantOpCityId
@@ -796,6 +799,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             isRetried = False,
             isRetargeted = False,
             retargetLink = Nothing,
+            sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId
