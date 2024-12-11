@@ -31,7 +31,8 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     defaultWaitTimeAtDestination :: Minutes,
     currency :: Currency,
     stateEntryPermitCharges :: Maybe HighPrecMoney,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
   }
   deriving (Generic, Show)
 

@@ -1512,6 +1512,13 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include ActualTime Percentage"
             includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Nnclude Actual Dist Percentage"
 
+            let waitingChargeInfo =
+                  Just
+                    FarePolicy.WaitingChargeInfo
+                      { waitingCharge = waitingCharges,
+                        freeWaitingTime = freeWatingTime
+                      }
+
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
             return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
