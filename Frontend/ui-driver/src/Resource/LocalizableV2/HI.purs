@@ -1760,6 +1760,9 @@ getHi =
     , upload_parcel_image : "पार्सल छवि अपलोड करें"
     , pickup_instruction : "पिकअप निर्देश"
     , drop_instruction : "ड्रॉप निर्देश"
+    , warning : "चेतावनी!"
+    , you_have_been_blocked_for_n_days: "आपको ब्लॉक कर दिया गया है क्योंकि कई ग्राहकों ने अतिरिक्त किराए की शिकायत की है।"
+    , do_not_ask_customers_for_extra_payment: "ग्राहकों से अतिरिक्त भुगतान न मांगें। ऐसा करना जारी रखने से आपका खाता ब्लॉक हो सकता है।"
     , parcel_is_inappropriate : "पार्सल अनुचित है"
     , sender_asking_different_location : "प्रेषक ने किसी अन्य स्थान पर आने के लिए कहा है"
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
@@ -1779,4 +1782,6 @@ getHi =
     , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
     , metro_warriors : "मेट्रो वॉरियर्स"
     , search : "खोजें"  
+    , blocked_for_variant_rides_till: (\a b c -> a <> " की सवारी के लिए " <> b <> "," <> c <> " तक ब्लॉक किया गया है")
+    , blocked_for_variant_rides_reason: (\a -> "कई ग्राहकों की अतिरिक्त किराए की शिकायतों के कारण आपको " <> a <> " की सवारी के लिए ब्लॉक कर दिया गया है")
     }

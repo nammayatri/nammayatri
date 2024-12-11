@@ -295,7 +295,11 @@ driverActiveInactiveBT status status_n = do
             (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
                 Just resp -> pure resp
                 _ -> pure dummyErrorResponseDriverActivity
-            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+            if accountBlocked then 
+                if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then 
+                    case errorPayload.blockReason of
+                        _ -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) 
+                else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
             pure if noPlanSelectedForDriver then 
                     toast $ (StringsV2.getStringV2 LT2.no_plan_selected)

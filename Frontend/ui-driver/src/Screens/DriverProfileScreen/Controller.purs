@@ -28,14 +28,14 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all)
 import Data.Int (fromString)
 import Data.Lens.Getter ((^.))
-import Data.Maybe (fromMaybe, Maybe(..), isJust)
+import Data.Maybe (fromMaybe, Maybe(..), isJust, maybe)
 import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber, getLinkedSoftBlockedVehicle)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
@@ -268,6 +268,8 @@ data Action = BackPressed
             | ProfileDataAPIResponseAction DriverProfileDataRes
             | ShowDrvierBlockedPopup
             | DriverBLockedPopupAction PopUpModal.Action
+            | ShowDriverSoftBlockedPopup
+            | DriverSoftBLockedPopupAction PopUpModal.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -376,6 +378,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state = do
   let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
   let (SA.DriverGoHomeInfo driverGoHomeInfo) =  driverProfileResp.driverGoHomeInfo
+      softBlockedVehicle = getLinkedSoftBlockedVehicle resp
   continue state {data = state.data {driverName = driverProfileResp.firstName,
                                       driverVehicleType = linkedVehicle.variant,
                                       driverRating = driverProfileResp.rating,
@@ -397,7 +400,11 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       cancellationWindow = driverProfileResp.windowSize,
                                       favCount = driverProfileResp.favCount,
                                       driverBlocked = fromMaybe false driverProfileResp.blocked,
-                                      blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime
+                                      blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime,
+                                      blockReason = driverProfileResp.blockedReasonFlag,
+                                      driverSoftBlockedVehicle = softBlockedVehicle,
+                                      softBlockExpiryTime = driverProfileResp.softBlockExpiryTime,
+                                      softBlockReasonFlag = driverProfileResp.softBlockReasonFlag
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 
@@ -438,6 +445,8 @@ eval (ChangeScreen screenType) state = do
 eval OpenSettings state = continue state{props{openSettings = true}}
 
 eval ShowDrvierBlockedPopup state = continue state {props { showDriverBlockedPopup = true }}
+
+eval ShowDriverSoftBlockedPopup state = continue state {props { showDriverSoftBlockedPopup = true }}
 
 eval (DriverBLockedPopupAction PopUpModal.OnButton2Click) state = continue state { props { showDriverBlockedPopup = false } }
 
@@ -615,6 +624,13 @@ eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
 eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus}} [
     pure $ DeactivateRc rcType ""
   ]
+
+
+eval (DriverSoftBLockedPopupAction PopUpModal.OnButton2Click) state = continue state { props { showDriverSoftBlockedPopup = false } }
+
+eval (DriverSoftBLockedPopupAction PopUpModal.OnButton1Click) state = do 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state { props { showDriverSoftBlockedPopup = false } }
 
 eval _ state = update state
 

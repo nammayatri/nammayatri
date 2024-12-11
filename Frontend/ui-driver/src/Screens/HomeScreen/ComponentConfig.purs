@@ -2910,6 +2910,105 @@ verifyUPI state =
   in
     requestInfoCardConfig'
 
+askedExtraFareConfig :: ST.HomeScreenState -> PopUpModal.Config
+askedExtraFareConfig state = PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = MarginTop 0
+    , margin = MarginHorizontal 24 24
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "HORIZONTAL"
+    , primaryText {
+        text = StringsV2.getStringV2 LT2.warning 
+      , margin = MarginHorizontal 16 16
+      , color = Color.black800
+      , textStyle = Heading2
+    }
+    , secondaryText {
+      text = StringsV2.getStringV2 LT2.do_not_ask_customers_for_extra_payment
+      , margin = Margin 16 4 16 0
+      , color = Color.black700
+      , textStyle = SubHeading2
+    },
+    option1 {
+      text = StringsV2.getStringV2 LT2.okay_got_it
+    , color = Color.yellow900
+    , background = Color.black900
+    , visibility = true
+    , margin = MarginTop 24
+    , width = MATCH_PARENT
+    },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_asked_extra_fare"
+    , visibility = VISIBLE
+    , width = V (EHC.screenWidth unit - 20)
+    , height = V (EHC.screenWidth unit - 180)
+    , margin = MarginBottom 16
+    },
+    option2 { 
+      visibility = false
+    },
+    dismissPopup = false
+  }
+
+blockedForNDaysConfig :: ST.HomeScreenState -> PopUpModal.Config
+blockedForNDaysConfig state = 
+  let 
+    blockedExpiryDate = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "DD-MM-YYYY" 
+    softBlockExpiryTime = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "hh:mm A"
+    serviceTierBlocked = fromMaybe "" state.data.driverSoftBlockedVehicle
+  in 
+    PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25, 
+      primaryText {
+        text = getString $ BLOCKED_FOR_VARIANT_RIDES_TILL serviceTierBlocked softBlockExpiryTime blockedExpiryDate
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10
+      },
+      secondaryText{
+        text = getString $ BLOCKED_FOR_VARIANT_RIDES_REASON serviceTierBlocked
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 
+      },
+      option1 {
+        text = getString CALL_SUPPORT
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , image {
+          imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = MarginRight 8
+        }
+      },
+      option2 {
+      text = getString CLOSE,
+      margin = MarginHorizontal 16 16,
+      color = Color.black650,
+      background = Color.white900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
+    },
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET  "ny_ic_account_blocked"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 250
+      }
+    }
+
 selectPlansModalState :: ST.HomeScreenState -> SelectPlansModal.SelectPlansState
 selectPlansModalState state = SelectPlansModal.config
   {

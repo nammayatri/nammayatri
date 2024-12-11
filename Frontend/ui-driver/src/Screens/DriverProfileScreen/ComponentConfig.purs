@@ -32,7 +32,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
-import Data.Maybe(fromMaybe, Maybe(..), isJust)
+import Data.Maybe(fromMaybe, Maybe(..), isJust, maybe)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not, (>))
@@ -44,6 +44,8 @@ import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude
 import Screens.DriverProfileScreen.Controller
+import Resource.Localizable.StringsV2 as StringsV2
+import Resource.Localizable.TypesV2 as LT2
 import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
@@ -589,3 +591,59 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         }
       ]
     )
+
+driverSoftBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
+driverSoftBLockedPopup state = 
+  let 
+    softBlockedTime = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "hh:mm A"
+    softBlockedDate = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "DD-MM-YYYY"
+    serviceTierBlocked = fromMaybe "" state.data.driverSoftBlockedVehicle
+  in 
+    PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25, 
+      primaryText {
+        text = getString $ BLOCKED_FOR_VARIANT_RIDES_TILL serviceTierBlocked softBlockedTime softBlockedDate
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10
+      },
+      secondaryText{
+        text = getString $ BLOCKED_FOR_VARIANT_RIDES_REASON serviceTierBlocked
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 
+      },
+      option1 {
+        text = getString CALL_SUPPORT
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , image {
+          imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = MarginRight 8
+        }
+      },
+      option2 {
+      text = getString CLOSE,
+      margin = MarginHorizontal 16 16,
+      color = Color.black650,
+      background = Color.white900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
+    },
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET  "ny_ic_account_blocked"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 250
+      }
+    }

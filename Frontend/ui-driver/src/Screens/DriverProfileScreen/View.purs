@@ -176,6 +176,7 @@ view push state =
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
     , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
+    , if state.props.showDriverSoftBlockedPopup then driverSoftBlockedPopupView push state else dummyTextView
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -458,6 +459,11 @@ manageVehicleItem state vehicle push =
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 profileView push state =
   let driverBlockedHeaderVisibility = state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
+      driverSoftBlockedHeaderVisibility = isJust state.data.driverSoftBlockedVehicle && (isJust state.data.softBlockExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (EHC.getCurrentUTC "") state.data.softBlockExpiryTime) (EHC.getCurrentUTC "") > 0)
+      hourTime = (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A")
+      dateTime = (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+      softBlockedTime = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "hh:mm A"
+      softBlockedDate = EHC.convertUTCtoISC (fromMaybe "" state.data.softBlockExpiryTime) "DD-MM-YYYY"
   in
   PrestoAnim.animationSet [ Anim.fadeIn (not state.props.openSettings) ]
     $ linearLayout
@@ -474,20 +480,20 @@ profileView push state =
             , background Color.red900
             , padding $ Padding 16 16 16 16
             , gravity LEFT
-            , visibility $ boolToVisibility driverBlockedHeaderVisibility
+            , visibility $ boolToVisibility $ driverBlockedHeaderVisibility || driverSoftBlockedHeaderVisibility
             ]
             [ textView $ 
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , color Color.white900
-                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+                , text $ getString $ if driverSoftBlockedHeaderVisibility then BLOCKED_FOR_VARIANT_RIDES_TILL (fromMaybe "" state.data.driverSoftBlockedVehicle) softBlockedTime softBlockedDate else BLOCKED_TILL hourTime dateTime
                 , weight 1.0
                 ] <> FontStyle.subHeading3 TypoGraphy
             , imageView 
                 [ height $ V 24
                 , width $ V 24
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
-                , onClick push $ const ShowDrvierBlockedPopup
+                , onClick push $ const $ if driverSoftBlockedHeaderVisibility then ShowDriverSoftBlockedPopup else ShowDrvierBlockedPopup
                 ]
             ]
         , linearLayout
@@ -2507,6 +2513,13 @@ driverBlockedPopupView push state =
     ]
     [ PopUpModal.view (push <<< DriverBLockedPopupAction) (driverBLockedPopup state) ]
 
+driverSoftBlockedPopupView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverSoftBlockedPopupView push state = 
+  linearLayout
+    [
+      height MATCH_PARENT
+    , width MATCH_PARENT
+    ][ PopUpModal.view (push <<< DriverSoftBLockedPopupAction) (driverSoftBLockedPopup state) ]
 
 rcActiveOnAnotherDriverProfilePopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcActiveOnAnotherDriverProfilePopUpView push state =

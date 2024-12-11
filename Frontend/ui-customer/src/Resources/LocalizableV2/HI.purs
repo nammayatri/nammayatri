@@ -1716,4 +1716,7 @@ getHi = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " प्रमुख मार्गों पर हमारे बस टिकटिंग पायलट लॉन्च का अनुभव करें। जल्द ही और मार्ग जोड़े जाएंगे!")
 , note_your_ticket_is_only_valid_for : (\s -> "ध्यान दें: आपकी टिकट बुकिंग के " <> s <> " तक ही वैध है। स्थानीय परिस्थितियों के कारण बसों का समय बदल सकता है, इसलिए कृपया बुकिंग के समय स्टॉप पर तैयार रहें।")
 , here_is_bus_ticket : "यहाँ बस टिकट है"
+, were_you_asked_to_pay_extra_q : "क्या आपसे ज़्यादा पैसे देने के लिए कहा गया?"
+, were_you_asked_to_pay_extra_desc : "अगर ड्राइवर/राइडर ने ऊपर दिखाए गए अंतिम किराए से ज़्यादा पैसे मांगे हों, तो हमें बताएं।"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "हम असुविधा के लिए हार्दिक माफी चाहते हैं"
 }

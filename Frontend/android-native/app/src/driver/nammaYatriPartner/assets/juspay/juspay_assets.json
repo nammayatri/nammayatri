@@ -941,6 +941,8 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_asked_extra_fare" : true,
+      "ny_ic_account_blocked_for_n_days" : true
    }
 }

@@ -482,7 +482,9 @@ view push state =
         state.props.showAddUPIPopUp,
         state.props.showVerifyUPIPopUp,
         state.props.accountBlockedPopupDueToCancellations,
-        state.props.showMetroWarriorWarningPopup
+        state.props.showMetroWarriorWarningPopup,
+        state.props.showAskedExtraFarePopUp,
+        state.props.showDriverSoftBlockedPopup
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2448,6 +2450,8 @@ popupModals push state =
           ST.VerifyUPI -> verifyUPI state
           ST.AccountBlockedDueToCancellations -> accountBlockedDueToCancellationsPopup state
           ST.MetroWarriorWarning -> disableMetroWarriorWarningPopup state
+          ST.AskedExtraFare -> askedExtraFareConfig state
+          ST.BlockedForNDays -> blockedForNDaysConfig state
       ]
   where 
   
@@ -2464,6 +2468,8 @@ popupModals push state =
       else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
       else if state.props.accountBlockedPopupDueToCancellations then ST.AccountBlockedDueToCancellations
       else if state.props.showMetroWarriorWarningPopup then ST.MetroWarriorWarning
+      else if state.props.showAskedExtraFarePopUp then ST.AskedExtraFare
+      else if state.props.showDriverSoftBlockedPopup then ST.BlockedForNDays
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2480,6 +2486,8 @@ popupModals push state =
           ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
           ST.AccountBlockedDueToCancellations -> AccountBlockedDueToCancellationsAC
           ST.MetroWarriorWarning -> MetroWarriorPopupAC
+          ST.AskedExtraFare -> AskedExtraFare
+          ST.BlockedForNDays -> BlockedForNDays
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
