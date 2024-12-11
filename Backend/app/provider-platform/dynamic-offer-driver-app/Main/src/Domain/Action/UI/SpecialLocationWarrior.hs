@@ -20,6 +20,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (elem, filter, id, map, whenJust)
 import Kernel.Prelude
+import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
@@ -78,8 +79,9 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocationId' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLocId
     getDriverTag preferredPrimarySpecialLocationId' driverInfo.preferredSecondarySpecialLocIds
-
-  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocationId preferredSecondarySpecialLocIds personId
+  now <- getCurrentTime
+  let enabledAt = if isSpecialLocWarrior then Just now else Nothing
+  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocationId preferredSecondarySpecialLocIds enabledAt personId
 
   mbDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocationId' <- MaybeT $ pure preferredPrimarySpecialLocationId

@@ -75,6 +75,7 @@ data DriverInformationT f = DriverInformationT
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     softBlockStiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
+    specialLocWarriorEnabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     subscribed :: B.C f Kernel.Prelude.Bool,
     tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
