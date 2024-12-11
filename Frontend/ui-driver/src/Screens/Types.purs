@@ -482,7 +482,11 @@ type DriverProfileScreenData = {
   completingProfileRes :: CompletingProfileRes,
   driverBlocked :: Boolean,
   blockedExpiryTime :: String,
-  favCount :: Maybe Int
+  blockReason :: Maybe String,
+  favCount :: Maybe Int,
+  driverSoftBlockedVehicle :: Maybe String,
+  softBlockExpiryTime :: Maybe String,
+  softBlockReasonFlag :: Maybe String
 }
 
 type CompletingProfileRes = {
@@ -596,7 +600,8 @@ type DriverProfileScreenProps = {
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
-  showDriverBlockedPopup :: Boolean
+  showDriverBlockedPopup :: Boolean,
+  showDriverSoftBlockedPopup :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1096,6 +1101,10 @@ type HomeScreenData =  {
 , onRideBannerTimer :: Int
 , blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
+, blockReason :: Maybe String
+, driverSoftBlockedVehicle :: Maybe String
+, softBlockExpiryTime :: Maybe String
+, softBlockReasonFlag :: Maybe String
 }
 
 type PlansState = {
@@ -1404,7 +1413,9 @@ type HomeScreenProps =  {
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
   intercityInfoPopUp :: Boolean,
-  showParcelIntroductionPopup :: Boolean
+  showParcelIntroductionPopup :: Boolean,
+  showAskedExtraFarePopUp :: Boolean,
+  showDriverSoftBlockedPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -1949,6 +1960,7 @@ data NotificationType =  DRIVER_REACHED
                       | TRIP_STARTED
                       | EDIT_LOCATION
                       | DRIVER_REACHED_DESTINATION
+                      | ISSUE_BREACH_EXTRA_FARE_MITIGATION
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -2619,7 +2631,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations | AskedExtraFare | BlockedForNDays
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3255,4 +3267,5 @@ type UploadParcelImageScreenProps = {
   showConfirmAndUploadButton :: Boolean,
   isStartRideActive :: Boolean,
   uploading :: Boolean
-} 
+}
+ 

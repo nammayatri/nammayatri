@@ -1681,4 +1681,7 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "Were you asked to pay extra?"
+, were_you_asked_to_pay_extra_desc : "Let us know if the driver/rider demanded payment more than the final fare shown above."
+, we_are_sorry_to_hear_this_please_click_on_need_help : "We sincerely apologize for the inconvenience."
 }

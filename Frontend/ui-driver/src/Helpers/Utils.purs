@@ -1196,3 +1196,30 @@ getHvErrorMsg errorCode =
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
+
+getVehicleServiceTierFromStr :: String -> SA.ServiceTierType
+getVehicleServiceTierFromStr str =
+  case str of
+    "COMFY"        -> SA.COMFY
+    "ECO"          -> SA.ECO
+    "PREMIUM"      -> SA.PREMIUM
+    "SUV"          -> SA.SUV_TIER
+    "AUTO_RICKSHAW"-> SA.AUTO_RICKSHAW
+    "HATCHBACK"    -> SA.HATCHBACK_TIER
+    "SEDAN"        -> SA.SEDAN_TIER
+    "TAXI"         -> SA.TAXI
+    "TAXI_PLUS"    -> SA.TAXI_PLUS
+    "RENTALS"      -> SA.RENTALS
+    "INTERCITY"    -> SA.INTERCITY
+    "BIKE"         -> SA.BIKE_TIER
+    "SUV_PLUS"     -> SA.SUV_PLUS_TIER
+    "DELIVERY_BIKE"-> SA.DELIVERY_BIKE
+    _              -> SA.COMFY
+
+getLinkedSoftBlockedVehicle :: SA.GetDriverInfoResp -> Maybe String
+getLinkedSoftBlockedVehicle (SA.GetDriverInfoResp driverInfo) = 
+  case driverInfo.linkedVehicle, driverInfo.softBlockStiers of
+    Just (SA.Vehicle linkedVehicle), Just softBlockServiceTiers -> linkedVehicle.serviceTierType >>= (isTierInList softBlockServiceTiers) 
+    _,_ -> Nothing
+  where
+    isTierInList tiers tier = if (getVehicleServiceTierFromStr tier) `DA.elem` tiers then Just $ show tier else Nothing

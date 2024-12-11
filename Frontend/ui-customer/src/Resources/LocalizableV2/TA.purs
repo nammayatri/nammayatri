@@ -1681,4 +1681,7 @@ getTa = Keymap {
 , confirm_contacts : "தொடர்புகளை உறுதிப்படுத்தவும்"
 , tickets_for_delhi_metro : "டெல்ஹி மெட்ரோ டிக்கெட்கள்"
 , max_parcel_size : (\l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "உங்களுக்கு அதிகம் பணம் கட்ட சொல்லியிருந்தார்களா?"
+, were_you_asked_to_pay_extra_desc : "மேலே காட்டியுள்ள இறுதி கட்டணத்தை விட அதிகம் பணம் கேட்டால் எங்களுக்கு தெரியப்படுத்துங்கள்."
+, we_are_sorry_to_hear_this_please_click_on_need_help : "இதை கேட்டு வருத்தமாயுள்ளது. புகார் அளிக்க \"உதவி தேவை\" என்பதை சொடுக்கவும்."
 }

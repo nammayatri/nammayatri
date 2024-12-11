@@ -1819,3 +1819,6 @@ getProxy str = case str of
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
   TRUCK -> \a -> a @~ truck
   REGISTER_YOUR_TRUCK -> \a -> a @~ register_your_truck
+  YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS -> \a -> a @~ you_have_been_blocked_for_n_days
+  BLOCKED_FOR_VARIANT_RIDES_TILL arg1 arg2 arg3 -> \a -> (a @~ blocked_for_variant_rides_till) arg1 arg2 arg3
+  BLOCKED_FOR_VARIANT_RIDES_REASON arg1 -> \a -> (a @~ blocked_for_variant_rides_reason) arg1

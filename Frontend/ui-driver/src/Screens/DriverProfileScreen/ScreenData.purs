@@ -125,6 +125,10 @@ initData =
     , driverBlocked : false
     , blockedExpiryTime : ""
     , favCount : Nothing
+    , blockReason : Nothing
+    , driverSoftBlockedVehicle : Nothing
+    , softBlockExpiryTime: Nothing
+    , softBlockReasonFlag: Nothing
     },
 
   props: {
@@ -164,7 +168,8 @@ initData =
     isRideActive : false,
     canSwitchToRental : Nothing,
     canSwitchToInterCity : Nothing,
-    showDriverBlockedPopup : false
+    showDriverBlockedPopup : false,
+    showDriverSoftBlockedPopup : false
    }
 }
 
@@ -294,6 +299,10 @@ dummyDriverInfo = GetDriverInfoResp {
     , totalRidesTaken : Nothing
     , subscriptionEnabledForVehicleCategory : Nothing
     , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , blockedReasonFlag : Nothing
+    , softBlockStiers : Nothing
+    , softBlockExpiryTime : Nothing
+    , softBlockReasonFlag : Nothing
 }
 
 organizationInfo :: OrganizationInfo

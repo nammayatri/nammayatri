@@ -92,7 +92,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
-import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
+import Services.Accessor (_lat, _lon, _area, _extras, _instructions, _extraFareMitigationFlag, _vehicleVariant)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -470,6 +470,8 @@ data Action = NoAction
             | DeliveryCall ST.DeliverCallType
             | NotifyReachedDestination
             | ParcelIntroductionPopup PopUpModal.Action
+            | AskedExtraFare PopUpModal.Action
+            | BlockedForNDays PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -710,7 +712,7 @@ eval (Notification notificationType) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
-  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.ISSUE_BREACH_EXTRA_FARE_MITIGATION]) then do
       exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else continue state
 
@@ -1370,7 +1372,7 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq, showAskedExtraFarePopUp = (activeRide ^. _extraFareMitigationFlag) == Just true && (activeRide ^. _vehicleVariant) == "BIKE"}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
@@ -1729,6 +1731,16 @@ eval (ParcelIntroductionPopup action) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_parcel_introduction_clicked"
       void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
       continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
+
+eval (AskedExtraFare PopUpModal.OnButton1Click) state = 
+  continue state {props {showAskedExtraFarePopUp = false}}
+
+eval (BlockedForNDays PopUpModal.OnButton1Click) state = 
+  continue state {props {showDriverSoftBlockedPopup = false}}
+
+eval (BlockedForNDays PopUpModal.OnButton2Click) state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state {props {showDriverSoftBlockedPopup = false}}
 
 eval _ state = update state 
 

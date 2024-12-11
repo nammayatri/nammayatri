@@ -1767,6 +1767,11 @@ newtype Keymap
   , no_plan_selected :: String
   , a_new_way_to_earn_parcel :: String
   , seamless_earning_experience_click_below :: String
+  , warning :: String
+  , you_have_been_blocked_for_n_days :: String
+  , do_not_ask_customers_for_extra_payment :: String
+  , blocked_for_variant_rides_till :: String -> String -> String -> String
+  , blocked_for_variant_rides_reason :: String -> String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7016,3 +7021,18 @@ a_new_way_to_earn_parcel = a
 
 seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_click_below"
 seamless_earning_experience_click_below = a
+
+warning :: Proxy "warning"
+warning = a
+
+you_have_been_blocked_for_n_days :: Proxy "you_have_been_blocked_for_n_days"
+you_have_been_blocked_for_n_days = a
+
+do_not_ask_customers_for_extra_payment :: Proxy "do_not_ask_customers_for_extra_payment"
+do_not_ask_customers_for_extra_payment = a
+
+blocked_for_variant_rides_till :: Proxy "blocked_for_variant_rides_till"
+blocked_for_variant_rides_till = a
+
+blocked_for_variant_rides_reason :: Proxy "blocked_for_variant_rides_reason"
+blocked_for_variant_rides_reason = a

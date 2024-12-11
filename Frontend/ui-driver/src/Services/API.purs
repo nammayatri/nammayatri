@@ -486,6 +486,10 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , totalRidesTaken :: Maybe Int
     , subscriptionEnabledForVehicleCategory :: Maybe Boolean
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
+    , blockedReasonFlag :: Maybe String
+    , softBlockStiers :: Maybe (Array ServiceTierType)
+    , softBlockExpiryTime :: Maybe String
+    , softBlockReasonFlag :: Maybe String
     }
 
 
@@ -699,7 +703,8 @@ newtype RidesInfo = RidesInfo
       roundTrip :: Boolean,
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
-      receiverDetails :: Maybe PersonDetails
+      receiverDetails :: Maybe PersonDetails,
+      extraFareMitigationFlag :: Maybe Boolean
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType

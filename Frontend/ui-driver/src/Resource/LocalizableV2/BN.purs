@@ -1753,4 +1753,9 @@ getBn =
     , no_plan_selected : "কোন পরিকল্পনা নির্বাচিত নেই"
     , a_new_way_to_earn_parcel: "আয়ের নতুন উপায় - পার্সেল 2W"
     , seamless_earning_experience_click_below: "সহজ আয়ের অভিজ্ঞতার জন্য নিচে ক্লিক করুন"
+    , warning : "সতর্কতা!"
+    , you_have_been_blocked_for_n_days: "অতিরিক্ত ভাড়া নিয়ে একাধিক গ্রাহক অভিযোগের কারণে আপনাকে দিনের জন্য ব্লক করা হয়েছে।"
+    , do_not_ask_customers_for_extra_payment: "গ্রাহকদের কাছে অতিরিক্ত অর্থ চাইবেন না। এটি চালিয়ে গেলে আপনি ব্লক হতে পারেন।"
+    , blocked_for_variant_rides_till: (\a b c -> a <> "যাত্রার জন্য " <> b <> "," <> c <> "পর্যন্ত ব্লক করা হয়েছে")
+    , blocked_for_variant_rides_reason: (\a -> "অতিরিক্ত ভাড়ার বিষয়ে একাধিক গ্রাহকের অভিযোগের কারণে আপনাকে " <> a <> " যাত্রার জন্য ব্লক করা হয়েছে")
     }

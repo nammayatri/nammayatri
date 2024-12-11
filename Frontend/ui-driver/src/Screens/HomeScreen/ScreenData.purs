@@ -176,6 +176,10 @@ initData =
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
       , blockExpiryTime : ""
+      , blockReason : Nothing
+      , driverSoftBlockedVehicle : Nothing
+      , softBlockExpiryTime : Nothing
+      , softBlockReasonFlag : Nothing
     }
   , props:
       { isFreeRide: false
@@ -273,6 +277,8 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , showParcelIntroductionPopup : false
+      , showAskedExtraFarePopUp : false
+      , showDriverSoftBlockedPopup : false
       }
   }
 

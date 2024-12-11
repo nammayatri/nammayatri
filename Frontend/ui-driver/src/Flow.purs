@@ -130,7 +130,7 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _extraFareMitigationFlag, _vehicleVariant)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
@@ -202,7 +202,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
-    when baseFlow $ showParcelIntroductionPopup
+    when baseFlow $ showParcelIntroductionPopup *> showDriverSoftBlockedPopUp
     initialFlow    
     where
     updateOperatingCity :: FlowBT String Unit
@@ -296,6 +296,24 @@ baseAppFlow baseFlow event driverInfoResponse = do
               Nothing -> pure unit
           _ -> pure unit
       else pure unit
+    
+    showDriverSoftBlockedPopUp :: FlowBT String Unit
+    showDriverSoftBlockedPopUp = do
+      case driverInfoResponse of
+        Just (Right (GetDriverInfoResp driverInfoResp)) -> do    
+          let softBlockedVehicle = HU.getLinkedSoftBlockedVehicle (GetDriverInfoResp driverInfoResp)
+          modifyScreenState
+            $ HomeScreenStateType
+                ( \homeScreen ->
+                    homeScreen {
+                      data { 
+                        driverSoftBlockedVehicle = softBlockedVehicle
+                        , softBlockExpiryTime = driverInfoResp.softBlockExpiryTime
+                        , softBlockReasonFlag = driverInfoResp.softBlockReasonFlag
+                        }, 
+                        props { showDriverSoftBlockedPopup = isJust softBlockedVehicle}}
+              )
+        _ -> pure unit
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do
@@ -2287,6 +2305,7 @@ currentRideFlow activeRideResp isActiveRide = do
                 state = allState.homeScreen
                 activeRide = (activeRideDetail state (RidesInfo ride))
                 stage = (if activeRide.status == NEW then (if (any (\c -> c == ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ChatWithCustomer else RideAccepted) else RideStarted)
+                showAskedExtraFarePopUp = ride.extraFareMitigationFlag == Just true && ride.vehicleVariant == "BIKE"
             sourceMod <- translateString decodedSource 500
             destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
               destMod <- translateString decodedDestination' 500
@@ -2315,8 +2334,8 @@ currentRideFlow activeRideResp isActiveRide = do
             void $ updateStage $ HomeScreenStage stage
             void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
             let stateChange = if (ride.bookingType == Just ADVANCED) 
-                                  then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})) 
-                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)}}))
+                then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})) 
+                else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired), showAskedExtraFarePopUp = showAskedExtraFarePopUp}}))
             modifyScreenState $ stateChange
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -2440,7 +2459,7 @@ homeScreenFlow = do
   case action of             
     GO_TO_PROFILE_SCREEN updatedState -> do 
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate, blockReason = updatedState.data.blockReason}}
       driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
@@ -2777,6 +2796,11 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
             baseAppFlow false Nothing Nothing
           else pure unit
+        "ISSUE_BREACH_EXTRA_FARE_MITIGATION" -> do
+          (GetDriverInfoResp getDriverInfoResp) <- Remote.getDriverInfoBT ""
+          let softBlockedVehicle = HU.getLinkedSoftBlockedVehicle (GetDriverInfoResp getDriverInfoResp)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {softBlockExpiryTime = getDriverInfoResp.softBlockExpiryTime, softBlockReasonFlag = getDriverInfoResp.softBlockReasonFlag, driverSoftBlockedVehicle = softBlockedVehicle}, props {showDriverSoftBlockedPopup = isJust softBlockedVehicle}})
+          homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -2808,7 +2832,7 @@ homeScreenFlow = do
           case (rideList.list DA.!! 0) of
             Just ( rideInfo) -> do
               let currActiveRideDetails = activeRideDetail state rideInfo
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true, showAskedExtraFarePopUp = (rideInfo ^. _extraFareMitigationFlag) == Just true && (rideInfo ^. _vehicleVariant) == "BIKE"}})
               pure unit
             Nothing -> pure unit
       homeScreenFlow
@@ -3885,7 +3909,8 @@ updateBannerAndPopupFlags = do
 
     showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN ST.VerifyUPI && isJust payoutVpa && case payoutVpaStatus of 
                                                                                                               Just status -> status == MANUALLY_ADDED
-                                                                                                              Nothing -> false
+                                                                                                              Nothing -> false   
+
   when shouldDriverbeOffline $ changeDriverStatus Offline
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
