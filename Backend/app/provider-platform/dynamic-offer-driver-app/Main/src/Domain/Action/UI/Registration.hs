@@ -223,6 +223,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             merchantId = Just merchantId,
             active = False,
             onRide = False,
+            specialLocWarriorEnabledAt = Nothing,
             enabled = False,
             blocked = False,
             numOfLocks = 0,

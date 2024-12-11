@@ -75,6 +75,7 @@ data DriverInformation = DriverInformation
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     softBlockStiers :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
+    specialLocWarriorEnabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     subscribed :: Kernel.Prelude.Bool,
     tollRelatedIssueCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
