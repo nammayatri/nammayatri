@@ -174,3 +174,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_upgraded_to_cab boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN vehicle_icon_url character varying(255) ;
+
+
+
+------- SQL updates -------
+
