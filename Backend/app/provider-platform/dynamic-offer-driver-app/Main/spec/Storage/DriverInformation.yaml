@@ -54,6 +54,7 @@ DriverInformation:
     subscribed: Bool
     paymentPending: Bool
     isSpecialLocWarrior: Bool
+    specialLocWarriorEnabledAt: Maybe UTCTime
     preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
     preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
     referralCode: Maybe Text
@@ -286,7 +287,7 @@ DriverInformation:
       where: driverId
     updateSpecialLocWarriorInfo:
       kvFunction: updateOneWithKV
-      params: [isSpecialLocWarrior, preferredPrimarySpecialLocId, preferredSecondarySpecialLocIds]
+      params: [isSpecialLocWarrior, preferredPrimarySpecialLocId, preferredSecondarySpecialLocIds, specialLocWarriorEnabledAt]
       where: driverId
     updateTripEndLocation:
       kvFunction: updateOneWithKV

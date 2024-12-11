@@ -65,6 +65,7 @@ Ride:
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
+    isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
     fromLocation: Location
     stops : "[Location]"
@@ -199,6 +200,7 @@ Ride:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     deliveryFileIds: (Kernel.Types.Id.Id <$> ) <$> deliveryFileIds|E
+    isDriverSpecialLocWarrior: Kernel.Prelude.fromMaybe False isDriverSpecialLocWarrior|E
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
 
   toTType:
@@ -226,6 +228,7 @@ Ride:
     tripCategory: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     onlinePayment: Kernel.Prelude.Just|I
+    isDriverSpecialLocWarrior: Kernel.Prelude.Just|I
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
@@ -243,6 +246,7 @@ Ride:
     isAdvanceBooking: Maybe Bool
     tripCategory: Maybe TripCategory
     onlinePayment: Maybe Bool
+    isDriverSpecialLocWarrior: Maybe Bool
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
 

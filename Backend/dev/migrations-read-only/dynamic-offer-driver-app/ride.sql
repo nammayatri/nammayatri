@@ -182,3 +182,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN has_stops boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pickup_or_destination_edited boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_driver_special_loc_warrior boolean ;
