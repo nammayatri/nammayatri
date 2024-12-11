@@ -555,6 +555,7 @@
       "ny_ic_money_outline" : true,
       "ic_phone_filled_green" : true,
       "ic_phone_filled_red" : true,
-      "ny_ic_parce_correct_image" : true
+      "ny_ic_parce_correct_image" : true,
+      "ny_ic_parcel_box" : true
    }
 }
