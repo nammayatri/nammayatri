@@ -537,6 +537,20 @@ config =
                 enableCabBanner = false
               }
           },
+          defaultCityConfig 
+          {   cityName = "Bidar"
+            , cityCode = "std:8482"
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = true
+            , enableScheduling = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
 
            defaultCityConfig 
           {   cityName = "Thanjavur"

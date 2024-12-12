@@ -74,6 +74,7 @@ defaultCityRemoteConfig defaultValue =
   , cuttack : Just defaultValue
   , puri : Just defaultValue
   , pudukkottai : Just defaultValue
+  , bidar : Just defaultValue
   , config: Nothing
   }
 
@@ -189,6 +190,7 @@ getCityBasedConfig config city = case city of
   "cuttack" -> fromMaybe config.default config.cuttack
   "puri" -> fromMaybe config.default config.puri
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
+  "bidar" -> fromMaybe config.default config.bidar
   _ -> case (getMerchant FunctionCall) of
         YATRISATHI -> fromMaybe config.default config.ysCities
         _ -> config.default
