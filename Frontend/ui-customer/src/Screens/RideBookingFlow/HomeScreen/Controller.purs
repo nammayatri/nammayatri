@@ -2545,7 +2545,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVe
       { data
           { selectedQuoteId = Just config.id
           , selectedQuoteVariant = Just config.vehicleVariant
-          , selectedEstimatesObject = config
+          , selectedEstimatesObject = config {activeIndex = config.index}
           }
       }
   else 
