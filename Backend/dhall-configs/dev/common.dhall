@@ -87,4 +87,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , internalEndPointMap
     , urlShortnerConfig
     , sosAlertsTopicARN
+    , ondcRegistryUrl
+    , ondcGatewayUrl
+    , nyRegistryUrl
+    , nyGatewayUrl
     }
