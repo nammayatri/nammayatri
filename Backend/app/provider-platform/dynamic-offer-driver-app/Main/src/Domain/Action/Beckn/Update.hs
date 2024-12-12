@@ -268,7 +268,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     timeDiffFromUtc = Nothing,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
                     currency = booking.currency,
-                    distanceUnit = booking.distanceUnit
+                    distanceUnit = booking.distanceUnit,
+                    merchantOperatingCityId = Just booking.merchantOperatingCityId
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now

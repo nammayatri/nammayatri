@@ -58,7 +58,9 @@ updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
+      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -75,7 +77,9 @@ instance FromTType' Beam.Rating Domain.Types.Rating.Rating where
             rideId = Kernel.Types.Id.Id rideId,
             riderId = Kernel.Types.Id.Id riderId,
             updatedAt = updatedAt,
-            wasOfferedAssistance = wasOfferedAssistance
+            wasOfferedAssistance = wasOfferedAssistance,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
@@ -89,5 +93,7 @@ instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
         Beam.rideId = Kernel.Types.Id.getId rideId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.updatedAt = updatedAt,
-        Beam.wasOfferedAssistance = wasOfferedAssistance
+        Beam.wasOfferedAssistance = wasOfferedAssistance,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

@@ -20,6 +20,8 @@ instance FromTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferr
           { driverId = Kernel.Types.Id.Id driverId,
             linkedAt = linkedAt,
             referralCode = Kernel.Types.Id.Id referralCode,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -30,6 +32,8 @@ instance ToTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.linkedAt = linkedAt,
         Beam.referralCode = Kernel.Types.Id.getId referralCode,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

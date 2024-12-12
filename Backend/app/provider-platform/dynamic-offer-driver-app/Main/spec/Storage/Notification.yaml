@@ -65,4 +65,4 @@ Notification:
     - EXTRA_DOMAIN_TYPE_FILE
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

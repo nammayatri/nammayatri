@@ -238,7 +238,8 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
           responseCode = Nothing,
           responseMessage = Nothing,
           createdAt = now,
-          updatedAt = now
+          updatedAt = now,
+          merchantId = Just merchantId
         }
     mkNotificationRequest driverInfoForPDN shortId = do
       now <- getCurrentTime

@@ -171,7 +171,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               tollCharges = Nothing,
               vehicleAge = vehicleAge,
               currency = searchReq.currency,
-              distanceUnit = searchReq.distanceUnit
+              distanceUnit = searchReq.distanceUnit,
+              merchantOperatingCityId = Just searchReq.merchantOperatingCityId
             }
       pure $ Fare.fareSum fareParams
 

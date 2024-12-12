@@ -17,6 +17,7 @@ data PayoutTransaction = PayoutTransaction
     gateWayRefId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction,
     merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutOrderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder,
     status :: Kernel.Prelude.Text,
     transactionRef :: Kernel.Prelude.Text,

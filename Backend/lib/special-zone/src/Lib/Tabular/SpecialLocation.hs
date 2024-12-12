@@ -36,8 +36,9 @@ mkPersist
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
+      merchantId Text Maybe
       merchantOperatingCityId Text Maybe
-      linkedLocationsIds (PostgresList Text),
+      linkedLocationsIds (PostgresList Text)
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -57,5 +58,7 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
           gates = unPostgresList gates,
           geom = Nothing,
           linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),
+          merchantId = Id <$> merchantId,
+          merchantOperatingCityId = Id <$> merchantOperatingCityId,
           ..
         }
