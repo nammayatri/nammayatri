@@ -517,6 +517,35 @@ config =
               }
           },
 
+          defaultCityConfig 
+          {   cityName = "Pudukkottai"
+            , cityCode = "std:04322"
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = true
+            , enableScheduling = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+          defaultCityConfig 
+          {   cityName = "Bidar"
+            , cityCode = "std:8482"
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = true
+            , enableScheduling = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
            defaultCityConfig 
           {   cityName = "Thanjavur"
             , cityCode = "std:04362"

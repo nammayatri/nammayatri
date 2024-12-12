@@ -67,6 +67,8 @@ defaultCityRemoteConfig defaultValue =
   , gulbarga : Just defaultValue
   , udupi : Just defaultValue
   , ysCities : Just defaultValue
+  , pudukkottai : Just defaultValue
+  , bidar : Just defaultValue
   , config: Nothing
   }
 
@@ -161,6 +163,8 @@ getCityBasedConfig config city = case city of
   "mangalore" -> fromMaybe config.default config.mangalore
   "gulbarga" -> fromMaybe config.default config.gulbarga
   "udupi" -> fromMaybe config.default config.udupi
+  "pudukkottai" -> fromMaybe config.default config.pudukkottai
+  "bidar" -> fromMaybe config.default config.bidar
   _ -> case (getMerchant FunctionCall) of
         YATRISATHI -> fromMaybe config.default config.ysCities
         _ -> config.default
