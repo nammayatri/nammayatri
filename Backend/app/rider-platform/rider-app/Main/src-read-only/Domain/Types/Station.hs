@@ -24,6 +24,7 @@ data Station = Station
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
+    stationCategory :: Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

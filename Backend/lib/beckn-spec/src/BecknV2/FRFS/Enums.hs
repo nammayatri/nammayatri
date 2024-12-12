@@ -74,6 +74,11 @@ data VehicleCategory = METRO | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
+-- data StationCategory = MULTIMODAL_STATION | INDEPENDENT_STATION
+--   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+-- $(mkHttpInstancesForEnum ''StationCategory)
+
 data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

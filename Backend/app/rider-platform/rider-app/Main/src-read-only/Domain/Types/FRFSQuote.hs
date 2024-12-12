@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.Station
+import qualified Domain.Types.StationType
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -40,6 +41,7 @@ data FRFSQuote = FRFSQuote
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    stationCategory :: Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory,
     stationsJson :: Kernel.Prelude.Text,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,

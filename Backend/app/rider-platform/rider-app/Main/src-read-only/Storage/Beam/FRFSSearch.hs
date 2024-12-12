@@ -8,6 +8,7 @@ module Storage.Beam.FRFSSearch where
 import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.StationType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -29,6 +30,7 @@ data FRFSSearchT f = FRFSSearchT
     quantity :: B.C f Kernel.Prelude.Int,
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory),
     toStationId :: B.C f Kernel.Prelude.Text,
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

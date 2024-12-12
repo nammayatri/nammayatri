@@ -51,6 +51,7 @@ import Domain.Types.RiderConfig
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.StationType as DST
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
@@ -646,10 +647,10 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                 void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
             DTrip.Metro -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.METRO frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) (Just DST.MULTIMODAL_STATION) Spec.METRO frfsSearchReq
             DTrip.Bus -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.BUS frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) (Just DST.MULTIMODAL_STATION) Spec.BUS frfsSearchReq
             DTrip.Walk -> do
               fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
               toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}

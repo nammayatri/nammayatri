@@ -12,6 +12,7 @@ import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.Route
 import qualified Domain.Types.Station
+import qualified Domain.Types.StationType
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.JourneyPlannerTypes
@@ -28,6 +29,7 @@ data FRFSSearch = FRFSSearch
     quantity :: Kernel.Prelude.Int,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
+    stationCategory :: Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
