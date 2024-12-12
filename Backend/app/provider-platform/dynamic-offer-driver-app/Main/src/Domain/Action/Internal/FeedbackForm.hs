@@ -36,7 +36,7 @@ saveFeedbackFormResult feedbackFormReq = do
   let rideId = feedbackFormReq.rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   feedbackChipsList <- getFeedbackAnswers feedbackFormReq
-  addFeedback feedbackChipsList rideId ride.driverId
+  addFeedback feedbackChipsList ride ride.driverId
   updateFeedbackBadge feedbackChipsList ride.driverId
   pure Success
 
@@ -49,14 +49,18 @@ getFeedbackAnswers req = do
     getAnswerLists :: [FeedbackAnswer] -> [[Text]]
     getAnswerLists = map (\(FeedbackAnswer _ answers) -> answers)
 
-addFeedback :: [Text] -> Id DRide.Ride -> Id DP.Person -> Flow ()
-addFeedback feedbackChipsList rideId driverId = do
+addFeedback ::
+  [Text] ->
+  DRide.Ride ->
+  Id DP.Person ->
+  Flow ()
+addFeedback feedbackChipsList ride driverId = do
   unless (null feedbackChipsList) $ do
     newFeedbacks <- generateFeedbackList feedbackChipsList
     QFeedback.createMany newFeedbacks
   where
     generateFeedbackList :: MonadFlow m => [Text] -> m [DFeedback.Feedback]
-    generateFeedbackList = mapM (buildFeedback rideId driverId)
+    generateFeedbackList = mapM (buildFeedback ride driverId)
 
 updateFeedbackBadge :: [Text] -> Id DP.Person -> Flow ()
 updateFeedbackBadge feedbackChipsList driverId = do
@@ -73,13 +77,21 @@ updateFeedbackBadge feedbackChipsList driverId = do
           newFeedbackBadge <- buildFeedbackBadge driverId badge
           QFeedbackBadge.createFeedbackBadge newFeedbackBadge
 
-buildFeedback :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Text -> m DFeedback.Feedback
-buildFeedback rideId driverId badge = do
+buildFeedback ::
+  MonadFlow m =>
+  DRide.Ride ->
+  Id DP.Person ->
+  Text ->
+  m DFeedback.Feedback
+buildFeedback ride driverId badge = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   pure $
     DFeedback.Feedback
       { createdAt = now,
+        rideId = ride.id,
+        merchantId = ride.merchantId,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId,
         ..
       }
 

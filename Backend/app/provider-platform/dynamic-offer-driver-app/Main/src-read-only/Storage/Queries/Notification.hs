@@ -63,6 +63,7 @@ updateByPrimaryKey (Domain.Types.Notification.Notification {..}) = do
       Se.Set Beam.sourceAmount sourceAmount,
       Se.Set Beam.status status,
       Se.Set Beam.txnDate txnDate,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

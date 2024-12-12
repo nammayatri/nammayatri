@@ -30,6 +30,8 @@ updateByPrimaryKey (Domain.Types.Feedback.Feedback {..}) = do
     [ Se.Set Beam.badge badge,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId)
+      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

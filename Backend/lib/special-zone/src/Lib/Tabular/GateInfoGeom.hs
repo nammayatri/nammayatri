@@ -37,6 +37,8 @@ mkPersist
       specialLocationId SpecialLocationTId
       defaultDriverExtra Int Maybe
       name Text
+      merchantId Text Maybe
+      merchantOperatingCityId Text Maybe
       address Text Maybe
       canQueueUpOnGate Bool
       geom Text Maybe
@@ -51,5 +53,7 @@ instance ToTType GateInfoGeomT Domain.GateInfo where
     GateInfoGeomT
       { id = getId id,
         specialLocationId = toKey specialLocationId,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        merchantId = getId <$> merchantId,
         ..
       }

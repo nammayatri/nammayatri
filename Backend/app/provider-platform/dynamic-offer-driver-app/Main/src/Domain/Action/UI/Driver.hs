@@ -1352,6 +1352,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
+              merchantOperatingCityId = Just merchantOpCityId,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'

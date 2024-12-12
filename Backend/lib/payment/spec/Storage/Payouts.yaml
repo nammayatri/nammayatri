@@ -98,6 +98,7 @@ PayoutTransaction:
     amount : Price
     status : Text
     merchantId: Text
+    merchantOperatingCityId : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:

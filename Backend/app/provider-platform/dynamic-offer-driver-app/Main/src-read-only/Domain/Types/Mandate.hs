@@ -5,6 +5,7 @@
 module Domain.Types.Mandate where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -26,7 +27,8 @@ data Mandate = Mandate
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.Mandate.MandateStatus,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

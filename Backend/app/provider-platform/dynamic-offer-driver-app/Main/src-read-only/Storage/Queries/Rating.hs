@@ -70,6 +70,8 @@ updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
       Se.Set Beam.ratingValue ratingValue,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
+      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

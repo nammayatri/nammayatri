@@ -88,7 +88,7 @@ import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
-import Lib.Types.SpecialLocation
+import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT

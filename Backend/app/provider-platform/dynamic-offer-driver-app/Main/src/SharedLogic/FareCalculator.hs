@@ -41,9 +41,11 @@ import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude as KP
+import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
@@ -261,7 +263,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     tollCharges :: Maybe HighPrecMoney,
     noOfStops :: Int,
     currency :: Currency,
-    distanceUnit :: DistanceUnit
+    distanceUnit :: DistanceUnit,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -357,6 +360,8 @@ calculateFareParameters params = do
             sgst = fp.sgst,
             cgst = fp.cgst,
             platformFeeChargesBy = fp.platformFeeChargesBy,
+            merchantId = Just params.farePolicy.merchantId,
+            merchantOperatingCityId = params.merchantOperatingCityId,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)

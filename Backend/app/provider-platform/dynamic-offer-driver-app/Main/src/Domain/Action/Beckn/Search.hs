@@ -571,7 +571,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           tollCharges = tollCharges,
           currency = searchRequest.currency,
           noOfStops = length searchRequest.stops,
-          distanceUnit = searchRequest.distanceUnit
+          distanceUnit = searchRequest.distanceUnit,
+          merchantOperatingCityId = Just merchantOpCityId
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
@@ -651,7 +652,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               tollCharges = tollCharges,
               noOfStops,
               currency,
-              distanceUnit
+              distanceUnit,
+              merchantOperatingCityId = Just merchantOperatingCityId
             }
     fareParamsMax <- calculateFareParameters params
     fareParamsMin <-
