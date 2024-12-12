@@ -85,4 +85,5 @@
     <string name="includes">அடங்கும்</string>
     <string name="stops_info">%1$d நிறுத்தங்கள் (நிறுத்த கட்டணத்துடன்)</string>
     <string name="stops">%1$d நிறுத்தங்கள்</string>
+    <string name="round_trip">சுற்றுலா பயணம்</string>
 </resources>

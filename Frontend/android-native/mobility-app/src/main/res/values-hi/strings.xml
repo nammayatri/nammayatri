@@ -85,4 +85,6 @@
     <string name="includes">शामिल</string>
     <string name="stops_info">%1$d स्टॉप्स (स्टॉप चार्ज सहित)</string>
     <string name="stops">%1$d स्टॉप्स</string>
+    <string name="round_trip">राउंड ट्रिप</string>
+
 </resources>

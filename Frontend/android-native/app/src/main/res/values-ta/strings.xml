@@ -51,4 +51,5 @@
     <string name="call_support">ஆதரவை அழை</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"கூடுதல் கட்டணம் இல்லை. காலிகைகள் இல்லை. காதிரி கட்டணங்கள் இல்லை."</string>
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
+    <string name="round_trip">சுற்றுலா பயணம்</string>
 </resources>

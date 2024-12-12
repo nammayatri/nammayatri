@@ -147,7 +147,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0;
+            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip();
             if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
@@ -170,6 +170,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
                 holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
+                holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
@@ -660,6 +661,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     Boolean isFavourite = rideRequestBundle.getBoolean("isFavourite");
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                     int stops = rideRequestBundle.getInt("middleStopCount", 0);
+                    boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
                     }
@@ -709,7 +711,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             isFavourite,
                             parkingCharge,
                             getCurrTime,
-                            stops
+                            stops,
+                            roundTrip
                     );
 
                     if (floatyView == null) {

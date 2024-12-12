@@ -50,4 +50,5 @@
     <string name="call_support">सहायता कॉल करें</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"कोई अतिरिक्त किराया नहीं। कोई सुझाव नहीं। कोई प्रतीक्षा शुल्क नहीं।"</string>
     <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
+    <string name="round_trip">राउंड ट्रिप</string>
 </resources>

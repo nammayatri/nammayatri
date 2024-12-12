@@ -53,4 +53,5 @@
     <string name="navigate_to_location">Navigate to location</string>
     <string name="close">Close</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="round_trip">Aller-retour</string>
 </resources>
