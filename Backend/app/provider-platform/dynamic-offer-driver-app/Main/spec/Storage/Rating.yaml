@@ -45,7 +45,6 @@ Rating:
       where:
         and: [id, driverId]
 
-  excludedFields: [merchantOperatingCityId, merchantId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

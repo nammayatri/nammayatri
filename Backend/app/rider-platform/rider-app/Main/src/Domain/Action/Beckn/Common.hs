@@ -1080,7 +1080,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         Nothing ->
           when isReferredByPerson $ do
             QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id

@@ -7,8 +7,6 @@ import qualified Domain.Types.BookingLocation as DBBL
 import qualified Domain.Types.DeliveryPersonDetails as DPD
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -33,11 +31,11 @@ fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerI
     ([], Nothing) -> do
       -- HANDLING OLD DATA : ONLY IF TripCategory is Nothing as for older cases
       logInfo "Accessing Booking Location Table"
-      pickupLoc <- upsertLocationForOldData (Id providerId) (Id <$> merchantOperatingCityId) (Id <$> fromLocationId) id
+      pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
       pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
       QLM.create pickupLocMapping
 
-      dropLoc <- upsertLocationForOldData (Id providerId) (Id <$> merchantOperatingCityId) (Id <$> toLocationId) id
+      dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
       dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
       QLM.create dropLocMapping
       return (pickupLoc, Just dropLoc)
@@ -76,14 +74,12 @@ getBookingTypeFromTripCategory tripCategory =
     _ -> Domain.Types.Booking.NormalBooking
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> DBBL.BookingLocation -> m DL.Location
-buildLocation merchantId mbMerchantOperatingCityId DBBL.BookingLocation {..} =
+buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DBBL.BookingLocation -> m DL.Location
+buildLocation DBBL.BookingLocation {..} =
   return $
     DL.Location
       { id = cast id,
         address = mkLocationAddress address,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = mbMerchantOperatingCityId,
         ..
       }
 
@@ -104,10 +100,10 @@ mkFullAddress DBBL.LocationAddress {..} = do
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
 
-upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
-upsertLocationForOldData merchantId mbMerchantOperatingCityId locationId bookingId = do
+upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
+upsertLocationForOldData locationId bookingId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "Location Id Not Found in Booking Location Table")
-  location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) (buildLocation merchantId mbMerchantOperatingCityId) loc
+  location <- maybe (throwError $ InternalError ("Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
   void $ QL.create location
   return location
 
