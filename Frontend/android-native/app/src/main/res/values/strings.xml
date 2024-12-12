@@ -54,4 +54,5 @@
     <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
     <string name="third_party_booking">"Third Party Booking"</string>
     <string name="title_dynamicfeature" translatable="false">dynamicfeature</string>
+    <string name="round_trip">Round Trip</string>
 </resources>

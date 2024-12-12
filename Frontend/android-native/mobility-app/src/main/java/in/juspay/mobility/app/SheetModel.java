@@ -13,7 +13,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class SheetModel {
-    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource, renderedAt;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource, renderedAt ;
     private String requestId;
     private int startTime, driverDefaultStepFee;
     private double updatedAmount, parkingCharge;
@@ -33,7 +33,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking , roundTrip;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
@@ -82,7 +82,8 @@ public class SheetModel {
                       Boolean isFavourite,
                       double parkingCharge,
                       String renderedAt,
-                      int stops
+                      int stops,
+                      boolean roundTrip
                       ){
 
         this.srcLat = srcLat;
@@ -138,11 +139,14 @@ public class SheetModel {
         this.parkingCharge = parkingCharge;
         this.renderedAt = renderedAt;
         this.stops = stops;
+        this.roundTrip = roundTrip;
     }
 
     public String getRenderedAt(){
         return renderedAt;
     }
+
+    public boolean getRoundTrip(){return roundTrip;}
 
     public String getVehicleServiceTier() {
         return vehicleServiceTier;

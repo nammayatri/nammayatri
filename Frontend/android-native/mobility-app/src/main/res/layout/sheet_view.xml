@@ -237,6 +237,36 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp"  />
                                 </LinearLayout>
+                                <LinearLayout
+                                    android:id="@+id/roundTripRideTypeTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_intercity_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="8dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:id="@+id/roundTripRideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/ny_ic_round_trip_indicator_white" />
+
+                                    <TextView
+                                        android:id="@+id/roundTripRideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="@string/round_trip"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp"  />
+                                </LinearLayout>
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"

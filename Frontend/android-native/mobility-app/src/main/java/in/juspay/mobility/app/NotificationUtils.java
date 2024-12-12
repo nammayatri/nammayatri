@@ -289,6 +289,7 @@ public class NotificationUtils {
                     sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
                     sheetData.putBoolean("isFavourite", entity_payload.has("isFavourite") && entity_payload.optBoolean("isFavourite", false));
                     sheetData.putInt("middleStopCount", entity_payload.optInt("middleStopCount", 0));
+                    sheetData.putBoolean("roundTrip" , entity_payload.optBoolean("roundTrip", false));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
