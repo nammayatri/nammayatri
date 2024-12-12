@@ -17,6 +17,8 @@ data DriverReferralT f = DriverReferralT
   { driverId :: B.C f Data.Text.Text,
     linkedAt :: B.C f Kernel.Prelude.UTCTime,
     referralCode :: B.C f Data.Text.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

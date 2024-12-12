@@ -37,6 +37,8 @@ updateByPrimaryKey (Domain.Types.DriverReferral.DriverReferral {..}) = do
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.linkedAt linkedAt,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

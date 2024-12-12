@@ -300,9 +300,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
+            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
+            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
             ..
           }
 
@@ -315,23 +316,23 @@ deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = d
 
 postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
 postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
-  createOrUpdateGate existingGates request
+  createOrUpdateGate specialLocation existingGates request
   return Success
   where
-    createOrUpdateGate :: [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
-    createOrUpdateGate existingGates req = do
+    createOrUpdateGate :: SL.SpecialLocation -> [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
+    createOrUpdateGate specialLocation existingGates req = do
       let existingGatewithGeom = find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName req.name) existingGates
           existingGate = fst <$> existingGatewithGeom
           mbGeom = snd =<< existingGatewithGeom
-      updatedGate <- mkGate req existingGate mbGeom
+      updatedGate <- mkGate specialLocation req existingGate mbGeom
       void $
         runTransaction $
           if isNothing existingGate then QGIG.create updatedGate else QGIG.updateGate updatedGate
 
-    mkGate :: Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
-    mkGate reqT mbGate mbGeom = do
+    mkGate :: SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
+    mkGate specialLocation reqT mbGate mbGeom = do
       id <- cast <$> maybe generateGUID (return . (.id)) mbGate
       now <- getCurrentTime
       latitude <- fromMaybeM (InvalidRequest "Latitude field cannot be empty for a new gate") $ reqT.latitude <|> (mbGate <&> (.point.lat))
@@ -349,6 +350,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             updatedAt = now,
             point = LatLong {lat = latitude, lon = longitude},
             gateType = D.Pickup,
+            merchantId = specialLocation.merchantId,
+            merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             ..
           }
 

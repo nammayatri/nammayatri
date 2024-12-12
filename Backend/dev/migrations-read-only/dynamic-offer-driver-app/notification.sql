@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.notification ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.notification ADD COLUMN txn_date timestamp with time zone NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.notification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.notification ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.notification ADD COLUMN merchant_id character varying(36) ;

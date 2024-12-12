@@ -135,6 +135,8 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.createdAt = createdAt,
         BeamFP.updatedAt = updatedAt,
+        BeamFP.merchantId = getId <$> merchantId,
+        BeamFP.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
 
@@ -240,6 +242,8 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
               createdAt = createdAt,
               updatedAt = updatedAt,
+              merchantId = Id <$> merchantId,
+              merchantOperatingCityId = Id <$> merchantOperatingCityId,
               ..
             }
     Nothing -> return Nothing

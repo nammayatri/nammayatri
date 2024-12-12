@@ -153,6 +153,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                       },
                 platformFeeChargesBy = fromMaybe FP.Subscription platformFeeChargesBy,
                 updatedAt = fromMaybe now updatedAt,
+                merchantId = Id <$> merchantId,
+                merchantOperatingCityId = Id <$> merchantOperatingCityId,
                 ..
               }
       Nothing -> return Nothing
@@ -191,5 +193,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.currency = Just currency,
         BeamFP.updatedAt = Just updatedAt,
+        merchantId = getId <$> merchantId,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
