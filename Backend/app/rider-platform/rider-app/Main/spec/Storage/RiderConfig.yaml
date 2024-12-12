@@ -43,14 +43,14 @@ RiderConfig:
     policeTriggerDelay: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
-    exotelStatusCheckSchedulerDelay : Int
+    exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
     sensitiveWords: "Maybe [Text]"
-    sensitiveWordsForExactMatch : "Maybe [Text]"
+    sensitiveWordsForExactMatch: "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
     makeMultiModalSearch: Bool
@@ -60,12 +60,13 @@ RiderConfig:
     feedbackAlertRatingThreshold: Int
     postRideSafetyNotificationDelay: NominalDiffTime
     useUserSettingsForSafetyIVR: Bool
+    routeTimestampExpiryTTL: NominalDiffTime
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
     policeTriggerDelay: Maybe Seconds
     hardLimitForSafetyJobs: Maybe Seconds
-    exotelStatusCheckSchedulerDelay : Maybe Seconds
+    exotelStatusCheckSchedulerDelay: Maybe Seconds
     incidentReportSupport: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
@@ -78,6 +79,7 @@ RiderConfig:
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
     useUserSettingsForSafetyIVR: Maybe Bool
+    routeTimestampExpiryTTL: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -99,6 +101,7 @@ RiderConfig:
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
     useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
+    routeTimestampExpiryTTL: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> routeTimestampExpiryTTL)|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -117,6 +120,7 @@ RiderConfig:
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
+    routeTimestampExpiryTTL: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
 
   default:
     enableLocalPoliceSupport: "false"
@@ -133,12 +137,13 @@ RiderConfig:
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
     kaptureQueue: "''"
-    kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
+    kaptureConfig: '''{"kaptureQueue":"", "disposition":""}'''
     exotelStatusCheckSchedulerDelay: "120"
     avgSpeedInKmPerHr: "20"
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
-    postRideSafetyNotificationDelay : "60"
+    postRideSafetyNotificationDelay: "60"
+    routeTimestampExpiryTTL: "900"
     useUserSettingsForSafetyIVR: "false"
 
   queries:

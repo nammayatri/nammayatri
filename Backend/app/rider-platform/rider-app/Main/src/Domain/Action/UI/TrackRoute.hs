@@ -9,6 +9,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as DT
 import qualified Data.Time
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
@@ -30,6 +31,8 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.Common (fromMaybeM)
 import Servant
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRiderConfig
+import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as RTM
@@ -51,12 +54,25 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
   initialRouteInfo :: [(Text, TrackRoute.VehicleInfoForRoute)] <-
     Redis.withCrossAppRedis $ Redis.hGetAll (makeRouteKey routeCode)
 
+  currentUTC <- getCurrentTime
+  personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+  riderConfigInfo <- CQRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+  let staleThreshold = riderConfigInfo.routeTimestampExpiryTTL :: Kernel.Prelude.NominalDiffTime
+  let isInfoStale (vInfo :: TrackRoute.VehicleInfoForRoute) =
+        case vInfo.timestamp of
+          Just timestampText ->
+            case parseUTCTime (DT.unpack timestampText) of
+              Just ts -> ts < addUTCTime (- staleThreshold) currentUTC
+              Nothing -> True
+          Nothing -> True
+
+  let finlInitialRouteInfo = filter (not . isInfoStale . snd) initialRouteInfo
   routeInfoFromRedis <-
-    if null initialRouteInfo
+    if null finlInitialRouteInfo
       then do
         tripIds <- map DRTM.tripCode <$> RTM.findAllTripIdByRouteCode routeCode
         concat <$> forM tripIds (\tripId -> Redis.withCrossAppRedis $ Redis.hGetAll (makeTripKey tripId))
-      else pure initialRouteInfo
+      else pure finlInitialRouteInfo
 
   let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] =
         mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
@@ -102,6 +118,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
       pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, nextStopTravelTime = Just $ Seconds 300, vehicleId = vehicleId_, vehicleInfo = vi} -- TODO :: `nextStopTravelTime` should be calculated as (Avg Speed / Distance), where Average speed should be stored by Bus Tracking in VehicleInfo ?
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
+  where
+    parseUTCTime :: String -> Maybe UTCTime
+    parseUTCTime ts = Data.Time.parseTimeM True Data.Time.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" ts
 
 mkLatLong :: Double -> Double -> Maps.LatLong
 mkLatLong lat_ lon_ =
