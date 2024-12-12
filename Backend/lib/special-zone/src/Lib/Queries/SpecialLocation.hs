@@ -76,7 +76,7 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
   gatesWithShape <- QGI.findAllGatesBySpecialLocationId id
   let gatesInfoFull =
         map
-          ( \(GD.GateInfo {point = gatePoint, id = gateId, gateType = gt, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, ..}, gateShape) ->
+          ( \(GD.GateInfo {point = gatePoint, id = gateId, gateType = gt, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, merchantId = _merchantId, merchantOperatingCityId = _merchantOperatingCityId, ..}, gateShape) ->
               GD.GateInfoFull
                 { GD.id = gateId,
                   GD.point = gatePoint,
@@ -90,6 +90,7 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
     SpecialLocationFull
       { gatesInfo = gatesInfoFull,
         geoJson = Just specialShape,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
 
@@ -193,7 +194,7 @@ deleteById = Esq.deleteByKey @SpecialLocationT
 specialLocToSpecialLocWarrior :: Transactionable m => D.SpecialLocation -> m SpecialLocationWarrior
 specialLocToSpecialLocWarrior D.SpecialLocation {..} = do
   linkedLocations <- mapM Lib.Queries.SpecialLocation.findById linkedLocationsIds >>= pure . catMaybes
-  pure SpecialLocationWarrior {..}
+  pure SpecialLocationWarrior {merchantOperatingCityId = getId <$> merchantOperatingCityId, ..}
 
 specialLocFullToSpecialLocWarrior :: Transactionable m => SpecialLocationFull -> m SpecialLocationWarrior
 specialLocFullToSpecialLocWarrior SpecialLocationFull {..} = do

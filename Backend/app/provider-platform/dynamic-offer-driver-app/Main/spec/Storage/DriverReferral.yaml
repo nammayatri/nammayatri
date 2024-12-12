@@ -19,7 +19,6 @@ DriverReferral:
     referralCode: PrimaryKey
     driverId: SecondaryKey
 
-  excludedFields: [merchantOperatingCityId, merchantId]
 
   queries:
     findByRefferalCode:

@@ -30,11 +30,16 @@ import Kernel.Utils.GenericPretty
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
 
+data Merchant
+
+data MerchantOperatingCity
+
 data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
     locationName :: Text,
     category :: Text,
-    merchantOperatingCityId :: Maybe Text,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     gates :: [GatesInfo], --TODO: deprecate this later
     geom :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],

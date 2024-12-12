@@ -285,9 +285,6 @@ BookingLocation:
   constraints:
     id: PrimaryKey
 
-  excludedFields:
-    - merchantId
-    - merchantOperatingCityId
 
   queries:
     findById:

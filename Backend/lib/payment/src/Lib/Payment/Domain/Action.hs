@@ -932,6 +932,7 @@ payoutStatusUpdates status_ orderId statusResp = do
                     PT.PayoutTransaction
                       { id = uuid,
                         merchantId = order.merchantId,
+                        merchantOperatingCityId = order.merchantOperatingCityId,
                         payoutOrderId = Id orderId,
                         transactionRef = transactionRef,
                         gateWayRefId = gatewayRefId,

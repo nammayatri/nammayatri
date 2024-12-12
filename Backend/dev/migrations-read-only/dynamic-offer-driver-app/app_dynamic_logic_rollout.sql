@@ -9,3 +9,8 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN version_
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD PRIMARY KEY ( domain, merchant_operating_city_id, time_bounds, version);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN merchant_id character varying(36) ;

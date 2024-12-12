@@ -38,5 +38,3 @@ Rating:
     findRatingForRide:
       kvFunction: findOneWithKV
       where: rideId
-
-  excludedFields: [merchantId, merchantOperatingCityId]

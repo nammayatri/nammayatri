@@ -30,6 +30,7 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
@@ -62,7 +63,9 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
@@ -165,7 +168,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
@@ -202,13 +206,19 @@ mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFar
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
 farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} =
-  FullFarePolicy {..}
+farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} =
+  FullFarePolicy
+    { merchantId = merchantId',
+      ..
+    }
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
 fullFarePolicyToFarePolicy ffp@FullFarePolicy {..} =
   let cancellationFarePolicyId = (.id) <$> ffp.cancellationFarePolicy
-   in FarePolicy {..}
+   in FarePolicy
+        { merchantId = Just merchantId,
+          ..
+        }
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

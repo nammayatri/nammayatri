@@ -31,7 +31,8 @@ instance FromTType' Beam.Mandate Domain.Types.Mandate.Mandate where
             payerVpa = payerVpa,
             startDate = startDate,
             status = status,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId
           }
 
 instance ToTType' Beam.Mandate Domain.Types.Mandate.Mandate where
@@ -49,5 +50,6 @@ instance ToTType' Beam.Mandate Domain.Types.Mandate.Mandate where
         Beam.payerVpa = payerVpa,
         Beam.startDate = startDate,
         Beam.status = status,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }

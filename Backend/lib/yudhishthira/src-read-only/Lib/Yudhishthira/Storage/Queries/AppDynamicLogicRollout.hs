@@ -53,7 +53,8 @@ updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (
 updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.percentageRollout percentageRollout,
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.percentageRollout percentageRollout,
       Se.Set Beam.versionDescription versionDescription,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

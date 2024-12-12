@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -136,7 +137,7 @@ handler merchantId req ride = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
+      newRating <- buildRating ride.merchantId (Just ride.merchantOperatingCityId) ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
@@ -167,8 +168,21 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatin
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe (Id D.MediaFile) -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite mediaId = do
+buildRating ::
+  MonadFlow m =>
+  Maybe (Id Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Id DRide.Ride ->
+  Id DP.Person ->
+  Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe (Id D.MediaFile) ->
+  m DRating.Rating
+buildRating merchantId merchantOperatingCityId rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite mediaId = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

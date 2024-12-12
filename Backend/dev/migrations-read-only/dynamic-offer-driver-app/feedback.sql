@@ -6,3 +6,9 @@ ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN driver_id character varyi
 ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN ride_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.feedback ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN merchant_id character varying(36) ;

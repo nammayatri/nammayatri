@@ -1128,7 +1128,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   result <-
     Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
       logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
-      flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file merchantOpCity.id
+      flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
       (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
@@ -1143,11 +1143,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   where
     cleanField = replaceEmpty . T.strip
 
-    readCsv distanceUnit csvFile merchantOpCity = do
+    readCsv merchantId distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM (makeFarePolicy merchantOpCity distanceUnit) v >>= (pure . V.toList)
+        Right (_, v) -> V.imapM (makeFarePolicy merchantId merchantOpCity distanceUnit) v >>= (pure . V.toList)
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
@@ -1294,8 +1294,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
-    makeFarePolicy :: Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
-    makeFarePolicy merchantOpCity distanceUnit idx row = do
+    makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
+    makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
@@ -1522,7 +1522,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, ..})
+      return (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
@@ -1560,8 +1560,9 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
+            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
+            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
             ..
           }
 
@@ -1574,23 +1575,23 @@ deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = d
 
 postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
 postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
-  createOrUpdateGate existingGates request
+  createOrUpdateGate specialLocation existingGates request
   return Success
   where
-    createOrUpdateGate :: [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
-    createOrUpdateGate existingGates req = do
+    createOrUpdateGate :: SL.SpecialLocation -> [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
+    createOrUpdateGate specialLocation existingGates req = do
       let existingGateWithGeom = find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName req.name) existingGates
           existingGate = fst <$> existingGateWithGeom
           mbGeom = snd =<< existingGateWithGeom
-      updatedGate <- mkGate req existingGate mbGeom
+      updatedGate <- mkGate specialLocation req existingGate mbGeom
       void $
         runTransaction $
           if isNothing existingGate then QGIG.create updatedGate else QGIG.updateGate updatedGate
 
-    mkGate :: Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
-    mkGate reqT mbGate mbGeom = do
+    mkGate :: SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
+    mkGate specialLocation reqT mbGate mbGeom = do
       id <- cast <$> maybe generateGUID (return . (.id)) mbGate
       now <- getCurrentTime
       latitude <- fromMaybeM (InvalidRequest "Latitude cannot be empty for a new gate") $ reqT.latitude <|> (mbGate <&> (.point.lat))
@@ -1607,6 +1608,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             updatedAt = now,
             point = LatLong {lat = latitude, lon = longitude},
             gateType = D.Pickup,
+            merchantId = specialLocation.merchantId,
+            merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             ..
           }
 
