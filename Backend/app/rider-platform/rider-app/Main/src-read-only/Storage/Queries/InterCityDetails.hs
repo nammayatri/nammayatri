@@ -31,7 +31,7 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
           { baseFare = Kernel.Utils.Common.mkPrice (Just currency) baseFare,
             deadKmFare = Kernel.Utils.Common.mkPrice (Just currency) deadKmFare,
             id = Kernel.Types.Id.Id id,
-            kmPerPlannedExtraHour = Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit,
+            kmPerPlannedExtraHour = (Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit),
             nightShiftInfo = Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency),
             perDayMaxAllowanceInMins = perDayMaxAllowanceInMins,
             perDayMaxHourAllowance = perDayMaxHourAllowance,
@@ -41,6 +41,7 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
             plannedPerKmRateOneWay = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateOneWay,
             plannedPerKmRateRoundTrip = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateRoundTrip,
             roundTrip = roundTrip,
+            stateEntryPermitCharges = Kernel.Utils.Common.mkPrice (Just currency) stateEntryPermitCharges,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -52,9 +53,9 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.currency = (.currency) baseFare,
         Beam.deadKmFare = (.amount) deadKmFare,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.distanceUnit = (.unit) kmPerPlannedExtraHour,
-        Beam.kmPerPlannedExtraHour = Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour,
-        Beam.nightShiftCharge = (.amount) . (.nightShiftCharge) <$> nightShiftInfo,
+        Beam.distanceUnit = ((.unit) kmPerPlannedExtraHour),
+        Beam.kmPerPlannedExtraHour = (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour),
+        Beam.nightShiftCharge = (((.amount) . (.nightShiftCharge)) <$> nightShiftInfo),
         Beam.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo,
         Beam.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
         Beam.perDayMaxAllowanceInMins = perDayMaxAllowanceInMins,
@@ -65,6 +66,7 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.plannedPerKmRateOneWay = (.amount) plannedPerKmRateOneWay,
         Beam.plannedPerKmRateRoundTrip = (.amount) plannedPerKmRateRoundTrip,
         Beam.roundTrip = roundTrip,
+        Beam.stateEntryPermitCharges = (.amount) stateEntryPermitCharges,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

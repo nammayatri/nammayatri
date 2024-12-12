@@ -424,3 +424,9 @@ validateOnSearchContext context searchReq = do
   ContextUtils.validateContext Context.ON_SEARCH context
   bppId <- Common.getContextBppId context
   Common.validateSubscriber bppId searchReq.merchantId searchReq.merchantOperatingCityId
+
+getStateEntryPermitCharges :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getStateEntryPermitCharges tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.STATE_ENTRY_PERMIT_CHARGES tagGroups
+  stateEntryPermitCharges <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency stateEntryPermitCharges

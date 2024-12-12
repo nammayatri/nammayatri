@@ -433,8 +433,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
+          stateEntryPermitChargesCaption = show Tags.STATE_ENTRY_PERMIT_CHARGES
+          stateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . (mkValue . highPrecMoneyToText) <$> det.stateEntryPermitCharges
+
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
-        <> catMaybes [perDayMaxAllowanceInMinutesItem]
+        <> catMaybes [perDayMaxAllowanceInMinutesItem, stateEntryPermitChargesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 

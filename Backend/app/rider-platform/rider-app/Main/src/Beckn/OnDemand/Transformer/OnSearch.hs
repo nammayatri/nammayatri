@@ -70,6 +70,7 @@ buildInterCityQuoteInfo item quoteId_ currency = do
   let perHourCharge = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency)
   let perExtraMinRate = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerExtraMinRate itemTags currency)
   let perExtraKmRate = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerExtraKmRate itemTags currency)
+  let stateEntryPermitCharges = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getStateEntryPermitCharges itemTags currency)
   let kmPerPlannedExtraHour = fromMaybe 0 (Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags)
   let plannedPerKmRateOneWay = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency)
   let plannedPerKmRateRoundTrip = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency)
