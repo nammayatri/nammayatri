@@ -13,6 +13,7 @@ Driver-App:
     a. Add new role in person table - BusDriver.
 
     b. Tables:
+
         provider: {
             id: string,
             name: string,
