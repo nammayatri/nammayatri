@@ -79,6 +79,9 @@ import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import EulerHS.Extra.Monitoring.Types
+import EulerHS.KVConnector.Helper.Utils
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
@@ -706,7 +709,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
   }
 
 calculateDriverPool ::
-  ( EncFlow m r,
+  ( MonadIO m,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -720,15 +724,22 @@ calculateDriverPool ::
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
+  uuidForLatencyId <- generateGUIDText
+  L.setOptionLocal LocalLatencyId (Just (uuidForLatencyId <> "_pool"))
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      QPG.getNearestDrivers $
-        QPG.NearestDriversReq
-          { fromLocLatLong = coord,
-            nearestRadius = radius,
-            driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            ..
-          }
+      measureFunctionLatencyAndReturn
+        ( QPG.getNearestDrivers $
+            QPG.NearestDriversReq
+              { fromLocLatLong = coord,
+                nearestRadius = radius,
+                driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
+                ..
+              }
+        )
+        "GetNearestDrivers"
+        "pooling"
+  L.setOptionLocal LocalLatencyId Nothing
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts

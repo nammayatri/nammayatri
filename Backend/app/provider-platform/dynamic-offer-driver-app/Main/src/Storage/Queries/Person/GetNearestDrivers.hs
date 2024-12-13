@@ -11,6 +11,7 @@ import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
+import EulerHS.KVConnector.Helper.Utils
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -77,9 +78,12 @@ getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
-  vehicle <- Int.getVehicles driverInfos
-  drivers <- Int.getDrivers vehicle
+  let dIfn = Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfos <- measureFunctionLatencyAndReturn dIfn "GetDriverInfos" "driverInformation"
+  let vehFn = Int.getVehicles driverInfos
+  vehicle <- measureFunctionLatencyAndReturn vehFn "GetVehicles" "vehicle"
+  let drFn = Int.getDrivers vehicle
+  drivers <- measureFunctionLatencyAndReturn drFn "GetDrivers" "person"
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show driverInfos
   driverBankAccounts <-
