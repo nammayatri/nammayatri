@@ -192,7 +192,6 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
 
-  fork "reset driver extra fare ask" $ when (fromMaybe False driverInfo.extraFareMitigationFlag) $ QDI.updateExtraFareMitigation (Just False) driverId
   fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
   fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
 
