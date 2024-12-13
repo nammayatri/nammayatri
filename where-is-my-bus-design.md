@@ -14,23 +14,23 @@ Driver-App:
 
     b. Tables:
 
-        provider: {
-            id: string,
-            name: string,
-        }
-        vehicleRouteMapping:{
-            providerId: string,
+        vehicleRouteMapping: {
+            fleetOwnerId: string, -- person with role fleet.
             vehicleId: string,
-            routeId: string,
+            routeCode: string,
             blocked: boolean,
             allowEndingMidRoute: boolean
         }
+
         tripTransaction: {
             id: string,
-            providerId: string,
+            fleetOwnerId: string,
             vehicleId: string,
-            tripId: Maybe string, -- maybe not be available
+            tripId: Maybe string, -- GET IT FROM BAP
             driverId: string,
+            status: TripStatus,
+            isCurrentlyDeviated: boolean, -- default false, will come in v2
+            deviationCount: int,
             startLocation: latLon,
             endLocation: Maybe latLon,
             startedNearStopId: StopId, -- if change is made somewhere between stops, then this will store the upcoming stopId.
@@ -50,6 +50,8 @@ Driver-App:
 
     c. Types:
 
+        data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED
+
         data RequestStatus = ACCEPTED | REJECTED
 
         data LocationInfo = {
@@ -67,24 +69,22 @@ Driver-App:
             reason: Maybe string
         }
 
-        data FlowStatus = ....... | WAITING_FOR_ADMIN_APPROVAL | ADMIN_APPROVED | ADMIN_DECLINED
-
     d. NewAPIs:
 
-        a.1 - GET /ui/wmb/driver/vehicleId (required for Private Drivers, on QR scan)
+        a.1 - GET /ui/wmb/availableRoutes/{vehicleNumber} (vehicleNumber from OR, required for Private Drivers, on QR scan)
               response: {
                 routesAvailable: [{
-                    routeId: string,
+                    routeCode: string,
                     source: LocationInfo,
                     destination: LocationInfo
                 }]
               }
               * this should have limit of number of possible routeIds assignable
-        a.2 - POST /ui/wmb/driver/{routeId}/link (required for Private Drivers) (on QR scan) (start duty)
-              response: {
-                tripTransactionId: string
+        a.2 - POST /ui/wmb/trip/link (required for Private Drivers) (on QR scan) (start duty)
+              request:{ 
+                vehicleNumber: string,
+                routeCode: string,
               }
-        a.3 - GRPS Notification and GET /ui/wmb/driver/journey
               response: {
                 tripTransactionId: string,
                 busDetails: {
@@ -94,18 +94,46 @@ Driver-App:
                 source: LocationInfo,
                 destination: LocationInfo
               }
-        a.4 - POST /ui/wmb/driver/{tripTransactionId}/start (go online)
+              * generate a tripTransaction without tripId with status TRIP_ASSIGNED
+              -- mark onRide = true in driverInfo
+              -- upsert vehicle table.
+        a.3 - GRPC Notification and GET /ui/wmb/trip/active (for dashbord linking usecase)
+              response: {
+                tripTransactionId: string,
+                busDetails: {
+                  number: string,
+                  tyep: AC | NON-AC
+                },
+                source: LocationInfo,
+                destination: LocationInfo
+              }
+        a.4 - POST /ui/wmb/trip/{tripTransactionId}/start (go online)
+              request: {
+                location: latLon
+              }
               response: {
                 result: Success
               }
-        a.5 - POST /ui/wmb/driver/{tripTransactionId}/request
+              * Map the tripId according to location -> stop matching.
+                // figure out the nearest crossed or on stop as the `start stop`
+                allTrips <- findALlRouteTrips routeId
+                tripId = undefined;
+                tripStopBusIsAt ::[(stop, trip, scheduledStopArrivalTime)] <- 
+                    for all trips in allTrips:
+                    do
+                        let startStop = fold (\currLoc tripStop acc -> min (distance currStop tripStop) acc) 1000000 tripStops
+                    done
+                let tripId = least duration stop from currentTime in tripStopBusIsAt
+                // set this as tripId in tripTransaction.
+                // without TripId start shouldn't be allowed.
+                // map using the current time nearest to trip start stop scheudle arrival time.
+        a.5 - POST /ui/wmb/trip/{tripTransactionId}/request
               request: DriverRequestType,
               response: {
                 requestId: string,
               }
-        a.6 - GRPC notification and GET update in FlowStatus API for request status.
 
-        a.5 - POST /ui/wmb/driver/{tripTransactionId}/end
+        a.6 - POST /ui/wmb/trip/{tripTransactionId}/end
               reqeust: {
                 lat: double,
                 lon: double
@@ -120,50 +148,75 @@ Driver-App:
                         // allow ending trip with confirmation popup on UI.
                     } else {
                         // create request for dashbaord admin to accept END_RIDE request.
-                        // sendNotificationToProviderDashboard (GRPC)
+                        // sendNotificationTofleetOwnerIdDashboard (GRPC)
                     }
                 }
         
         --- Might be required:
-        a.* - GET /ui/wmb/driver/routes (Just in case, they might change their routes from UI)
+        a.* - GET /ui/wmb/routes?searchString=<Maybe string> (Just in case, they might change their routes from UI)
               response: {
                 schedules: [{
-                    routeId: string,
+                    routeCode: string,
                     source: LocationInfo,
                     destination: LocationInfo,
                 }]
               }
               * Paginated, no limit of routes max routes in this API.
-        a.* - POST /ui/wmb/driver/routes/update (Just in case, they might change their routes from UI)
+        a.* - POST /ui/wmb/vehicleRouteMapping/upsert (Just in case, they might change their routes from UI)
               response: {
-                password: string,             -- randomly generated for a provider on rotation or some other machenism, lets sync up once.
-                routeIds: ["routeId<string>"] -- validate max selection with a configurable limit.
+                password: string,             -- randomly generated for a fleetOwnerId on rotation or some other machenism, lets sync up once.
+                routeIds: ["routeCode<string>"] -- validate max selection with a configurable limit.
+                routeCode: string,
+                blocked: boolean,
+                allowEndingMidRoute: boolean
               }
-              * this will override all existing routes and replace with new selected. any other behaviour if required can be handled at UI.
+              * if vehicle is not there create vehicle
+
 3. Dashboard Backend:
 
     a. Types:
 
-        {provider: string} -> name/uuid of bus providers.
+        {fleetOwnerId: string} -> name/uuid of bus fleetOwnerIds.
 
-    b. NewAPIs:
+    b. NewAPIs:            
 
-        a.1 GET /dashboard/wmb/routes/{provider}
-            -- same as /ui/wmb/driver/routes but you would need extra API in backend to support provider based.
+        a.1 GET /dashboard/wmb/routes?searchString=<Maybe string>&limit=&offset=
+            -- same as /ui/wmb/routes?searchString=<Maybe string> but you would need extra API in backend to support fleetOwnerId based.
 
-        a.2 POST /dashboard/wmb/routes/{provider}/update
-            -- same as /ui/wmb/driver/routes/update but you would need extra API in backend to support provider based. 
 
-        a.2 POST /dashboard/wmb/driver/{driverId}/{routeId}/link
-            -- same as /ui/wmb/driver/link but you would need extra API in backend to support driverId based.
+        a.2 GET /dashboard/wmb/vehicleRouteMapping/list?searchString=vehicleNumber&limit=&offset=
+            response: [{
+                vechileNumber: string,
+                vehicleId: string,
+                type: AC | NON_AC...,
+                routesLinked: [{RouteDetails}]
+            }]
 
-        a.3 POST /dashboard/wmb/driver/{driverId}/{tripTransactionId}/start
-            -- same as /ui/wmb/driver/{tripTransactionId}/start but you would need extra API in backend to support driverId based.
+        a.2 POST /dashboard/wmb/vehicleRouteMapping/{vehicleId}/upsert
+            -- same as /ui/wmb/vehicleRouteMapping/upsert but you would need extra API in backend to support fleetOwnerId based. 
 
-        a.4 POST /dashboard/wmb/driver/{driverId}/{tripTransactionId}/end
-            -- same as /ui/wmb/driver/{tripTransactionId}/end but you would need extra API in backend to support driverId based.
+        a.3 POST /dashboard/wmb/{vehicleId}/trip/link
+            request: {
+                driverNumber: string,
+                routeCode: string,
+            }
+            response: {
+                tripTransactionId: string,
+                busDetails: {
+                  number: string,
+                  tyep: AC | NON-AC
+                },
+                source: LocationInfo,
+                destination: LocationInfo
+            }
 
-        a.5 on GRPC or GET /dashboard/wmb/provider/requests
+        a.4 POST /dashboard/wmb/{vehicleId}/trip/{tripTransactionId}/start
+            -- same as /ui/wmb/trip/{tripTransactionId}/start but you would need extra API in backend to support vehicleId based.
+
+        a.5 POST /dashboard/wmb/{vehicleId}/trip/{tripTransactionId}/end
+            -- same as /ui/wmb/trip/{tripTransactionId}/end but you would need extra API in backend to support vehicleId based.
+
+        a.6 on GRPC or GET /dashboard/wmb/driverRequests&status=Accept&date=date
             response: [{
                 reqeustId: string,
                 driverId: string,
@@ -171,18 +224,18 @@ Driver-App:
                 type: DriverRequestType,
                 data: JSON{} according to notification type if required
             }]
-        a.6 POST /dasboard/wmb/provider/request/{requestId}/accept
+        a.7 POST /dasboard/wmb/driverRequest/{requestId}/accept
             response: {
                 result: SUCCESS
             }
-        a.7 POST /dasboard/wmb/provider/request/{requestId}/reject
+        a.8 POST /dasboard/wmb/driverRequest/{requestId}/reject
             response: {
                 result: SUCCESS
             }
-      
+
 4. Dashboard Frontend:
 
-    a.1 Onboarding / login for providers.
+    a.1 Onboarding / login for fleetOwnerIds.
 
     a.2 Add vehicle/bulkvehicle.
 
@@ -200,4 +253,3 @@ Driver-App:
     a.7 End trip 
 
     -- design might be required for some or all of the above.
-
