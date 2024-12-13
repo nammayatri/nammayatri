@@ -2501,6 +2501,7 @@ homeScreenFlow = do
           void $ pure $ JB.exitLocateOnMap ""
           void $ updateStage $ HomeScreenStage RideStarted
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"

@@ -141,7 +141,7 @@ screen initialState (GlobalState globalState) =
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-              case (activeRideResponse.list DA.!! 0) of
+              case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
                 Just ride -> do
                   let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
                   lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride advancedRide
@@ -331,7 +331,7 @@ getActiveRideDetails push delayTime retryCount = do
   lift $ lift $ doAff $ liftEffect $ push $ UpdateRetryRideList false
   if retryCount > 0 then do
     (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-    case (activeRideResponse.list DA.!! 0) of
+    case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
       Just ride -> do
         let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
         lift $ lift $ doAff $ liftEffect $ push $ RideActiveAction ride advancedRide
