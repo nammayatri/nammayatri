@@ -56,7 +56,8 @@ view triggertype push state =
   , afterRender push (const AfterRender)
   ][ if triggertype == "INTERNET_ACTION" then noInternetScreenView push state triggertype 
       else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state triggertype 
-        else  textView[] 
+      else if triggertype == "SERVER_DOWN" then serviceDownView push state triggertype
+      else  textView[] 
     ]
   
 
@@ -127,6 +128,42 @@ noInternetScreenView push state triggertype =
       ]
       , buttonView push state triggertype
   ]
+
+
+serviceDownView :: forall w. (Action -> Effect Unit) -> ST.NoInternetScreenState -> String -> PrestoDOM (Effect Unit) w 
+serviceDownView push state triggertype = 
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , orientation VERTICAL
+      , clickable false
+      , margin $ MarginHorizontal 32 32
+      ][imageView
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_unavailable"
+        , height $ V 213
+        , width $ V 240
+        , gravity CENTER
+        ],
+        textView $
+        [ text "Whoops, we just had a tiny glitch!"
+        , color Color.black800
+        , gravity CENTER
+        ] <> FontStyle.h2 LanguageStyle,
+        textView $
+        [ text "Seems like something went wrong at our end. Please try again a little later."
+        , color Color.black700
+        , margin $ MarginTop 4
+        , gravity CENTER
+        ] <> FontStyle.subHeading2 TypoGraphy
+      ]
+      , buttonView push state triggertype
+  ]
+
 
 buttonView :: forall w. (Action -> Effect Unit) -> ST.NoInternetScreenState -> String -> PrestoDOM (Effect Unit) w 
 buttonView push state  triggertype = 

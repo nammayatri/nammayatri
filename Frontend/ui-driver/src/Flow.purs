@@ -172,6 +172,7 @@ import RemoteConfig as RemoteConfig
 import Control.Apply as CA
 import Screens.MetroWarriorsScreen.Controller (getMetroWarriorFromLocationId, makeStationsData)
 import Data.Newtype (unwrap)
+import Screens.NoInternetScreen.Handler as NoInternetScreen
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -306,9 +307,15 @@ checkRideAndInitiate event driverInfoResponse = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
         pure (Tuple Nothing driverInfoResp.onRide)
       _ -> do
-        GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-        let activeRide = not (null rideListResponse.list)
-        pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
+        result <- lift $ lift $ Remote.getRideHistoryReq "2" "0" "true" "null" "null"
+        case result of 
+          (Right (GetRidesHistoryResp rideListResponse)) -> do
+            let activeRide = not (null rideListResponse.list)
+            pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
+          (Left err) -> do
+            pure (Tuple Nothing true)
+            
+
   void $ lift $ lift $ fork $ checkAndDownloadMLModel
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
   modifyScreenState $ HomeScreenStateType (\homeScreenState → homeScreenState { props { retryRideList = activeRide }})
@@ -2209,6 +2216,7 @@ tripDetailsScreenFlow = do
 
 currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 currentRideFlow activeRideResp isActiveRide = do
+  -- lift $ lift $ NoInternetScreen.noInternetScreen' "SERVER_DOWN"
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_START"
   let isRequestExpired = 
         if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
@@ -2225,26 +2233,25 @@ currentRideFlow activeRideResp isActiveRide = do
     Just false -> do
       noActiveRidePatch allState onBoardingSubscriptionViewCount
     _ -> do
-      if isJust activeRideResp
-        then do
+        if isJust activeRideResp then do
           let (GetRidesHistoryResp activeRideResponse) = fromMaybe (GetRidesHistoryResp{list:[]}) activeRideResp
-          (not (null activeRideResponse.list)) ? do
+          if (not (null activeRideResponse.list)) then do
             void $ liftFlowBT $ startLocationPollingAPI
             activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
-            $ noActiveRidePatch allState onBoardingSubscriptionViewCount
+          else 
+            noActiveRidePatch allState onBoardingSubscriptionViewCount
+          gotoHomeScreen
+
         else do
-          (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-          (not (null activeRideResponse.list)) ?
-            activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
-            $ noActiveRidePatch allState onBoardingSubscriptionViewCount
-  void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
-  -- Deprecated case for aadhaar popup shown after HV Integration
-  when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
-  liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
-  homeScreenFlow
+          result <- lift $ lift $ Remote.getRideHistoryReq "2" "0" "true" "null" "null"
+          case result of 
+            (Right (GetRidesHistoryResp activeRideResponse)) -> do 
+              if (not (null activeRideResponse.list)) then activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
+              else noActiveRidePatch allState onBoardingSubscriptionViewCount
+              gotoHomeScreen
+            (Left err) -> lift $ lift $ NoInternetScreen.noInternetScreen' "SERVER_DOWN"
+
+
   where
     activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount = do
       case activeRideResponse.list of
@@ -2309,6 +2316,18 @@ currentRideFlow activeRideResp isActiveRide = do
           setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
           pure unit
       else pure unit
+    
+    gotoHomeScreen = do
+        (GlobalState allState) <- getState
+        void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
+        -- Deprecated case for aadhaar popup shown after HV Integration
+        if (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) then do -- TODO :: Should be moved to global events as an async event
+            (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
+        else pure unit
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
+        liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
+        homeScreenFlow
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -2902,7 +2921,7 @@ homeScreenFlow = do
       modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.Home}}
       tripDetailsScreenFlow
     POST_RIDE_FEEDBACK state-> do 
-      void $ lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
+      void $ lift $ lift $ fork $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       when (state.data.endRideData.rating == 5) $ void $ pure $ JB.launchInAppRatingPopup unit
       (GlobalState globalstate) <- getState
       (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false

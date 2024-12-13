@@ -164,6 +164,6 @@ noInternetScreenHandler lazy = do
   if checkConditionToShowInternetScreen "lazy" then do
     void  $ fork $ do  
         void $ pure $ JB.hideKeyboardOnNavigation true
-        void $ NoInternetScreen.noInternetScreen'
+        void $ NoInternetScreen.noInternetScreen' "INTERNET_ACTION"
   else 
     pure unit

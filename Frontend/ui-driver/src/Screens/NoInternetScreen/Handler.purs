@@ -43,20 +43,21 @@ noInternetScreen triggertype= do
     InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure CHECK_INTERNET)
 
 
-noInternetScreen' :: Flow GlobalState Unit
-noInternetScreen' = do 
+noInternetScreen' :: String -> Flow GlobalState Unit
+noInternetScreen' triggertype = do 
   void $ EHU.toggleLoader false
   (GlobalState state) <- Flow.getState
   void $ EHC.liftFlow $ initUIWithNameSpace "NoInternetScreen" Nothing
   let 
-    screen = NoInternetScreen.screen state.noInternetScreen "INTERNET_ACTION"
+    screen = NoInternetScreen.screen state.noInternetScreen triggertype
     scopedScreen = { 
       initialState : screen.initialState
       , view : screen.view
       , name : screen.name  
       , globalEvents : screen.globalEvents
       , eval : screen.eval
-      , parent : Just "NoInternetScreen"}
+      , parent : Just "NoInternetScreen"
+      }
   void $ showScreenWithNameSpace scopedScreen 
   let _ = DU.setKeyInWindow "noInternetCount" 0
   EHC.liftFlow $ terminateUI $ Just "NoInternetScreen"

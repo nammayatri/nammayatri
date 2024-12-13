@@ -30,13 +30,13 @@ primaryButtonConfig triggertype = let
     config' = PrimaryButton.config 
     primaryButtonConfig' = config' 
       { textConfig 
-        { text = if triggertype == "INTERNET_ACTION" then (getString TRY_AGAIN) else (getString GRANT_ACCESS)
+        { text = if triggertype == "INTERNET_ACTION" then (getString TRY_AGAIN)  else if triggertype == "SERVER_DOWN" then "Try Again" else (getString TRY_AGAIN)
         , color = Color.yellow900
         }
       , width = MATCH_PARENT 
       , background = Color.black900
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
+      , margin = Margin 16 0 16 16 
+      , cornerRadius = 8.0
       , id = "NoInternetScreenPrimaryButton"
       }
   in primaryButtonConfig'
