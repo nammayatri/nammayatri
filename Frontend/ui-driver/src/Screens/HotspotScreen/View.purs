@@ -293,6 +293,8 @@ updateButtonIconAndText push state =
             pure unit
           ) (const NoAction)
   , gravity CENTER
+  , cornerRadius 6.0
+  , rippleColor Color.rippleShade
   ]
   [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
     $ imageView
