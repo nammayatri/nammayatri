@@ -1702,7 +1702,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
-          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing
           return (cast dI.driverInfo.driverId)
       )
       driverInfosAndRideDetails
