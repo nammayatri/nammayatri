@@ -23,6 +23,7 @@ imports:
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyPlannerTypes
+  StationCategory: Domain.Types.StationType
 
 module: FRFSTicketService
 types:
@@ -49,6 +50,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSDiscountRes:
     code: Text
@@ -57,6 +59,7 @@ types:
     description: Text
     tnc: Text
     eligibility: Bool
+    derive: "Show"
 
   FRFSDiscountReq:
     code: Text
@@ -232,6 +235,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         city: City
+        stationCategory: StationCategory
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:

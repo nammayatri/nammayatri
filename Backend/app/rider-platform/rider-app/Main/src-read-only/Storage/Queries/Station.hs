@@ -7,6 +7,7 @@ module Storage.Queries.Station (module Storage.Queries.Station, module ReExport)
 import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Station
+import qualified Domain.Types.StationType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -58,6 +59,23 @@ findByStationCodeAndMerchantOperatingCityId code merchantOperatingCityId = do
         ]
     ]
 
+findByStationCodeAndMerchantOperatingCityIdAndCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory -> m (Maybe Domain.Types.Station.Station))
+findByStationCodeAndMerchantOperatingCityIdAndCategory code merchantOperatingCityId stationCategory = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.code $ Se.Eq code,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.stationCategory $ Se.Eq stationCategory
+        ]
+    ]
+
+findByStationCodeAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory -> m (Maybe Domain.Types.Station.Station))
+findByStationCodeAndType code stationCategory = do findOneWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.stationCategory $ Se.Eq stationCategory]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -73,6 +91,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.possibleTypes possibleTypes,
+      Se.Set Beam.stationCategory stationCategory,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
+      Se.Set Beam.stationCategory stationCategory,
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

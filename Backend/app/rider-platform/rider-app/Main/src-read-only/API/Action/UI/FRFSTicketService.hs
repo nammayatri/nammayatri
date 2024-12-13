@@ -17,6 +17,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.StationType
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
@@ -83,6 +84,9 @@ type API =
       :> QueryParam
            "city"
            Kernel.Types.Beckn.Context.City
+      :> QueryParam
+           "stationCategory"
+           Domain.Types.StationType.StationCategory
       :> MandatoryQueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
@@ -301,11 +305,12 @@ postFrfsSearch ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
-postFrfsSearch a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postFrfsSearch a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getFrfsSearchQuote ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

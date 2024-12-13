@@ -29,6 +29,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyPlannerTypes
   StationType: Domain.Types.StationType
+  StationCategory: Domain.Types.StationType
 
 FRFSSearch:
   tableName: frfs_search
@@ -46,6 +47,7 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    stationCategory: Maybe StationCategory
 
   beamFields:
     journeyLegInfo:
@@ -97,6 +99,7 @@ Station:
     timeBounds: TimeBound
     possibleTypes: Maybe [StationType]
     merchantOperatingCityId: Id MerchantOperatingCity
+    stationCategory: Maybe StationCategory
 
   default:
     timeBounds: "'Unbounded'"
@@ -125,6 +128,10 @@ Station:
     findByStationCode:
       kvFunction: findOneWithKV
       where: code
+    findByStationCodeAndType:
+      kvFunction: findOneWithKV
+      where:
+        and: [code, stationCategory]
     deleteByStationCode:
       kvFunction: deleteWithKV
       where: code
@@ -132,6 +139,10 @@ Station:
       kvFunction: findOneWithKV
       where:
         and: [code, merchantOperatingCityId]
+    findByStationCodeAndMerchantOperatingCityIdAndCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [code, merchantOperatingCityId, stationCategory]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -166,6 +177,7 @@ FRFSQuote:
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
     bppDelayedInterest : Maybe Int
+    stationCategory: Maybe StationCategory
 
   beamFields:
     price:
@@ -248,6 +260,7 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
+    stationCategory: Maybe StationCategory
 
   default:
     customerCancelled: "false"

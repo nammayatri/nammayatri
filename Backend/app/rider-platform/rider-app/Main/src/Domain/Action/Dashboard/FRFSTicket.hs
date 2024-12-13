@@ -28,6 +28,7 @@ import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import Domain.Types.Route
 import Domain.Types.Station
+import Domain.Types.StationType as DST
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (groupBy, id)
@@ -284,11 +285,11 @@ getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset veh
 
   pure frfsStations
 
-postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
+postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Maybe DST.StationCategory -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationAdd merchantShortId opCity code stationCategory vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  stationExists <- QStation.findByStationCodeAndMerchantOperatingCityId code merchantOpCity.id
+  stationExists <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory code merchantOpCity.id stationCategory
   newId <- generateGUID
   now <- getCurrentTime
   case stationExists of
@@ -308,16 +309,17 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 timeBounds = Kernel.Types.TimeBound.Unbounded,
                 merchantOperatingCityId = merchantOpCity.id,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                stationCategory
               }
       QStation.create newStation
       pure Success
 
-postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationDelete merchantShortId opCity code _vehicleType = do
+postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> Maybe DST.StationCategory -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationDelete merchantShortId opCity code stationCategory _vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  _ <- QStation.findByStationCodeAndMerchantOperatingCityId code merchantOpCity.id >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
+  _ <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory code merchantOpCity.id stationCategory >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
   stopMappings <- QRSM.findByStopCode code
   unless (null stopMappings) $ throwError InvalidAction
   QStation.deleteByStationCode code

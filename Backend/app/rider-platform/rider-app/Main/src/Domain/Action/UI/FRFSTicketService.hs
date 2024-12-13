@@ -38,6 +38,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
+import qualified Domain.Types.StationType as DST
 import qualified Environment
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, fromList, groupBy, id, length, map, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
@@ -328,26 +329,30 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations
       Nothing -> return stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req =
-  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Maybe StationCategory -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (mbPersonId, merchantId) mbCity mbStationCategory vehicleType_ req =
+  postFrfsSearchHandler (mbPersonId, merchantId) mbCity mbStationCategory vehicleType_ req Nothing Nothing
 
-postFrfsSearchHandler :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Maybe (Id DPO.PartnerOrgTransaction) -> Maybe (Id DPO.PartnerOrganization) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId = do
+postFrfsSearchHandler :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Maybe StationCategory -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Maybe (Id DPO.PartnerOrgTransaction) -> Maybe (Id DPO.PartnerOrganization) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearchHandler (mbPersonId, merchantId) mbCity mbStationCategory vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
+  stationCategory <-
+    case mbStationCategory of
+      Just stationType -> return stationType
+      Nothing -> return INDEPENDENT_STATION
   (fromStation, toStation) <-
     case mbCity of
       Just city -> do
         merchantOpertaingCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-        fromStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityId fromStationCode merchantOpertaingCity.id >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or merchantOperatingCityId: " <> merchantOpertaingCity.id.getId)
-        toStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityId toStationCode merchantOpertaingCity.id >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or merchantOperatingCityId: " <> merchantOpertaingCity.id.getId)
+        fromStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory fromStationCode merchantOpertaingCity.id (Just stationCategory) >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or merchantOperatingCityId: " <> merchantOpertaingCity.id.getId)
+        toStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory toStationCode merchantOpertaingCity.id (Just stationCategory) >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or merchantOperatingCityId: " <> merchantOpertaingCity.id.getId)
         return (fromStationInfo, toStationInfo)
       Nothing -> do
         merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
-        fromStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityId fromStationCode merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Invalid from station id")
-        toStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityId toStationCode merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Invalid to station id")
+        fromStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory fromStationCode merchantOperatingCityId (Just stationCategory) >>= fromMaybeM (InvalidRequest "Invalid from station id")
+        toStationInfo <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory toStationCode merchantOperatingCityId (Just stationCategory) >>= fromMaybeM (InvalidRequest "Invalid to station id")
         return (fromStationInfo, toStationInfo)
   route <-
     maybe
@@ -375,6 +380,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
             journeyLegInfo = journeySearchData,
+            stationCategory = Just stationCategory,
             ..
           }
   QFRFSSearch.create searchReq

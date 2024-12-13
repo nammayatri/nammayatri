@@ -32,3 +32,8 @@ ALTER TABLE atlas_app.station ADD COLUMN time_bounds text  default 'Unbounded';
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.station ADD COLUMN possible_types text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ADD COLUMN station_category text ;

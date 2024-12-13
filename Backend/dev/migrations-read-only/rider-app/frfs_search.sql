@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN agency text ;
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN pricing_id text ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN station_category text ;

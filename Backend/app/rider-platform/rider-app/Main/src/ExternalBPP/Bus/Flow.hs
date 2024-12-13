@@ -19,6 +19,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
+import Domain.Types.StationType as DST
 import ExternalBPP.Bus.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.Bus.ExternalAPI.Types
 import Kernel.Prelude
@@ -55,7 +56,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                   endStopCode = toStation.code,
                   travelTime = Nothing
                 }
-        mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+        mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id searchReq.stationCategory
       Nothing -> do
         transitRoutesInfo <- getPossibleTransitRoutesBetweenTwoStops fromStation.code toStation.code
         if null transitRoutesInfo
@@ -64,7 +65,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
             quotes' <-
               mapM
                 ( \routeInfo -> do
-                    mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+                    mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id searchReq.stationCategory
                 )
                 routesInfo
             return $ concat quotes'
@@ -72,7 +73,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
             quotes' <-
               mapM
                 ( \transitRouteInfo -> do
-                    mkTransitRoutesQuote searchReq.vehicleType transitRouteInfo merchantOperatingCity.id
+                    mkTransitRoutesQuote searchReq.vehicleType transitRouteInfo merchantOperatingCity.id searchReq.stationCategory
                 )
                 transitRoutesInfo
             return $ concat quotes'
@@ -104,11 +105,11 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                     <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
             [startStation] ++ intermediateStations ++ [endStation]
 
-    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> Id MerchantOperatingCity -> m [DQuote]
-    mkSingleRouteQuote vehicleType routeInfo merchantOperatingCityId = do
+    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> Id MerchantOperatingCity -> Maybe DST.StationCategory -> m [DQuote]
+    mkSingleRouteQuote vehicleType routeInfo merchantOperatingCityId stationCategory = do
       stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code
-      startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
-      endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+      startStation <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory routeInfo.startStopCode merchantOperatingCityId stationCategory >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+      endStation <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory routeInfo.endStopCode merchantOperatingCityId stationCategory >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
 
       currentTime <- getCurrentTime
@@ -175,15 +176,15 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         )
         serviceableFareProducts
 
-    mkTransitRoutesQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> [RouteStopInfo] -> Id MerchantOperatingCity -> m [DQuote]
-    mkTransitRoutesQuote vehicleType transitRouteInfo merchantOperatingCityId = do
+    mkTransitRoutesQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Spec.VehicleCategory -> [RouteStopInfo] -> Id MerchantOperatingCity -> Maybe DST.StationCategory -> m [DQuote]
+    mkTransitRoutesQuote vehicleType transitRouteInfo merchantOperatingCityId stationCategory = do
       -- TODO :: This is to be handled properly with OTP
       routeStations <-
         mapM
           ( \routeInfo -> do
               stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code
-              startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound routeInfo.startStopCode)
-              endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound routeInfo.endStopCode)
+              startStation <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory routeInfo.startStopCode merchantOperatingCityId stationCategory >>= fromMaybeM (StationNotFound routeInfo.startStopCode)
+              endStation <- QStation.findByStationCodeAndMerchantOperatingCityIdAndCategory routeInfo.endStopCode merchantOperatingCityId stationCategory >>= fromMaybeM (StationNotFound routeInfo.endStopCode)
               stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
 
               currentTime <- getCurrentTime

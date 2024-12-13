@@ -13,6 +13,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Text
 import qualified Domain.Action.RiderPlatform.Management.FRFSTicket
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified Domain.Types.StationType
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -111,8 +112,8 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity apiTokenInfo routeCode v
 getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
 getFRFSTicketFrfsRouteStations merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.getFRFSTicketFrfsRouteStations merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType
 
-postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationAdd merchantShortId opCity apiTokenInfo code vehicleType req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.postFRFSTicketFrfsStationAdd merchantShortId opCity apiTokenInfo code vehicleType req
+postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationAdd merchantShortId opCity apiTokenInfo code stationCategory vehicleType req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.postFRFSTicketFrfsStationAdd merchantShortId opCity apiTokenInfo code stationCategory vehicleType req
 
-postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationDelete merchantShortId opCity apiTokenInfo code vehicleType = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.postFRFSTicketFrfsStationDelete merchantShortId opCity apiTokenInfo code vehicleType
+postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.StationType.StationCategory -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStationDelete merchantShortId opCity apiTokenInfo code stationCategory vehicleType = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSTicket.postFRFSTicketFrfsStationDelete merchantShortId opCity apiTokenInfo code stationCategory vehicleType
