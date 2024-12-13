@@ -335,8 +335,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         estimatedTollCharges = rideOld.estimatedTollCharges
         estimatedTollNames = rideOld.estimatedTollNames
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
+    advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
     tripEndPoints <- do
-      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+      let mbAdvanceRideId = (.id) <$> advanceRide
+      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId
       pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
@@ -431,7 +433,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
-      advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
