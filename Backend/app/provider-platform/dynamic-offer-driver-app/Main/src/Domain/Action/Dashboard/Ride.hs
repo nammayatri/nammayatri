@@ -104,8 +104,9 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbFareDiff) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
     throwError $ InvalidRequest "At least one filter is required"
+  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
