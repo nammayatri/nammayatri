@@ -9,7 +9,9 @@ OTP:
 
 Driver-App:
 1. Backend:
+
     a. Add new role in person table - BusDriver.
+
     b. Tables:
         provider: {
             id: string,
@@ -46,6 +48,7 @@ Driver-App:
         }
 
     c. Types:
+
         data RequestStatus = ACCEPTED | REJECTED
 
         data LocationInfo = {
@@ -66,6 +69,7 @@ Driver-App:
         data FlowStatus = ....... | WAITING_FOR_ADMIN_APPROVAL | ADMIN_APPROVED | ADMIN_DECLINED
 
     d. NewAPIs:
+
         a.1 - GET /ui/wmb/driver/vehicleId (required for Private Drivers, on QR scan)
               response: {
                 routesAvailable: [{
@@ -135,10 +139,14 @@ Driver-App:
                 routeIds: ["routeId<string>"] -- validate max selection with a configurable limit.
               }
               * this will override all existing routes and replace with new selected. any other behaviour if required can be handled at UI.
-2. Dashboard Backend:
+3. Dashboard Backend:
+
     a. Types:
+
         {provider: string} -> name/uuid of bus providers.
+
     b. NewAPIs:
+
         a.1 GET /dashboard/wmb/routes/{provider}
             -- same as /ui/wmb/driver/routes but you would need extra API in backend to support provider based.
 
@@ -171,14 +179,24 @@ Driver-App:
                 result: SUCCESS
             }
       
-3. Dashboard Frontend:
+4. Dashboard Frontend:
+
     a.1 Onboarding / login for providers.
+
     a.2 Add vehicle/bulkvehicle.
+
     a.3 Add routes/bulkroutes.
+
     a.4 Onboard driver.
+
             - Upload DL and Adhaar (both configurable).
             - Phone number and name.
+
     a.5 Link Driver for routes. (start duty)
+
     a.6 Start trip for a driver + route link (tripTransactionId).
+
     a.7 End trip 
+
     -- design might be required for some or all of the above.
+
