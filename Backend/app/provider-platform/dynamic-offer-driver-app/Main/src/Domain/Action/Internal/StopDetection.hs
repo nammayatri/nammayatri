@@ -37,7 +37,8 @@ stopDetection StopDetectionReq {..} = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let distance = distanceBetweenInMeters location (LatLong booking.fromLocation.lat booking.fromLocation.lon)
-  when (ride.status == NEW && distance >= transporterConfig.minDistanceForStopFcm) $ do
+  let isValidRideForStop = ride.status == NEW && booking.isScheduled == False
+  when (isValidRideForStop && distance >= transporterConfig.minDistanceForStopFcm) $ do
     oldStopCount :: Maybe Int <- Redis.safeGet $ mkStopCountDuringPickupRedisKey rideId.getId
     let currStopCount = 1 + fromMaybe 0 oldStopCount
     Redis.setExp (mkStopCountDuringPickupRedisKey ride.id.getId) currStopCount 1200 --20 mins
