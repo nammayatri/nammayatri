@@ -46,11 +46,11 @@ jobs:
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-darwin]
+        system: [aarch64-linux]
         isMain:
           - ${{ contains(github.ref, 'main') }}
         exclude:
-          - system: aarch64-darwin
+          - system: x86_64-linux
             isMain: false
     needs: [process-labels]
     runs-on: ny-ci-nixos
@@ -68,20 +68,14 @@ jobs:
       - name: Docker tasks
         id: docker
         if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
+          matrix.system == 'aarch64-linux'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image tarball
         if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
+          matrix.system == 'aarch64-linux'
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -90,9 +84,6 @@ jobs:
   push-docker:
     needs: [build, process-labels]
     runs-on: ubuntu-latest
-    if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
-      needs.process-labels.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4
