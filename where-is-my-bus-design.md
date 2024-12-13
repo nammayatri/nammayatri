@@ -1,12 +1,3 @@
-LTS:
-1. Use lts redis in the python-proxy script.
-2. 
-
-
-OTP:
-1. Create a proxy api in python-proxy directly giving protobuf.
-2. Check for bottlenecks.
-
 Driver-App:
 1. Backend:
 
@@ -14,13 +5,19 @@ Driver-App:
 
     b. Tables:
 
+        routeMappingConfigs: {
+            id: string,
+            allowEndingMidRoute: boolean -- govt will have false, private will have true, default false
+        }
+
         vehicleRouteMapping: {
             fleetOwnerId: string, -- person with role fleet.
             vehicleId: string,
             routeCode: string,
             blocked: boolean,
-            allowEndingMidRoute: boolean
-        }
+            configId: routeMappingConfigs
+        } 1-N mapping 
+        pk: vehicleId, routeCode
 
         tripTransaction: {
             id: string,
@@ -31,7 +28,7 @@ Driver-App:
             status: TripStatus,
             isCurrentlyDeviated: boolean, -- default false, will come in v2
             deviationCount: int,
-            startLocation: latLon,
+            startLocation: Maybe latLon,
             endLocation: Maybe latLon,
             startedNearStopId: StopId, -- if change is made somewhere between stops, then this will store the upcoming stopId.
             endStopId: Maybe stopId,
@@ -72,13 +69,11 @@ Driver-App:
     d. NewAPIs:
 
         a.1 - GET /ui/wmb/availableRoutes/{vehicleNumber} (vehicleNumber from OR, required for Private Drivers, on QR scan)
-              response: {
-                routesAvailable: [{
+              response: [{
                     routeCode: string,
                     source: LocationInfo,
                     destination: LocationInfo
                 }]
-              }
               * this should have limit of number of possible routeIds assignable
         a.2 - POST /ui/wmb/trip/link (required for Private Drivers) (on QR scan) (start duty)
               request:{ 
@@ -127,6 +122,7 @@ Driver-App:
                 // set this as tripId in tripTransaction.
                 // without TripId start shouldn't be allowed.
                 // map using the current time nearest to trip start stop scheudle arrival time.
+
         a.5 - POST /ui/wmb/trip/{tripTransactionId}/request
               request: DriverRequestType,
               response: {
@@ -179,8 +175,9 @@ Driver-App:
         {fleetOwnerId: string} -> name/uuid of bus fleetOwnerIds.
 
     b. NewAPIs:            
-
+        -- Bulk Upsert CSV vehicle, driver,routes mapping
         a.1 GET /dashboard/wmb/routes?searchString=<Maybe string>&limit=&offset=
+            -- do internal API call to BAP
             -- same as /ui/wmb/routes?searchString=<Maybe string> but you would need extra API in backend to support fleetOwnerId based.
 
 
@@ -253,3 +250,4 @@ Driver-App:
     a.7 End trip 
 
     -- design might be required for some or all of the above.
+
