@@ -71,6 +71,8 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.maximumWalkDistance (Just maximumWalkDistance),
       Se.Set Beam.payoutBatchDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay),
       Se.Set Beam.payoutBatchSize payoutBatchSize,
+      Se.Set Beam.payoutReferralProgram (Just payoutReferralProgram),
+      Se.Set Beam.payoutReferralStartDate (Just payoutReferralStartDate),
       Se.Set Beam.placeNameCacheExpiryDays placeNameCacheExpiryDays,
       Se.Set Beam.policeTriggerDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay),
       Se.Set Beam.postRideSafetyNotificationDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) postRideSafetyNotificationDelay),
@@ -92,6 +94,8 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
 
 instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   fromTType' (Beam.RiderConfigT {..}) = do
+    now <- Kernel.Types.Common.getCurrentTime
+    let payoutReferralStartDate_ = fromMaybe now payoutReferralStartDate
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
@@ -127,6 +131,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             payoutBatchDelay = fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay),
             payoutBatchSize = payoutBatchSize,
+            payoutReferralProgram = fromMaybe False payoutReferralProgram,
+            payoutReferralStartDate = payoutReferralStartDate_,
             placeNameCacheExpiryDays = placeNameCacheExpiryDays,
             policeTriggerDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay),
             postRideSafetyNotificationDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay),
@@ -180,6 +186,8 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.payoutBatchDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay,
         Beam.payoutBatchSize = payoutBatchSize,
+        Beam.payoutReferralProgram = Just payoutReferralProgram,
+        Beam.payoutReferralStartDate = Just payoutReferralStartDate,
         Beam.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
         Beam.policeTriggerDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay,
         Beam.postRideSafetyNotificationDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) postRideSafetyNotificationDelay,

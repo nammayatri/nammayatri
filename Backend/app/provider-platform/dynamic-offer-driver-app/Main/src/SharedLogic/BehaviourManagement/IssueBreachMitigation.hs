@@ -113,6 +113,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
         JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
           SoftBlockNotifyDriverRequestJobData
             { driverId = driverInfo.driverId,
+              pendingNotificationRedisKey = isNotificationPendingKey,
               entityData = entity
             }
         Redis.del isNotificationPendingKey
@@ -177,16 +178,17 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
                       blockedReasonFlag = show blockReasonFlag,
                       blockedSTiers = allowedSTiers
                     }
+            let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
             if not driverInfo.onRide
               then do
                 void $
                   JC.createJobIn @_ @'SoftBlockNotifyDriver notifyDriverJobTs maxShards $
                     SoftBlockNotifyDriverRequestJobData
                       { driverId = driverInfo.driverId,
+                        pendingNotificationRedisKey = isNotificationPendingKey,
                         entityData = notificationEntityData
                       }
               else do
-                let isNotificationPendingKey = mkNotificationSendKey issueType driverInfo.driverId.getId
                 void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
           IBHard -> do
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag

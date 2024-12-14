@@ -607,6 +607,7 @@ getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
+      city = getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys
   in case variant of
       "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -622,10 +623,10 @@ getVehicleVariantImage variant =
       "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "AUTO_RICKSHAW" -> 
-        case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
+        case city of
+          _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
           "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-          "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           _           -> fetchImage FF_ASSET "ic_vehicle_front"
       "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
@@ -638,6 +639,9 @@ getVehicleVariantImage variant =
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
+
+isKeralaCity :: String -> Boolean 
+isKeralaCity city = DA.elem city ["Kochi", "Kozhikode", "Thrissur", "Trivandrum"]
 
 getVariantRideType :: String -> String
 getVariantRideType variant =

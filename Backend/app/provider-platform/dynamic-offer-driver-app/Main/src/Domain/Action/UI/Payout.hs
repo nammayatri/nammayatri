@@ -102,7 +102,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       unless (isSuccessStatus payoutOrder.status) do
         mbVehicle <- QV.findById (Id payoutOrder.customerId)
         let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-        payoutConfig <- CPC.findByPrimaryKey merchanOperatingCityId vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present For CityId: " <> merchanOperatingCityId.getId)
+        payoutConfig <- CPC.findByPrimaryKey merchanOperatingCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchanOperatingCityId.getId)
         when (isSuccessStatus payoutStatus) do
           driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
           QDriverStats.updateTotalPayoutAmountPaid (driverStats.totalPayoutAmountPaid <&> (+ amount)) (Id payoutOrder.customerId)
@@ -216,7 +216,7 @@ processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFl
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+  payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
   redisLockDriverId <- Redis.tryLockRedis lockKey 10800
   when (payoutConfig.isPayoutEnabled && redisLockDriverId) do
     dailyStats_ <- QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
@@ -234,18 +234,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
-          let createPayoutOrderReq =
-                Juspay.CreatePayoutOrderReq
-                  { orderId = uid,
-                    amount = pendingAmount,
-                    customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-                    customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-                    customerId = personId.getId,
-                    orderType = payoutConfig.orderType,
-                    remark = payoutConfig.remark,
-                    customerName = person.firstName,
-                    customerVpa = vpa
-                  }
+          let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
           let serviceName = DEMSC.PayoutService TPayout.Juspay
           let entityName = DPayment.BACKLOG
               createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName

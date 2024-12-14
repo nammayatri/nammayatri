@@ -96,7 +96,6 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.isForwardRequest (Kernel.Prelude.Just isForwardRequest),
       Se.Set Beam.isPartOfIntelligentPool isPartOfIntelligentPool,
       Se.Set Beam.keepHiddenForSeconds keepHiddenForSeconds,
-      Se.Set Beam.lastRideId (Kernel.Types.Id.getId <$> lastRideId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

@@ -2,6 +2,7 @@ module Storage.CachedQueries.Merchant.PayoutConfig where
 
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
+import Domain.Types.VehicleCategory (VehicleCategory)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -25,6 +26,21 @@ cachePayoutConfigForCityByEnabled id isPayoutEnabled payoutEntity cfg = do
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> PayoutEntity -> Text
 makeMerchantOpCityIdKey id isPayoutEnabled payoutEntity = "CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> "-isPayoutEnabled:" <> show isPayoutEnabled <> "-payoutEntity:" <> show payoutEntity
+
+findByCityIdAndVehicleCategoryAndIsPayoutEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> VehicleCategory -> m (Maybe PayoutConfig)
+findByCityIdAndVehicleCategoryAndIsPayoutEnabled id isPayoutEnabled vehicleCategory =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory) >>= \case
+    Just a -> return a
+    Nothing -> cachePayoutConfigForCityAndVehicleCategory id isPayoutEnabled vehicleCategory /=<< Queries.findByCityIdAndVehicleCategoryAndIsPayoutEnabled id (Just vehicleCategory) isPayoutEnabled
+
+cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> Bool -> VehicleCategory -> Maybe PayoutConfig -> m ()
+cachePayoutConfigForCityAndVehicleCategory id isPayoutEnabled vehicleCategory cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let idKey = makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory
+  Hedis.setExp idKey cfg expTime
+
+makeMerchantOpCityIdAndCategoryKey :: Id MerchantOperatingCity -> Bool -> VehicleCategory -> Text
+makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory = "CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId <> "-isPayoutEnabled:" <> show isPayoutEnabled <> "-vehicleCategory:" <> show vehicleCategory
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> PayoutEntity -> m ()

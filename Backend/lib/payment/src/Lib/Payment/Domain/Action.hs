@@ -30,6 +30,8 @@ module Lib.Payment.Domain.Action
     payoutStatusService,
     payoutStatusUpdates,
     cancelPaymentIntentService,
+    verifyVPAService,
+    mkCreatePayoutOrderReq,
   )
 where
 
@@ -939,3 +941,26 @@ payoutStatusUpdates status_ orderId statusResp = do
               QPayoutTransaction.create payoutTransaction
         Nothing -> pure ()
     Nothing -> pure ()
+
+mkCreatePayoutOrderReq :: Text -> HighPrecMoney -> Maybe Text -> Maybe Text -> Text -> Text -> Maybe Text -> Text -> Text -> PT.CreatePayoutOrderReq
+mkCreatePayoutOrderReq orderId amount mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType =
+  PT.CreatePayoutOrderReq
+    { customerPhone = fromMaybe "6666666666" mbPhoneNo,
+      customerEmail = fromMaybe "dummymail@gmail.com" mbEmail,
+      customerName = fromMaybe "Unknown Customer" mbCustomerName,
+      ..
+    }
+
+------ verifyVPA api ------
+
+verifyVPAService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Payment.VerifyVPAReq ->
+  (Payment.VerifyVPAReq -> m Payment.VerifyVPAResp) ->
+  m Payment.VerifyVPAResp
+verifyVPAService _merchantId _personId verifyVPAReq verifyVPACall = do
+  verifyVPACall verifyVPAReq -- api call

@@ -30,6 +30,9 @@ imports:
   PaymentService: Kernel.External.Payment.Types
   TripCategory: Domain.Types.Trip
   MultiModalService: Kernel.External.MultiModal.Types
+  GatewayAndRegistryService: Domain.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  Expand: Kernel.External.Payout.Interface.Types
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -76,6 +79,7 @@ Merchant:
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
+    gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
 
   excludedFields:
     - merchantId
@@ -105,6 +109,7 @@ Merchant:
     scheduleRideBufferTime: Seconds
     driverOnTheWayNotifyExpiry: Maybe Seconds
     arrivingPickupThreshold: HighPrecDistance
+    gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
 
   toTType:
     city: defaultCity|E
@@ -124,6 +129,7 @@ Merchant:
     arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
     arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
 
   fromTType:
     defaultCity: city|E
@@ -138,6 +144,7 @@ Merchant:
     editPickupDistanceThreshold: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold|E
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
 
   sqlType:
     editPickupDistanceThreshold: double precision
@@ -184,6 +191,7 @@ Merchant:
     arrivedPickupThreshold: double precision
     arrivingPickupThreshold: double precision
     driverOnTheWayNotifyExpiry: integer
+    gatewayAndRegistryPriorityList: "text[]"
 
   default:
     arrivedPickupThreshold: "50"
@@ -204,6 +212,7 @@ Merchant:
     fakeOtpEmails: "'{}'"
     city: "'Kochi'"
     onlinePayment: "false"
+    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
 
   constraints:
     shortId: SecondaryKey
@@ -222,6 +231,10 @@ Merchant:
     findBySubscriberId:
       kvFunction: findOneWithKV
       where: subscriberId
+    updateGatewayAndRegistryPriorityList:
+      kvFunction: updateWithKV
+      where: id
+      params: [gatewayAndRegistryPriorityList]
 
   excludedDefaultQueries:
     - createMany
@@ -340,6 +353,14 @@ MerchantServiceUsageConfig:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    updateSmsProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [smsProvidersPriorityList]
+    updateWhatsappProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [whatsappProvidersPriorityList]
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -564,6 +585,7 @@ PayoutConfig:
   tableName : payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
+    id: Id PayoutConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     timeDiff: NominalDiffTime
@@ -573,12 +595,31 @@ PayoutConfig:
     remark: Text
     orderType: Text
     payoutEntity: PayoutEntity
+    expand: Maybe Expand
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+    referralRewardAmountPerRide: HighPrecMoney
+    thresholdPayoutAmountPerPerson: HighPrecMoney
+    referredByRewardAmount: HighPrecMoney
+    maxPayoutReferralForADay: Int
   beamType:
     timeDiff: Seconds
+    referralRewardAmountPerRide: Maybe HighPrecMoney
+    thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
+    referredByRewardAmount: Maybe HighPrecMoney
+    maxPayoutReferralForADay: Maybe Int
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    referralRewardAmountPerRide: Just referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson: Just thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount: Just referredByRewardAmount|E
+    maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    referralRewardAmountPerRide: fromMaybe 0 referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson:  fromMaybe 0 thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
+    maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
+
   default:
     timeDiff: "86400"
     isPayoutEnabled: "False"
@@ -586,13 +627,18 @@ PayoutConfig:
     maxRetryCount: "5"
     remark: "'Cashback for metro ticket booking with NammaYatri'"
     orderType: "'FULFILL_ONLY'"
+    payoutEntity: "'PAYOUT_AWARD'"
   constraints:
-    merchantOperatingCityId: PrimaryKey
+    id: PrimaryKey
   queries:
     findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
+    findByCityIdAndVehicleCategoryAndIsPayoutEnabled:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleCategory, isPayoutEnabled]
 
   beamInstance:
     - MakeTableInstances
@@ -600,6 +646,5 @@ PayoutConfig:
 
   types:
     PayoutEntity:
-      enum: "METRO_TICKET_CASHBACK"
-
+      enum: "METRO_TICKET_CASHBACK,PAYOUT_AWARD"
 

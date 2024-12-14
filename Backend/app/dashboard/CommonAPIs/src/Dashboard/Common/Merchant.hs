@@ -36,8 +36,10 @@ import qualified Kernel.External.Notification.FCM.Flow as FCM
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import Kernel.External.SMS.Types (SmsService (..))
 import Kernel.External.Types (Language)
 import qualified Kernel.External.Verification as Verification
+import Kernel.External.Whatsapp.Types (WhatsappService (..))
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.Beckn.Context as Context
@@ -45,6 +47,7 @@ import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
@@ -802,4 +805,47 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     priority :: Maybe Int
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ConfigFailoverReq = ConfigFailoverReq
+  { merchantOperatingCity :: Kernel.Prelude.Maybe Context.City,
+    priorityOrder :: Kernel.Prelude.Maybe PriorityListWrapperType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigFailoverReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data ConfigNames
+  = BecknNetwork
+  | SmsProvider
+  | WhatsappProvider
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData ConfigNames where
+  parseQueryParam = readEither
+
+instance ToHttpApiData ConfigNames where
+  toUrlPiece = show
+
+data NetworkEnums
+  = ONDC
+  | NY
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData NetworkEnums where
+  parseQueryParam = readEither
+
+instance ToHttpApiData NetworkEnums where
+  toUrlPiece = show
+
+data PriorityListWrapperType = PriorityListWrapperType
+  { networkTypes :: [NetworkEnums],
+    smsProviders :: [SmsService],
+    whatsappProviders :: [WhatsappService]
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

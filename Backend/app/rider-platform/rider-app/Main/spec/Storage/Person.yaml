@@ -102,6 +102,7 @@ Person:
     informPoliceSos : Bool
     androidId: Maybe Text
     customerNammaTags: "Maybe [Text]"
+    payoutVpa: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -309,6 +310,11 @@ Person:
     updateCustomerTags:
       kvFunction: updateWithKV
       params: [customerNammaTags]
+      where: id
+
+    updatePayoutVpa:
+      kvFunction: updateWithKV
+      params: [payoutVpa]
       where: id
 
   extraOperations:

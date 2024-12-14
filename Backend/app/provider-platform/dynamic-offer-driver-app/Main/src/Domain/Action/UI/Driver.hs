@@ -174,7 +174,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToIntegral)
@@ -2587,18 +2586,10 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         )
         ([], refundAmount)
         driverFeeSorted
-    mkPayoutReq driverFeeToPayout person vpa uid phoneNo =
-      Juspay.CreatePayoutOrderReq
-        { orderId = uid,
-          amount = foldl (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout,
-          customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-          customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-          customerId = personId.getId,
-          orderType = "FULFILL_ONLY",
-          remark = "Refund for security deposit",
-          customerName = person.firstName,
-          customerVpa = vpa
-        }
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo = do
+      let amount = foldl' (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout
+          remark = "Refund for security deposit"
+      DPayment.mkCreatePayoutOrderReq uid amount phoneNo person.email personId.getId remark (Just person.firstName) vpa "FULFILL_ONLY"
     adjustDues dueDriverFees = do
       now <- getCurrentTime
       invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees

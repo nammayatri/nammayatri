@@ -70,6 +70,13 @@ getBackfillPersonStatsData personId merchantOpCityid = do
             updatedAt = now,
             referralCount = 0,
             ticketsBookedInEvent = Just 0,
+            referralAmountPaid = 0,
+            referralEarnings = 0,
+            referredByEarnings = 0,
+            validActivations = 0,
+            referredByEarningsPayoutStatus = Nothing,
+            backlogPayoutStatus = Nothing,
+            backlogPayoutAmount = 0,
             ..
           }
   return personStatsValues

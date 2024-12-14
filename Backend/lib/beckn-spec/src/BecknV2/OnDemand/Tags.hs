@@ -90,6 +90,7 @@ data BecknTagGroup
   | DELIVERY
   | DRIVER_REACHED_DESTINATION_INFO
   | ESTIMATED_END_TIME_RANGE
+  | RIDE_DETAILS_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -444,6 +445,8 @@ data BecknTag
   | ESTIMATED_END_TIME_RANGE_START
   | ESTIMATED_END_TIME_RANGE_END
   | PARCEL_IMAGE_UPLOADED
+  | CUSTOMER_DISABILITY_DISABLE
+  | IS_VALID_RIDE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -520,6 +523,7 @@ instance CompleteTag BecknTag where
     ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO
     SPECIAL_LOCATION_TAG -> GENERAL_INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
+    CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

@@ -74,6 +74,7 @@ defaultCityRemoteConfig defaultValue =
   , cuttack : Just defaultValue
   , puri : Just defaultValue
   , pudukkottai : Just defaultValue
+  , bidar : Just defaultValue
   , config: Nothing
   }
 
@@ -149,6 +150,7 @@ getAppBasedConfig :: forall a. AppConfigRC a -> String -> a
 getAppBasedConfig config app = case app of
   "Namma Yatri Partner" -> fromMaybe config.default config.nammaYatriPartner
   "Odisha Yatri Partner" -> fromMaybe config.default config.odishaYatriPartner
+  "Yatri Driver" -> fromMaybe config.default config.yatriPartner
   _ -> config.default
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
@@ -189,6 +191,7 @@ getCityBasedConfig config city = case city of
   "cuttack" -> fromMaybe config.default config.cuttack
   "puri" -> fromMaybe config.default config.puri
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
+  "bidar" -> fromMaybe config.default config.bidar
   _ -> case (getMerchant FunctionCall) of
         YATRISATHI -> fromMaybe config.default config.ysCities
         _ -> config.default
