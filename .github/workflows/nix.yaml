@@ -47,13 +47,8 @@ jobs:
     strategy:
       matrix:
         system: [x86_64-linux, aarch64-darwin]
-        isMain:
-          - ${{ contains(github.ref, 'main') }}
-        exclude:
-          - system: aarch64-darwin
-            isMain: false
     needs: [process-labels]
-    runs-on: ny-ci-nixos
+    runs-on: ${{ matrix.system }}
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
@@ -61,9 +56,9 @@ jobs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
-      
       - name: Build all flake outputs
-        run: om ci run --systems "${{ matrix.system }}" -- -vv
+        run: |
+          om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
       - name: Docker tasks
         id: docker
@@ -86,6 +81,23 @@ jobs:
         with:
           name: docker-image
           path: docker-image.tgz
+
+  # The previous job would have already built for macOS but we must do it again
+  # from NixOS host (via remote builder protocol) so as to populate its local
+  # Nix store, and thus provide macOS binaries as part of our Nix cache.
+  macos-build-for-cache:
+    runs-on: ${{ matrix.host }}
+    needs: [build, process-labels]
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        system: [aarch64-darwin]
+        host: [x86_64-linux]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all flake outputs
+        run: |
+          om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
   push-docker:
     needs: [build, process-labels]
