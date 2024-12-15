@@ -1,0 +1,1 @@
+UPDATE atlas_driver_offer_bpp.transporter_config SET min_threshold_for_pass_through_destination = 1000;
