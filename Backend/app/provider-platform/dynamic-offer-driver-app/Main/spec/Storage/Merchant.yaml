@@ -990,8 +990,8 @@ TransporterConfig:
     issueBreachConfig: Maybe [IssueBreachConfig]
     recentScheduledBookingsSafeLimit: Int
     minDistanceForStopFcm: HighPrecMeters
-
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
+    minThresholdForPassThroughDestination: Maybe Meters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1039,6 +1039,8 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
+    minThresholdForPassThroughDestination: Maybe Meters
+
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1095,6 +1097,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1157,6 +1160,7 @@ TransporterConfig:
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1212,6 +1216,7 @@ TransporterConfig:
     issueBreachConfig: json
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: text[]
+    minThresholdForPassThroughDestination: int
 
   default:
     mediaFileUrlPattern: |-
@@ -1342,6 +1347,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
     recomputeDistanceThresholds: "Array ['DistanceRecomputeConfigs {estimatedDistanceUpper = 5000, minThresholdPercentage = 40, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper = 10000, minThresholdPercentage = 30, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper =15000, minThresholdPercentage = 20, minThresholdDistance = 1000}', 'DistanceRecomputeConfigs {estimatedDistanceUpper = 9999999, minThresholdPercentage = 10, minThresholdDistance = 1000}']"
+    minThreshildForPassThroughDestination: "1000"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1552,4 +1558,6 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+
+
 
