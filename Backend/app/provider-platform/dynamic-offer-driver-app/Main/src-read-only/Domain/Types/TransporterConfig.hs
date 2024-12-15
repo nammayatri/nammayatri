@@ -146,6 +146,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     minLocationAccuracy :: Kernel.Prelude.Double,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,

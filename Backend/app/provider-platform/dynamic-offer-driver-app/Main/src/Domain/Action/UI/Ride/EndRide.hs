@@ -510,7 +510,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
-      (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False)
+      (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
