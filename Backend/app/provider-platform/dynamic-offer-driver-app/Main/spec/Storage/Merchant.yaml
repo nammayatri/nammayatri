@@ -884,6 +884,7 @@ TransporterConfig:
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
     minDistanceForStopFcm: HighPrecMeters
+    minThresholdForPassThroughDestination: Maybe Meters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -928,6 +929,8 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
     minDistanceForStopFcm: Maybe HighPrecMeters
+    minThresholdForPassThroughDestination: Maybe Meters
+
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -981,6 +984,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1039,6 +1043,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
 
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1092,6 +1097,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     minDistanceForStopFcm: double precision
+    minThresholdForPassThroughDestination: int
 
   default:
     mediaFileUrlPattern: |-
@@ -1221,6 +1227,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: "false"
     minDistanceForStopFcm: "100"
 
+    minThreshildForPassThroughDestination: "1000"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1430,4 +1437,6 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+
+
 

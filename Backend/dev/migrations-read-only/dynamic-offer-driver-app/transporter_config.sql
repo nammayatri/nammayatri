@@ -324,3 +324,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_list_sc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_for_stop_fcm double precision  default 100;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_threshold_for_pass_through_destination int ;
