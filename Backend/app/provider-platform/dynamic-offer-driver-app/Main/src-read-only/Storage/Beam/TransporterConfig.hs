@@ -144,6 +144,7 @@ data TransporterConfigT f = TransporterConfigT
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minThresholdForPassThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,

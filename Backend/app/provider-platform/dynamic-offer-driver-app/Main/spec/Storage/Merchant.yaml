@@ -887,6 +887,7 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recentScheduledBookingsSafeLimit: Int
     issueBreachConfig: Maybe [IssueBreachConfig]
+    minThresholdForPassThroughDestination: Maybe Meters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -933,6 +934,8 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     recentScheduledBookingsSafeLimit: Maybe Int
     issueBreachConfig: Maybe Value
+    minThresholdForPassThroughDestination: Maybe Meters
+
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -988,6 +991,7 @@ TransporterConfig:
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1049,6 +1053,7 @@ TransporterConfig:
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
 
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1103,6 +1108,7 @@ TransporterConfig:
     demandHotspotsConfig: json
     minDistanceForStopFcm: double precision
     issueBreachConfig: json
+    minThresholdForPassThroughDestination: int
 
   default:
     mediaFileUrlPattern: |-
@@ -1233,6 +1239,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
 
+    minThreshildForPassThroughDestination: "1000"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1442,4 +1449,6 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+
+
 

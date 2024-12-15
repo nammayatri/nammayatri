@@ -326,3 +326,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_fo
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recent_scheduled_bookings_safe_limit integer  default 50;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN issue_breach_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_threshold_for_pass_through_destination int ;
