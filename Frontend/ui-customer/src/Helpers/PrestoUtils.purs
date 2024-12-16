@@ -20,3 +20,10 @@ initUIWrapper _ = do
   case globalPayload of
     Nothing -> lift $ lift $ initUI
     Just payload -> liftFlowBT $ initUIWithNameSpace "default" ((payload ^. _payload) ^. _fragmentViewGroups >>= (\a -> a ^. _main))
+
+getFragmentView :: String -> Maybe String 
+getFragmentView _ = do
+   let globalPayload =  EHC.getGlobalPayload "__payload"
+   case globalPayload of
+    Nothing -> Nothing
+    Just payload -> ((payload ^. _payload) ^. _fragmentViewGroups >>= (\a -> a ^. _main))

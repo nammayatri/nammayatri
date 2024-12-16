@@ -27,7 +27,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
 import Presto.Core.Types.Language.Flow (getLogFields)
-
+import Helpers.PrestoUtils
 import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.List as PrestoList
@@ -42,7 +42,7 @@ selectContactsScreen = do
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "SelectContactsScreen"
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ NewContact.view push listItem1
 
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "SelectContactsScreen" Nothing 
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "SelectContactsScreen" (getFragmentView "") 
   act <- lift $ lift $ runScreenWithNameSpace ( SelectContactsScreen.screen state.selectContactsScreen listItemm)
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "SelectContactsScreen"
   case act of
