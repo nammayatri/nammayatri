@@ -28,7 +28,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail,unsafeFromForeign)
+import Foreign (Foreign, ForeignError(..), fail,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON, genericDecode)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
@@ -48,6 +48,7 @@ import Accessor (_amount)
 import DecodeUtil
 import Data.Function.Uncurried (runFn3)
 import Debug
+import Data.Argonaut.Core as AC
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -2414,7 +2415,8 @@ newtype CreateOrderRes = CreateOrderRes --TODO:: Move to common
     sdk_payload :: PaymentPagePayload,
     id :: String,
     order_id :: String,
-    payment_links :: PaymentLinks
+    payment_links :: PaymentLinks,
+    sdk_payload_json :: Maybe Foreign
   }
 
 newtype PaymentLinks = PaymentLinks
@@ -2579,7 +2581,9 @@ instance encodeSTicketBookingReq :: Encode TicketBookingReq where encode = defau
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance showCreateOrderRes :: Show CreateOrderRes where
+  show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
+    show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
 
