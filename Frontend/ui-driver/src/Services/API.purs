@@ -33,7 +33,7 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign, Foreign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
@@ -2427,7 +2427,8 @@ newtype CreateOrderRes = CreateOrderRes
     sdk_payload :: PaymentPagePayload,
     id :: String,
     order_id :: String,
-    payment_links :: PaymentLinks
+    payment_links :: PaymentLinks,
+    sdk_payload_json :: Maybe Foreign
   }
 
 
@@ -2458,7 +2459,9 @@ instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance showCreateOrderRes :: Show CreateOrderRes where 
+  show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
+    show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
 
