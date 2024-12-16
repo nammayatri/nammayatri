@@ -24,6 +24,9 @@ updateAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateOneWithKV [Se
 updateInitiatedBy :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateInitiatedBy initiatedBy id = do updateOneWithKV [Se.Set Beam.initiatedBy initiatedBy] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateRiderPreferredOption :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequest.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption (Just riderPreferredOption)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateTotalRidesCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
