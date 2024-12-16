@@ -178,6 +178,10 @@ initData =
       , scheduleRideCount : Nothing
       , blockExpiryTime : ""
       , isSpecialLocWarrior : false
+      , blockReason : Nothing
+      , driverSoftBlockedVehicle : Nothing
+      , softBlockExpiryTime : Nothing
+      , softBlockReasonFlag : Nothing
     }
   , props:
       { isFreeRide: false
@@ -277,6 +281,8 @@ initData =
       , retryRideList : false
       , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
+      , showAskedExtraFarePopUp : false
+      , showDriverSoftBlockedPopup : false
       }
   }
 

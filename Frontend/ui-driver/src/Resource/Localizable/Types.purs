@@ -1779,7 +1779,7 @@ data STR = LETS_GET_STARTED
         | PICKUP_INSTRUCTION
         | DROP_INSTRUCTION
         | TRUCK
-        | REGISTER_YOUR_TRUCK
+        | REGISTER_YOUR_TRUCK        
         | METRO_WARRIOR_MODE
         | CHOOSE_METRO_STATION
         | PRIMARY_METRO_STATION
@@ -1791,6 +1791,9 @@ data STR = LETS_GET_STARTED
         | CHOOSE_PREFERRED_METRO
         | METRO_WARRIORS
         | SEARCH
+        | YOU_HAVE_BEEN_BLOCKED_FOR_N_DAYS
+        | BLOCKED_FOR_VARIANT_RIDES_TILL String String String
+        | BLOCKED_FOR_VARIANT_RIDES_REASON String
 
 -- instance showSTR :: Show STR
 --   show = case _ of

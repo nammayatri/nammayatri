@@ -1716,4 +1716,7 @@ getBn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " টি প্রধান রুটে আমাদের বাস টিকিটিং পাইলট লঞ্চের অভিজ্ঞতা নিন। শীঘ্রই আরও রুট আসছে!")
 , note_your_ticket_is_only_valid_for : (\s -> "দ্রষ্টব্য: আপনার টিকিট বুকিংয়ের " <> s <> " পর্যন্ত বৈধ। স্থানীয় পরিস্থিতির কারণে বাসের সময়সূচি পরিবর্তিত হতে পারে, তাই দয়া করে বুক করার সময় স্টপেজে প্রস্তুত থাকুন।")
 , here_is_bus_ticket : "এখানে আ"
+, were_you_asked_to_pay_extra_q : "আপনাকে কি বেশি টাকা দিতে বলা হয়েছিল?"
+, were_you_asked_to_pay_extra_desc : "যদি চালক/রাইডার উপরে দেখানো চূড়ান্ত ভাড়ার চেয়ে বেশি টাকা চায়, তবে আমাদের জানান।"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "আমরা অসুবিধার জন্য অন্তঃপুরে দুঃখিত"
 }

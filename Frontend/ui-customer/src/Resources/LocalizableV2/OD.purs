@@ -1716,4 +1716,7 @@ getOd = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "ଆମ ପାଇଲଟ୍ ପ୍ରବର୍ତ୍ତନକୁ ଅନୁଭବ କରନ୍ତୁ " <> s <> " ମୁଖ୍ୟ ପଥଗୁଡିକରେ। ସିଗ୍ରହ ସବୁ ଆସୁଛି!")  
 , note_your_ticket_is_only_valid_for : (\s -> "ଧ୍ୟାନ ଦିଅନ୍ତୁ: ଆପଣଙ୍କ ଟିକେଟ୍ କେବଳ " <> s <> " ପାଇଁ ପ୍ରାମାଣିକ ଅଟେ। ସ୍ଥାନୀୟ ପରିସ୍ଥିତି ଅନୁସାରେ ବସ୍ ସମୟ ପରିବର୍ତ୍ତିତ ହୋଇପାରେ, ସେପରି ଷ୍ଟପ୍ରେ ବସ୍ ବୁକିଂ କରିବା ସମୟରେ ଥାନ୍ତୁ")  
 , here_is_bus_ticket : "ଏହା ଆପଣଙ୍କର ବସ୍ ଟିକେଟ୍"  
+, were_you_asked_to_pay_extra_q : "କି ଆପଣଙ୍କୁ ଅଧିକ ପେସା ଦେବାକୁ କୁହାଯାଇଥିଲା?"
+, were_you_asked_to_pay_extra_desc : "ଯଦି ଚାଳକ/ରାଇଡର୍ ଆଖ୍ୟାନ୍ତିକ ଭଡ଼ାରୁ ଅଧିକ ପେସା ଦାବି କରିଥିଲେ, ଆମକୁ ଜଣାନ୍ତୁ।"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "ଆମେ ଏହି ଅସୁବିଧା ପାଇଁ ଗଭୀର ଭାବେ କ୍ଷମାପ୍ରାର୍ଥୀ।"
 }

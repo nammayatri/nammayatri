@@ -365,3 +365,7 @@ frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> ro
 
 confirmMetroQuoteV2 :: String -> String
 confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"
+
+
+createIssue :: String
+createIssue = (getBaseUrl "62") <> "/issue"

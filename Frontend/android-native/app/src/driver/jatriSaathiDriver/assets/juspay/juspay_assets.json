@@ -902,6 +902,8 @@
       "ys_ic_petrapol_map" : true,
       "ys_ic_siliguri_map" : true,
       "zone_curve" : true,
-      "ny_img_welcome_third" : true
+      "ny_img_welcome_third" : true,
+      "ny_ic_asked_extra_fare" : true,
+      "ny_ic_account_blocked_for_n_days" : true
    }
 }

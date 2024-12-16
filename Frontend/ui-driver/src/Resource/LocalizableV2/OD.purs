@@ -1779,4 +1779,9 @@ getOd =
     , choose_preferred_metro : "ପସନ୍ଦର ମେଟ୍ରୋ ବାଛନ୍ତୁ"
     , metro_warriors : "ମେଟ୍ରୋ ୱାରିଅର୍"
     , search : "ଖୋଜନ୍ତୁ"
+    , you_have_been_blocked_for_n_days : "ଆପଣଙ୍କୁ ଦିନ ପାଇଁ ଅବରୋଧ କରାଯାଇଛି।"
+    , do_not_ask_customers_for_extra_payment : "গ্রাহকদের কাছে অতিরিক্ত ভাড়া চাইবেন না। যদি আপনি এটা করতে থাকেন, আপনি ব্লক হতে পারেন |"
+    , warning: "ସତର୍କତା"
+    , blocked_for_variant_rides_till : (\a b c -> a <> " ଯାତ୍ରା ପାଇଁ " <> b <> "," <> c <> " ପର୍ଯ୍ୟନ୍ତ ବନ୍ଦ କରାଯାଇଛି")
+    , blocked_for_variant_rides_reason : (\a -> "You have been blocked for " <> a <> " Rides due to multiple customer complaints regarding extra fare")
   }

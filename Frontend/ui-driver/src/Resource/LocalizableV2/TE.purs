@@ -1779,4 +1779,9 @@ getTe =
     , choose_preferred_metro : "ప్రాధాన్యమైన మెట్రోను ఎంచుకోండి"
     , metro_warriors : "మెట్రో వారియర్స్"
     , search : "వెతకండి"  
+    , warning : "హెచ్చరిక!"
+    , you_have_been_blocked_for_n_days: "అదనపు చార్జీ పై పలు కస్టమర్ ఫిర్యాదుల కారణంగా మీరు రోజులకు బ్లాక్ చేయబడ్డారు."
+    , do_not_ask_customers_for_extra_payment: "కస్టమర్ దగ్గర అదనపు డబ్బు అడగవద్దు. ఇలా కొనసాగితే మీరు బ్లాక్ అవుతారు." 
+    , blocked_for_variant_rides_till: (\a b c -> "Blocked for " <> a <> " Rides till " <> b <> ", " <> c)
+    , blocked_for_variant_rides_reason: (\a -> "You have been blocked for " <> a <> " Rides due to multiple customer complaints regarding extra fare")
     }
