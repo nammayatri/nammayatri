@@ -317,7 +317,7 @@ mkDisabilityDisableTagGroup res =
                         descriptorShortDesc = Nothing
                       },
                 tagDisplay = Just False,
-                tagValue = Just $ show res.disabilityDisable
+                tagValue = (Just . T.pack . show) =<< res.disabilityDisable
               }
           ]
     }
