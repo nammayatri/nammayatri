@@ -203,6 +203,11 @@ SearchRequest:
       where: id
       params: [isAdvanceBookingEnabled]
 
+    updateRiderPreferredOption:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [riderPreferredOption]
+
     updateTotalRidesCount:
       kvFunction: updateOneWithKV
       params: [id, totalRidesCount]

@@ -264,6 +264,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
+      updateRiderPreferredOption quotes
 
       let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
       whenJust mbRequiredEstimate $ \requiredEstimate ->
@@ -329,6 +330,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
     isNotBlackListed :: [Enums.VehicleCategory] -> Enums.VehicleCategory -> Bool
     isNotBlackListed blackListedVehicles vehicleCategory = vehicleCategory `notElem` blackListedVehicles
+
+    updateRiderPreferredOption quotes = case listToMaybe quotes of
+      Just quote -> do
+        let actualRiderPreferredOption = case quote.quoteDetails of
+              DQuote.InterCityDetails _ -> InterCity
+              _ -> OneWay
+        when (actualRiderPreferredOption == InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption InterCity quote.requestId
+      _ -> pure ()
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
