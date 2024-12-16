@@ -5,21 +5,21 @@ Driver-App:
 
     b. Tables:
 
-        routeMappingConfigs: {
+        RouteMappingConfigs: {
             id: string,
             allowEndingMidRoute: boolean -- govt will have false, private will have true, default false
         }
 
-        vehicleRouteMapping: {
+        VehicleRouteMapping: {
             fleetOwnerId: string, -- person with role fleet.
             vehicleId: string,
             routeCode: string,
             blocked: boolean,
-            configId: routeMappingConfigs
+            configId: Id Domain.Types.RouteMappingConfigs
         } 1-N mapping 
         pk: vehicleId, routeCode
 
-        tripTransaction: {
+        TripTransaction: {
             id: string,
             fleetOwnerId: string,
             vehicleId: string,
@@ -36,7 +36,7 @@ Driver-App:
         }
         * route to trip Id mapping already exist in some tables, just create a new entry in tripTransaction using the schedules of trip.
 
-        driverRequest: {
+        DriverRequest: {
             id: string,
             requestType: string,
             description: Maybe string,
@@ -123,7 +123,7 @@ Driver-App:
                 // without TripId start shouldn't be allowed.
                 // map using the current time nearest to trip start stop scheudle arrival time.
 
-        a.5 - POST /ui/wmb/trip/{tripTransactionId}/request
+        a.5 - POST /ui/wmb/trip/{tripTransactionId}/request (Don't make now)
               request: DriverRequestType,
               response: {
                 requestId: string,
@@ -135,7 +135,7 @@ Driver-App:
                 lon: double
               }
               response: {
-                result: SUCCESS | FLOW_STATUS_VALA_WAITING_RESPONSE
+                result: SUCCESS | (For Government => WAITING_FOR_ADMIN_APPROVAL)
               }
               - if (End location within X meters of route's last stop) {
                     allow ending trip.
@@ -147,6 +147,8 @@ Driver-App:
                         // sendNotificationTofleetOwnerIdDashboard (GRPC)
                     }
                 }
+        a.6 - POST /ui/driver/profile (existing)
+               { .., wmbTripStatus : ON_TRIP | RIDE_END_PENDING_FOR_APPROVAL | IDLE }
         
         --- Might be required:
         a.* - GET /ui/wmb/routes?searchString=<Maybe string> (Just in case, they might change their routes from UI)
