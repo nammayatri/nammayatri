@@ -164,11 +164,15 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
 sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg = do
+  now <- getCurrentTime
   -- In case of static offer flow we will have booking created before driver ride request is sent
   mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
-  handler (handle mbBooking) goHomeCfg
+  handler (handle mbBooking now) goHomeCfg
   where
-    handle mbBooking =
+    lastMaybe [] = Nothing
+    lastMaybe xs = Just $ last xs
+
+    handle mbBooking now =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
@@ -183,7 +187,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
               },
           isSearchTryValid = I.isSearchTryValid searchTry.id,
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
-          isScheduledBooking = searchTry.isScheduled,
+          isScheduledBooking = round (diffUTCTime searchTry.startTime now) > fromMaybe 300 (lastMaybe driverPoolConfig.scheduleTryTimes),
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
             case mbBooking of
