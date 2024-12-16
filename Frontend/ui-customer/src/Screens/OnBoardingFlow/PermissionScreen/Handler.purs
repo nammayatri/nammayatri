@@ -32,6 +32,7 @@ import Screens.Types as ST
 import Engineering.Helpers.Utils as EHU
 import DecodeUtil as DU
 import JBridge
+import Helpers.PrestoUtils
 
 permissionScreen :: FlowBT String PERMISSION_SCREEN_OUTPUT
 permissionScreen = do
@@ -50,7 +51,7 @@ noInternetScreen = do
   void $ EHU.toggleLoader false
   (GlobalState state) <- Flow.getState
   logField_ <- getLogFields
-  void $ liftFlow $ initUIWithNameSpace "PermissionScreen" Nothing
+  void $ liftFlow $ initUIWithNameSpace "PermissionScreen" (getFragmentView "")
   let 
     screen = PermissionScreen.screen state.permissionScreen{logField = logField_, stage = ST.INTERNET_ACTION}
     scopedScreen = { 
