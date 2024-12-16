@@ -71,8 +71,9 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithM
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
 import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms, getReferralCode)
-import Foreign (unsafeToForeign)
+import Foreign (unsafeToForeign, unsafeFromForeign)
 import Foreign.Class (class Encode, encode, decode)
+import Foreign.Generic (encodeJSON)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 import Helpers.Utils as HU
@@ -83,7 +84,7 @@ import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig(..), Language, CityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
+import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage, addLanguageToPayload)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const, (>>=))
 import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
@@ -3151,13 +3152,12 @@ clearPendingDuesFlow showLoader = do
       let (CreateOrderRes orderResp) = clearduesResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
-          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       void $ pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       void $ pure $ metaLogEvent "ny_driver_payment_page_opened"
       liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      let sdkPayload = maybe (encodeJSON orderResp.sdk_payload) (addLanguageToPayload (getPaymentPageLangKey (getLanguageLocale languageKey))) orderResp.sdk_payload_json
       void $ paymentPageUI sdkPayload
       pure $ toggleBtnLoader "" false
       void $ lift $ lift $ toggleLoader false
@@ -3202,15 +3202,12 @@ nyPaymentFlow planCardConfig fromScreen = do
         pure unit 
       else pure unit
       let (CreateOrderRes orderResp) = listResp.orderResp
-          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
-          (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
-          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       void $ pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       void $ pure $ metaLogEvent "ny_driver_payment_page_opened"
       liftFlowBT $ firebaseLogEvent "ny_driver_payment_page_opened"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      let sdkPayload = maybe (encodeJSON orderResp.sdk_payload) (addLanguageToPayload (getPaymentPageLangKey (getLanguageLocale languageKey))) orderResp.sdk_payload_json
       void $ paymentPageUI sdkPayload
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
@@ -3313,7 +3310,8 @@ ysPaymentFlow = do
       let (PaymentPagePayload sdk_payload) = listResp.sdk_payload
       setValueToLocalStore DISABLE_WIDGET "true"
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-      paymentPageOutput <- paymentPageUI listResp.sdk_payload
+      let sdkPayload = maybe (encodeJSON listResp.sdk_payload) (addLanguageToPayload (getPaymentPageLangKey (getLanguageLocale languageKey))) listResp.sdk_payload_json
+      paymentPageOutput <- paymentPageUI sdkPayload
       pure $ toggleBtnLoader "" false
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
@@ -4176,13 +4174,10 @@ addUPIFlow state = do
   response <- lift $ lift $ Remote.payoutRegistration "dummy"
   case response of
     Right (API.PayoutRegisterRes payoutRegisterRes) -> do
-      let (CreateOrderRes createOrderRes) = payoutRegisterRes.orderResp 
-          (PaymentPagePayload sdk_payload) = createOrderRes.sdk_payload
-          (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
-          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      let (CreateOrderRes createOrderRes) = payoutRegisterRes.orderResp
       modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{orderId = Just payoutRegisterRes.orderId}})
       lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      let sdkPayload = maybe (encodeJSON createOrderRes.sdk_payload) (addLanguageToPayload (getPaymentPageLangKey (getLanguageLocale languageKey))) createOrderRes.sdk_payload_json
       void $ paymentPageUI sdkPayload
       checkPaymentStatus payoutRegisterRes.orderId
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
