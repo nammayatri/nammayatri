@@ -1,0 +1,94 @@
+imports:
+  Text: Data.Text
+  LatLong: Kernel.External.Maps.Types
+  ServiceTierType: Domain.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+
+
+VehicleRouteMapping:
+  tableName: vehicle_route_mapping
+
+  fields:
+    fleetOwnerId: Id Person
+    vehicleNumber: Text
+    routeCode: Text
+    vehicleColor: Text
+    vehicleModel: Text
+    vehicleClass: Text
+    vehicleServiceTierType: ServiceTierType
+    blocked: Bool
+    allowEndingMidRoute: Bool
+
+  constraints:
+    vehicleNumber: PrimaryKey
+    routeCode: PrimaryKey
+
+TripTransaction:
+  tableName: trip_transaction
+
+  types:
+    TripStatus:
+      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id TripTransaction
+    fleetOwnerId: Id Person
+    vehicleNumber: Text
+    tripCode: Maybe Text
+    driverId: Id Person
+    status: TripStatus
+    isCurrentlyDeviated: Bool
+    deviationCount: Int
+    startLocation: Maybe LatLong
+    endLocation: Maybe LatLong
+    startedNearStopCode: Text
+    endStopCode: Text
+    allowEndingMidRoute: Bool
+
+  constraints:
+    id: PrimaryKey
+
+  beamFields:
+    startLocation:
+      startLocationLat: Maybe Double
+      startLocationLon: Maybe Double
+    endLocation:
+      endLocationLat: Maybe Double
+      endLocationLon: Maybe Double
+
+  toTType:
+    startLocationLat: Kernel.Prelude.fmap (.lat)|I
+    startLocationLon: Kernel.Prelude.fmap (.lon)|I
+    endLocationLat: Kernel.Prelude.fmap (.lat)|I
+    endLocationLon: Kernel.Prelude.fmap (.lon)|I
+  fromTType:
+    startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+    endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
+DriverRequest:
+  tableName: driver_request
+
+  types:
+    RequestStatus:
+      enum: "ACCEPTED, REJECTED"
+
+  fields:
+    id: Id DriverRequest
+    requestType: Text
+    description: Maybe Text
+    tripTransactionId : Id TripTransaction
+    status: Maybe RequestStatus
+    reason: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+
+
+
+
+

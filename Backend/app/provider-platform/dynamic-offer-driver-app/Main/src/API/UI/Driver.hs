@@ -36,7 +36,6 @@ module API.UI.Driver
   )
 where
 
-import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
