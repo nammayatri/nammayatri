@@ -168,6 +168,9 @@ suggestionsDefinitions dummy =
   , { key: "dols1AP", value: { en_us: "Yes", ta_in: "ஆம்", kn_in: "ಹೌದು", hi_in: "हाँ", ml_in: "അതെ", bn_in: "হ্যাঁ", te_in: "అవును" } }
   , { key: "dols2AP", value: { en_us: "Ok", ta_in: "சரி", kn_in: "ಸರಿ", hi_in: "ठीक है", ml_in: "ഓക്കേ", bn_in: "ঠিক আছে", te_in: "సరే" } }
   , { key: "dols3AP", value: { en_us: "At pick-up", ta_in: "பிக்-அப்பில் உள்ளேன்", kn_in: "ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ ", hi_in: "मैं लोकेशन पे आ गया हूँ ", ml_in: "ഞാൻ പിക്ക്-അപ്പിൽ ആണ്", bn_in: "আমি পিক-আপ স্থানে আছি", te_in: "పికప్ వద్ద ఉన్నాను" } }
+  , { key: "driverStopDetectedOverlay1BP", value: {en_us: "On my way, hold tight!",ta_in: "வந்துகொண்டு இருக்கிறேன், சற்று காத்திருங்கள்!",kn_in: "ಸರಿ ಬರುತ್ತಿದ್ದೇನೆ, ಸ್ವಲ್ಪ ಕಾಯಿರಿ",hi_in: "रास्ते में हूँ, थोड़ा इंतजार करें!",ml_in: "ഞാൻ വരുന്നു, കുറച്ച് സമയം കാത്തിരിക്കൂ!",bn_in: "রাস্তায় আছি, একটু অপেক্ষা করুন!",te_in: "మార్గ మధ్యంలో ఉన్నాను,కాసేపు ఆగండి"} }
+  , { key: "driverStopDetectedOverlay2BP", value: {en_us: "Traffic ahead, few mins delay",ta_in: "போக்குவரத்து நெரிசலாக உள்ளது, சில நிமிடங்கள் தாமதமாகும்",kn_in: "ಟ್ರಾಫಿಕ್ ಇದೆ, ಸ್ವಲ್ಪ ಸಮಯ ತಡೆಯಿರಿ",hi_in: "आगे ट्रैफिक है, कुछ मिनट देरी होगी",ml_in: "ട്രാഫിക് ഉണ്ട്, കുറച്ച് നേരം വൈകും",bn_in: "সামনের দিকে ট্রাফিক আছে, কয়েক মিনিট দেরি",te_in: "ముందు ట్రాఫిక్ ఉంది, కొద్దిసేపు ఆలస్యం అవుతుంది."} }
+  , { key: "driverStopDetectedOverlay3BP", value: {en_us: "Struggling with location, one sec!",ta_in: "இடத்தை கண்டுபிடிக்க சிரமமாக உள்ளது, ஒரு நொடி!",kn_in: "ಸ್ಥಳ ಸಿಗುವುದರಲ್ಲಿ ತೊಂದರೆ, ಒಂದು ಕ್ಷಣ!",hi_in: "स्थान ढूंढने में मुश्किल हो रही है, एक सेकंड!",ml_in: "ലൊക്കേഷൻ കണ്ടെത്താൻ ബുദ്ധിമുട്ടുന്നു, ഒരു സെക്കന്റ്!",bn_in: "লোকেশন খুঁজতে অসুবিধা হচ্ছে, এক সেকেন্ড!",te_in: "లొకేషన్ కనుగొనుటలో ఇబ్బందిఉంది, ఒక సెకండ్ ఆగండి!"} }
   ]
 
 getSuggestions ∷ String -> Suggestions
@@ -234,6 +237,7 @@ getSuggestions dummy =
   , { key: "driverOverlayDefaultBP", value: [ "dols1BP", "dols2BP", "dols3BP" ] }
   , { key: "driverDefaultAP", value: [ "dds1AP", "dds2AP", "dds3AP" ] }
   , { key: "driverDefaultBP", value: [ "dds1BP", "dds2BP", "dds3BP" ] }
+  , { key: "driverStopDetectedOverlayDefault", value: ["driverStopDetectedOverlay1BP","driverStopDetectedOverlay2BP","driverStopDetectedOverlay3BP"]}
   ]
 
 type Suggestions
