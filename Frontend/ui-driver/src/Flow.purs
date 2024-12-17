@@ -202,7 +202,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
-    when baseFlow $ showParcelIntroductionPopup *> showDriverSoftBlockedPopUp
+    when baseFlow $ showParcelIntroductionPopup
     initialFlow    
     where
     updateOperatingCity :: FlowBT String Unit
@@ -296,24 +296,6 @@ baseAppFlow baseFlow event driverInfoResponse = do
               Nothing -> pure unit
           _ -> pure unit
       else pure unit
-    
-    showDriverSoftBlockedPopUp :: FlowBT String Unit
-    showDriverSoftBlockedPopUp = do
-      case driverInfoResponse of
-        Just (Right (GetDriverInfoResp driverInfoResp)) -> do    
-          let softBlockedVehicle = HU.getLinkedSoftBlockedVehicle (GetDriverInfoResp driverInfoResp)
-          modifyScreenState
-            $ HomeScreenStateType
-                ( \homeScreen ->
-                    homeScreen {
-                      data { 
-                        driverSoftBlockedVehicle = softBlockedVehicle
-                        , softBlockExpiryTime = driverInfoResp.softBlockExpiryTime
-                        , softBlockReasonFlag = driverInfoResp.softBlockReasonFlag
-                        }, 
-                        props { showDriverSoftBlockedPopup = isJust softBlockedVehicle}}
-              )
-        _ -> pure unit
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do
@@ -2305,7 +2287,7 @@ currentRideFlow activeRideResp isActiveRide = do
                 state = allState.homeScreen
                 activeRide = (activeRideDetail state (RidesInfo ride))
                 stage = (if activeRide.status == NEW then (if (any (\c -> c == ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ChatWithCustomer else RideAccepted) else RideStarted)
-                showAskedExtraFarePopUp = ride.extraFareMitigationFlag == Just true && ride.vehicleVariant == "BIKE"
+                showAskedExtraFarePopUp = false -- ride.extraFareMitigationFlag == Just true && ride.vehicleVariant == "BIKE"
             sourceMod <- translateString decodedSource 500
             destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
               destMod <- translateString decodedDestination' 500
@@ -2832,7 +2814,7 @@ homeScreenFlow = do
           case (rideList.list DA.!! 0) of
             Just ( rideInfo) -> do
               let currActiveRideDetails = activeRideDetail state rideInfo
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true, showAskedExtraFarePopUp = (rideInfo ^. _extraFareMitigationFlag) == Just true && (rideInfo ^. _vehicleVariant) == "BIKE"}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true, showAskedExtraFarePopUp = false}})
               pure unit
             Nothing -> pure unit
       homeScreenFlow
@@ -3816,7 +3798,8 @@ updateBannerAndPopupFlags = do
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
   rideAndEarnPopup <- callGetPastDaysData appConfig allState.homeScreen
-  let
+  let 
+    _ = spy "updateBannerAndPopupFlags" (getDriverInfoResp)
     coinsConfig = getCoinsConfigData $ DS.toLower driverCity
     cityConfig = getCityConfig appConfig.cityConfig driverCity
     driverCity = getValueToLocalStore DRIVER_LOCATION
@@ -3910,6 +3893,7 @@ updateBannerAndPopupFlags = do
     showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN ST.VerifyUPI && isJust payoutVpa && case payoutVpaStatus of 
                                                                                                               Just status -> status == MANUALLY_ADDED
                                                                                                               Nothing -> false   
+    softBlockedVehicle = HU.getLinkedSoftBlockedVehicle (GetDriverInfoResp getDriverInfoResp)
 
   when shouldDriverbeOffline $ changeDriverStatus Offline
   when moveDriverToOffline $ do
@@ -3939,6 +3923,9 @@ updateBannerAndPopupFlags = do
                     freeTrialRides = getDriverInfoResp.freeTrialRides,
                     totalRidesTaken = getDriverInfoResp.totalRidesTaken
                 }
+                , driverSoftBlockedVehicle = softBlockedVehicle
+                , softBlockExpiryTime = getDriverInfoResp.softBlockExpiryTime
+                , softBlockReasonFlag = getDriverInfoResp.softBlockReasonFlag
                 }
               , props
                 { autoPayBanner = autopayBannerType
@@ -3949,6 +3936,7 @@ updateBannerAndPopupFlags = do
                 , showReferNowPopUp = showReferNowPopUp
                 , showAddUPIPopUp = showAddUPIPopUp
                 , showVerifyUPIPopUp = showVerifyUPIPopUp
+                , showDriverSoftBlockedPopup = isJust softBlockedVehicle
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup

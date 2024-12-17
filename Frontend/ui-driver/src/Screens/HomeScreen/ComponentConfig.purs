@@ -2955,7 +2955,7 @@ askedExtraFareConfig state = PopUpModal.config {
     , width = MATCH_PARENT
     },
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_asked_extra_fare"
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_asked_extra_fare"
     , visibility = VISIBLE
     , width = V (EHC.screenWidth unit - 20)
     , height = V (EHC.screenWidth unit - 180)
@@ -2976,7 +2976,8 @@ blockedForNDaysConfig state =
   in 
     PopUpModal.config {
       gravity = CENTER,
-      backgroundClickable = false,
+      backgroundClickable = true,
+      dismissPopup = true,
       optionButtonOrientation = "VERTICAL",
       buttonLayoutMargin = Margin 16 0 16 20,
       margin = MarginHorizontal 25 25, 
@@ -3015,7 +3016,7 @@ blockedForNDaysConfig state =
     },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = fetchImage FF_ASSET  "ny_ic_account_blocked"
+        imageUrl = fetchImage COMMON_ASSET "ny_ic_account_blocked_for_n_days"
       , visibility = VISIBLE
       , margin = Margin 16 16 16 16
       , width = MATCH_PARENT

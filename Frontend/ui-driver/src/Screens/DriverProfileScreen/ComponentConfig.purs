@@ -640,7 +640,7 @@ driverSoftBLockedPopup state =
     },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = fetchImage FF_ASSET  "ny_ic_account_blocked"
+        imageUrl = fetchImage COMMON_ASSET "ny_ic_account_blocked_for_n_days"
       , visibility = VISIBLE
       , margin = Margin 16 16 16 16
       , width = MATCH_PARENT

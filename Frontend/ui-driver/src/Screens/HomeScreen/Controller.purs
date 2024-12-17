@@ -1372,7 +1372,7 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq, showAskedExtraFarePopUp = (activeRide ^. _extraFareMitigationFlag) == Just true && (activeRide ^. _vehicleVariant) == "BIKE"}}
+      updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq, showAskedExtraFarePopUp = false}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
@@ -1735,11 +1735,11 @@ eval (ParcelIntroductionPopup action) state = do
 eval (AskedExtraFare PopUpModal.OnButton1Click) state = 
   continue state {props {showAskedExtraFarePopUp = false}}
 
-eval (BlockedForNDays PopUpModal.OnButton1Click) state = 
+eval (BlockedForNDays PopUpModal.OnButton1Click) state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
   continue state {props {showDriverSoftBlockedPopup = false}}
 
-eval (BlockedForNDays PopUpModal.OnButton2Click) state = do
-  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+eval (BlockedForNDays PopUpModal.OnButton2Click) state =
   continue state {props {showDriverSoftBlockedPopup = false}}
 
 eval _ state = update state 
