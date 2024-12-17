@@ -33,7 +33,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverBlockTransactions.DriverBlockTransactions {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blockLiftTime blockLiftTime,
+    [ Se.Set Beam.actionType actionType,
+      Se.Set Beam.blockLiftTime blockLiftTime,
       Se.Set Beam.blockReason blockReason,
       Se.Set Beam.blockReasonFlag blockReasonFlag,
       Se.Set Beam.blockTimeInHours blockTimeInHours,
@@ -54,7 +55,8 @@ instance FromTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransac
     pure $
       Just
         Domain.Types.DriverBlockTransactions.DriverBlockTransactions
-          { blockLiftTime = blockLiftTime,
+          { actionType = actionType,
+            blockLiftTime = blockLiftTime,
             blockReason = blockReason,
             blockReasonFlag = blockReasonFlag,
             blockTimeInHours = blockTimeInHours,
@@ -73,7 +75,8 @@ instance FromTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransac
 instance ToTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransactions.DriverBlockTransactions where
   toTType' (Domain.Types.DriverBlockTransactions.DriverBlockTransactions {..}) = do
     Beam.DriverBlockTransactionsT
-      { Beam.blockLiftTime = blockLiftTime,
+      { Beam.actionType = actionType,
+        Beam.blockLiftTime = blockLiftTime,
         Beam.blockReason = blockReason,
         Beam.blockReasonFlag = blockReasonFlag,
         Beam.blockTimeInHours = blockTimeInHours,

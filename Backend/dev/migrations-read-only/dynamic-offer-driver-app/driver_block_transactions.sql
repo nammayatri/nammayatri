@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD PRIMARY KEY ( i
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN block_reason_flag text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN action_type text ;
