@@ -21,6 +21,7 @@ import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 
 data TransporterConfigD (s :: UsageSafety) = TransporterConfig
@@ -128,6 +129,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,
+    issueBreachConfig :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachConfig],
     kaptureDisposition :: Kernel.Prelude.Text,
     kaptureQueue :: Kernel.Prelude.Text,
     languagesToBeTranslated :: [Kernel.External.Types.Language],

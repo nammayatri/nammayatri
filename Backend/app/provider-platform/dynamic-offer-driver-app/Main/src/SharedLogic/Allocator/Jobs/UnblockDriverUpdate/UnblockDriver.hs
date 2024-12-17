@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
   ( unblockDriver,
+    unblockSoftBlockedDriver,
   )
 where
 
@@ -50,4 +51,18 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
     notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
+  return Complete
+
+unblockSoftBlockedDriver ::
+  ( TranslateFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Job 'UnblockSoftBlockedDriver ->
+  m ExecutionResult
+unblockSoftBlockedDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
+  let driverId = jobData.driverId
+  QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   return Complete

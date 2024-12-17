@@ -145,7 +145,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amou
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lon double precision ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lat double precision ;
-
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN extra_fare_mitigation_flag boolean ;
 
 ------- SQL updates -------
 
@@ -161,3 +161,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_special_loc_
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN has_ride_started boolean ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN special_loc_warrior_enabled_at timestamp with time zone ;
 
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN issue_breach_cooldown_times json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_stiers text[] ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_reason_flag text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN soft_block_expiry_time timestamp with time zone ;

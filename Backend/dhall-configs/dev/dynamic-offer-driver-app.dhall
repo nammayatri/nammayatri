@@ -199,6 +199,8 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
+      | UnblockSoftBlockedDriver
+      | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
       | CheckExotelCallStatusAndNotifyBAP
       | MandateExecution
@@ -225,6 +227,8 @@ let AllocatorJobType =
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True

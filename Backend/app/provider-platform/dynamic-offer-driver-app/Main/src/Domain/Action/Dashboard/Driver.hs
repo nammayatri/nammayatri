@@ -172,7 +172,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import SharedLogic.Allocator
-import qualified SharedLogic.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -693,6 +693,8 @@ unblockDriver merchantShortId opCity reqDriverId dashboardUserName preventWeekly
       (Nothing, Just _) -> do
         QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
       _ -> pure ()
+  when (isJust driverInf.softBlockStiers) $ do
+    QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -868,7 +870,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
         blockedInfo = blockDetails,
-        email
+        email,
+        softBlockStiers = info.softBlockStiers >>= (pure . map show),
+        softBlockExpiryTime = info.softBlockExpiryTime,
+        softBlockReasonFlag = info.softBlockReasonFlag
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity

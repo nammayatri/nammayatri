@@ -43,6 +43,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
@@ -93,6 +94,8 @@ allocatorHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)

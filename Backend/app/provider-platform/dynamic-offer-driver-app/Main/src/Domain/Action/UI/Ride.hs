@@ -72,6 +72,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -94,6 +95,7 @@ import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
@@ -110,6 +112,7 @@ import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
@@ -251,7 +254,8 @@ data DriverRideRes = DriverRideRes
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    extraFareMitigationFlag :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -427,7 +431,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
-        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone)
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
+        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag)
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
@@ -465,10 +470,19 @@ arrivedAtPickup rideId req = do
     now <- getCurrentTime
     QRide.updateArrival rideId now
     BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
+    -- Extra Fare Mitigation warning --
+    driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
+    when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
 
   pure Success
   where
     isValidRideStatus status = status == DRide.NEW
+
+    notifyDriverOnExtraFareWarning driverId moCityId = do
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
+      TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
+      QDI.updateExtraFareMitigation (Just False) driverId
 
 otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
 otpRideCreate driver otpCode booking clientId = do
