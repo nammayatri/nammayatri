@@ -139,7 +139,6 @@ cancel ::
   SBCR.CancellationSource ->
   m CancelRes
 cancel booking mRide req cancellationSource = do
-  let distanceUnit = booking.distanceUnit
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking mRide
@@ -167,11 +166,11 @@ cancel booking mRide req cancellationSource = do
                 else do
                   logInfo $ "Valid disToPickup received: " <> show disToPickup
                   pure $ Just disToPickup
-            buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just booking.merchantId) distanceUnit
+            buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just ride.id)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
-            buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
-      Nothing -> buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
+            buildBookingCancellationReason Nothing Nothing (Just ride.id)
+      Nothing -> buildBookingCancellationReason Nothing Nothing Nothing
   QBCR.upsert cancellationReason
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $
@@ -187,20 +186,22 @@ cancel booking mRide req cancellationSource = do
         ..
       }
   where
-    buildBookingCancellationReason currentDriverLocation disToPickup merchantId distanceUnit = do
+    buildBookingCancellationReason currentDriverLocation disToPickup mbRideId = do
       let CancelReq {..} = req
       now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = booking.id,
-            rideId = Nothing,
-            merchantId = merchantId,
+            rideId = mbRideId,
+            merchantId = Just booking.merchantId,
             source = cancellationSource,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
-            driverDistToPickup = convertMetersToDistance distanceUnit <$> disToPickup,
+            driverDistToPickup = convertMetersToDistance booking.distanceUnit <$> disToPickup,
+            riderId = Just booking.riderId,
+            distanceUnit = booking.distanceUnit,
             createdAt = now,
             updatedAt = now,
             ..
