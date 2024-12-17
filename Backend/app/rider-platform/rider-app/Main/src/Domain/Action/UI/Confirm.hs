@@ -96,6 +96,7 @@ cancelBooking booking = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            riderId = Just booking.riderId,
             createdAt = now,
             updatedAt = now
           }

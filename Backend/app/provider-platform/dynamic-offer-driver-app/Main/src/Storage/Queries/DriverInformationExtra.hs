@@ -155,6 +155,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             requestorId = Just dashboardUserName,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             blockReasonFlag = Just blockReasonFlag
           }
 
@@ -199,6 +200,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             requestorId = Nothing
           }
 

@@ -26,6 +26,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B
@@ -61,10 +62,11 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   let distanceUnit = merchantOpCity.distanceUnit
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
   now <- getCurrentTime
-  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
+  stuckBookings <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
+  let stuckBookingIds = (stuckBookings <&> (.id))
   stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant merchantOpCity reqBookingIds now
-  bcReasons <- mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing distanceUnit `mapM` stuckBookingIds
-  bcReasonsWithRides <- (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) distanceUnit item.bookingId) `mapM` stuckRideItems
+  bcReasons <- (\booking -> mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing distanceUnit booking.id booking.riderId) `mapM` stuckBookings
+  bcReasonsWithRides <- (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) distanceUnit item.bookingId item.riderId) `mapM` stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.riderId)
   _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
@@ -76,8 +78,8 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
-mkBookingCancellationReason :: (MonadFlow m) => Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> DistanceUnit -> Id DBooking.Booking -> m DBCR.BookingCancellationReason
-mkBookingCancellationReason merchantId reasonCode mbRideId distanceUnit bookingId = do
+mkBookingCancellationReason :: (MonadFlow m) => Id DM.Merchant -> Common.CancellationReasonCode -> Maybe (Id DRide.Ride) -> DistanceUnit -> Id DBooking.Booking -> Id DPerson.Person -> m DBCR.BookingCancellationReason
+mkBookingCancellationReason merchantId reasonCode mbRideId distanceUnit bookingId riderId = do
   now <- getCurrentTime
   return $
     DBCR.BookingCancellationReason
@@ -91,6 +93,7 @@ mkBookingCancellationReason merchantId reasonCode mbRideId distanceUnit bookingI
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
         distanceUnit,
+        riderId = Just riderId,
         createdAt = now,
         updatedAt = now
       }
@@ -153,7 +156,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
             DRide.COMPLETED -> DBooking.COMPLETED
             DRide.CANCELLED -> DBooking.CANCELLED
       unless (bookingNewStatus == booking.status) $ do
-        cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) booking.distanceUnit bookingId
+        cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) booking.distanceUnit bookingId booking.riderId
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
@@ -162,7 +165,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
       void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
     Nothing -> do
-      cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing booking.distanceUnit bookingId
+      cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing booking.distanceUnit bookingId booking.riderId
       QBooking.updateStatus bookingId DBooking.CANCELLED
       QBCR.upsert cancellationReason
       let updBooking = booking{status = DBooking.CANCELLED}
