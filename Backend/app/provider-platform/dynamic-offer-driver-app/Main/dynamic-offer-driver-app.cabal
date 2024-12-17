@@ -248,6 +248,7 @@ library
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
       Domain.Action.UI.Whatsapp
+      Domain.Action.UI.WMB
       Domain.Types.Beckn.Status
       Domain.Types.Cac
       Domain.Types.CacType
@@ -563,9 +564,11 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RiderDriverCorrelationExtra
+      Storage.Queries.RouteExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
+      Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
@@ -673,6 +676,7 @@ library
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
+      API.Action.UI.WMB
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
@@ -705,6 +709,7 @@ library
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
+      API.Types.UI.WMB
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
@@ -743,6 +748,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
+      Domain.Types.DriverRequest
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.Estimate
@@ -802,16 +808,20 @@ library
       Domain.Types.RiderDetails
       Domain.Types.RiderDriverCorrelation
       Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.Route
+      Domain.Types.RouteTripStopMapping
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.Station
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
       Domain.Types.SurgePricing
       Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.TransporterConfig
+      Domain.Types.TripTransaction
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
       Domain.Types.VehicleDetails
@@ -820,6 +830,7 @@ library
       Domain.Types.VehiclePermit
       Domain.Types.VehiclePUC
       Domain.Types.VehicleRegistrationCertificate
+      Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleServiceTier
       Domain.Types.VendorFee
       Domain.Types.VendorSplitDetails
@@ -863,6 +874,7 @@ library
       Storage.Beam.DriverQuote
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
+      Storage.Beam.DriverRequest
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.Estimate
@@ -922,16 +934,20 @@ library
       Storage.Beam.RiderDetails
       Storage.Beam.RiderDriverCorrelation
       Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.Route
+      Storage.Beam.RouteTripStopMapping
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.Station
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SurgePricing
       Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
+      Storage.Beam.TripTransaction
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
       Storage.Beam.VehicleDetails
@@ -940,6 +956,7 @@ library
       Storage.Beam.VehiclePermit
       Storage.Beam.VehiclePUC
       Storage.Beam.VehicleRegistrationCertificate
+      Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleServiceTier
       Storage.Beam.VendorFee
       Storage.Beam.VendorSplitDetails
@@ -986,6 +1003,7 @@ library
       Storage.Queries.DriverQuote
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
+      Storage.Queries.DriverRequest
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.Estimate
@@ -1076,9 +1094,11 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RiderDetails
       Storage.Queries.OrphanInstances.RiderDriverCorrelation
+      Storage.Queries.OrphanInstances.Route
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
+      Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.Vehicle
@@ -1106,16 +1126,20 @@ library
       Storage.Queries.RiderDetails
       Storage.Queries.RiderDriverCorrelation
       Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.Route
+      Storage.Queries.RouteTripStopMapping
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.Station
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SurgePricing
       Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig
+      Storage.Queries.TripTransaction
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
       Storage.Queries.VehicleDetails
@@ -1124,6 +1148,7 @@ library
       Storage.Queries.VehiclePermit
       Storage.Queries.VehiclePUC
       Storage.Queries.VehicleRegistrationCertificate
+      Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleServiceTier
       Storage.Queries.VendorFee
       Storage.Queries.VendorSplitDetails
