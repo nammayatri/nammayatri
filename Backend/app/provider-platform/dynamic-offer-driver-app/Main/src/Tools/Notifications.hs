@@ -32,6 +32,7 @@ import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
+import Domain.Types.ServiceTierType
 import Domain.Types.Trip as Trip
 import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
@@ -190,6 +191,30 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken langua
       ("baseFare", show entityData.baseFare),
       ("distance", maybe "unknown" distanceToText entityData.distanceWithUnit)
     ]
+
+data IssueBreachEntityData = IssueBreachEntityData
+  { ibName :: Text,
+    blockExpirationTime :: UTCTime,
+    blockedReasonFlag :: Text,
+    blockedSTiers :: [ServiceTierType]
+  }
+  deriving (Generic, ToJSON, Eq, FromJSON, Show)
+
+notifySoftBlocked :: (CacheFlow m r, EsqDBFlow m r) => Person -> IssueBreachEntityData -> m ()
+notifySoftBlocked person entity = do
+  dynamicFCMNotifyPerson
+    person.merchantOperatingCityId
+    person.id
+    person.deviceToken
+    (fromMaybe ENGLISH person.language)
+    Nothing
+    (createFCMReq entity.ibName person.id.getId FCM.Person identity)
+    (Just entity)
+    [ ("blockExpirationTime", showTimeIst entity.blockExpirationTime),
+      ("blockedSTiers", blockedSTiers)
+    ]
+  where
+    blockedSTiers = T.intercalate ", " $ map show entity.blockedSTiers
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"

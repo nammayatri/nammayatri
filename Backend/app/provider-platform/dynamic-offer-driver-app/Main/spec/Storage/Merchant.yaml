@@ -41,6 +41,7 @@ imports:
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
+  IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -885,6 +886,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Bool
     minDistanceForStopFcm: HighPrecMeters
     recentScheduledBookingsSafeLimit: Int
+    issueBreachConfig: Maybe [IssueBreachConfig]
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -930,6 +932,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Maybe Bool
     minDistanceForStopFcm: Maybe HighPrecMeters
     recentScheduledBookingsSafeLimit: Maybe Int
+    issueBreachConfig: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -984,6 +987,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
+    issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1042,6 +1046,8 @@ TransporterConfig:
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
+    issueBreachConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1096,6 +1102,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     minDistanceForStopFcm: double precision
+    issueBreachConfig: json
 
   default:
     mediaFileUrlPattern: |-

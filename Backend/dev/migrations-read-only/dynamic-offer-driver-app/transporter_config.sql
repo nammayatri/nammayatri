@@ -314,7 +314,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_driven_s
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN otp_ride_start_restriction_radius integer ;
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_list_scheduled_booking_api boolean  default false;
@@ -326,3 +325,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_list_sc
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_for_stop_fcm double precision  default 100;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recent_scheduled_bookings_safe_limit integer  default 50;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN issue_breach_config json ;

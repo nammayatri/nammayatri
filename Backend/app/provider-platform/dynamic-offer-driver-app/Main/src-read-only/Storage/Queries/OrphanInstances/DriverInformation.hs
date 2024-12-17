@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.DriverInformation where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverInformation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,11 +45,13 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             driverTripEndLocation = Storage.Queries.Transformers.Ride.mkLatLong driverTripEndLocationLat driverTripEndLocationLon,
             enabled = enabled,
             enabledAt = enabledAt,
+            extraFareMitigationFlag = extraFareMitigationFlag,
             forwardBatchingEnabled = Kernel.Prelude.fromMaybe Kernel.Prelude.False forwardBatchingEnabled,
             hasAdvanceBooking = Kernel.Prelude.fromMaybe Kernel.Prelude.False hasAdvanceBooking,
             hasRideStarted = hasRideStarted,
             isInteroperable = Kernel.Prelude.fromMaybe Kernel.Prelude.False isInteroperable,
             isSpecialLocWarrior = Kernel.Prelude.fromMaybe Kernel.Prelude.False isSpecialLocWarrior,
+            issueBreachCooldownTimes = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes,
             lastACStatusCheckedAt = lastACStatusCheckedAt,
             lastEnabledOn = lastEnabledOn,
             latestScheduledBooking = latestScheduledBooking,
@@ -68,6 +71,9 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             preferredSecondarySpecialLocIds = Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds,
             referralCode = referralCode,
             referredByDriverId = Kernel.Types.Id.Id <$> referredByDriverId,
+            softBlockExpiryTime = softBlockExpiryTime,
+            softBlockReasonFlag = softBlockReasonFlag,
+            softBlockStiers = softBlockStiers,
             specialLocWarriorEnabledAt = specialLocWarriorEnabledAt,
             subscribed = subscribed,
             tollRelatedIssueCount = tollRelatedIssueCount,
@@ -109,11 +115,13 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.driverTripEndLocationLon = Kernel.Prelude.fmap (.lon) driverTripEndLocation,
         Beam.enabled = enabled,
         Beam.enabledAt = enabledAt,
+        Beam.extraFareMitigationFlag = extraFareMitigationFlag,
         Beam.forwardBatchingEnabled = Kernel.Prelude.Just forwardBatchingEnabled,
         Beam.hasAdvanceBooking = Kernel.Prelude.Just hasAdvanceBooking,
         Beam.hasRideStarted = hasRideStarted,
         Beam.isInteroperable = Kernel.Prelude.Just isInteroperable,
         Beam.isSpecialLocWarrior = Kernel.Prelude.Just isSpecialLocWarrior,
+        Beam.issueBreachCooldownTimes = Kernel.Prelude.toJSON <$> issueBreachCooldownTimes,
         Beam.lastACStatusCheckedAt = lastACStatusCheckedAt,
         Beam.lastEnabledOn = lastEnabledOn,
         Beam.latestScheduledBooking = latestScheduledBooking,
@@ -134,6 +142,9 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.preferredSecondarySpecialLocIds = Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds),
         Beam.referralCode = referralCode,
         Beam.referredByDriverId = Kernel.Types.Id.getId <$> referredByDriverId,
+        Beam.softBlockExpiryTime = softBlockExpiryTime,
+        Beam.softBlockReasonFlag = softBlockReasonFlag,
+        Beam.softBlockStiers = softBlockStiers,
         Beam.specialLocWarriorEnabledAt = specialLocWarriorEnabledAt,
         Beam.subscribed = subscribed,
         Beam.tollRelatedIssueCount = tollRelatedIssueCount,

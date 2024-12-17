@@ -48,9 +48,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cancel
-import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator as FareCalculator

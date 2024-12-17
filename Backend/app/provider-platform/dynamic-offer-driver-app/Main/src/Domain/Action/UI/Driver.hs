@@ -209,10 +209,10 @@ import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
-import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -340,7 +340,11 @@ data DriverInformationRes = DriverInformationRes
     favCount :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool,
-    isSpecialLocWarrior :: Bool
+    isSpecialLocWarrior :: Bool,
+    blockedReasonFlag :: Maybe BlockReasonFlag,
+    softBlockStiers :: Maybe [DriverInfo.ServiceTierType],
+    softBlockExpiryTime :: Maybe UTCTime,
+    softBlockReasonFlag :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -358,6 +362,7 @@ data DriverEntityRes = DriverEntityRes
     enabled :: Bool,
     blocked :: Bool,
     blockExpiryTime :: Maybe UTCTime,
+    blockedReasonFlag :: Maybe BlockReasonFlag,
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
@@ -394,7 +399,10 @@ data DriverEntityRes = DriverEntityRes
     totalRidesTaken :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool,
-    isSpecialLocWarrior :: Bool
+    isSpecialLocWarrior :: Bool,
+    softBlockStiers :: Maybe [DriverInfo.ServiceTierType],
+    softBlockExpiryTime :: Maybe UTCTime,
+    softBlockReasonFlag :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -905,6 +913,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
         blockExpiryTime = driverInfo.blockExpiryTime,
+        blockedReasonFlag = driverInfo.blockReasonFlag,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
         paymentPending = driverInfo.paymentPending,
@@ -934,6 +943,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         payoutVpaBankAccount = driverInfo.payoutVpaBankAccount,
         subscriptionEnabledForVehicleCategory = isEnabledForCategory,
         isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
+        softBlockStiers = driverInfo.softBlockStiers,
+        softBlockExpiryTime = driverInfo.softBlockExpiryTime,
+        softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         ..
       }
 
