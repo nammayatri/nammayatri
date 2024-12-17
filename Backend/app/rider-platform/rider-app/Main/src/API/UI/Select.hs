@@ -145,8 +145,8 @@ rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPerso
 
 cancelSearchUtil :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.CancelAPIResponse
 cancelSearchUtil (personId, merchantId) estimateId = do
-  activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
-  -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  activeBooking <- B.runInReplica $ QRB.findByTransactionIdAndStatus estimate.requestId.getId activeBookingStatus
   if isJust activeBooking
     then do
       logTagInfo "Booking already created while cancelling estimate." estimateId.getId

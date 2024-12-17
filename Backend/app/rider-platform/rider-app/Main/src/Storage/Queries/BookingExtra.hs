@@ -7,7 +7,6 @@ import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
-import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -26,8 +25,6 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.DriverOffer as BeamDO
-import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
@@ -197,18 +194,14 @@ findByRiderId (Id personId) = do
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
-findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe Booking)
-findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
-  driverOfferIds <- map (Just . getId . (.id)) <$> findAllWithKVAndConditionalDB [Se.Is BeamDO.estimateId $ Se.Eq estimateId] Nothing
-  if null driverOfferIds
-    then return Nothing
-    else do
-      quoteIds <- map (Just . getId . (.id)) <$> findAllWithKVAndConditionalDB [Se.Is BeamQ.driverOfferId $ Se.In driverOfferIds] Nothing
-      if null quoteIds
-        then return Nothing
-        else do
-          bookings <- findAllWithKVAndConditionalDB [Se.Is BeamB.quoteId $ Se.In quoteIds, Se.Is BeamB.status $ Se.In statusList] Nothing
-          return $ listToMaybe bookings
+findByTransactionIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
+findByTransactionIdAndStatus transactionId statusList =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId,
+      Se.Is BeamB.status $ Se.In statusList
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
 
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
