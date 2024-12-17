@@ -131,7 +131,7 @@ confirm DConfirmReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
+  activeBooking <- QRideB.findByQuoteId (Just quote.id)
   case activeBooking of
     Just booking -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
