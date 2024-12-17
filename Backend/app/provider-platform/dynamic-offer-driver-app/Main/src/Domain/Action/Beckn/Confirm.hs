@@ -224,7 +224,8 @@ validateRequest ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

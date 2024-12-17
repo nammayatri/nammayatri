@@ -21,10 +21,13 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
+
+type LTSFlow m r c = (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c)
 
 data StartRideReq = StartRideReq
   { lat :: Double,

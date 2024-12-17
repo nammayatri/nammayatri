@@ -508,7 +508,8 @@ calculateGoHomeDriverPool ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
@@ -556,7 +557,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -711,7 +713,8 @@ calculateDriverPool ::
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   CalculateDriverPoolReq a ->
   m [DriverPoolResult]
@@ -759,7 +762,8 @@ calculateDriverPoolWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -889,7 +893,8 @@ calculateDriverPoolCurrentlyOnRide ::
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   CalculateDriverPoolReq a ->
   Maybe Integer ->
@@ -946,7 +951,8 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
@@ -1015,7 +1021,8 @@ computeActualDistanceOneToOne ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->
@@ -1032,7 +1039,8 @@ computeActualDistance ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   DistanceUnit ->
   Id DM.Merchant ->

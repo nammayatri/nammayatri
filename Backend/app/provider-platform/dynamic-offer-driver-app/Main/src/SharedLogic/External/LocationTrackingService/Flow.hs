@@ -35,7 +35,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
 
-rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> m APISuccess
+rideStart :: LTSFlow m r c => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> m APISuccess
 rideStart rideId lat lon merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -47,12 +47,12 @@ rideStart rideId lat lon merchantId driverId = do
             driverId
           }
   rideStartRes <-
-    callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI
+    withShortRetry (callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI)
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_START_RIDE_API") url)
   logDebug $ "lts rideStart: " <> show rideStartRes
   return rideStartRes
 
-rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> m EndRideRes
+rideEnd :: LTSFlow m r c => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> m EndRideRes
 rideEnd rideId lat lon merchantId driverId mbNextRideId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -65,12 +65,12 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId = do
             nextRideId = mbNextRideId
           }
   rideEndRes <-
-    callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI
+    withShortRetry (callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI)
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_END_RIDE_API") url)
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> m [DriverLocation]
+nearBy :: LTSFlow m r c => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> m [DriverLocation]
 nearBy lat lon onRide vt radius merchantId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -84,12 +84,12 @@ nearBy lat lon onRide vt radius merchantId = do
             merchantId = merchantId
           }
   nearByRes <-
-    callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+    withShortRetry (callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI)
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
   logDebug $ "lts nearBy: " <> show nearByRes
   return nearByRes
 
-rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> m APISuccess
+rideDetails :: LTSFlow m r c => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -104,12 +104,12 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide = do
             isFutureRide
           }
   rideDetailsRes <-
-    callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI
+    withShortRetry (callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI)
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_RIDE_DETAILS_API") url)
   logDebug $ "lts rideDetails: " <> show rideDetailsRes
   return rideDetailsRes
 
-driversLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => [Id DP.Person] -> m [DriverLocation]
+driversLocation :: LTSFlow m r c => [Id DP.Person] -> m [DriverLocation]
 driversLocation driverIds = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -123,7 +123,7 @@ driversLocation driverIds = do
   logDebug $ "lts driversLocation: " <> show driversLocationRes
   return driversLocationRes
 
-driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
+driverLocation :: LTSFlow m r c => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
 driverLocation rideId merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url

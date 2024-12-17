@@ -78,7 +78,8 @@ sendSearchRequestToDrivers ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -156,7 +157,8 @@ sendSearchRequestToDrivers' ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   DriverPoolConfig ->
   SearchTry ->

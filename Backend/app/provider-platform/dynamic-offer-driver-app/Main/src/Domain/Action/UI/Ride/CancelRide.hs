@@ -102,7 +102,8 @@ cancelRideHandle ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
-    Metrics.HasCoreMetrics r
+    Metrics.HasCoreMetrics r,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   ServiceHandle m
 cancelRideHandle =
@@ -173,7 +174,8 @@ cancelRideImpl ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
-    DC.EventFlow m r
+    DC.EventFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   ServiceHandle m ->
   RequestorId ->
