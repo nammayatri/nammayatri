@@ -29,6 +29,7 @@ data Plan = Plan
     id :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     isDeprecated :: Kernel.Prelude.Bool,
     isOfferApplicable :: Kernel.Prelude.Bool,
+    listingPriority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,

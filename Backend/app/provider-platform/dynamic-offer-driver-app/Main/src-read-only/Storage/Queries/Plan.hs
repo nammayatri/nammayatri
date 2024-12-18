@@ -101,6 +101,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.frequency frequency,
       Se.Set Beam.isDeprecated isDeprecated,
       Se.Set Beam.isOfferApplicable isOfferApplicable,
+      Se.Set Beam.listingPriority listingPriority,
       Se.Set Beam.maxAmount maxAmount,
       Se.Set Beam.maxCreditLimit maxCreditLimit,
       Se.Set Beam.maxMandateAmount maxMandateAmount,
