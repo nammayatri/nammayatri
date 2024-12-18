@@ -56,22 +56,30 @@ data BusLeg = BusLeg MultiModalLeg
 data MetroLeg = MetroLeg MultiModalLeg
 data TrainLeg = TrainLeg MultiModalLeg
 
-data TaxiSearchData = TaxiSearchData 
+data TaxiSearchData = TaxiSearchData
   { personId: Id Person
   , bundleVersion :: Maybe Text
   , fromLocation :: Location
   , stops :: [Location]
-  ... other things 
+  ... other things
   }
 
-data WalkSearchData = WalkSearchData 
+data WalkSearchData = WalkSearchData
   { fromLocation :: Location
   , stops :: [Location]
   , merchantId :: Id Merchant
-  ... other things 
+  ... other things
   }
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | Confirm WalkLegConfirmRequest | Cancel WalkLegCancelRequest | Update WalkLegUpdateRequest
+data TaxiConfirmData = TaxiConfirmData
+  { skipBooking :: Bool,
+    journeyLegOrder :: Int
+  }
+
+data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateRequest
+data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData
+data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData
+data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData
 
 type SearchJourneyLeg leg m = leg -> m ()
 type ConfirmJourneyLeg leg m = leg -> m ()
@@ -127,27 +135,31 @@ class JourneyLeg leg m where
   get :: GetJourneyLeg leg m
 
 instance JourneyLeg WalkLeg m where
-  search (WalkLegRequest (Search multimodalLeg walkLegSearchData)) = do 
+  search (WalkLegRequestSearch multimodalLeg walkLegSearchData) = do
     WL.create $ mkWalkLegSearch multimodalLeg walkLegSearchData
   confirm (WalkLeg _legData) = return () -- return nothing
   update (WalkLeg $ Update WalkLegUpdateRequest) JourneyLegStatus = return ()
     -- WalkLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime
   cancel (WalkLeg $ Cancel WalkLegCancelRequest) JourneyLegStatus = return ()
-    -- case JourneyLegStatus of
-        -- if Finishing | Cancelled | Completed | Skipped = throw error
     -- update JourneyLegStatus: Cancelled
     WalkLegCancelRequest :: id
   getState (WalkLeg _legData) = return JourneyLegState -- id
   get (WalkLeg _legData) = return WalkLeg -- id
 
 instance JourneyLeg TaxiLeg m where
-  search (TaxilegRequest (Search multimodalLeg taxiLegSearchData)) = do 
+  search (TaxilegRequestSearch multimodalLeg taxiLegSearchData) = do
+    QSR.create multimodalLeg taxiLegSearchData
     dSearchRes <- search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ (Just journeySearchData)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  confirm (TaxiLeg $ Confirm TaxiLegConfirmRequest) = return ()
-    -- TaxiLegConfirmRequest :: pId, estimateId
-    -- void $ Select.select pId (Id estimateId) selectReq
-    -- update JourneyLegStatus: Assigning
+  confirm (TaxilegRequestConfirm taxiLegConfirmData) = do
+    searchReq <- QSearchRequest.findById taxiLegConfirmData.searchReqId
+    estimateId <- searchReq.journeySearchData.pricingId
+    case taxiLegConfirmData.skippedBooking of
+      True ->
+        -- subtract price from total estimate
+        QSearchRequest.updateIsSkipped True
+      False ->
+        void $ Select.select pId (Id estimateId) selectReq
   update (TaxiLeg $ Update TaxiLegUpdateRequest) = return ()
     -- not possible for JourneyLegStatus = Skipped | Finishing | Cancelled | Completed
     -- TaxiLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime, mbVehicleType
@@ -162,8 +174,18 @@ instance JourneyLeg TaxiLeg m where
   get (TaxiLeg _legData) = return _legData
 
 instance JourneyLeg BusLeg m where
-  search (BusLeg _legData) = return ()
-  confirm (BusLeg _legData) = return ()
+  search (BusLegRequestSearch multimodalLeg busLegSearchData) = do
+    FRFSSearch.create multimodalLeg busLegSearchData
+    void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.BUS frfsSearchReq
+  confirm (BusLegRequestConfirm busLegConfirmData) = do
+    frfsSearchReq <- QFRFSSearch.findById taxiLegConfirmData.searchReqId
+    quoteId <- searchReq.journeySearchData.pricingId
+    case busLegConfirmData.skippedBooking of
+      True ->
+         -- subtract price from total estimate
+        QFRFSSearch.updateIsSkipped True
+      False ->
+        void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
   update (BusLeg _legData) = return ()
   cancel (BusLeg _legData) = return ()
   getState (BusLeg _legData) = return InPlan
@@ -178,15 +200,25 @@ instance JourneyLeg TrainLeg m where
   get (TrainLeg _legData) = return _legData
 
 instance JourneyLeg MetroLeg m where
-  search (MetroLeg _legData) = return ()
-  confirm (MetroLeg _legData) = return ()
+  search (MetroLegRequestSearch multimodalLeg metroLegSearchData) = do
+    FRFSSearch.create multimodalLeg metroLegSearchData
+    void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.METRO frfsSearchReq
+  confirm (MetroLegRequestConfirm metroLegConfirmData) = do
+    frfsSearchReq <- QFRFSSearch.findById taxiLegConfirmData.searchReqId
+    quoteId <- searchReq.journeySearchData.pricingId
+    case metroLegConfirmData.skippedBooking of
+      True ->
+         -- subtract price from total estimate
+        QFRFSSearch.updateIsSkipped True
+      False ->
+        void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
   update (MetroLeg _legData) = return ()
   cancel (MetroLeg _legData) = return ()
   getState (MetroLeg _legData) = return InPlan
   get (MetroLeg _legData) = return _legData
 
 -- Journey Module (base function)
-data JourneyInitData leg = JourneyInitData 
+data JourneyInitData leg = JourneyInitData
   { legs: [leg]
   , parentSearchId :: Id SearchRequest
   , merchantId :: Id Merchant
@@ -204,7 +236,7 @@ addLeg :: JourneyLeg leg m => leg -> m ()
 addLeg leg = JL.search leg -- output could be the search request
 
 getCurrentLeg :: JourneyLeg leg m => Journey -> m leg
-getCurrentLeg 
+getCurrentLeg
   -- get the current leg based on status
   -- loop through all legs and based on getState
   journeyLegs <- getAllLegs journeyId
@@ -223,19 +255,19 @@ getRemainingLegs journeyId = do
 deleteLeg :: JourneyLeg leg m => leg -> m ()
   JL.cancel leg
   -- remove it from the journey mark it deleted/skipped
-  
-updateLeg :: JourneyLeg leg m => UpdateJourneyLeg -> leg -> m () 
+
+updateLeg :: JourneyLeg leg m => UpdateJourneyLeg -> leg -> m ()
   -- update the leg
   -- update it in the journey
 
-skipJourney :: Journey -> [leg] -> m () 
--- skipJourney journey 
-    -- getRemainingLegs 
+skipJourney :: Journey -> [leg] -> m ()
+-- skipJourney journey
+    -- getRemainingLegs
     map update [leg]
     -- @@ call cancel for current leg
 
 endJourney :: Journey -> m ()
-endJourney 
+endJourney
 -- if last leg then update leg
 -- loop through and delete/update legs and journey as required
 -- call leg level cancel
@@ -250,12 +282,12 @@ startJourney journeyId = do
 getAllLegs :: Id Journey -> m ()
 getAllLegs journeyId = do
   searchRequests <- findAllByJourneyId journeyId -- in searchRequest
-  frfsSearchRequests <- findAllByJourneyId journeyId -- in FRFS search 
+  frfsSearchRequests <- findAllByJourneyId journeyId -- in FRFS search
   let legs = sortBy order $ transformSearchReqToJourneyLeg searchRequests  <> transformFRFSSearchReqToJourneyLegfrfs SearchRequests 
   return legs
 
 replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
-replaceLeg journey oldLegs newLeg = 
+replaceLeg journey oldLegs newLeg =
   forM_ (deleteLeg journey) oldLegs >> addLeg journey newLeg
 
 extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
@@ -265,7 +297,7 @@ extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
 
 
 
--- Journey Module (utils function) 
+-- Journey Module (utils function)
 -- replace auto with taxi / generic name
 replaceCurrentWithAuto :: Journey -> VehicleType -> m () -- add vehicleType
 replaceCurrentWithAuto journey vehicleType = do
@@ -298,8 +330,8 @@ continueWithAuto journey = do
 updateJourney :: Journey -> Id Journey -> m ()-- to update journey data
 
 
-recalculate :: Journey -> m () 
-let legs = getRemainingLegs 
+recalculate :: Journey -> m ()
+let legs = getRemainingLegs
 -- for now nothing just call replace with auto
 
 -- completeCurrentLeg :: Journey -> m ()
