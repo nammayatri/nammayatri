@@ -1,13 +1,13 @@
-JM => Journey Module 
+JM => Journey Module
 JL => Journey Leg
 
 // normal search api call
 multimodalOptions <- otp
-journeys <- 
-  multimodalOptions `forM` \multimodalOption -> do 
+journeys <-
+  multimodalOptions `forM` \multimodalOption -> do
     journeyLegs = traverse mkJourneyLeg multimodalOption.legs
-    initReq = 
-      JourneyInitData 
+    initReq =
+      JourneyInitData
         { parentSearchId
         , merchantId
         , merchantOperatingCityId
@@ -23,5 +23,16 @@ return {searchLegs}
 mkJourneyLegSearch person info multimodalLeg = do
   taxiLegInfo = mkTaxiLegInfo info person
   case multimodalLeg.mode of
-    Unspecified -> WalkLegRequestSearch $ multimodalLeg info
+    Walk -> WalkLegRequestSearch $ multimodalLeg info
 
+
+data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement]}
+
+data JourneyConfirmReqElement = JourneyConfirmReqElement {journeyLegOrder :: Int, skipBooking :: Bool}
+
+-- add journeyLegInfo.isSkipped :: Bool, journeyLegInfo.isDeleted :: Bool to SearchRequest, FRFSSearch, WalkLegMultimodal
+
+// confirm api call
+multimodalConfirm :: (Maybe Id Person, Id Merchant) -> Id Journey -> JourneyConfirmReq -> Flow Success
+multimodalConfirm (personId, merchantId) journeyId journeyConfirmReq = do
+  JM.startJourney journeyId journeyConfirmReq
