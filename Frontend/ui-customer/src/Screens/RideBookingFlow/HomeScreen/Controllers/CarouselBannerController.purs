@@ -19,6 +19,7 @@ import Common.RemoteConfig.Types as CRT
 import Storage
 import Helpers.Utils
 import Resources.Constants 
+import Engineering.Helpers.Utils as EHU
 import Debug
 import Components.LocationTagBarV2 as LocationTagBarV2
 
@@ -141,7 +142,7 @@ safetyBannerAction action state =
   case action of 
     Banner.OnClick -> 
       if state.props.isOffline then do  
-        void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+        void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
         continue state
       else do 
         exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER

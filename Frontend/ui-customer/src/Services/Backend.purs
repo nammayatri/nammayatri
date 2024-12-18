@@ -38,7 +38,7 @@ import Engineering.Helpers.Commons as EHC
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime, decodeErrorCode)
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, drawRoute, toggleBtnLoader)
 import JBridge as JB
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
@@ -191,8 +191,8 @@ triggerOTPBT payload = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ EHU.showToast $ (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         void $ lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
@@ -230,8 +230,8 @@ resendOTPBT token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
-            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ EHU.showToast  (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 
@@ -246,14 +246,14 @@ verifyTokenBT payload token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
-            pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
+            void $ lift $ lift $ EHU.showToast  (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}})
                 void $ lift $ lift $ EHU.toggleLoader false
-                pure $ toast "INVALID_AUTH_DATA"
+                void $ lift $ lift $ EHU.showToast  "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-                pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                void $ lift $ lift $ EHU.showToast  (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 -- verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
@@ -337,7 +337,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     withAPIResultBT (EP.placeDetails id) identity errorHandler (lift $ lift $ callAPI headers (PlaceDetailsReq id))
     where
     errorHandler errorPayload  = do
-        pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+        void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
@@ -368,7 +368,7 @@ rideSearchBT payload = do
                             400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING
                             400, _, _ -> codeMessage
                             _,_,_ -> getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            pure $ toast message
+            void $ lift $ lift $ EHU.showToast  message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             void $ lift $ lift $ EHU.toggleLoader false
@@ -489,10 +489,10 @@ selectEstimateBT payload estimateId = do
                 codeMessage = decodeError errResp.errorMessage "errorCode"
                 userMessage = decodeError errResp.errorMessage "errorMessage"
             case errorPayload.code, codeMessage, userMessage of
-                400, "SEARCH_REQUEST_EXPIRED", _ -> pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
-                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> pure $ toast (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
-                400, _, _ -> pure $ toast codeMessage
-                _, _, _ -> pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                400, "SEARCH_REQUEST_EXPIRED", _ -> void $ lift $ lift $ EHU.showToast  (getString ESTIMATES_EXPIRY_ERROR)
+                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> void $ lift $ lift $ EHU.showToast  (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
+                400, _, _ -> void $ lift $ lift $ EHU.showToast  codeMessage
+                _, _, _ -> void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack

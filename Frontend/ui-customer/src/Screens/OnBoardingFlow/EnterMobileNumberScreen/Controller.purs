@@ -32,8 +32,9 @@ import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import Engineering.Helpers.Utils as EHU
 import Helpers.Utils (setText, showCarouselScreen)
-import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
+import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -206,11 +207,11 @@ eval Resend state = do
     let newState = state {data{attempts = if (state.data.attempts > 0) then state.data.attempts - 1 else state.data.attempts},props{resendEnable = false}}
     let _ = EHE.addEvent (EHE.defaultEventObject "otp_resend_clicked") { module = "onboarding"}
     if state.data.attempts == 0 then do
-        _ <- pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+        _ <- pure $ EHU.showToast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
         _ <- pure $ toggleBtnLoader "" false
         continue newState{props{enterOTP = false}}
       else do 
-        _ <- pure $ toast (getString OTP_RESENT_SUCCESSFULLY)
+        _ <- pure $ EHU.showToast (getString OTP_RESENT_SUCCESSFULLY)
         exit $ ResendOTP newState
 
 eval (AutoFill otp) state = do

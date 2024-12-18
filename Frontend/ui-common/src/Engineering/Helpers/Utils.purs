@@ -39,6 +39,7 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
 import Halogen.VDom.DOM.Prop (PropValue)
 import LoaderOverlay.Handler as UI
+import Toast.Handler as UI
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DefaultConfig
 import MerchantConfig.Types (AppConfig)
@@ -82,12 +83,25 @@ toggleLoader =
     pure unit
   else do
     doAff $ liftEffect $ terminateLoader ""
+showToast :: String -> Flow GlobalState Unit
+showToast message = do
+  void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = "", message = message } } })
+  doAff $ liftEffect $ terminateToast ""
+  state <- getState
+  _ <- liftFlow $ launchAff $ flowRunner state UI.toastScreen
+  pure unit
+
+terminateToast :: String -> Effect Unit
+terminateToast _ = terminateUI $ Just "Toast"
 
 terminateLoader :: String -> Effect Unit
 terminateLoader _ = terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
+
+toastText :: String -> String -> Flow GlobalState Unit
+toastText title message = void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = title, message = message } } })
 
 showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
 showAndHideLoader showLoader title description state = do

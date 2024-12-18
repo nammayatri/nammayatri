@@ -18,7 +18,7 @@ import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, drawRoute, toggleBtnLoader)
 import JBridge as JB
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)

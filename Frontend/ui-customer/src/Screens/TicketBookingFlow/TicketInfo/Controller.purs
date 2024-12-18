@@ -18,7 +18,8 @@ import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Components.GenericHeader as GenericHeader
-import JBridge (shareImageMessage, copyToClipboard, toast)
+import JBridge (shareImageMessage, copyToClipboard)
+import Engineering.Helpers.Utils as EHU
 import Common.Types.App as Common
 import Services.API (TicketPlaceResp(..))
 import Language.Strings (getString)
@@ -83,7 +84,7 @@ eval GoHome state = exit GoToHomeScreen
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ copyToClipboard text
-    void $ pure $ toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 
