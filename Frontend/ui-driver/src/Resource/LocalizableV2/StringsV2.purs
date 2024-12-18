@@ -1849,3 +1849,8 @@ getProxy str = case str of
   CHOOSE_PREFERRED_METRO -> \a -> a @~ choose_preferred_metro
   METRO_WARRIORS -> \a -> a @~ metro_warriors
   SEARCH -> \a -> a @~ search
+  INTERCITY_ROUND_TRIP_RIDE_ACCEPTED -> \a -> a @~ intercity_round_trip_ride_accepted
+  YOU_ARE_ON_INTERCITY_ROUND_TRIP_RIDE -> \a -> a @~ you_are_on_intercity_roundtrip_ride
+  PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_ROUND_TRIP  arg1 -> \a -> (a @~ please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip) arg1
+  YOUR_INTERCITY_ROUND_TRIP_RIDE_STARTS_IN -> \a -> a @~ your_intercity_round_trip_ride_starts_in
+

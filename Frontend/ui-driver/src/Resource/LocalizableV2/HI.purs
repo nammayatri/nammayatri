@@ -1779,4 +1779,8 @@ getHi =
     , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
     , metro_warriors : "मेट्रो वॉरियर्स"
     , search : "खोजें"  
+    , intercity_round_trip_ride_accepted : "अंतर-शहर राउंडट्रिप सवारी स्वीकार की गई"
+    , you_are_on_intercity_roundtrip_ride : "आप एक अंतर-शहर राउंडट्रिप सवारी पर हैं"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "कृपया सुनिश्चित करें कि आपका वाहन अंतर-शहर यात्रा के लिए " <> "<span><b>" <> destination <> "</b></span>" <> " और वहां से वापस आने के लिए तैयार है ") 
+    , your_intercity_round_trip_ride_starts_in : "आपकी अंतर-शहर राउंडट्रिप सवारी शुरू होने वाली है"
     }

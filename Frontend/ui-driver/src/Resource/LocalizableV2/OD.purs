@@ -1779,4 +1779,9 @@ getOd =
     , choose_preferred_metro : "ପସନ୍ଦର ମେଟ୍ରୋ ବାଛନ୍ତୁ"
     , metro_warriors : "ମେଟ୍ରୋ ୱାରିଅର୍"
     , search : "ଖୋଜନ୍ତୁ"
+    , intercity_round_trip_ride_accepted : "ଆନ୍ତର୍ଜିଲ୍ଲା ଦୁଇତି ରାଉଣ୍ଡ ଯାତ୍ରା ଗ୍ରହଣ କରାଗଲା।"
+    , you_are_on_intercity_roundtrip_ride : "ଆପଣ ଆନ୍ତର୍ଜିଲ୍ଲା ଦୁଇତି ରାଉଣ୍ଡ ଯାତ୍ରାରେ ଅଛନ୍ତି।"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "অনুগ্রহ করে নিশ্চিত করুন যে আপনার গাড়ি আন্তঃনগর যাত্রার জন্য " <> "<span><b>" <> destination <> "</b></span>" <> " এ যাওয়া এবং সেখান থেকে ফেরার জন্য প্রস্তুত।")
+    , your_intercity_round_trip_ride_starts_in : "ଆପଣଙ୍କ ଆନ୍ତର୍ଜିଲ୍ଲା ଦୁଇତି ରାଉଣ୍ଡ ଯାତ୍ରା ଆରମ୍ଭ ହେଉଛି"
+
   }

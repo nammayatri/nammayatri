@@ -1127,6 +1127,9 @@ config =
       auto : "https://www.youtube.com/watch?v=nwXV-vT_X_8",
       cab : "https://www.youtube.com/watch?v=aKGPp5A2M0E"
   }
+  , intercityRideVideoConfig : {
+    cab : "https://www.youtube.com/watch?v=B9wxq7vNJGk"
+  }
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }

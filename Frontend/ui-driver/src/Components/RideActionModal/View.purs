@@ -178,13 +178,21 @@ rideActionViewWithLabel push config =
                         secondaryText = getString LEARN_MORE,
                         imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
                       }
-                  else if config.rideType == ST.Intercity then 
+                  else if config.rideType == ST.Intercity && config.roundTrip == false then 
                     dummyLabelConfig
                       { label = "Intercity Ride ",
                         backgroundColor = Color.blue800,
                         text = getString  INTERCITY_RIDE,
                         secondaryText = getString LEARN_MORE,
-                        imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
+                        imageUrl = fetchImage FF_ASSET "ny_ic_intercity"
+                      }
+                  else if config.rideType == ST.Intercity && config.roundTrip == true then 
+                    dummyLabelConfig
+                      { label = "roundTrip ", 
+                        backgroundColor = Color.blue800,
+                        text = getString INTERCITY_RETURN,
+                        secondaryText = getString LEARN_MORE,
+                        imageUrl = fetchImage FF_ASSET "ny_ic_intercity"
                       }
 
                     else 
@@ -224,7 +232,7 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity ) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
+          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
@@ -952,7 +960,7 @@ rideTierAndCapacity push config =
     , textView
       [ height $ V 18
       , width WRAP_CONTENT
-      , text $ show config.rideType
+      , text $ if config.roundTrip == false then  show config.rideType else getString INTERCITY_RETURN
       , margin $ MarginRight 6
       , visibility $ boolToVisibility $  config.rideType == ST.Intercity
       ]
@@ -1210,10 +1218,10 @@ getTitle config = do
   let isScheduledRide = getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled)
   case config.startRideActive,  config.notifiedCustomer, isScheduledRide of
     _, _, true -> getRideStartRemainingTimeTitle config
-    false, _, _ -> case config.rideType of 
-        ST.Rental -> (getString YOU_ARE_ON_A_RENTAL_RIDE)
-        ST.Intercity -> (getString YOU_ARE_ON_A_INTERCITY_RIDE)
-        _ -> (getString YOU_ARE_ON_A_RIDE)
+    false, _, _ ->  if config.rideType == ST.Rental then  (getString YOU_ARE_ON_A_RENTAL_RIDE)
+                    else if  config.rideType == ST.Intercity && config.roundTrip == false then (getString YOU_ARE_ON_A_INTERCITY_RIDE)
+                    else if  config.rideType == ST.Intercity && config.roundTrip == true then (getString YOU_ARE_ON_INTERCITY_ROUND_TRIP_RIDE)
+                    else (getString YOU_ARE_ON_A_RIDE)
     true, false, _  ->  ((getCustomerName config) <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
     true, true, _ -> case (getLanguageLocale languageKey) of
         "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
@@ -1225,10 +1233,11 @@ getTitle config = do
     getRideStartRemainingTimeTitle :: Config -> String
     getRideStartRemainingTimeTitle config = 
       let time = HU.formatSecIntoMinSecs config.rideStartRemainingTime
-      in case config.rideType of
-          ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN [time]
-          ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN [time]
-          _ -> ""
+      in 
+        if config.rideType == ST.Rental then  getVarString YOUR_RENTAL_RIDE_STARTS_IN [time]
+        else if  config.rideType == ST.Intercity && config.roundTrip == false then  getVarString YOUR_INTERCITY_RIDE_STARTS_IN [time]
+        else if  config.rideType ==  ST.Intercity && config.roundTrip == true then  getVarString YOUR_INTERCITY_ROUND_TRIP_RIDE_STARTS_IN [time]
+        else ""
     showRideStartRemainingTime :: Config -> Boolean
     showRideStartRemainingTime config = getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled)
 

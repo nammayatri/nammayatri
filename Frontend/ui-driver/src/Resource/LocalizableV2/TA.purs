@@ -1779,4 +1779,8 @@ getTa =
     , choose_preferred_metro : "பிடித்த மெட்ரோவைத் தேர்வு செய்யவும்"
     , metro_warriors : "மெட்ரோ வாரியர்ஸ்"
     , search : "தேடுக"
+    , intercity_round_trip_ride_accepted : "இடைநகர் ரவுண்ட்ரிப் சவாரி ஏற்கப்பட்டது "
+    , you_are_on_intercity_roundtrip_ride : "இடைநகர் ரவுண்ட்ரிப் சவாரியில் இருக்கிறீர்கள்"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "தயவுசெய்து உங்கள் வாகனம் "  <> "<span><b>" <> destination <> "</b></span>" <>  " சென்று திரும்ப வர தயாராக உள்ளது என்பதை உறுதிப்படுத்தவும்" )
+    , your_intercity_round_trip_ride_starts_in : "உங்கள் இடைநகர் ரவுண்ட்ரிப் சவாரி தொடங்குகிறது "
     }
