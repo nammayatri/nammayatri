@@ -253,7 +253,8 @@ rideInfo ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig],
-    CH.HasClickhouseEnv CH.ATLAS_KAFKA m
+    CH.HasClickhouseEnv CH.ATLAS_KAFKA m,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
