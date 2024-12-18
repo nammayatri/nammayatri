@@ -245,6 +245,12 @@ ServicePeopleCategory:
     findAllServicePeopleCategory:
       kvFunction: findAllWithKV
       where: id
+    findByIdAndName:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - in: [id]
+          - eq: [name]
 
   extraOperations:
   - EXTRA_QUERY_FILE

@@ -28,6 +28,11 @@ findAllServicePeopleCategory ::
   (Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m [Domain.Types.ServicePeopleCategory.ServicePeopleCategory])
 findAllServicePeopleCategory id = do findAllWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByIdAndName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory] -> Kernel.Prelude.Text -> m (Maybe Domain.Types.ServicePeopleCategory.ServicePeopleCategory))
+findByIdAndName id name = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id), Se.Is Beam.name $ Se.Eq name]]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m (Maybe Domain.Types.ServicePeopleCategory.ServicePeopleCategory))
