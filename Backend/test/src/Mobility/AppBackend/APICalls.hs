@@ -33,6 +33,7 @@ import qualified "rider-app" Domain.Types.Ride as BRide
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
+import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Id
@@ -78,7 +79,7 @@ callAppFeedback ratingValue rideId =
    in appFeedback appRegistrationToken request
 
 appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
-appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> ClientM AppBooking.BookingListRes
+appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> ClientM AppBooking.BookingListRes
 appBookingStatus :<|> _ :<|> appBookingList :<|> _ :<|> _ = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
