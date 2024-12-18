@@ -37,4 +37,4 @@ getBookingList ::
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
 getBookingList merchantShortId _opCity personId mbLimit mbOffset mbOnlyActive bookingStatus = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Booking.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bookingStatus Nothing
+  Domain.Action.UI.Booking.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing

@@ -295,8 +295,8 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> m ([Booking], [Booking])
-findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> m ([Booking], [Booking])
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
@@ -307,9 +307,11 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
+              <> ([Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
+              <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
           )
       ]
-      (if isOnlyActive then (Se.Asc BeamB.startTime) else (Se.Desc BeamB.startTime))
+      (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
   otherActivePartyBooking <-
@@ -322,7 +324,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
             pure $
               filter
                 ( \bk ->
-                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId)
+                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId) && (isNothing mbFromDate || isNothing mbToDate || (fromJust mbFromDate <= bk.createdAt && bk.createdAt <= fromJust mbToDate))
                 )
                 booking
           Nothing -> pure []

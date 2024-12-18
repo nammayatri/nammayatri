@@ -123,11 +123,6 @@ ALTER TABLE atlas_app.person ADD COLUMN client_react_native_version text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.person ADD COLUMN client_react_native_version text ;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_app.person ADD COLUMN payout_vpa text ;
 
 
