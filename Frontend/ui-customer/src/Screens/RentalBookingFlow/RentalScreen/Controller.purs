@@ -44,7 +44,8 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide,overlappingRides)
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
-import JBridge (showDateTimePicker, toast, updateSliderValue)
+import JBridge (showDateTimePicker, updateSliderValue)
+import Engineering.Helpers.Utils as EHU
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
@@ -204,10 +205,10 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
       else continue newState {props{showPrimaryButton = true}}
        else 
         if validDate then do 
-          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
+          void $ pure $ EHU.showToast $ getString STR.SCHEDULE_RIDE_AVAILABLE
           continue state {props{showPrimaryButton = true}}
         else do
-          void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
+          void $ pure $ EHU.showToast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
           continue state {props{showPrimaryButton = true}}
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state

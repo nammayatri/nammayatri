@@ -59,7 +59,8 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
-import Screens.Types 
+import Screens.Types
+import Toast.ScreenData as ToastScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
@@ -110,6 +111,7 @@ newtype GlobalState = GlobalState {
   , selectedLanguageScreen :: SelectLanguageScreenState
   , helpAndSupportScreen :: HelpAndSupportScreenState
   , writeToUsScreen :: WriteToUsScreenState
+  , toast :: ToastScreenData.ToastState
   , permissionsScreen :: PermissionsScreenState
   , homeScreen :: HomeScreenState
   , editBankDetailsScreen :: EditBankDetailsScreenState
@@ -192,6 +194,7 @@ defaultGlobalState = GlobalState {
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
 , chooseCityScreen : ChooseCityScreenData.initData
+, toast : ToastScreenData.initData
 , welcomeScreen : WelcomeScreenData.initData
 , driverEarningsScreen : DriverEarningsScreenData.initData
 , benefitsScreen : BenefitsScreenData.initData

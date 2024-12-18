@@ -38,6 +38,7 @@ import Common.Types.App as Common
 import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import Services.API
 import Language.Strings (getString)
@@ -110,7 +111,7 @@ eval (RefreshStatusAC PrimaryButton.OnClick) state = exit $ RefreshPaymentStatus
 eval (Copy text) state = 
   continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text
-    void $ pure $ JB.toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 

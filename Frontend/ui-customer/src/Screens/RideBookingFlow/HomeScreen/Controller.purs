@@ -83,7 +83,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -495,10 +495,10 @@ eval (EditLocation isEditingPickup) state = do
   case isEditingPickup of
     ST.Source -> do
       if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
-        void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
+        void $ pure $ EHU.showToast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
         continue state
       else if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
-        void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
+        void $ pure $ EHU.showToast $ getString DRIVER_ALMOST_AT_PICKUP
         continue state
       else do
         void $ pure $ updateLocalStage EditPickUpLocation
@@ -1455,7 +1455,7 @@ eval OpenSettings state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   let _ = EHE.addEvent (EHE.defaultEventObject "burger_menu_clicked") { module = "onboarding"}
   if state.props.isOffline then do
-    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
     continue state
   else
     continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
@@ -1541,7 +1541,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.GoToDriverProfile
 
 eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ toast $ getString $ OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"
+    _ <- pure $ EHU.showToast $ getString $ OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"
     _ <- pure $ clearTimerWithId timerID
     continue state{props{zoneOtpExpired = true}}
   else do
@@ -1600,7 +1600,7 @@ eval OpenEmergencyHelp state = do
   void $ pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
   if state.props.isOffline then do
-    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
     continue state
   else do
     exit $ GoToNammaSafety state true false
@@ -1616,7 +1616,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.EditingLocation i
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state =
   if state.props.isOffline then do
-    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
     continue state
   else do
     if state.data.config.feature.shareWithEmergencyContacts
@@ -1648,7 +1648,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.ClearOptions)) state = do
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
   if state.props.isOffline then do
-    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+    void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
     continue state
   else do
     let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".CancelRide") "true"
@@ -1679,7 +1679,7 @@ eval (SuggestedDestinationClicked item isFamousDest) state = do
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
-    void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
+    void $ pure $ EHU.showToast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
     else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
@@ -2165,7 +2165,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   else do
     void $ pure $ runFn2 updatePushInIdMap "EstimatePolling" true
     void $ pure $ updateLocalStage SearchLocationModel
-    void $ pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
+    void $ pure $ EHU.showToast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
     continue state { props {currentStage = SearchLocationModel}}
 
   where
@@ -2200,7 +2200,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
       case (null estimatedVarient) of
         true -> do
           _ <- pure $ hideKeyboardOnNavigation true
-          _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
+          _ <- pure $ EHU.showToast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
           continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
           -- let newState = state { props { currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
           -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
@@ -2827,10 +2827,10 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
         else continue newState
       else
         if isAfterThirtyMinutes then do
-          void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+          void $ pure $ EHU.showToast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
           continue state
         else do
-          void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
+          void $ pure $ EHU.showToast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state
 
 eval (DateSelectAction title dateResp respYear respMonth respDay timeResp respHour respMinute ) state = do
@@ -2926,21 +2926,21 @@ eval (DateSelectAction title dateResp respYear respMonth respDay timeResp respHo
           continue newState
         else if title == "Return" then
           if not isAfterThirtyMinutes then do
-            void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+            void $ pure $ EHU.showToast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
             continue state
           else if not validRoundTripReturnUTC then do
-            void $ pure $ toast $ getString ROUND_TRIP_INVALID_MESSAGE
+            void $ pure $ EHU.showToast $ getString ROUND_TRIP_INVALID_MESSAGE
             continue state
           else if not bookingDurationCheck then do
-            void $ pure $ toast $ getString BOOKING_DURATION_INVALID
+            void $ pure $ EHU.showToast $ getString BOOKING_DURATION_INVALID
             continue state
           else
             continue newState
         else do
-          void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
+          void $ pure $ EHU.showToast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state
       else do
-        void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+        void $ pure $ EHU.showToast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
         continue state
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
@@ -2951,7 +2951,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
         void $ pure $ updateLocalStage SearchLocationModel
         continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isIntercityFlow = true,isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
         else do
-          void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
+          void $ pure $ EHU.showToast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
     "DELIVERY" -> exit $ GoToParcelInstructions state
@@ -3143,7 +3143,7 @@ eval GoToHomeScreen state = do
 eval (AcWorkingPopupAction (PopUpModal.OnButton1Click)) state = do
   let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing state.data.fareProductType
   if isAcCabRide then
-    void $ pure $ toast $ getString GREAT_ENJOY_THE_TRIP
+    void $ pure $ EHU.showToast $ getString GREAT_ENJOY_THE_TRIP
   else pure unit
   void $ pure $ setValueToCache (show AC_POPUP_SHOWN_FOR_RIDE) state.data.driverInfoCardState.rideId (\id -> id)
   continue state{props{showAcWorkingPopup = false}}
@@ -3400,7 +3400,7 @@ eval (ServicesOnClick service) state = do
         void $ pure $ updateLocalStage SearchLocationModel
         continue updatedState { data { source=(getString CURRENT_LOCATION)}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
         else do
-          void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
+          void $ pure $ EHU.showToast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState
     RC.INSTANT -> do 
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_instant") { module = "onboarding"}
@@ -3596,7 +3596,7 @@ tagClickEvent savedAddressType arrItem state isEditDestination = do
             continue state{props{currentStage = FavouriteLocationModel}}
         _,Nothing    -> do
           if (length state.data.savedLocations >= 20) then do
-            _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
+            _ <- pure $ EHU.showToast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
             continue state
             else updateAndExit state{props{tagType = Just savedAddressType}}  $ CheckFavDistance state{props{tagType = Just savedAddressType}}
         _,Just item  -> do
@@ -3733,7 +3733,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
   case (null estimatedVarient) of
     true -> do
       _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
+      _ <- pure $ EHU.showToast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
       continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
     false -> do
       if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then

@@ -26,6 +26,7 @@ import Foreign (Foreign)
 import Foreign.Object (Object(..), empty)
 import Language.Types (STR(..))
 import LoaderOverlay.ScreenData as LoaderScreenScreenData
+import Toast.ScreenData as ToastScreenData
 import Screens.SelectContactsFlow.SelectContactsScreen.ScreenData (SelectContactsScreenState)
 import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
@@ -125,6 +126,7 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , toast :: ToastScreenData.ToastState
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
   , searchLocationScreen :: SearchLocationScreenState
@@ -181,6 +183,7 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , toast : ToastScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
   , followRideScreen : FollowRideScreenData.initData

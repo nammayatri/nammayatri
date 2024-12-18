@@ -15,7 +15,7 @@ import Debug (spy)
 import Data.Array (length, (!!), catMaybes)
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
-import JBridge (shareImageMessage, copyToClipboard, toast)
+import JBridge (shareImageMessage, copyToClipboard)
 import Common.Types.App as Common
 import Language.Strings (getString)
 import Language.Types (STR(..))

@@ -41,6 +41,7 @@ import Components.Safety.SosButtonAndDescription as SosButtonAndDescription
 import Components.Safety.SafetyActionTileView as SafetyActionTileView
 import Components.OptionsMenu as OptionsMenu
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
+import Engineering.Helpers.Utils as EHU
 import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn7, runEffectFn3)
 import Timers (clearTimerWithId, waitingCountdownTimerV2Impl, startTimer)
@@ -375,10 +376,10 @@ eval (AudioPermission status) state =
 eval (UploadMultiPartDataCallback _ fileId) state = do
   void $ pure $ JB.toggleBtnLoader "" false
   if DS.null fileId then do
-    void $ pure $ JB.toast "Failed to upload media file. Please try again."
+    void $ pure $ EHU.showToast "Failed to upload media file. Please try again."
     continue state 
   else do
-    void $ pure $ JB.toast "Audio shared successfully"
+    void $ pure $ EHU.showToast "Audio shared successfully"
     continue state {props { recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false} }
 
 eval (SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording) state = 

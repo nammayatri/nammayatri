@@ -23,8 +23,9 @@ import Components.SourceToDestination as SourceToDestinationController
 import Data.Array (null)
 import Data.String (length)
 import Data.String (trim)
-import JBridge (hideKeyboardOnNavigation, copyToClipboard, toast, showDialer, openUrlInApp, openUrlInMailApp)
+import JBridge (hideKeyboardOnNavigation, copyToClipboard, showDialer, openUrlInApp, openUrlInMailApp)
 import Language.Strings (getString)
+import Engineering.Helpers.Utils (showToast)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import Prelude (class Show, pure, unit, not, bind, ($), (>), discard, void, (==), (<>))
@@ -141,8 +142,10 @@ eval (ContactSupportPopUpAction (PopUpModalController.OnButton2Click)) state = c
 
 eval ViewInvoice state = do
     let onUsRide  = state.data.selectedItem.providerType == ONUS
-    void $ pure if onUsRide then unit else toast $ getString OTHER_PROVIDER_NO_RECEIPT 
-    if onUsRide then exit $ GoToInvoice state else continue state
+    if onUsRide then exit $ GoToInvoice state
+        else do 
+            void $ pure $ showToast $ getString OTHER_PROVIDER_NO_RECEIPT
+            continue state
 
 eval ReportIssue state =  do
     if state.data.config.feature.enableHelpAndSupport
@@ -157,7 +160,7 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick ))
 
 eval Copy state = continueWithCmd state [ do 
     _ <- pure $ copyToClipboard state.data.tripId
-    _ <- pure $ toast (getString COPIED)
+    _ <- pure $ showToast (getString COPIED)
     pure NoAction
   ]
 

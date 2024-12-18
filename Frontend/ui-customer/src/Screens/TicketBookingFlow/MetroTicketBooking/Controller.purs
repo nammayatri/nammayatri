@@ -29,7 +29,8 @@ import Services.API as API
 import Data.Array
 import Data.Maybe
 import Debug (spy)
-import JBridge (toast, toggleBtnLoader,hideKeyboardOnNavigation)
+import JBridge (toggleBtnLoader,hideKeyboardOnNavigation)
+import Engineering.Helpers.Utils as EHU
 import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
@@ -116,7 +117,7 @@ eval BackPressed state =
 
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
-     void $ pure $ toast $ "Please Select Route"
+     void $ pure $ EHU.showToast $ "Please Select Route"
      void $ pure $ toggleBtnLoader "" false
      continue state 
     else updateAndExit state $ UpdateAction state
@@ -155,7 +156,7 @@ eval (SelectLocation loc) state =
 eval (GetMetroQuotesAction resp) state = do 
   void $ pure $ toggleBtnLoader "" false
   if null resp then do
-    void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
+    void $ pure $ EHU.showToast $ getString NO_QOUTES_AVAILABLE
     continue state{ props{currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
   else updateQuotes resp state
 
@@ -193,7 +194,7 @@ updateQuotes quotes state = do
   let quoteData = find (\(FrfsQuote item) -> (getTicketType item._type) == (state.data.ticketType)) quotes
   case quoteData of
     Nothing -> do
-      void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
+      void $ pure $ EHU.showToast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (FrfsQuote quoteData) -> do
       let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}

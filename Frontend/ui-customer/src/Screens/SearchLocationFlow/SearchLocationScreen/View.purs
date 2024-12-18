@@ -29,6 +29,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SeparatorView.View as SeparatorView
 import Components.ChooseYourRide as ChooseYourRide
+import Engineering.Helpers.Utils as EHU
 import Components.RateCard as RateCard
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Monad.Free (runFree)
@@ -63,7 +64,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Helpers.CommonView (emptyTextView)
 import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer, getCityFromString, getDistanceString)
-import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker, handleLocateOnMapCallback, getKeyInSharedPrefKeys)
+import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker, handleLocateOnMapCallback, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -1129,7 +1130,7 @@ getEstOrQuotes action flowStatusAction count duration push state = do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorMessage"
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-            void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+            void $ pure $ EHU.showToast "ACTIVE BOOKING ALREADY PRESENT"
             doAff do liftEffect $ push $ flowStatusAction
           else do
             void $ delay $ Milliseconds duration

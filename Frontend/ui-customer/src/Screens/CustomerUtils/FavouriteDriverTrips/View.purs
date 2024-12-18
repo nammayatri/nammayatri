@@ -72,7 +72,7 @@ getFavouriteDriverTrips push state = do
       liftFlowBT $ push $ GetFavouriteDriversTripsAPIResponseAction (resp)
       pure unit
     Left _ -> do
-      void $ pure $ JB.toast $ getString NOT_AVAILABLE
+      void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
       liftFlowBT $ push $ BackPressed
       pure unit
 

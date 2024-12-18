@@ -209,7 +209,7 @@ variantsView push state =
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
                             , gravity CENTER
                             , onClick (\action -> if isInActive then do 
-                                                     void $ pure $ JB.toast "Not available at this moment"
+                                                     void $ pure $ EHU.showToast "Not available at this moment"
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
                             , accessibility if isInActive then DISABLE else ENABLE

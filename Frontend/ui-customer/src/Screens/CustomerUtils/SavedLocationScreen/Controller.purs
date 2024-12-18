@@ -30,7 +30,7 @@ import Data.String (trim, toLower, split, Pattern(..))
 import Data.Array (filter, (!!), length)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved)
-import JBridge (toast, toggleBtnLoader)
+import JBridge (toggleBtnLoader)
 import Language.Strings(getString)
 import Language.Types(STR(..))
 import Accessor (_list)
@@ -162,7 +162,7 @@ eval (ChangeScreen number name id) state = updateAndExit state $ FavouriteDriver
 
 eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do 
   if (length state.data.savedLocations >= 20) then do 
-    _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
+    _ <- pure $ EHU.showToast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     _ <- pure $ toggleBtnLoader "" false
     continue state
     else do
