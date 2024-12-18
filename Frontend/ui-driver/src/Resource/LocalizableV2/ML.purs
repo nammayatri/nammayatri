@@ -1779,4 +1779,8 @@ getMl =
     , choose_preferred_metro : "പ്രിയപ്പെട്ട മെട്രോ തിരഞ്ഞെടുക്കുക"
     , metro_warriors : "മെട്രോ വാരിയേഴ്സ്"
     , search : "തിരയുക" 
+    , intercity_round_trip_ride_accepted :"അന്തർനഗര റൗണ്ട്‌ട്രിപ്പ് യാത്ര സ്വീകരിച്ചു"
+    , you_are_on_intercity_roundtrip_ride : " നിങ്ങള്‍ അന്തർനഗര റൗണ്ട്‌ട്രിപ്പ് യാത്രയിൽ ആണു"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "ദയവായി നിങ്ങളുടെ വാഹനം " <> "<span><b>" <> destination <> "</b></span>" <> " ലേക്ക് പോകാനും തിരിച്ചുവരാനും തയ്യാറാണെന്ന് ഉറപ്പാക്കുക" )
+    , your_intercity_round_trip_ride_starts_in : "നിങ്ങളുടെ അന്തർനഗര റൗണ്ട്ട്രിപ്പ് യാത്ര ആരംഭിക്കുന്നു"
     }

@@ -1779,4 +1779,8 @@ getKn =
     , choose_preferred_metro : "ಆದ್ಯತೆಯ ಮೆಟ್ರೋಅನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , metro_warriors : "ಮೆಟ್ರೋ ವಾರಿಯರ್ಸ್"
     , search : "ಹುಡುಕಿ"
+    , intercity_round_trip_ride_accepted : "ಅಂತರನಗರ ರೌಂಡ್ಟ್ರಿಪ್ ಸವಾರಿ ಸ್ವೀಕಾರಿಸಲಾಗಿದೆ "
+    , you_are_on_intercity_roundtrip_ride : "ನೀವು ಅಂತರನಗರ ರೌಂಡ್ಟ್ರಿಪ್ ಸವಾರಿಯಲ್ಲಿದ್ದೀರಿ"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "ದಯವಿಟ್ಟು ನಿಮ್ಮ ವಾಹನವು "<> "<span><b>" <> destination <> "</b></span>" <>" ಗೆ ಹೋಗಲು ಮತ್ತು ಅಲ್ಲಿಂದ ಹಿಂದಿರುಗಲು ಸಿದ್ಧವಾಗಿರುವುದನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ ") 
+    , your_intercity_round_trip_ride_starts_in : "ನಿಮ್ಮ ಅಂತರನಗರ ರೌಂಡ್ಟ್ರಿಪ್ ಸವಾರಿ ಆರಂಭವಾಗುತ್ತದೆ"
     }

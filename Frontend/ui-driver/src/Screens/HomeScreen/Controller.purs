@@ -1520,9 +1520,12 @@ eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd
 eval (PopUpRentalInfoAction PopUpModal.OnButton1Click) state = continue state{props{rentalInfoPopUp = false, intercityInfoPopUp = false}} 
 
 eval (PopUpRentalInfoAction PopUpModal.OnSecondaryTextClick) state = do 
-  let link = case state.data.linkedVehicleCategory of
+  let tripType = state.data.activeRide.tripType
+      link  = if tripType == ST.Rental then 
+          case state.data.linkedVehicleCategory of
               "AUTO_RICKSHAW" -> state.data.config.rentalRideVideoConfig.auto 
-              _ -> state.data.config.rentalRideVideoConfig.cab 
+              _ -> state.data.config.rentalRideVideoConfig.cab
+          else  state.data.config.intercityRideVideoConfig.cab 
   continueWithCmd state [ do 
     void $ JB.openUrlInApp link
     pure AfterRender

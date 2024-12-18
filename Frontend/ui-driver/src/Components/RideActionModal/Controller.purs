@@ -89,7 +89,8 @@ type Config = {
   isDelivery :: Boolean,
   delivery :: Mb.Maybe DeliveryDetails,
   isSourceDetailsExpanded :: Boolean,
-  isDestinationDetailsExpanded :: Boolean
+  isDestinationDetailsExpanded :: Boolean,
+  roundTrip :: Boolean
 }
 
 type DeliveryDetails = {
@@ -166,5 +167,6 @@ config = {
   isDelivery : false,
   delivery : Nothing,
   isSourceDetailsExpanded : false,
-  isDestinationDetailsExpanded : false
+  isDestinationDetailsExpanded : false,
+  roundTrip : false
 }

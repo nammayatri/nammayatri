@@ -1794,6 +1794,10 @@ newtype Keymap
   , choose_preferred_metro :: String
   , metro_warriors :: String
   , search :: String
+  , intercity_round_trip_ride_accepted :: String
+  , you_are_on_intercity_roundtrip_ride :: String
+  , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip :: String -> String
+  , your_intercity_round_trip_ride_starts_in :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7124,3 +7128,15 @@ metro_warriors = Proxy
 
 search :: Proxy "search"
 search = Proxy
+
+intercity_round_trip_ride_accepted :: Proxy "intercity_round_trip_ride_accepted"
+intercity_round_trip_ride_accepted = a
+
+you_are_on_intercity_roundtrip_ride :: Proxy "you_are_on_intercity_roundtrip_ride"
+you_are_on_intercity_roundtrip_ride = a
+
+please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip :: Proxy "please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip"
+please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip = a
+
+your_intercity_round_trip_ride_starts_in :: Proxy "your_intercity_round_trip_ride_starts_in"
+your_intercity_round_trip_ride_starts_in = a

@@ -1709,7 +1709,7 @@ getEn =
     , your_ride_starts_in: "your ride starts in"
     , away: " away"
     , intercity: "Intercity"
-    , intercity_return: "Intercity Return"
+    , intercity_return: "Intercity Roundtrip"
     , rental: "Rental"
     , regular: "Regular"
     , upcoming_ride: "Upcoming"
@@ -1779,4 +1779,8 @@ getEn =
     , choose_preferred_metro : "Choose preferred metro"
     , metro_warriors : "Metro Warriors"
     , search : "Search"
+    , intercity_round_trip_ride_accepted : "Intercity Roundtrip ride accepted"
+    , you_are_on_intercity_roundtrip_ride : "you are on  an Intercity Roundtrip ride"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "Please ensure that your vehicle is ready for intercity trip to and back from "<> "<span><b>" <> destination <> "</b></span>") 
+    , your_intercity_round_trip_ride_starts_in : "Your Intercity Roundtrip ride starts in"
     }

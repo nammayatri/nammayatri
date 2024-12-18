@@ -202,7 +202,7 @@ screen initialState (GlobalState globalState) =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
-                                void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push
+                                void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push initialState.data.activeRide.roundTrip
                                 void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
                                 void $ pure $ setValueToLocalStore RIDE_START_ODOMETER "" 
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
@@ -343,21 +343,24 @@ getActiveRideDetails push delayTime retryCount = do
     pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
 
 
-playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
-playRideAssignedAudio tripCategory rideId push = do 
+playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Boolean -> Effect Unit
+playRideAssignedAudio tripCategory rideId push isRoundTrip = do 
   let lastPlayedRideId = getValueToLocalStore LAST_PLAYED_RIDE_ID
   if(lastPlayedRideId /= rideId) && rideId /= "" then do
     void $ pure $ setValueToLocalStore LAST_PLAYED_RIDE_ID rideId
     let 
       city = getValueToLocalStore DRIVER_LOCATION
       config = RC.fetchRideAssignedAudioConfig city
-      audioUrl = case tripCategory of
-        ST.Rental ->  config.rental
-        ST.Intercity -> config.intercity
-        ST.RoundTrip -> config.roundTrip
-        ST.Delivery -> config.delivery
-        ST.OneWay -> config.oneWay
-        ST.RideShare -> config.rideShare
+      audioUrl = 
+        if isRoundTrip then config.roundTrip
+        else 
+          case tripCategory of
+            ST.Rental ->  config.rental
+            ST.Intercity -> config.intercity
+            ST.RoundTrip -> config.roundTrip
+            ST.Delivery -> config.delivery
+            ST.OneWay -> config.oneWay
+            ST.RideShare -> config.rideShare
     case audioUrl of
       Just url -> do
         pure $ runFn4 JB.startAudioPlayer url push OnRideAssignedAudioCompleted  "0"

@@ -240,7 +240,7 @@ rideTypePill config push =
     , textView $ 
         [ height WRAP_CONTENT
         , text config.rideTypePill.pillText
-        , maxWidth $ 55
+        , maxWidth $ 65
         , color Color.white900
         , margin $ Margin 4 0 0 1
         , gravity LEFT
