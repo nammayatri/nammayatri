@@ -557,7 +557,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : [],
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -2698,8 +2698,8 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
+          "enableVariantBasedSubscription" : true,
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },

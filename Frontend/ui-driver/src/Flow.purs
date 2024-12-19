@@ -472,6 +472,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
         Right (GetDriverInfoResp getDriverInfoResp) -> do
           let cityConfigFromCityCode = HU.getCityConfigFromCityCode config.cityConfig (fromMaybe "" getDriverInfoResp.operatingCity)
           void $ pure $ setValueToLocalStore DRIVER_LOCATION  (capitalize $ cityConfigFromCityCode.cityName)
+          setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           when updateCTBasicData $ liftFlowBT $ updateInitialCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
@@ -2552,10 +2553,10 @@ homeScreenFlow = do
           if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "", enterOdometerReadingModal= false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
               void $ lift $ lift $ toggleLoader false
-            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
-              void $ lift $ lift $ toggleLoader false
-              else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+            void $ lift $ lift $ toggleLoader false
+          else pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
           homeScreenFlow
     GO_TO_START_ZONE_RIDE {otp, lat, lon, ts} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
