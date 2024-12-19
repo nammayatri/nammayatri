@@ -73,15 +73,32 @@ data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
   }
 
 data TaxiLegUpdateData = EditLocation Location EditLocationReq | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
- 
-data WalkSearchData = WalkSearchData 
-  { fromLocation :: Location
-  , stops :: [Location]
+
+data WalkSearchData = WalkSearchData
+  { originAddress :: LocationAddress,
+    destinationAddress :: LocationAddress
   , merchantId :: Id Merchant
   ... other things
   }
 
-data TaxiConfirmData = TaxiConfirmData
+data TaxiSearchData =  TaxiSearchData
+  { originAddress :: LocationAddress,
+    destinationAddress :: LocationAddress,
+    personId :: Id Person,
+    isDestinationManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool,
+    sessionToken :: Maybe Text
+  }
+
+
+data MetroSearchData = MetroSearchData   -- same for bus
+  { personId :: Id Person,
+    merchantId :: Id Person,
+    originCity :: Context.City,
+    quantity :: Int
+  }
+
+data TaxiConfirmData = TaxiConfirmData     -- same for other confirm reqs
   { skipBooking :: Bool,
     journeyLegOrder :: Int
   }
@@ -98,7 +115,7 @@ data WalkLegDeleteRequest = WalkLegDeleteRequest{searchId :: Id Walk}
 
 data MetroLegDeleteRequest = MetroLegDeleteRequest{searchId :: Id FRFS}
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData | WalkLegRequestDelete WalkLegDeleteRequest
+data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestUpdate WalkLegUpdateData | WalkLegRequestDelete WalkLegDeleteRequest
 data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) | TaxiLegRequestCancel TaxiLegCancelRequest | TaxiLegRequestDelete TaxiLegDeleteRequest
 data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData | MetroLegRequestCancel MetroLegCancelRequest | MetroLegRequestDelete MetroLegDeleteRequest
 data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData
@@ -118,7 +135,7 @@ data BusLegUpdateData = BusLegUpdateData
   busLocation : Location
   startTime : Maybe UTCTime
 }
-data BusLegRequest = BusLegRequestUpdate BusLegUpdateData 
+data BusLegRequest = BusLegRequestUpdate BusLegUpdateData
 
 type SearchJourneyLeg leg m = leg -> m ()
 type ConfirmJourneyLeg leg m = leg -> m ()
@@ -270,8 +287,8 @@ instance JourneyLeg BusLeg m where
       False ->
         void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
   update (BusLegRequest $ BusLegRequestUpdate busLegUpdateRequest) =
-  -- let customerLocation = get eta between user location and bus station 
-  -- let busLocation = get eta between bus and bus station 
+  -- let customerLocation = get eta between user location and bus station
+  -- let busLocation = get eta between bus and bus station
   -- let threshold = 50
       -- mark status with respect to bus -  Ontime, Departed, Delayed, Arriving, Finishing, Completed
       -- mark status with respect to user -  AtRiskOfMissing, Missed
@@ -384,7 +401,7 @@ getAllLegs :: Id Journey -> m ()
 getAllLegs journeyId = do
   searchRequests <- findAllByJourneyId journeyId -- in searchRequest
   frfsSearchRequests <- findAllByJourneyId journeyId -- in FRFS search
-  let legs = sortBy order $ transformSearchReqToJourneyLeg searchRequests  <> transformFRFSSearchReqToJourneyLegfrfs SearchRequests 
+  let legs = sortBy order $ transformSearchReqToJourneyLeg searchRequests  <> transformFRFSSearchReqToJourneyLegfrfs SearchRequests
   return legs
 
 replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
