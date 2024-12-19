@@ -27,8 +27,7 @@ data TaxiSearchData = TaxiSearchData
   }
 
 data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
-  {
-    searchRequestId :: Id SearchRequest
+  { searchRequestId :: Id SearchRequest
   , estimateId :: Id Estimate
   , merchantId :: Id Merchant
   , personId :: Id Person

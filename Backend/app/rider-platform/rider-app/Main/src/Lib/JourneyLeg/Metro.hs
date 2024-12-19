@@ -8,21 +8,17 @@ mapServiceStatusToJourneyLegStatus status = case status of
   Verified -> Assigning -- Indicates the service is verified and assigning resources.
   Cancelled -> Cancelled -- Indicates the service has been cancelled.
 
-data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData
+data MetroLegConfirmRequest
+
+data MetroLegRequest
+  = MetroLegRequestSearch MultiModalLeg MetroSearchData
+  | MetroLegConfirm MetroLegConfirmRequest
 
 instance JourneyLeg MetroLeg m where
   search (MetroLegRequestSearch multimodalLeg metroLegSearchData) = do
     FRFSSearch.create multimodalLeg metroLegSearchData
     void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.METRO frfsSearchReq
-  confirm (MetroLegRequestConfirm metroLegConfirmData) = do
-    frfsSearchReq <- QFRFSSearch.findById taxiLegConfirmData.searchReqId
-    quoteId <- searchReq.journeySearchData.pricingId
-    case metroLegConfirmData.skippedBooking of
-      True ->
-        -- subtract price from total estimate
-        QFRFSSearch.updateIsSkipped True
-      False ->
-        void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
+  confirm (MetroLegConfirm req) = return ()
   update (MetroLeg _legData) = return ()
   cancel (MetroLeg _legData) = return ()
   getState (MetroLeg _legData) = return InPlan
