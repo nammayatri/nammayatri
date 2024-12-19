@@ -19,7 +19,8 @@ data DBUpdateObject = DBUpdateObject
   { dbModel :: DBModel,
     contents :: DBUpdateObjectContent,
     mappings :: Mapping,
-    updatedModel :: Maybe A.Object -- required for Kafka
+    updatedModel :: Maybe A.Object, -- required for Kafka
+    forceDrainToDB :: Bool
   }
   deriving stock (Show)
 
@@ -31,6 +32,7 @@ instance FromJSON DBUpdateObject where
     contents <- command A..: "contents"
     mbMappings <- o A..:? "mappings"
     updatedModel <- o A..:? "updatedModel"
+    forceDrainToDB <- o A..:? "forceDrainToDB" A..!= False
     let mappings = fromMaybe (Mapping M.empty) mbMappings
         dbModel = tagObject.getDBModelOptions
     pure DBUpdateObject {..}
