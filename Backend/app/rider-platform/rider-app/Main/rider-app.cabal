@@ -277,6 +277,14 @@ library
       ExternalBPP.Metro.ExternalAPI.CMRL.StationList
       ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
+      Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Metro
+      Lib.JourneyLeg.Taxi
+      Lib.JourneyLeg.Types
+      Lib.JourneyLeg.Walk
+      Lib.JourneyModule.Base
+      Lib.JourneyModule.Types
+      Lib.JourneyModule.Utils
       Lib.JourneyPlannerTypes
       SharedLogic.Cac
       SharedLogic.CallBPP

@@ -1,25 +1,5 @@
 module Domain.Types.JourneyLegs where
 
-data JourneyLegStatus =
-    InPlan
-  -- | Booking
-  -- | RetryBooking
-  | Assigning
-  -- | ReAssigning
-  | Booked
-  | OnTime
-  | AtRiskOfMissing
-  | Departed
-  | Missed
-  | Delayed
-  | Arriving
-  | Skipped -- we might need this
-  | Ongoing
-  | Finishing
-  | Cancelled
-  | Completed
-  deriving (Eq, Show)
-
 completedStatus :: [JourneyLegStatus]
 completedStatus = [Cancelled, Completed]
 
@@ -27,33 +7,15 @@ data ServiceStatus = Pending | Failed | Confirmed | Verified | Cancelled derivin
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-
 -- Mapper functions
-mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
-mapRideStatusToJourneyLegStatus status = case status of
-    UPCOMING    -> InPlan
-    NEW         -> Booked
-    INPROGRESS  -> Ongoing
-    COMPLETED   -> Completed
-    CANCELLED   -> Cancelled
-
-mapServiceStatusToJourneyLegStatus :: ServiceStatus -> JourneyLegStatus
-mapServiceStatusToJourneyLegStatus status = case status of
-    Pending   -> InPlan -- Indicates the service is yet to start planning.
-    Failed    -> FailedStatus -- Indicates a failure in the service.
-    Confirmed -> Booked -- Indicates the service has been confirmed/booked.
-    Verified  -> Assigning -- Indicates the service is verified and assigning resources.
-    Cancelled -> Cancelled -- Indicates the service has been cancelled.
-
-data JourneyLegState = {
-  status :: JourneyLegStatus,
-  currentPosition :: LatLong | Station
-}
-
 data WalkLeg = WalkLeg MultiModalLeg
+
 data TaxiLeg = TaxiLeg MultiModalLeg
+
 data BusLeg = BusLeg MultiModalLeg
+
 data MetroLeg = MetroLeg MultiModalLeg
+
 data TrainLeg = TrainLeg MultiModalLeg
 
 data TaxiSearchData = TaxiSearchData
