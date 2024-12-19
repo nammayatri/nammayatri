@@ -1,14 +1,16 @@
 module Lib.JourneyLeg.Taxi where
 
+import qualified API.UI.Select as DSelect
+
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
-    UPCOMING    -> InPlan
-    NEW         -> Booked
-    INPROGRESS  -> Ongoing
-    COMPLETED   -> Completed
-    CANCELLED   -> Cancelled
+  UPCOMING    -> InPlan
+  NEW         -> Booked
+  INPROGRESS  -> Ongoing
+  COMPLETED   -> Completed
+  CANCELLED   -> Cancelled
 
-data TaxiSearchData = TaxiSearchData
+data TaxiSearchRequest = TaxiSearchRequest
   { personId: Id Person
   , bundleVersion :: Maybe Text
   , fromLocation :: Location
@@ -24,27 +26,42 @@ data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
 
 data TaxiLegUpdateData = EditLocation Location EditLocationReq | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
 
-data TaxiConfirmData = TaxiConfirmData
+data TaxiLegConfirmRequest = TaxiLegConfirmRequest
   { skipBooking :: Bool,
-    journeyLegOrder :: Int
+    personId :: Id Person,
+    merchantId :: Id Merchant,
+    estimateId :: Id Estimate
   }
 
-data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
+data TaxiLegRequest 
+  = TaxiLegRequestSearch MultiModalLeg TaxiSearchRequest
+  | TaxiLegConfirm TaxiLegConfirmRequest
+  | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
 
-instance JourneyLeg TaxiLeg m where
+instance JourneyLeg TaxiLegRequest m where
   search (TaxilegRequestSearch multimodalLeg taxiLegSearchData) = do
     QSR.create multimodalLeg taxiLegSearchData
     dSearchRes <- search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ (Just journeySearchData)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  confirm (TaxilegRequestConfirm taxiLegConfirmData) = do
-    searchReq <- QSearchRequest.findById taxiLegConfirmData.searchReqId
-    estimateId <- searchReq.journeySearchData.pricingId
-    case taxiLegConfirmData.skippedBooking of
-      True ->
-        -- subtract price from total estimate
-        QSearchRequest.updateIsSkipped True
-      False ->
-        void $ Select.select pId (Id estimateId) selectReq
+  
+  confirm (TaxiLegConfirm req) = do
+    now <- getCurrentTime
+    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime newTime oldTime) :: Integer) >= 300 -- 5 minutes buffer
+    unless shouldSkipBooking $
+      let selectReq =
+        DSelect.DSelectReq
+          { customerExtraFee = Nothing,
+            customerExtraFeeWithCurrency = Nothing,
+            autoAssignEnabled = True,
+            autoAssignEnabledV2 = Just True,
+            paymentMethodId = Nothing,
+            otherSelectedEstimates = Nothing,
+            isAdvancedBookingEnabled = Nothing,
+            deliveryDetails = Nothing,
+            disabilityDisable = Nothing
+          }
+      void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
+  
   update (TaxiLegRequest $ TaxiLegRequestUpdate taxiLegUpdateRequest legId) =
     -- Handle the specific type of update
     case taxiLegUpdateRequest of
