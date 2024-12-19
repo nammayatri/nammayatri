@@ -3,6 +3,10 @@ imports:
   SearchRequest: Domain.Types.SearchRequest
   Estimate: Domain.Types.Estimate
   LocationAddress: Domain.Types.LocationAddress
+  PriceAPIEntity : Kernel.Types.Common
+  FRFSStationAPI : API.Types.UI.FRFSTicketService
+  TravelMode : Domain.Types.Trip
+  Location : Domain.Types.Location
 
 module: MultimodalConfirm
 
@@ -33,8 +37,7 @@ types:
     journeyLegInfo: JourneyLegInfo
 
   JourneyLegInfo:
-    enum: "Walk JourneyLegWalkInfo, Taxi JourneyLegTaxiInfo, Bus JourneyBusInfo, Metro JourneyMetroInfo"
-
+    enum: "Walk JourneyLegWalkInfo, Taxi JourneyLegTaxiInfo, Bus JourneyLegBusInfo, Metro JourneyLegMetroInfo"
   JourneyLegWalkInfo:
     origin: Location
     destination: Location
@@ -50,15 +53,15 @@ types:
     destinationStop: FRFSStationAPI
     lineColor: Text
     frequency: Seconds
-  
+
   JourneyLegBusInfo:
     originStation: FRFSStationAPI
     destinationStation: FRFSStationAPI
-    type: Text
+    busCategory: Text
     routeNumber: Text
     frequency: Maybe Seconds
     startTime: Maybe TimeOfDay
-  
+
 apis:
   - POST:
       endpoint: '/multimodal/{journeyId}/info'
@@ -84,7 +87,7 @@ apis:
         estimateId: Id Estimate
       response:
         type: Kernel.Types.APISuccess.APISuccess
-  
+
   - POST:
       endpoint: /multimodal/{legId}/switchToAuto
       params:
