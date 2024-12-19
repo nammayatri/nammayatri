@@ -24,6 +24,9 @@ imports:
   WhatsappProviderEnums: Dashboard.Common.Merchant
   NetworkEnums: Dashboard.Common.Merchant
   PriorityListWrapperType: Dashboard.Common.Merchant
+  UpsertTicketConfigReq: Dashboard.Common.Merchant
+  UpsertTicketConfigResp: Dashboard.Common.Merchant
+
 module: Merchant
 
 apis:
@@ -193,6 +196,18 @@ apis:
         endpoint: MerchantAPI ToggleConfigPriorityEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
+  - POST: # UpsertTicketPlaceAPI
+      endpoint: /ticket/config/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertTicketConfigReq
+      response:
+        type: UpsertTicketConfigResp
+      migrate:
+        endpoint: MerchantAPI UpsertTicketConfigEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG
+
 types:
   MerchantUpdateReq:
     - name: Maybe Text

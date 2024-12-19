@@ -25,11 +25,13 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
     postMerchantConfigFailover,
+    postMerchantTicketConfigUpsert,
   )
 where
 
 import qualified API.Client.RiderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
+import Dashboard.Common.Merchant
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -203,3 +205,9 @@ postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req
+
+postMerchantTicketConfigUpsert :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.UpsertTicketConfigReq -> Environment.Flow Dashboard.Common.Merchant.UpsertTicketConfigResp)
+postMerchantTicketConfigUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantTicketConfigUpsert)) req

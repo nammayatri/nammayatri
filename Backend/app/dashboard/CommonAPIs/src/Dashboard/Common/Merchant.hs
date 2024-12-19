@@ -44,6 +44,7 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -849,3 +850,25 @@ data PriorityListWrapperType = PriorityListWrapperType
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---- UpsertTicketConfig ----------------------------------
+
+newtype UpsertTicketConfigReq = UpsertTicketConfigReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpsertTicketConfigReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data UpsertTicketConfigResp = UpsertTicketConfigResp {unprocessedTicketConfig :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertTicketConfigReq where
+  fromMultipart form = do
+    UpsertTicketConfigReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertTicketConfigReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]

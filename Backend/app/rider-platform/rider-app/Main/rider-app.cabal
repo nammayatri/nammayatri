@@ -373,6 +373,7 @@ library
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
       Storage.Queries.BookingPartiesLinkExtra
+      Storage.Queries.BusinessHourExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
@@ -406,6 +407,7 @@ library
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
+      Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.StationExtra
       Storage.Queries.TicketBookingExtra
@@ -821,6 +823,7 @@ library
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BookingPartiesLink
+      Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability
@@ -849,6 +852,7 @@ library
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
+      Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.TicketBooking

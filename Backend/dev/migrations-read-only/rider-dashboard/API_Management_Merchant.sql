@@ -149,3 +149,19 @@ UPDATE atlas_bap_dashboard.transaction
 
 -- {"api":"PostMerchantConfigFailover","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'TOGGLE_CONFIG_PRIORITY' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantTicketConfigUpsert","migration":"endpoint","param":"MerchantAPI UpsertTicketConfigEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TICKET_CONFIG_UPSERT'
+  WHERE endpoint = 'MerchantAPI UpsertTicketConfigEndpoint';
+
+-- {"api":"PostMerchantTicketConfigUpsert","migration":"endpointV2","param":null,"schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TICKET_CONFIG_UPSERT'
+  WHERE endpoint = 'MerchantAPI PostMerchantTicketConfigUpsertEndpoint';
+
+-- {"api":"PostMerchantTicketConfigUpsert","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TICKET_CONFIG_UPSERT' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'UPSERT_FARE_TICKET_CONFIG' ) ON CONFLICT DO NOTHING;
