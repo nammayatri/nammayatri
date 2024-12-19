@@ -152,8 +152,10 @@ checkBookingsForStatus (currBooking : bookings) = do
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> Flow BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate = do
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> Flow BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' = do
+  let mbFromDate = millisecondsToUTC <$> mbFromDate'
+  let mbToDate = millisecondsToUTC <$> mbToDate'
   (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
@@ -162,7 +164,7 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus
       let allBookingsNotScheduled = length $ filter (\booking -> booking.startTime < now) allbookings
       if allBookingsNotScheduled == limit
         then do
-          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate
+          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate'
         else do
           returnResonseAndClearStuckRides allbookings rbList personId
     else do
