@@ -1696,7 +1696,7 @@ getRideCompletedConfig state = let
     badgeCard{
       visible = disability,
       image = fetchImage FF_ASSET "ny_ic_disability_confetti_badge",
-      imageWidth = V 152, 
+      imageWidth = V 152,
       imageHeight = V 106,
       text1 = getString BADGE_EARNED,
       text2 = getString PURPLE_RIDE_CHAMPION,
@@ -1714,7 +1714,7 @@ getRideCompletedConfig state = let
     endRideOdometerImage = getValueToLocalStore RIDE_END_ODOMETER,
     rideStartedAt = fromMaybe "" state.data.endRideData.tripStartTime,
     rideEndedAt = fromMaybe "" state.data.endRideData.tripEndTime
-  },  
+  },
     showContactSupportPopUp = state.props.showContactSupportPopUp,
     driverUpiQrCard {
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,

@@ -329,7 +329,7 @@ data Action = NoAction
             | BackPressed
             | ScreenClick
             | BookingOptions
-            | Notification String
+            | Notification String String String 
             | ChangeStatus Boolean
             | GoOffline Boolean
             | CancelGoOffline
@@ -718,8 +718,9 @@ eval (KeyboardCallback keyBoardState) state = do
   else
     continue state
 
-eval (Notification notificationType) state = do
+eval (Notification notificationType notificationBody entityData) state = do
   _ <- pure $ printLog "notificationType" notificationType
+  let metroRideCoinData = getMetroCoinDetails entityData
   if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
     let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag, safetyAudioAutoPlay = false}}
     void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
@@ -728,18 +729,13 @@ eval (Notification notificationType) state = do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
     exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
-  else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
-    let city = getValueToLocalStore DRIVER_LOCATION
-        metroRideCoinConfig = RC.getMetroCoinsEvent city
-        metroRideCoinData = case notificationType of
-          "TO_METRO_COINS" ->
-              { coinsEarned: metroRideCoinConfig.coinsToMetroRide, metroRideType: API.ToMetro }
-          "FROM_METRO_COINS" ->
-              { coinsEarned: metroRideCoinConfig.coinsFromMetroRide, metroRideType: API.FromMetro }
-          _ ->
-              { coinsEarned: 0, metroRideType: API.None }
-    continue state { data = state.data { endRideData = state.data.endRideData { metroRideCoinData = Just metroRideCoinData } } }
+  else if notificationType == show ST.COINS_SUCCESS && state.props.currentStage == ST.RideCompleted && isJust metroRideCoinData then do
+    let _ = removeFromWindow "notificationData"
+    continue state { data{ endRideData{ metroRideCoinData = metroRideCoinData}}}
   else continue state
+  where
+    getMetroCoinDetails :: String -> Maybe ST.MetroRideCoinData
+    getMetroCoinDetails entityData = checkCoinEvent entityData [API.MetroRideCompleted API.ToMetro, API.MetroRideCompleted API.FromMetro]
 
 eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }

@@ -40,7 +40,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any, head)
+import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any, head, elem)
 import Data.Either (Either(..), either)
 import RemoteConfig.Utils
 import Data.Function.Uncurried (runFn1, runFn2, runFn5)
@@ -82,6 +82,8 @@ import Timers (startTimer)
 import Locale.Utils
 import Effect.Uncurried (runEffectFn3)
 import Types.App (defaultGlobalState, GlobalState(..))
+import RemoteConfig.Utils as RC
+import Screens.DriverEarningsScreen.Transformer (checkIfVariantIsCoinEnabled)
 
 screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
@@ -178,7 +180,7 @@ view push state =
                 [ tabView push state
                 , case state.props.subView of
                     ST.USE_COINS_VIEW -> do
-                      if (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
+                      if (checkIfVariantIsCoinEnabled "") then
                         linearLayout
                           [ width MATCH_PARENT
                           , gravity CENTER_VERTICAL
@@ -195,7 +197,7 @@ view push state =
                       else
                         linearLayout [] []
                     _
-                      | any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] || (not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)) -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+                      | any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] || (not (checkIfVariantIsCoinEnabled "")) -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
                     _ -> linearLayout [] []
                 , if any (_ == state.props.subView) [ ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW ] then separatorView true state.props.subView else linearLayout [] []
                 , if not state.data.anyRidesAssignedEver then
@@ -236,8 +238,6 @@ view push state =
     ]
   where
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-  showGenericHeader = state.props.subView == ST.USE_COINS_VIEW || not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)
 
 loadMoreView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 loadMoreView push state =
@@ -297,10 +297,8 @@ lottieView state push =
 
 tabView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
-  let
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-    setVisibility = if ((state.props.subView == ST.EARNINGS_VIEW || state.props.subView == ST.YATRI_COINS_VIEW) && state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then VISIBLE else GONE
+  let    
+    setVisibility = if ((state.props.subView == ST.EARNINGS_VIEW || state.props.subView == ST.YATRI_COINS_VIEW) && checkIfVariantIsCoinEnabled "") then VISIBLE else GONE
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1486,8 +1484,6 @@ convertView push state =
     coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
     bounds = runFn1 getLayoutBounds $ getNewIDWithTag "ConvertCoinsSliderView"
     marginLeft' = (state.data.coinsToUse * bounds.width) / 100
-    setVisibility = if state.data.coinBalance < coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
-    coinBalanceNearestCeil = ((state.data.coinBalance + coinsConfig.stepFunctionForCoinConversion - 1) / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
     coinsDefaultValue = (state.data.coinBalance / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
     discountPoints = (toNumber coinsDefaultValue) * state.data.coinConversionRate
   in
@@ -1561,7 +1557,6 @@ convertView push state =
               dummyView
             , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (coinsDefaultValue > 0 && state.data.hasActivePlan && state.data.coinsToUse <= state.data.coinBalance))
           ]
-        
       ]
 
 

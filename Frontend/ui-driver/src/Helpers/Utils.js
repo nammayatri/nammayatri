@@ -200,16 +200,28 @@ export const storeCallBackForNotification = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (notificationType) {
-          if (window.whitelistedNotification.has(notificationType)) {
-						window.notificationType = notificationType;
-            cb(action(notificationType))();
+        let notificationData= window.notificationData ? JSON.parse(window.notificationData) : [];
+        const callback = callbackMapper.map(function (notificationType, notificationBody) {        
+          let parsedBody, entityData;
+          try {
+            parsedBody = notificationBody ? JSON.parse(notificationBody.replace(/\s+/g, '')) : null;
+            entityData = parsedBody && parsedBody.entityData ? JSON.parse(parsedBody.entityData) : null;
+          } catch (parseError) {
+            console.log("Error parsing notificationBody or entityData:", parseError);
           }
+          let entityDataStringified = entityData ? JSON.stringify(entityData) : null;
+          if (window.whitelistedNotification.has(notificationType) && entityData && Object.keys(entityData).length > 0) {
+            notificationData.push({
+                notificationType,
+                entityData : entityDataStringified
+              });
+            window.notificationData = JSON.stringify(notificationData)
+          }
+          cb(action(notificationType)(notificationBody)(entityDataStringified))();
         });
         window.onResumeListeners = [];
         JBridge.storeCallBackForNotification(callback);
-      }
-      catch (error) {
+      } catch (error) {
         console.log("Error occurred in storeCallBackForNotification ------", error);
       }
     }

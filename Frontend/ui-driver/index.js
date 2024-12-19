@@ -12,7 +12,7 @@ try {
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
 const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds",  "addToLogList"])
-window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION", "FROM_METRO_COINS", "TO_METRO_COINS"]);
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION",  "COINS_SUCCESS"]);
 
 console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
 if (window.JBridge.firebaseLogEventWithParams){  

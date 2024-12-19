@@ -43,6 +43,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Array as DA
 import Font.Style as FontStyle
+import Screens.DriverEarningsScreen.Transformer (checkIfVariantIsCoinEnabled)
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -61,9 +62,7 @@ primaryButtonConfig isActive =
 genericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
 genericHeaderConfig state =
   let
-    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-    enableYatriCoins = state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins
+    enableYatriCoins = state.data.config.feature.enableYatriCoins && checkIfVariantIsCoinEnabled ""
 
     headerText =
       if state.props.subView == ST.FAQ_VIEW then

@@ -3509,8 +3509,8 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where 
-  decode body = 
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where
+  decode body =
     case (typeOf body == "object") of
       true -> defaultDecode body
       false -> defaultDecode $ unsafeToForeign {tag : body}
