@@ -46,12 +46,13 @@ jobs:
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-darwin]
-    needs: [process-labels]
-    runs-on: ${{ matrix.system }}
-    if: |
-      needs.process-labels.outputs.has-backend == 'true' && 
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
+        system: [aarch64-linux]
+        host: [aarch64-darwin]
+    #needs: [process-labels]
+    runs-on: ${{ matrix.host }}
+    #if: |
+    #  needs.process-labels.outputs.has-backend == 'true' && 
+    #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
