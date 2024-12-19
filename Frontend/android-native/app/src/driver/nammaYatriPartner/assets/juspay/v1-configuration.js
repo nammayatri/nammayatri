@@ -560,7 +560,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : [],
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -2702,7 +2702,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
-          "variantList" : [],
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
