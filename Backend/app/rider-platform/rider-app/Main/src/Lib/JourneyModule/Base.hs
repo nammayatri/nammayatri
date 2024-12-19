@@ -2,6 +2,10 @@ module Lib.JourneyModule.Base where
 
 import qualified Kernel.External.MultiModal.Interface as ExternalInterface
 import qualified Storage.Journey.Queries as JQ
+import qualified Domain.Types.Journey as DJ
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Lib.JourneyModule.Types
 
 mkJourneyLeg :: JourneyLeg a m => ExternalInterface.MultiModalLeg -> m a
 mkJourneyLeg multimodalLeg = do
@@ -18,6 +22,17 @@ init journeyReq = do
 
 getJourney :: Id Journey -> m Journey
 getJourney id = JQ.findById id
+
+getAllLegs :: Id Journey -> m LegInfo
+getAllLegs journeyId = do
+  taxiLegs <- QSearchRequest.findAllByJourneyId journeyId >>= mapM mkLegInfoFromSearchRequest
+  publicTransportLegs <- QFRFSSearch.findAllByJourneyId journeyId >>= mapM mkLegInfoFromFrfsSearchRequest
+  return $ sortBy (.order) (taxiLegs <> publicTransportLegs)
+
+startJourney :: Id Journey -> ConfirmReq -> m () -- confirm request
+startJourney journeyId = do
+  allLegs <- getAllLegs journeyId
+  mapM (JL.confirm . mkConfirmReq) allLegs
 
 addLeg :: JourneyLeg leg m => leg -> m ()
 addLeg leg = JL.search leg -- output could be the search request
@@ -58,19 +73,6 @@ endJourney
 -- if last leg then update leg
 -- loop through and delete/update legs and journey as required
 -- call leg level cancel
-
-startJourney :: Id Journey -> ConfirmReq -> m () -- confirm request
-startJourney journeyId = do
-  -- journey <- getJourney journeyId
-  allLegs <- getAllLegs journeyId
-  mapM JL.confirm allLegs
-
-getAllLegs :: Id Journey -> m ()
-getAllLegs journeyId = do
-  searchRequests <- findAllByJourneyId journeyId -- in searchRequest
-  frfsSearchRequests <- findAllByJourneyId journeyId -- in FRFS search
-  let legs = sortBy order $ transformSearchReqToJourneyLeg searchRequests  <> transformFRFSSearchReqToJourneyLegfrfs SearchRequests 
-  return legs
 
 replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
 replaceLeg journey oldLegs newLeg =
