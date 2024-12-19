@@ -26,11 +26,23 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "multimodal" :> Capture "journeyId" (Kernel.Types.Id.Id Domain.Types.Journey.Journey) :> "confirm"
+  ( TokenAuth :> "multimodal" :> Capture "journeyId" (Kernel.Types.Id.Id Domain.Types.Journey.Journey) :> "info"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
+           API.Types.UI.MultimodalConfirm.JourneyInfoReq
+      :> Post ('[JSON]) API.Types.UI.MultimodalConfirm.JourneyInfoResp
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "confirm"
+      :> ReqBody
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyConfirmReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -40,14 +52,32 @@ type API =
       :> Capture
            "estimateId"
            (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate)
-      :> "taxi"
-      :> Get
-           '[JSON]
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "legId"
+           Kernel.Prelude.Text
+      :> "switchToAuto"
+      :> Post
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalConfirm :<|> getMultimodalSwitchTaxi
+handler = postMultimodalInfo :<|> postMultimodalConfirm :<|> postMultimodalSwitch :<|> postMultimodalSwitchToAuto
+
+postMultimodalInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.JourneyInfoReq ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalInfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -59,7 +89,7 @@ postMultimodalConfirm ::
   )
 postMultimodalConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getMultimodalSwitchTaxi ::
+postMultimodalSwitch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
@@ -67,4 +97,13 @@ getMultimodalSwitchTaxi ::
     Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-getMultimodalSwitchTaxi a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalSwitchTaxi (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalSwitch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalSwitchToAuto ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalSwitchToAuto a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitchToAuto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
