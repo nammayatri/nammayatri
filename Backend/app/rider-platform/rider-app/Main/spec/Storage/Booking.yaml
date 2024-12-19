@@ -406,6 +406,9 @@ Booking:
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
     updateIsBookingUpdated:
       kvFunction: updateWithKV
       params:
