@@ -371,10 +371,7 @@ window.getMerchantConfig = function () {
         },
         "rideStartAudio" : {
           "acCab" : {
-            "tollAudio" : "",
-            "acAudio" : "",
             "parkingAudio" : "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
-            "defaultAudio" : ""
           },
           "nonAcCab" : {},
           "auto" : {},
