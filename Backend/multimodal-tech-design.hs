@@ -86,9 +86,21 @@ data TaxiConfirmData = TaxiConfirmData
     journeyLegOrder :: Int
   }
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData
-data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
-data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData
+data WalkLegCancelRequest = WalkLegCancelRequest{searchId :: Id Walk}
+
+data TaxiLegCancelRequest = TaxiLegCancelRequest{searchId :: Id Search}
+
+data MetroLegCancelRequest = MetroLegCancelRequest{searchId :: Id FRFS}
+
+data TaxiLegDeleteRequest = TaxiLegDeleteRequest{searchId :: Id Search}
+
+data WalkLegDeleteRequest = WalkLegDeleteRequest{searchId :: Id Walk}
+
+data MetroLegDeleteRequest = MetroLegDeleteRequest{searchId :: Id FRFS}
+
+data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData | WalkLegRequestDelete WalkLegDeleteRequest
+data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) | TaxiLegRequestCancel TaxiLegCancelRequest | TaxiLegRequestDelete TaxiLegDeleteRequest
+data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData | MetroLegRequestCancel MetroLegCancelRequest | MetroLegRequestDelete MetroLegDeleteRequest
 data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData
 
 data WalkLegUpdateData = WalkLegUpdateData
@@ -176,9 +188,13 @@ instance JourneyLeg WalkLeg m where
   update (WalkLegRequest $ WalkLegRequestUpdate walkLegUpdateData) = do
     WL.updateWalkLegById $ walkLegUpdateData walkLegUpdateData.id
     -- WalkLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime
-  cancel (WalkLeg $ Cancel WalkLegCancelRequest) JourneyLegStatus = return ()
-    -- update JourneyLegStatus: Cancelled
-    WalkLegCancelRequest :: id
+  cancel (WalkLegRequest $ WalkLegRequestCancel WalkLegCancelRequest) JourneyLegStatus =
+    updateSearchRequestJourneyLeg(searchId, isCancelled, true)
+    update JourneyLegStatus: Cancelled
+  delete (WalkLegRequest $ WalkLegRequestDelete WalkLegDeleteRequest) JourneyLegStatus =
+    cancel (WalkLegRequest $ WalkLegRequestCancel {searchId : searchId}) JourneyLegStatus
+    updateSearchRequestJourneyLeg (searchId, isDelete, true)
+    update JourneyLegStatus: Deleted
   getState (WalkLeg _legData) = return JourneyLegState -- id
   get (WalkLeg _legData) = return WalkLeg -- id
 
@@ -221,9 +237,22 @@ instance JourneyLeg TaxiLeg m where
             QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
             return ()
 
-  cancel (TaxiLeg _legData) = return ()
-    -- call cancelV2
-    -- update JourneyLegStatus: Cancelled
+  cancel (TaxiLegRequest $ TaxiLegRequestCancel TaxiLegCancelRequest) JourneyLegStatus = do
+    booking <- getBooking(searchId)
+    case getStatus(searchId) of
+      Booked | Delayed | Arriving -> do
+        call cancel booking.id (booking.riderId, booking.merchantId)
+        update JourneyLegStatus: Cancelled
+        updateSearchRequestJourneyLeg (searchId, isCancel, true)
+      InPlan -> update JourneyLegStatus: Skipped
+      Assigning -> do
+        call cancelSearch (booking.riderId, booking.merchantId)
+        update JourneyLegStatus: Skipped
+    updateSearchRequestJourneyLeg (searchId, isSkipped, true)
+  delete (TaxiLegRequest $ TaxiLegRequestDelete TaxiLegDeleteRequest) JourneyLegStatus =
+    cancel(TaxiLegRequest $ TaxiLegRequestCancel {searchId : searchId} JourneyLegStatus)
+    updateSearchRequestJourneyLeg (searchId, isDelete, true)
+    update JourneyLegStatus: Deleted
   getState (TaxiLeg _legData) = return InPlan
   get (TaxiLeg _legData) = return _legData
 
@@ -273,7 +302,19 @@ instance JourneyLeg MetroLeg m where
       False ->
         void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
   update (MetroLeg _legData) = return ()
-  cancel (MetroLeg _legData) = return ()
+  cancel (MetroLegRequest $ MetroLegRequestCancel MetroLegCancelRequest) JourneyLegStatus =
+    booking <- getBooking(searchId)
+    case getStatus(searchId) of
+      Booked -> do
+        call postFrfsBookingCanCancel (booking.riderId, booking.merchantId) booking.id
+        update JourneyLegStatus: Cancelled
+        updateSearchRequestJourneyLeg (searchId, isCancel, true)
+      InPlan -> update JourneyLegStatus: Skipped
+    updateSearchRequestJourneyLeg (searchId, isSkipped, true)
+  delete(MetroLegRequest $ MetroLegRequestDelete MetroLegDeleteRequest) JourneyLegStatus =
+    cancel(MetroLegRequest $ MetroLegRequestCancel {searchId : searchId}) JourneyLegStatus
+    updateSearchRequestJourneyLeg (searchId, isDeleted, true)
+    update JourneyLegStatus: Deleted
   getState (MetroLeg _legData) = return InPlan
   get (MetroLeg _legData) = return _legData
 
