@@ -65,6 +65,10 @@ TicketPlace:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByNameAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [name, merchantOperatingCityId]
 
 TicketService:
   tableName: ticket_service
@@ -114,6 +118,11 @@ TicketService:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+    findByPlacesIdAndService:
+      kvFunction: findOneWithKV
+      where:
+        and: [placesId, service]
 
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
@@ -180,6 +189,9 @@ BusinessHour:
       kvFunction: findOneWithKV
       where: id
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
 ServiceCategory:
   tableName: service_category
 
@@ -195,6 +207,9 @@ ServiceCategory:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 ServicePeopleCategory:
   tableName: service_people_category

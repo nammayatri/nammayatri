@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.Dashboard.Merchant
   ( postMerchantServiceConfigMapsUpdate,
@@ -26,15 +27,22 @@ module Domain.Action.Dashboard.Merchant
     deleteMerchantSpecialLocationGatesDelete,
     buildMerchantServiceConfig,
     postMerchantConfigFailover,
+    postMerchantTicketConfigUpsert,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Csv
 import Data.List.Extra (notNull)
 import qualified Data.Text as T
+import Data.Time hiding (getCurrentTime)
+import qualified Data.Vector as V
 import qualified Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
+import Domain.Types.BusinessHour
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.Merchant as DM
@@ -44,7 +52,12 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.RiderConfig as DRC
+import Domain.Types.ServiceCategory
+import Domain.Types.ServicePeopleCategory
+import Domain.Types.TicketPlace
+import Domain.Types.TicketService
 import Environment
+import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
 import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
 import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
@@ -59,6 +72,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
@@ -78,9 +92,17 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.BecknConfig as SQBC
+import qualified Storage.Queries.BusinessHour as SQBH
+import qualified Storage.Queries.BusinessHourExtra as SQBHE
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.ServiceCategory as SQSC
+import qualified Storage.Queries.ServiceCategoryExtra as SQSCE
+import qualified Storage.Queries.ServicePeopleCategory as SQSPC
+import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
+import qualified Storage.Queries.TicketPlace as SQTP
+import qualified Storage.Queries.TicketService as SQTS
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -89,13 +111,13 @@ postMerchantUpdate merchantShortId city req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  now <- getCurrentTime
 
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
-  now <- getCurrentTime
 
   mbAllExophones <- forM req.exoPhones $ \exophones -> do
     allExophones <- CQExophone.findAllExophones
@@ -716,3 +738,411 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+
+---------------------------------------------------------------------
+data TicketConfigCSVRow = TicketConfigCSVRow
+  { name :: Text,
+    city :: Text,
+    allowSameDayBooking :: Text,
+    description :: Text,
+    openTimings :: Text,
+    closeTimings :: Text,
+    placeType :: Text,
+    shortDesc :: Text,
+    gallery :: Text,
+    iconUrl :: Text,
+    lat :: Text,
+    lon :: Text,
+    mapImageUrl :: Text,
+    status :: Text,
+    termsAndConditions :: Text,
+    termsAndConditionsUrl :: Text,
+    svc :: Text,
+    svcShortDesc :: Text,
+    svcOperationalDays :: Text,
+    svcStartDate :: Text,
+    svcEndDate :: Text,
+    svcMaxVerification :: Text,
+    svcExpiryType :: Text,
+    svcExpiryValue :: Text,
+    svcExpiryTime :: Text,
+    svcAllowFutureBooking :: Text,
+    svcAllowCancellation :: Text,
+    businessHourType :: Text,
+    businessHourSlotTime :: Text,
+    businessHourStartTime :: Text,
+    businessHourEndTime :: Text,
+    svcCategoryAllowedSeats :: Text,
+    svcCategoryAvailableSeats :: Text,
+    svcCategoryDescription :: Text,
+    svcCategoryName :: Text,
+    peopleCategoryName :: Text,
+    peopleCategoryDescription :: Text,
+    priceAmount :: Text,
+    priceCurrency :: Text,
+    peakTimings :: Text,
+    peakDays :: Text,
+    cancellationType :: Text,
+    cancellationTime :: Text,
+    cancellationFee :: Text
+  }
+  deriving (Show)
+
+instance FromNamedRecord TicketConfigCSVRow where
+  parseNamedRecord r =
+    TicketConfigCSVRow
+      <$> r .: "name"
+      <*> r .: "city"
+      <*> r .: "allow_same_day_booking"
+      <*> r .: "description"
+      <*> r .: "open_timings"
+      <*> r .: "close_timing"
+      <*> r .: "place_type"
+      <*> r .: "short_desc"
+      <*> r .: "gallery"
+      <*> r .: "icon_url"
+      <*> r .: "lat"
+      <*> r .: "lon"
+      <*> r .: "map_image_url"
+      <*> r .: "status"
+      <*> r .: "terms_and_conditions"
+      <*> r .: "terms_and_conditions_url"
+      <*> r .: "svc"
+      <*> r .: "svc_short_desc"
+      <*> r .: "svc_operational_days"
+      <*> r .: "svc_start_date"
+      <*> r .: "svc_end_date"
+      <*> r .: "svc_max_verification"
+      <*> r .: "svc_expiry_type"
+      <*> r .: "svc_expiry_value"
+      <*> r .: "svc_expiry_time"
+      <*> r .: "svc_allow_future_booking"
+      <*> r .: "svc_allow_cancellation"
+      <*> r .: "business_hour_type"
+      <*> r .: "business_hour_slot_time"
+      <*> r .: "business_hour_start_time"
+      <*> r .: "business_hour_end_time"
+      <*> r .: "svc_category_allowed_seats"
+      <*> r .: "svc_category_available_seats"
+      <*> r .: "svc_category_description"
+      <*> r .: "svc_category_name"
+      <*> r .: "people_category_name"
+      <*> r .: "people_category_description"
+      <*> r .: "price_amount"
+      <*> r .: "price_currency"
+      <*> r .: "peak_timings"
+      <*> r .: "peak_days"
+      <*> r .: "cancellation_type"
+      <*> r .: "cancellation_time"
+      <*> r .: "cancellation_fee"
+
+postMerchantTicketConfigUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTicketConfigReq -> Flow Common.UpsertTicketConfigResp
+postMerchantTicketConfigUpsert merchantShortId opCity request = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  flatTicketConfigs <- readCsv request.file merchantOpCity
+  logTagInfo "Read file: " (show flatTicketConfigs)
+  void $ (processTicketConfigGroup . groupTicketEntities) flatTicketConfigs
+  return $
+    Common.UpsertTicketConfigResp
+      { unprocessedTicketConfig = [], -- handle race condition and errors later if needed
+        success = "Ticket configs updated successfully"
+      }
+  where
+    cleanField :: Text -> Maybe Text
+    cleanField txt = replaceEmpty (T.strip txt)
+
+    cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
+    cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
+
+    replaceEmpty :: Text -> Maybe Text
+    replaceEmpty = \case
+      "" -> Nothing
+      "no constraint" -> Nothing
+      "no_constraint" -> Nothing
+      x -> Just x
+
+    readCsv csvFile merchantOpCity = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector TicketConfigCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM (makeTicketConfigs merchantOpCity) v >>= (pure . V.toList)
+
+    readCSVField :: Read a => Int -> Text -> Text -> Flow a
+    readCSVField idx fieldValue fieldName =
+      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+    readMaybeCSVField _ fieldValue _ =
+      cleanField fieldValue >>= readMaybe . T.unpack
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    groupTicketEntities ::
+      [(TicketPlace, TicketService, BusinessHour, ServiceCategory, ServicePeopleCategory)] ->
+      [(TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])]
+    groupTicketEntities = foldl insertTuple []
+      where
+        insertTuple acc (place, service, businessHour, category, peopleCategory) =
+          let accUpdated =
+                case lookupPlace place acc of
+                  Just (existingPlace, serviceList) ->
+                    let updatedServices = insertService service serviceList businessHour category peopleCategory
+                     in replacePlace (existingPlace, updatedServices) acc
+                  Nothing -> (place, [(service, [(businessHour, [(category, [peopleCategory])])])]) : acc
+           in accUpdated
+
+        insertService service [] businessHour category peopleCategory = [(service, [(businessHour, [(category, [peopleCategory])])])]
+        insertService service ((existingService, businessHourList) : rest) businessHour category peopleCategory =
+          if existingService.id == service.id
+            then (existingService, insertBusinessHour businessHour businessHourList category peopleCategory) : rest
+            else (existingService, businessHourList) : insertService service rest businessHour category peopleCategory
+
+        insertBusinessHour businessHour [] category peopleCategory = [(businessHour, [(category, [peopleCategory])])]
+        insertBusinessHour businessHour ((existingBusinessHour, categoryList) : rest) category peopleCategory =
+          if existingBusinessHour.id == businessHour.id
+            then (existingBusinessHour, insertCategory category categoryList peopleCategory) : rest
+            else (existingBusinessHour, categoryList) : insertBusinessHour businessHour rest category peopleCategory
+
+        insertCategory category [] peopleCategory = [(category, [peopleCategory])]
+        insertCategory category ((existingCategory, peopleCategoryList) : rest) peopleCategory =
+          if existingCategory.id == category.id
+            then (existingCategory, insertPeopleCategory peopleCategory peopleCategoryList) : rest
+            else (existingCategory, peopleCategoryList) : insertCategory category rest peopleCategory
+
+        insertPeopleCategory peopleCategory [] = [peopleCategory]
+        insertPeopleCategory peopleCategory (existingPeopleCategory : rest) =
+          if existingPeopleCategory.id == peopleCategory.id
+            then existingPeopleCategory : rest
+            else existingPeopleCategory : insertPeopleCategory peopleCategory rest
+
+        lookupPlace ::
+          TicketPlace ->
+          [(TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])] ->
+          Maybe (TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])
+        lookupPlace place = find (\(p, _) -> p.id == place.id)
+
+        replacePlace ::
+          (TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])]) ->
+          [(TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])] ->
+          [(TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])]
+        replacePlace (np, ns) = map (\(p, services) -> if p.id == np.id then (np, ns) else (p, services))
+
+    processTicketConfigGroup :: [(TicketPlace, [(TicketService, [(BusinessHour, [(ServiceCategory, [ServicePeopleCategory])])])])] -> Flow ()
+    processTicketConfigGroup = mapM_ upsertPlace
+      where
+        upsertPlace (place, serviceGroups) = do
+          existingPlace <- SQTP.findByNameAndCity place.name place.merchantOperatingCityId
+          case existingPlace of
+            Just oldPlace -> do
+              mapM_ (upsertService oldPlace.id.getId) serviceGroups
+              SQTP.updateByPrimaryKey place{id = oldPlace.id}
+            Nothing -> do
+              newPlaceId <- generateGUID
+              mapM_ (upsertService newPlaceId) serviceGroups
+              SQTP.create place{id = Id newPlaceId}
+
+        upsertService placeId (service, businessHourGroups) = do
+          existingService <- SQTS.findByPlacesIdAndService placeId service.service
+          let bHours = case existingService of
+                Nothing -> []
+                Just svc -> svc.businessHours
+          processedBusinessHours <- mapM (upsertBusinessHour bHours) businessHourGroups
+          case existingService of
+            Nothing -> do
+              newServiceId <- generateGUID
+              SQTS.create service{id = newServiceId, placesId = placeId, businessHours = processedBusinessHours}
+            Just existingSvc -> SQTS.updateByPrimaryKey service{placesId = placeId, id = existingSvc.id, businessHours = processedBusinessHours}
+
+        upsertBusinessHour businessHourIds (businessHour, categoryGroups) = do
+          existingBH <- SQBHE.findByBtypeAndId businessHour.btype businessHourIds
+          let categoryIds = case existingBH of
+                Nothing -> []
+                Just bh -> bh.categoryId
+          processedCategories <- mapM (upsertCategory categoryIds) categoryGroups
+          case existingBH of
+            Nothing -> do
+              newBusinessHourId <- generateGUID
+              SQBH.create businessHour {id = newBusinessHourId, categoryId = processedCategories}
+              return newBusinessHourId
+            Just bh -> do
+              SQBH.updateByPrimaryKey businessHour{id = bh.id, categoryId = processedCategories}
+              return bh.id
+
+        upsertCategory categoryIds (category, peopleCategories) = do
+          existingCategory <- SQSCE.findByIdAndName categoryIds category.name
+          let peopleCategoryIds = case existingCategory of
+                Nothing -> []
+                Just cat -> cat.peopleCategory
+          processedPeopleCategories <- mapM (upsertPeopleCategory peopleCategoryIds) peopleCategories
+          case existingCategory of
+            Nothing -> do
+              newCategoryId <- generateGUID
+              SQSC.create category {id = newCategoryId, peopleCategory = processedPeopleCategories}
+              return newCategoryId
+            Just sc -> do
+              SQSC.updateByPrimaryKey category{id = sc.id, peopleCategory = processedPeopleCategories}
+              return sc.id
+
+        upsertPeopleCategory peopleCategoryIds peopleCategory = do
+          existingPeopleCategory <- SQSPCE.findByIdAndName peopleCategoryIds peopleCategory.name
+          case existingPeopleCategory of
+            Nothing -> do
+              newPeopleCategoryId <- generateGUID
+              SQSPC.create peopleCategory{id = newPeopleCategoryId}
+              return newPeopleCategoryId
+            Just pc -> do
+              SQSPC.updateByPrimaryKey peopleCategory{id = pc.id}
+              return pc.id
+
+    makeTicketConfigs :: DMOC.MerchantOperatingCity -> Int -> TicketConfigCSVRow -> Flow (TicketPlace, TicketService, BusinessHour, ServiceCategory, ServicePeopleCategory)
+    makeTicketConfigs merchantOpCity idx row = do
+      now <- getCurrentTime
+      let createdAt = now
+          updatedAt = now
+          ticketPlaceId = Id (show row.name <> "_" <> merchantOpCity.id.getId)
+          merchantId = Just merchantOpCity.merchantId
+          merchantOperatingCityId = merchantOpCity.id
+          separator = "##XX##"
+
+      ------------ TicketPlace --------------------------------------------------
+      name <- cleanCSVField idx row.name "Name"
+      allowSameDayBooking :: Bool <- readCSVField idx row.allowSameDayBooking "Allow same day booking"
+      placeType :: PlaceType <- readCSVField idx row.placeType "Place Type"
+      shortDesc <- cleanCSVField idx row.shortDesc "Short Description"
+      gallery :: [Text] <- readCSVField idx row.gallery "Gallery"
+      status :: PlaceStatus <- readCSVField idx row.status "Status"
+      termsAndConditions :: [Text] <- readCSVField idx row.termsAndConditions "Terms and conditions"
+      let description :: Maybe Text = cleanMaybeCSVField idx row.description "Description"
+          openTimings :: Maybe TimeOfDay = readMaybeCSVField idx row.openTimings "Open timings"
+          closeTimings :: Maybe TimeOfDay = readMaybeCSVField idx row.closeTimings "Close timings"
+          iconUrl :: Maybe Text = cleanMaybeCSVField idx row.iconUrl "Icon URL"
+          lat :: Maybe Double = readMaybeCSVField idx row.lat "Latitude"
+          lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
+          mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
+          termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
+          ticketPlace = TicketPlace {id = ticketPlaceId, ..}
+
+      ------------- TicketService --------------------------------------------------
+      service <- cleanCSVField idx row.svc "Service"
+      allowCancellation :: Bool <- readCSVField idx row.svcAllowCancellation "Service allow cancellation"
+      allowFutureBooking :: Bool <- readCSVField idx row.svcAllowFutureBooking "Service allow future booking"
+      maxVerification :: Int <- readCSVField idx row.svcMaxVerification "Service max verification"
+      expiryType <- cleanCSVField idx row.svcExpiryType "Service expiry type"
+      operationalDays :: [Text] <- readCSVField idx row.svcOperationalDays "Service operational days"
+      let svcStartDate :: Maybe Day = readMaybeCSVField idx row.svcStartDate "Service start date"
+          svcEndDate :: Maybe Day = readMaybeCSVField idx row.svcEndDate "Service end date"
+      let operationalDate = case (svcStartDate, svcEndDate) of
+            (Just startDt, Just endDt) -> Just OperationalDate {startDate = startDt, eneDate = endDt}
+            _ -> Nothing
+      expiry <- case expiryType of
+        "InstantExpiry" -> do
+          expiryValue :: Int <- readCSVField idx row.svcExpiryValue "Service expiry value"
+          pure $ InstantExpiry expiryValue
+        _ -> do
+          expiryTime <- readCSVField idx row.svcExpiryTime "Service expiry time"
+          pure $ VisitDate expiryTime
+      let svcShortDesc :: Maybe Text = readMaybeCSVField idx row.shortDesc "Short Description"
+          ticketServiceId = service <> separator <> ticketPlaceId.getId
+          placesId = ticketPlaceId.getId
+          ticketService =
+            TicketService
+              { id = Id ticketServiceId,
+                businessHours = [],
+                shortDesc = svcShortDesc,
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                ..
+              }
+
+      ------------- Business Hour --------------------------------------------------
+      bhType <- cleanCSVField idx row.businessHourType "Business hour type"
+      (btype, bTypeId) <- case bhType of
+        "Duration" -> do
+          bhStartTime :: TimeOfDay <- readCSVField idx row.businessHourStartTime "Business hour start time"
+          bhEndTime :: TimeOfDay <- readCSVField idx row.businessHourEndTime "Business hour end time"
+          return (Duration bhStartTime bhEndTime, Id (show bhStartTime <> separator <> show bhEndTime <> separator <> ticketServiceId))
+        _ -> do
+          bhSlotTime :: TimeOfDay <- readCSVField idx row.businessHourSlotTime "Business hour slot time"
+          return (Slot bhSlotTime, Id (show bhSlotTime <> separator <> ticketServiceId))
+      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, ..}
+
+      --------------- Service Category ------------------------------------------------
+      svcCategoryDescription <- cleanCSVField idx row.svcCategoryDescription "Service Category Description"
+      svcCategoryName <- cleanCSVField idx row.svcCategoryName "Service Category Name"
+      let allowedSeats :: Maybe Int = readMaybeCSVField idx row.svcCategoryAllowedSeats "Allowed seats"
+          availableSeats :: Maybe Int = readMaybeCSVField idx row.svcCategoryAvailableSeats "Available seats"
+          svcCategoryId = svcCategoryName <> separator <> bTypeId.getId
+      let serviceCategory =
+            ServiceCategory
+              { id = Id svcCategoryId,
+                name = svcCategoryName,
+                description = svcCategoryDescription,
+                peopleCategory = [],
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                ..
+              }
+
+      --------------- Service People Category ------------------------------------------------
+      peopleCategoryDescription <- cleanCSVField idx row.peopleCategoryDescription "People Category Description"
+      peopleCategoryName <- cleanCSVField idx row.peopleCategoryName "People Category Name"
+      priceAmount :: HighPrecMoney <- readCSVField idx row.priceAmount "Price Amount"
+      priceCurrency :: Currency <- readCSVField idx row.priceCurrency "Price Currency"
+      let pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
+          mbPeakTimings = cleanField row.peakTimings
+          svcPeopleCategoryId = peopleCategoryName <> separator <> svcCategoryId
+          mbCancellationType = cleanField row.cancellationType
+      timeBounds <-
+        case mbPeakTimings of
+          Nothing -> return Unbounded
+          _ -> do
+            peakTimings :: [(TimeOfDay, TimeOfDay)] <- readCSVField idx row.peakTimings "Peak Timings"
+            peakDays :: [DayOfWeek] <- readCSVField idx row.peakDays "Peak Days"
+            let bounds =
+                  BoundedPeaks
+                    { monday = if Monday `elem` peakDays then peakTimings else [],
+                      tuesday = if Tuesday `elem` peakDays then peakTimings else [],
+                      wednesday = if Wednesday `elem` peakDays then peakTimings else [],
+                      thursday = if Thursday `elem` peakDays then peakTimings else [],
+                      friday = if Friday `elem` peakDays then peakTimings else [],
+                      saturday = if Saturday `elem` peakDays then peakTimings else [],
+                      sunday = if Sunday `elem` peakDays then peakTimings else []
+                    }
+            return $ BoundedByWeekday bounds
+      cancellationCharges <-
+        case mbCancellationType of
+          Nothing -> return Nothing
+          _ -> do
+            cancelationTypeTxt <- cleanCSVField idx row.cancellationType "Cancellation Type"
+            let cancelationType =
+                  T.strip cancelationTypeTxt
+                    & T.dropAround (`elem` ['[', ']'])
+                    & T.splitOn (T.pack ",")
+                    & map T.strip
+            cancellationTime :: [Seconds] <- readCSVField idx row.cancellationTime "Cancellation Time"
+            cancellationFee :: [HighPrecMoney] <- readCSVField idx row.cancellationFee "Cancellation Fee"
+            let len = length cancelationType
+            if length cancellationTime == len && length cancellationFee == len
+              then
+                let maybeCharges = zipWith3 toCancellationCharge cancelationType cancellationTime cancellationFee
+                 in if all isJust maybeCharges
+                      then return $ Just (catMaybes maybeCharges)
+                      else return Nothing
+              else return Nothing
+      let servicePeopleCategory =
+            ServicePeopleCategory
+              { id = Id svcPeopleCategoryId,
+                name = peopleCategoryName,
+                description = peopleCategoryDescription,
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                ..
+              }
+      return (ticketPlace, ticketService, businessHour, serviceCategory, servicePeopleCategory)
+
+    toCancellationCharge :: Text -> Seconds -> HighPrecMoney -> Maybe CancellationCharge
+    toCancellationCharge type_ time fee =
+      case T.toLower type_ of
+        "flatfee" -> Just $ CancellationCharge (FlatFee fee) time
+        "percentage" -> Just $ CancellationCharge (Percentage (round fee)) time
+        _ -> Nothing

@@ -20,3 +20,6 @@ findServicePeopleCategoryById id day = do
   servicePeopleCategories :: [ServicePeopleCategory] <- findAllWithKV [Se.Is BeamR.id $ Se.Eq $ getId id]
   let boundedServicePeopleCategories = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) servicePeopleCategories) (UTCTime day $ secondsToDiffTime 19800)
   pure $ listToMaybe boundedServicePeopleCategories <|> find (\cfg -> cfg.timeBounds == Unbounded) servicePeopleCategories
+
+findByIdAndName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServicePeopleCategory] -> Text -> m (Maybe ServicePeopleCategory)
+findByIdAndName id name = findOneWithKV [Se.And [Se.Is BeamR.id $ Se.In (map getId id), Se.Is BeamR.name $ Se.Eq name]]
