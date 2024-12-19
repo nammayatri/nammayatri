@@ -5,6 +5,7 @@
 module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport) where
 
 import qualified Domain.Types.Booking
+import qualified Domain.Types.Quote
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -16,6 +17,9 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
 import Storage.Queries.BookingExtra as ReExport
 import Storage.Queries.Transformers.Booking
+
+findByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote) -> m (Maybe Domain.Types.Booking.Booking))
+findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId <$> quoteId)]
 
 updateIsBookingUpdated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
 updateIsBookingUpdated isBookingUpdated id = do
