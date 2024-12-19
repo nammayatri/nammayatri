@@ -297,6 +297,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         Delivery -> filter isDeliveryEstimate _estimateInfo
+        InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo -- Happens in case of crosscity, handle in a better way later
         _ -> []
 
     ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
