@@ -82,7 +82,7 @@ planListTransformer (UiPlansResp planResp) isIntroductory config cityConfig =
     in 
     if isIntroductory 
         then fetchIntroductoryPlans config cityConfig
-    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory config) sortedPlanEntityList 
+    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory config) planEntityArray -- Removed sorting logic here based on DAILY_UNLIMITED
 
 decodeOfferDescription :: String -> String
 decodeOfferDescription str = do
