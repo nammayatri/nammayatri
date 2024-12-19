@@ -1782,4 +1782,5 @@ getEn =
     , metro_warriors : "Metro Warriors"
     , search : "Search"
     , bus__ : "Bus"
+    , driver_unsubscribed : "Driver has been unsubscribed from platform. Pay pending amount to subscribe back"
     }

@@ -1852,3 +1852,4 @@ getProxy str = case str of
   METRO_WARRIORS -> \a -> a @~ metro_warriors
   SEARCH -> \a -> a @~ search
   BUS__ -> \a -> a @~ bus__
+  DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed

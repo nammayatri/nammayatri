@@ -278,14 +278,14 @@ defaultFreeTrialLottie = {
 
 defaultIntroductoryLottie :: LanguageKeyValue
 defaultIntroductoryLottie = {
-  english: "lottie/ny_sub_intro_english_jan1.json",
-  hindi: "lottie/ny_sub_intro_hindi_jan1.json",
-  kannada: "lottie/ny_sub_intro_kannada_jan1.json",
-  tamil: "lottie/ny_sub_intro_tamil_jan1.json",
+  english: "lottie/ny_sub_intro_english_apr1.json",
+  hindi: "lottie/ny_sub_intro_hindi_apr1.json",
+  kannada: "lottie/ny_sub_intro_kannada_apr1.json",
+  tamil: "lottie/ny_sub_intro_tamil_apr1.json",
   bengali: "lottie/ny_ic_subscription_info_bengali_03_2.json",
-  telugu: "lottie/ny_sub_intro_telugu_jan1.json",
-  malayalam: "lottie/ny_sub_intro_malayalam_jan1.json",
-  default: "lottie/ny_sub_intro_english_jan1.json"
+  telugu: "lottie/ny_sub_intro_telugu_apr1.json",
+  malayalam: "lottie/ny_sub_intro_malayalam_apr1.json",
+  default: "lottie/ny_sub_intro_english_apr1.json"
 }
 
 defaultSubscriptionPlanLottie :: LanguageKeyValue

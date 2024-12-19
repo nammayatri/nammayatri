@@ -1794,6 +1794,7 @@ data STR = LETS_GET_STARTED
         | METRO_WARRIORS
         | SEARCH
         | BUS__
+        | DRIVER_UNSUBSCRIBED
 
 -- instance showSTR :: Show STR
 --   show = case _ of

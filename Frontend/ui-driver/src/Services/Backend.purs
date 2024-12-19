@@ -762,6 +762,7 @@ getCorrespondingErrorMessage errorPayload = do
         "EXITED_BY_USER" -> getString EXITED_BY_USER
         "IMAGE_VALIDATION_EXCEED_LIMIT" -> getString IMAGE_VALIDATION_EXCEED_LIMIT
         "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY" -> getString CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY
+        "DRIVER_UNSUBSCRIBED" -> getString DRIVER_UNSUBSCRIBED
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
