@@ -13,7 +13,7 @@ data JourneyLegStatus =
   | Missed
   | Delayed
   | Arriving
-  -- | Skipped
+  | Skipped -- we might need this
   | Ongoing
   | Finishing
   | Cancelled
@@ -64,7 +64,17 @@ data TaxiSearchData = TaxiSearchData
   ... other things
   }
 
-data WalkSearchData = WalkSearchData
+data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
+  {
+    searchRequestId :: Id SearchRequest
+  , estimateId :: Id Estimate
+  , merchantId :: Id Merchant
+  , personId :: Id Person
+  }
+
+data TaxiLegUpdateData = EditLocation Location EditLocationReq | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
+ 
+data WalkSearchData = WalkSearchData 
   { fromLocation :: Location
   , stops :: [Location]
   , merchantId :: Id Merchant
@@ -76,10 +86,27 @@ data TaxiConfirmData = TaxiConfirmData
     journeyLegOrder :: Int
   }
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateRequest
-data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData
+data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData
+data TaxiLegRequest = TaxiLegRequestSearch MultiModalLeg TaxiSearchData | TaxiLegRequestConfirm TaxiConfirmData | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
 data MetroLegRequest = MetroLegRequestSearch MultiModalLeg MetroSearchData | MetroLegRequestConfirm MetroConfirmData
 data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData
+
+data WalkLegUpdateData = WalkLegUpdateData
+  { id : Id LegID
+    mbFromLocation : Location
+    mbtoLocation : Location
+    mbStartTime : Maybe UTCTime
+    status : JourneyLegStatus
+  }
+
+data BusLegUpdateData = BusLegUpdateData
+{
+  id : Id LegID
+  userLocation : Location
+  busLocation : Location
+  startTime : Maybe UTCTime
+}
+data BusLegRequest = BusLegRequestUpdate BusLegUpdateData 
 
 type SearchJourneyLeg leg m = leg -> m ()
 type ConfirmJourneyLeg leg m = leg -> m ()
@@ -109,6 +136,8 @@ data JourneyLeg = JourneyLeg
     fromDepartureTime :: Maybe UTCTime,
     toArrivalTime :: Maybe UTCTime,
     toDepartureTime :: Maybe UTCTime
+    status : JourneyLegStatus
+    sequenceNumber : Int
   }
 
 data GeneralVehicleType
@@ -134,11 +163,18 @@ class JourneyLeg leg m where
   getState :: GetJourneyLegState leg m
   get :: GetJourneyLeg leg m
 
+
+updateWalkLegById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Walkleg.Walkleg  ->  -> Id LegID -> m ()
+updateWalkLegById (Domain.Types.Walkleg.Walkleg {..}) legId = do
+   -- Function implementation goes here
+    -- You can now use legId along with the fields of the Walkleg record
+
 instance JourneyLeg WalkLeg m where
   search (WalkLegRequestSearch multimodalLeg walkLegSearchData) = do
     WL.create $ mkWalkLegSearch multimodalLeg walkLegSearchData
   confirm (WalkLeg _legData) = return () -- return nothing
-  update (WalkLeg $ Update WalkLegUpdateRequest) JourneyLegStatus = return ()
+  update (WalkLegRequest $ WalkLegRequestUpdate walkLegUpdateData) = do
+    WL.updateWalkLegById $ walkLegUpdateData walkLegUpdateData.id
     -- WalkLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime
   cancel (WalkLeg $ Cancel WalkLegCancelRequest) JourneyLegStatus = return ()
     -- update JourneyLegStatus: Cancelled
@@ -160,13 +196,31 @@ instance JourneyLeg TaxiLeg m where
         QSearchRequest.updateIsSkipped True
       False ->
         void $ Select.select pId (Id estimateId) selectReq
-  update (TaxiLeg $ Update TaxiLegUpdateRequest) = return ()
-    -- not possible for JourneyLegStatus = Skipped | Finishing | Cancelled | Completed
-    -- TaxiLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime, mbVehicleType
-    -- Just vehicleType -> switchTaxi      -- not possible for OnGoing
-    -- Just fromLocation -> editPickup       -- not possible for OnGoing
-    -- Just toLocation -> editDestination
-    -- Just startTime -> if nightTime -> recompute price, scheduledRides -> change time
+  update (TaxiLegRequest $ TaxiLegRequestUpdate taxiLegUpdateRequest legId) =
+    -- Handle the specific type of update
+    case taxiLegUpdateRequest of
+        EditLocation EditLocationReq -> do
+            -- Handle edit pickup and edit destination flow
+            editLocation rideId  (personId, merchantId) editLocationReq
+            return ()
+        TaxiUpdateStartTime newStartTime -> do
+          -- Cancel previous scheduled ride and create new search and then confirm
+          return ()
+        UpdateVariant newVariant -> do
+            searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
+            journeyLegInfo <- searchRequest.journeyLegInfo & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
+            oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
+            oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
+            newEstimate <- QEstimate.findById estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
+            QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
+            let journeyId = journeyLegInfo.journeyId
+            journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
+            initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
+            price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
+            newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
+            QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
+            return ()
+
   cancel (TaxiLeg _legData) = return ()
     -- call cancelV2
     -- update JourneyLegStatus: Cancelled
@@ -186,7 +240,13 @@ instance JourneyLeg BusLeg m where
         QFRFSSearch.updateIsSkipped True
       False ->
         void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
-  update (BusLeg _legData) = return ()
+  update (BusLegRequest $ BusLegRequestUpdate busLegUpdateRequest) =
+  -- let customerLocation = get eta between user location and bus station 
+  -- let busLocation = get eta between bus and bus station 
+  -- let threshold = 50
+      -- mark status with respect to bus -  Ontime, Departed, Delayed, Arriving, Finishing, Completed
+      -- mark status with respect to user -  AtRiskOfMissing, Missed
+    return ()
   cancel (BusLeg _legData) = return ()
   getState (BusLeg _legData) = return InPlan
   get (BusLeg _legData) = return _legData
