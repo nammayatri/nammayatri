@@ -101,6 +101,7 @@ Person:
     informPoliceSos : Bool
     androidId: Maybe Text
     customerNammaTags: "Maybe [Text]"
+    frequentLocGeohashes: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -237,6 +238,11 @@ Person:
     updateWhatsappNotificationEnrollStatus:
       kvFunction: updateWithKV
       params: [whatsappNotificationEnrollStatus, updatedAt]
+      where: id
+
+    updateFreqLocGeohashes:
+      kvFunction: updateWithKV
+      params: [frequentLocGeohashes]
       where: id
 
     setIsNewFalse:

@@ -92,6 +92,7 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     metricsSearchDurationTimeout :: Seconds,
@@ -160,6 +161,7 @@ data AppEnv = AppEnv
     kafkaClickhouseCfg :: ClickhouseCfg,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     graceTerminationPeriod :: Seconds,
@@ -234,7 +236,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

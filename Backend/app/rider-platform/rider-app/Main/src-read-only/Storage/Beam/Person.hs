@@ -51,6 +51,7 @@ data PersonT f = PersonT
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     firstName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     followsRide :: B.C f Kernel.Prelude.Bool,
+    frequentLocGeohashes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     gender :: B.C f Domain.Types.Person.Gender,
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
