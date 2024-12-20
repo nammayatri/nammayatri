@@ -586,7 +586,7 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             logDebug $ "journey for multi-modal: " <> show journey
 
             -- when (idx == 0) $ do
-            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ now maximumWalkDistance originCity
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ now maximumWalkDistance originCity journey
       )
       allRoutes.routes
 
@@ -608,8 +608,9 @@ makeChildSearchReqs ::
   UTCTime ->
   Meters ->
   Context.City ->
+  DJourney.Journey ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ _now maximumWalkDistance originCity = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ _now maximumWalkDistance originCity journey = do
   now <- getCurrentTime
   void $
     mapWithIndex
@@ -682,6 +683,8 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                         updatedAt = now
                       }
               QWalkLeg.create walkLeg
+              let legsDoneInitially = journey.legsDone
+              QJourney.updateNumberOfLegs (legsDoneInitially + 1) (journey.id)
       )
       journeyPlannerLegs
 

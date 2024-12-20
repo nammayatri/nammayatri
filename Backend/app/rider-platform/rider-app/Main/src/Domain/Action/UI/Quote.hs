@@ -48,6 +48,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Location as DL
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
@@ -204,9 +205,10 @@ data GetQuotesRes = GetQuotesRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data JourneyData = JourneyData
-  { totalPrice :: HighPrecMoney,
+  { totalPrice :: Maybe Price,
     modes :: [DTrip.TravelMode],
-    journeyLegs :: [JourneyLeg]
+    journeyLegs :: [JourneyLeg],
+    journeyId :: Id DJourney.Journey
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -399,7 +401,7 @@ getJourneyData searchRequestId = do
                 }
         logDebug $ "journey data for search request: " <> show searchReqJourneyData <> show frfsSearchReqJourneyData
         let journeyLegs = sortOn (.journeyLegOrder) $ (concat [searchReqJourneyData, frfsSearchReqJourneyData])
-        let sumPrice =
+        let _sumPrice =
               sum $
                 map
                   ( \leg -> do
@@ -412,9 +414,10 @@ getJourneyData searchRequestId = do
         return $
           Just $
             [ JourneyData
-                { totalPrice = HighPrecMoney {getHighPrecMoney = sumPrice},
+                { totalPrice = if journey.legsDone == journey.totalLegs then journey.estimatedFare else Nothing, -- HighPrecMoney {getHighPrecMoney = sumPrice},
                   modes = journey.modes,
-                  journeyLegs
+                  journeyLegs,
+                  journeyId = journey.id
                 }
             ]
       Nothing ->
