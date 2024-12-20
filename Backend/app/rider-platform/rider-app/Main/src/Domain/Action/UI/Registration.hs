@@ -451,7 +451,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
         informPoliceSos = False,
-        payoutVpa = Nothing
+        payoutVpa = Nothing,
+        frequentLocGeohashes = Just []
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
