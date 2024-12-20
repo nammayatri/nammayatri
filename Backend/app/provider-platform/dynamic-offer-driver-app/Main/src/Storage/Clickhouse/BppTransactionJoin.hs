@@ -222,7 +222,9 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                 RideDetails.vehicleColor = bppTxn.rideDetailsVehicleColor,
                 RideDetails.vehicleModel = bppTxn.rideDetailsVehicleModel,
                 RideDetails.vehicleNumber = bppTxn.rideDetailsVehicleNumber,
-                RideDetails.vehicleVariant = bppTxn.rideDetailsVehicleVariant
+                RideDetails.vehicleVariant = bppTxn.rideDetailsVehicleVariant,
+                RideDetails.merchantId = Just merchant.id,
+                RideDetails.merchantOperatingCityId = Just opCity.id
               },
           riderDetails =
             RiderDetails.RiderDetails
@@ -245,7 +247,8 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                 RiderDetails.referralCode = bppTxn.riderDetailsReferralCode,
                 RiderDetails.referredAt = bppTxn.riderDetailsReferredAt,
                 RiderDetails.referredByDriver = bppTxn.riderDetailsReferredByDriver,
-                RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt
+                RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt,
+                RiderDetails.merchantOperatingCityId = Just opCity.id
               },
           customerName = bppTxn.bookingCustomerName,
           fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),

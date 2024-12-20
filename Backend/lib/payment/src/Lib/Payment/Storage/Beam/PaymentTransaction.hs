@@ -51,7 +51,8 @@ data PaymentTransactionT f = PaymentTransactionT
     bankErrorMessage :: B.C f (Maybe Text),
     splitSettlementResponse :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

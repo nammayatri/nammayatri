@@ -353,7 +353,7 @@ planList (driverId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
             then do convertPlanToPlanEntity driverId mandateSetupDate False plan'
             else do convertPlanToPlanEntity driverId now False plan'
       )
-      plans
+      $ sortOn (.listingPriority) plans
   return $
     PlanListAPIRes
       { list = plansList,

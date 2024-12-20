@@ -155,6 +155,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             requestorId = Just dashboardUserName,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             blockReasonFlag = Just blockReasonFlag
           }
 
@@ -199,6 +200,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             requestorId = Nothing
           }
 
@@ -371,3 +373,12 @@ updateHasRideStarted driverId hasRideStarted = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateIsBlockedForReferralPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> Bool -> m ()
+updateIsBlockedForReferralPayout driverIds isBlocked = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.isBlockedForReferralPayout (Just isBlocked),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]

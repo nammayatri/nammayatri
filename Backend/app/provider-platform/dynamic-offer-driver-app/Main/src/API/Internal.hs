@@ -15,6 +15,7 @@ import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
+import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
@@ -42,6 +43,7 @@ type API =
            :<|> PopulateTipAmount.API
            :<|> Ride.API
            :<|> StopDetection.API
+           :<|> Multimodal.API
        )
 
 handler :: FlowServer API
@@ -62,3 +64,4 @@ handler =
     :<|> PopulateTipAmount.handler
     :<|> Ride.handler
     :<|> StopDetection.handler
+    :<|> Multimodal.handler

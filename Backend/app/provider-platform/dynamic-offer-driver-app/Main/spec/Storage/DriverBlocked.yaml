@@ -10,6 +10,9 @@ DriverBlockTransactions:
   types:
     BlockedBy:
           enum : "Dashboard, Application"
+    ActionType:
+          enum: "BLOCK, UNBLOCK"
+
   fields:
     id : Id DriverBlockTransactions
     reasonCode :  Maybe Text
@@ -21,6 +24,8 @@ DriverBlockTransactions:
     blockedBy : BlockedBy
     requestorId : Maybe Text
     blockReasonFlag: Maybe BlockReasonFlag
+    actionType: Maybe ActionType
+
   constraints:
     id: PrimaryKey
     driverId: "!SecondaryKey"
@@ -28,4 +33,3 @@ DriverBlockTransactions:
     findByDriverId:
       kvFunction: findAllWithKV
       where: driverId
-

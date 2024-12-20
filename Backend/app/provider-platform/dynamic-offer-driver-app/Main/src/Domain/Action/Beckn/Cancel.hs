@@ -109,7 +109,7 @@ cancel req merchant booking mbActiveSearchTry = do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing
       QRide.updateStatus ride.id SRide.CANCELLED
       when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
@@ -180,6 +180,7 @@ cancel req merchant booking mbActiveSearchTry = do
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             ..
           }
 

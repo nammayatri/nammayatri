@@ -30,7 +30,7 @@ import Engineering.Helpers.Utils (getColorWithOpacity)
 import Helpers.Utils (toRad)
 import JBridge as JB
 import MerchantConfig.Types
-import Prelude (pure, unit, class Show, bind, discard, ($), void, (<>), show, (>=), (<=), (&&), map, (/), (*), max, (>), Unit, (<), negate, (+), (||))
+import Prelude (pure, unit, class Show, bind, discard, ($), void, (<>), show, (>=), (<=), (&&), map, (/), (*), max, (>), Unit, (<), negate, (+), (||), (/=), when)
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.HomeScreen.Controller (getLastKnownLocValue)
@@ -68,7 +68,7 @@ eval (DemandHotspotApiResponseAction (DemandHotspotsResp resp)) state = do
   let pointsWithWeight = mapWithIndex (\index (HotspotsDetails item) -> {latlong : fixedDistanceLatLonWithRandomAngle item.location state.data.config.hotspotConfig.centerDeviation, weight : (toNumber item.frequency), id : "hotspot_" <> show index}) resp.hotspotsDetails
   void $ pure $ JB.removeAllPolylines ""
   continueWithCmd state { data {pointsWithWeight = pointsWithWeight, dataExpiryAt = resp.expiryAt}, props {refreshAnimation = false}} [do
-    void $ JB.animateCamera state.data.currentDriverLat state.data.currentDriverLon 14.0 "ZOOM"
+    when (state.data.currentDriverLat /= 0.0 && state.data.currentDriverLon /= 0.0) $ do void $ JB.animateCamera state.data.currentDriverLat state.data.currentDriverLon 14.0 "ZOOM"
     pure $ UpdateHotspotCircles state.props.mapCorners.leftPoint state.props.mapCorners.rightPoint state.props.mapCorners.topPoint state.props.mapCorners.bottomPoint
   ]
 
@@ -97,7 +97,7 @@ eval (UpdateHotspotCircles leftPoint rightPoint topPoint bottomPoint) state =
     pure AfterRender
   ]
 
-eval (ShowMap key lat lon) state = continueWithCmd state{props{lastUpdatedTime = EHC.getCurrentUTC ""}} [ do
+eval (ShowMap key lat lon) state = continueWithCmd state{data{ currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon}, props{lastUpdatedTime = EHC.getCurrentUTC ""}} [ do
   void $ JB.getCurrentPosition (showDriverMarker  true) constructLatLong
   void $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = fromMaybe 0.0 (fromString lat), lon = fromMaybe 0.0 (fromString lon), zoomLevel = 14.0 }
   pure AfterRender 

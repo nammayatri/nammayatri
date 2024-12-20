@@ -281,7 +281,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             hasRideStarted = Nothing,
             softBlockExpiryTime = Nothing,
             softBlockReasonFlag = Nothing,
-            softBlockStiers = Nothing
+            softBlockStiers = Nothing,
+            isBlockedForReferralPayout = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

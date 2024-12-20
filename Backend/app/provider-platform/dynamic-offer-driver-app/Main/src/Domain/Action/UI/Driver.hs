@@ -755,7 +755,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
   unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
-  activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
+  activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
   pure APISuccess.Success
   where
     checkIfGoToInDifferentGeometry :: DM.Merchant -> LatLong -> LatLong -> Flow Bool
@@ -1360,6 +1360,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
+              merchantOperatingCityId = Just merchantOpCityId,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
@@ -1401,9 +1402,8 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
         scheduledTime = uBooking.startTime
         pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
     void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
-    maxShards <- asks (.maxShards)
     let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
-    createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
+    createJobIn @_ @'ScheduledRideAssignedOnUpdate (Just merchant.id) (Just booking.merchantOperatingCityId) jobScheduledTime $
       ScheduledRideAssignedOnUpdateJobData
         { driverId = driver.id,
           bookingId = uBooking.id,
@@ -2549,7 +2549,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
       when (createPayoutOrderReq.amount <= 0.0) $ throwError (InternalError "refund amount is less than or equal to 0")
       void $ adjustDues dueDriverFees
-      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (Just $ cast opCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation
         ET.trackRefundSegregation payoutOrder refundAmountSegregation (show serviceName)
@@ -2621,6 +2621,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
             bankErrorUpdatedAt = Nothing,
             lastStatusCheckedAt = Nothing,
             serviceName = driverFee.serviceName,
+            merchantId = Just driverFee.merchantId,
             merchantOperatingCityId = driverFee.merchantOperatingCityId,
             updatedAt = now,
             createdAt = now

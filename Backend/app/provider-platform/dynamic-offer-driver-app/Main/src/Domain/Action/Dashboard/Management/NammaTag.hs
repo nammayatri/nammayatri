@@ -121,16 +121,17 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let mbMerchantId = Just $ cast merchant.id
   case req.domain of
     Lib.Yudhishthira.Types.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False)
     Lib.Yudhishthira.Types.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
     Lib.Yudhishthira.Types.CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]
@@ -141,7 +142,10 @@ postNammaTagRunJob ::
   Kernel.Types.Beckn.Context.City ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
-postNammaTagRunJob _merchantShortId _opCity req = do
+postNammaTagRunJob merchantShortId opCity req = do
+  mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+  let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+  let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
   -- Logic for complete old jobs works only for DbBased jobs
   whenJust req.completeOldJob $ \oldJobId -> do
     mbOldJob :: Maybe (AnyJob AllocatorJobType) <- QDBJ.findById oldJobId
@@ -154,7 +158,7 @@ postNammaTagRunJob _merchantShortId _opCity req = do
         QDBJ.markAsComplete oldJobId
 
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob (Handle.kaalChakraHandle mbMerchantId mbMerchantOpCityId) req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -163,12 +167,11 @@ postNammaTagRunJob _merchantShortId _opCity req = do
         Lib.Yudhishthira.Types.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
-      maxShards <- asks (.maxShards)
       case req.chakra of
-        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly scheduledTime maxShards jobData
-        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly scheduledTime maxShards jobData
+        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly mbMerchantId mbMerchantOpCityId scheduledTime jobData
+        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly mbMerchantId mbMerchantOpCityId scheduledTime jobData
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}
@@ -208,7 +211,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  YudhishthiraFlow.upsertLogicRollout (cast merchantOpCityId) rolloutReq
+  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions

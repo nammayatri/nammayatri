@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude
@@ -33,20 +34,21 @@ import Tools.Error (GenericError (InvalidRequest))
 
 buildUpdateReq ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
+  Id DM.Merchant ->
   Subscriber.Subscriber ->
   Spec.UpdateReq ->
   m DUpdate.DUpdateReq
-buildUpdateReq subscriber req = do
+buildUpdateReq merchantId subscriber req = do
   ContextV2.validateContext Context.UPDATE req.updateReqContext
   bap_uri <- Utils.getContextBapUri req.updateReqContext
   unless (Just subscriber.subscriber_id == req.updateReqContext.contextBapId) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-  parseEvent req.updateReqMessage req.updateReqContext
+  parseEvent merchantId req.updateReqMessage req.updateReqContext
 
-parseEvent :: (MonadFlow m) => Spec.UpdateReqMessage -> Spec.Context -> m DUpdate.DUpdateReq
-parseEvent reqMsg context = do
+parseEvent :: (MonadFlow m) => Id DM.Merchant -> Spec.UpdateReqMessage -> Spec.Context -> m DUpdate.DUpdateReq
+parseEvent merchantId reqMsg context = do
   bookingId <- fmap Id reqMsg.updateReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
   fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   eventType <-
@@ -54,6 +56,7 @@ parseEvent reqMsg context = do
       >>= (.fulfillmentStateDescriptor)
       >>= (.descriptorCode)
       & fromMaybeM (InvalidRequest "Event type is not present in UpdateReq.")
+
   case eventType of
     "PAYMENT_COMPLETED" -> do
       rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
@@ -76,30 +79,30 @@ parseEvent reqMsg context = do
   where
     parseAddStopEvent bookingId fulfillment = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
-      stops <- mapM Utils.buildLocation fulfillmentStops
+      stops' <- mapM (Utils.buildLocation' merchantId) fulfillmentStops
       pure $
         DUpdate.UAddStopReq $
           DUpdate.AddStopReq
             { bookingId,
-              stops
+              stops'
             }
 
     parseEditStopEvent bookingId fulfillment = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
-      stops <- mapM Utils.buildLocation fulfillmentStops
+      stops' <- mapM (Utils.buildLocation' merchantId) fulfillmentStops
       pure $
         DUpdate.UEditStopReq $
           DUpdate.EditStopReq
             { bookingId,
-              stops
+              stops'
             }
 
     parseEditLocationEvent bookingId fulfillment rideId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
       let originStop = Utils.getStartLocation fulfillmentStops
-      origin <- traverse Utils.buildLocation originStop
+      origin' <- traverse (Utils.buildLocation' merchantId) originStop
       let destinationStop = Utils.getDropLocation fulfillmentStops
-      destination <- traverse Utils.buildLocation destinationStop
+      destination' <- traverse (Utils.buildLocation' merchantId) destinationStop
       orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
       messageId <- Utils.getMessageId context
       status <- castOrderStatus orderStatus
@@ -109,8 +112,8 @@ parseEvent reqMsg context = do
           DUpdate.EditLocationReq
             { bookingId,
               rideId,
-              origin,
-              destination,
+              origin',
+              destination',
               status,
               bapBookingUpdateRequestId = messageId,
               transactionId

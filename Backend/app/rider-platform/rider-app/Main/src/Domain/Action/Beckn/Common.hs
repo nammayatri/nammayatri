@@ -639,11 +639,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   when onlinePayment $ do
     let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
-    maxShards <- asks (.maxShards)
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
-    createJobIn @_ @'ExecutePaymentIntent scheduleAfter maxShards (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
+    createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
@@ -804,11 +803,10 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
         (Just True, Just ride, Just _countryCode) -> do
           -- creating cancellation execution job which charges cancellation fee from users stripe account
-          maxShards <- asks (.maxShards)
           let scheduleAfter = riderConfig.cancellationPaymentDelay
               cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = person.id, cancellationAmount = fee, rideId = ride.id}
           logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
-          createJobIn @_ @'CancelExecutePaymentIntent scheduleAfter maxShards (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+          createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
         _ -> pure ()
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
@@ -845,6 +843,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }
@@ -1079,7 +1078,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         Nothing ->
           when isReferredByPerson $ do
             QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id

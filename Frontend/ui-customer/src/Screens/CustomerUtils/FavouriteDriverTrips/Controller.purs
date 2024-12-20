@@ -10,7 +10,7 @@ import Components.SourceToDestination as SourceToDestinationController
 import Data.Array (null)
 import Data.String (length)
 import Data.String (trim)
-import JBridge (hideKeyboardOnNavigation, copyToClipboard, toast)
+import JBridge (hideKeyboardOnNavigation, copyToClipboard)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)

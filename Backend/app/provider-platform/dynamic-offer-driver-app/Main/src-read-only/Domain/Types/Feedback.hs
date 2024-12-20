@@ -7,6 +7,8 @@ module Domain.Types.Feedback (module Domain.Types.Feedback, module ReExport) whe
 
 import Data.Aeson
 import Domain.Types.Extra.Feedback as ReExport
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import Kernel.Prelude
@@ -18,6 +20,8 @@ data Feedback = Feedback
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.Feedback.Feedback,
-    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

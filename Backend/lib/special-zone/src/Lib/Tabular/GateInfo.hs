@@ -39,6 +39,8 @@ mkPersist
       specialLocationId SpecialLocationTId
       defaultDriverExtra Int Maybe
       name Text
+      merchantId Text Maybe
+      merchantOperatingCityId Text Maybe
       address Text Maybe
       canQueueUpOnGate Bool
       createdAt UTCTime
@@ -60,5 +62,7 @@ instance FromTType GateInfoT Domain.GateInfo where
         { id = Id id,
           specialLocationId = fromKey specialLocationId,
           geom = Nothing,
+          merchantId = Id <$> merchantId,
+          merchantOperatingCityId = Id <$> merchantOperatingCityId,
           ..
         }

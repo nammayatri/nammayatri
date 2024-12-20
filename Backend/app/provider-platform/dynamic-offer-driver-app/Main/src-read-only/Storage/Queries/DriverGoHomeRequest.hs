@@ -48,6 +48,8 @@ updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) =
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.reachedHome mbReachedHome,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.numCancellation numCancellation,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now

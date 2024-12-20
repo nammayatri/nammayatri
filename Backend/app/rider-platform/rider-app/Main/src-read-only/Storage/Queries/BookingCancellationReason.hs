@@ -46,6 +46,7 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
       Se.Set Beam.reasonCode reasonCode,
       Se.Set Beam.reasonStage reasonStage,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
+      Se.Set Beam.riderId (Kernel.Types.Id.getId <$> riderId),
       Se.Set Beam.source source,
       Se.Set Beam.updatedAt (Just _now)
     ]

@@ -98,6 +98,18 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
+  - POST: # block/unlblock fraud drivers for payout
+      endpoint: payout/drivers/setBlockState
+      auth: ApiAuthV2
+      request:
+        type: SetDriversBlockStateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+
 types:
 
   PayoutReferralHistoryRes:
@@ -153,4 +165,8 @@ types:
    - derive: "'HideSecrets"
   DeleteVpaReq:
    - driverIds: [Id Driver]
+   - derive: "'HideSecrets"
+  SetDriversBlockStateReq:
+   - driverIds: [Id Driver]
+   - blockState: Bool
    - derive: "'HideSecrets"

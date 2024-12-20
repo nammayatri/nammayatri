@@ -69,13 +69,12 @@ sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exoph
 
 callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Ride.Ride -> m ()
 callOnClickTracker rideId = do
-  maxShards <- asks (.maxShards)
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
-  scheduleJobs ride booking.merchantId booking.merchantOperatingCityId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
+  scheduleJobs ride booking.merchantId booking.merchantOperatingCityId (riderConfig.exotelStatusCheckSchedulerDelay)
   return ()
   where
     callStatusObj merchantOperatingCityId merchantId = do
@@ -101,8 +100,8 @@ callOnClickTracker rideId = do
             customerIvrResponse = Nothing
           }
 
-    scheduleJobs ride merchantId merchantOperatingCityId maxShards exotelStatusCheckSchedulerDelay = do
-      createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (fromIntegral exotelStatusCheckSchedulerDelay) maxShards $
+    scheduleJobs ride merchantId merchantOperatingCityId exotelStatusCheckSchedulerDelay = do
+      createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (Just merchantId) (Just merchantOperatingCityId) (fromIntegral exotelStatusCheckSchedulerDelay) $
         CheckExotelCallStatusAndNotifyBPPJobData
           { rideId = ride.id,
             bppRideId = ride.bppRideId,

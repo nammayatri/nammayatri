@@ -311,18 +311,17 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   pure Success
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
-postMerchantSchedulerTrigger merchantShortId _ req = do
+postMerchantSchedulerTrigger merchantShortId opCity req = do
   void $ findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  maxShards <- asks (.maxShards)
   case req.scheduledAt of
     Just utcTime -> do
       let diffTimeS = diffUTCTime utcTime now
-      triggerScheduler req.jobName maxShards req.jobData diffTimeS
+      triggerScheduler req.jobName req.jobData diffTimeS
     _ -> throwError $ InternalError "invalid scheduled at time"
   where
-    triggerScheduler :: Maybe Common.JobName -> Int -> Text -> NominalDiffTime -> Flow APISuccess
-    triggerScheduler jobName maxShards jobDataRaw diffTimeS = do
+    triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> Flow APISuccess
+    triggerScheduler jobName jobDataRaw diffTimeS = do
       case jobName of
         Just Common.DriverFeeCalculationTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
@@ -335,7 +334,7 @@ postMerchantSchedulerTrigger merchantShortId _ req = do
               merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
               when (serviceName == Plan.YATRI_RENTAL) $ do
                 SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
-              createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
+              createJobIn @_ @'CalculateDriverFees (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: CalculateDriverFeesJobData)
               setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId serviceName diffTimeS
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
               pure Success
@@ -344,21 +343,24 @@ postMerchantSchedulerTrigger merchantShortId _ req = do
           let jobData' = decodeFromText jobDataRaw :: Maybe BadDebtCalculationJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'BadDebtCalculation diffTimeS maxShards (jobData :: BadDebtCalculationJobData)
+              createJobIn @_ @'BadDebtCalculation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: BadDebtCalculationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.ReferralPayoutTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe DriverReferralPayoutJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'DriverReferralPayout diffTimeS maxShards (jobData :: DriverReferralPayoutJobData)
+              createJobIn @_ @'DriverReferralPayout (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: DriverReferralPayoutJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.SupplyDemandCalculation -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe SupplyDemandRequestJobData
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'SupplyDemand diffTimeS maxShards (jobData :: SupplyDemandRequestJobData)
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              createJobIn @_ @'SupplyDemand mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: SupplyDemandRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
@@ -1133,7 +1135,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   result <-
     Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
       logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
-      flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file merchantOpCity.id
+      flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
       (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
@@ -1148,11 +1150,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   where
     cleanField = replaceEmpty . T.strip
 
-    readCsv distanceUnit csvFile merchantOpCity = do
+    readCsv merchantId distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM (makeFarePolicy merchantOpCity distanceUnit) v >>= (pure . V.toList)
+        Right (_, v) -> V.imapM (makeFarePolicy merchantId merchantOpCity distanceUnit) v >>= (pure . V.toList)
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
@@ -1299,8 +1301,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
-    makeFarePolicy :: Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
-    makeFarePolicy merchantOpCity distanceUnit idx row = do
+    makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
+    makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
@@ -1535,7 +1537,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
@@ -1573,9 +1575,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
+            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
+            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
             ..
           }
 
@@ -1588,23 +1591,23 @@ deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = d
 
 postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
 postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
-  void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
+  specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
-  createOrUpdateGate existingGates request
+  createOrUpdateGate specialLocation existingGates request
   return Success
   where
-    createOrUpdateGate :: [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
-    createOrUpdateGate existingGates req = do
+    createOrUpdateGate :: SL.SpecialLocation -> [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
+    createOrUpdateGate specialLocation existingGates req = do
       let existingGateWithGeom = find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName req.name) existingGates
           existingGate = fst <$> existingGateWithGeom
           mbGeom = snd =<< existingGateWithGeom
-      updatedGate <- mkGate req existingGate mbGeom
+      updatedGate <- mkGate specialLocation req existingGate mbGeom
       void $
         runTransaction $
           if isNothing existingGate then QGIG.create updatedGate else QGIG.updateGate updatedGate
 
-    mkGate :: Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
-    mkGate reqT mbGate mbGeom = do
+    mkGate :: SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
+    mkGate specialLocation reqT mbGate mbGeom = do
       id <- cast <$> maybe generateGUID (return . (.id)) mbGate
       now <- getCurrentTime
       latitude <- fromMaybeM (InvalidRequest "Latitude cannot be empty for a new gate") $ reqT.latitude <|> (mbGate <&> (.point.lat))
@@ -1621,6 +1624,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             updatedAt = now,
             point = LatLong {lat = latitude, lon = longitude},
             gateType = D.Pickup,
+            merchantId = specialLocation.merchantId,
+            merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             ..
           }
 

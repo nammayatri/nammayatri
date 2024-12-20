@@ -512,11 +512,10 @@ blockDriverWithReason merchantShortId opCity reqDriverId dashboardUserName req =
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
-  maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
       let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-      JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+      JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
         UnblockDriverRequestJobData
           { driverId = driverId
           }
@@ -648,6 +647,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             bankErrorUpdatedAt = Nothing,
             lastStatusCheckedAt = Nothing,
             serviceName = driverFee.serviceName,
+            merchantId = Just driverFee.merchantId,
             merchantOperatingCityId = driverFee.merchantOperatingCityId,
             updatedAt = now,
             createdAt = now
@@ -1702,7 +1702,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
-          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing
           return (cast dI.driverInfo.driverId)
       )
       driverInfosAndRideDetails

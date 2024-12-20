@@ -80,4 +80,5 @@
     <string name="includes">ഉൾപ്പെടുന്നു</string>
     <string name="stops_info">%1$d സ്റ്റോപ്പുകൾ (സ്റ്റോപ്പ് ചാർജ് ഉൾപ്പെടെ)</string>
     <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
+    <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
 </resources>

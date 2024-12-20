@@ -72,6 +72,14 @@ Location:
       id : Id Location
       extras: Maybe Text
       derive': Generic,Show,FromJSON,ToJSON,Data.OpenApi.ToSchema
+    Location': # sometimes we don't know MerchantOperatingCity, so defined this type without it
+      id: Id Location
+      lat: Double
+      lon: Double
+      address: LocationAddress
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      merchantId: Maybe (Id Merchant)
   fields:
     id: Id Location
     lat: Double
@@ -124,9 +132,7 @@ Location:
         - instructions|B
         - extras|B
       where: id
-  excludedFields:
-    - merchantId
-    - merchantOperatingCityId
+
 
   extraOperations:
     - EXTRA_QUERY_FILE

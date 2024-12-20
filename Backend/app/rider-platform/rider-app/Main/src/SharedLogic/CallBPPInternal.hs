@@ -16,10 +16,14 @@ module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
+import Data.Text as T
+import Domain.Types.Common
 import Domain.Types.FeedbackForm
+import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
+import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
@@ -548,3 +552,58 @@ getDeliveryImage ::
 getDeliveryImage apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getDeliveryImageClient bppRideId (Just apiKey)) "GetDeliveryImage" getDeliveryImageApi
+
+data CalculateFareReq = CalculateFareReq
+  { dropLatLong :: Kernel.External.Maps.Types.LatLong,
+    pickupLatLong :: Kernel.External.Maps.Types.LatLong,
+    mbDistance :: Maybe Meters,
+    mbDuration :: Maybe Seconds
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data FareData = FareData
+  { estimatedDistance :: Maybe Meters,
+    maxFare :: HighPrecMoney,
+    minFare :: HighPrecMoney,
+    tollNames :: Maybe [Text],
+    tripCategory :: TripCategory,
+    vehicleServiceTier :: ServiceTierType,
+    vehicleServiceTierName :: Maybe Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data GetFareResponse = FareResponse {estimatedFares :: [FareData]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type GetFareAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "merchantCity" Context.City
+    :> "calculateFare"
+    :> Header "token" Text
+    :> ReqBody '[JSON] CalculateFareReq
+    :> Post '[JSON] GetFareResponse
+
+getFareClient :: Text -> Context.City -> Maybe Text -> CalculateFareReq -> EulerClient GetFareResponse
+getFareClient = client getFareApi
+
+getFareApi :: Proxy GetFareAPI
+getFareApi = Proxy
+
+getFare ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  Context.City ->
+  CalculateFareReq ->
+  m GetFareResponse
+getFare merchant city req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getFareClient merchantId city (Just apiKey) req) "GetFare" getFareApi

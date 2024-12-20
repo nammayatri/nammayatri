@@ -26,4 +26,4 @@ Feedback:
     badge: character varying (255)
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

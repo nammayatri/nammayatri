@@ -8,7 +8,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import Screens (ScreenName(..), getScreen)
-import JBridge (toast, hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation)
 import Screens.Types (Contacts, EmergencyContactsScreenState, NewContacts, NewContactsProp)
 import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!), mapMaybe)
 import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText, emitTerminateApp, isParentView)

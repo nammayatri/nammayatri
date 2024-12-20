@@ -269,7 +269,8 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
             tollCharges = Nothing, ------fix it in future
             noOfStops = 0, ------fix it in future
             currency,
-            distanceUnit
+            distanceUnit,
+            merchantOperatingCityId = Just merchantOperatingCityId
           }
   parameters <- SFC.calculateFareParameters params
   return $ SFC.fareSum parameters

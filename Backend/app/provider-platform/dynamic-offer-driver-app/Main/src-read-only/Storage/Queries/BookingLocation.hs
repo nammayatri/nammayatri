@@ -49,7 +49,9 @@ instance FromTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLoc
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocation where
@@ -69,5 +71,7 @@ instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocat
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

@@ -131,7 +131,7 @@ confirm DConfirmReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
+  activeBooking <- QRideB.findByTransactionIdAndStatus searchRequest.id.getId DRB.activeBookingStatus
   case activeBooking of
     Just booking -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
@@ -145,7 +145,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -154,8 +154,7 @@ confirm DConfirmReq {..} = do
     when (scheduleAfter > 0) $ do
       let dfCalculationJobTs = max 2 scheduleAfter
           scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
-      maxShards <- asks (.maxShards)
-      createJobIn @_ @'ScheduledRidePopupToRider dfCalculationJobTs maxShards (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
+      createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
@@ -264,8 +263,9 @@ buildBooking ::
   Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
+  Maybe Text ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled disabilityTag = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -326,7 +326,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           tripCategory = quote.tripCategory,
           initiatedBy = searchRequest.initiatedBy,
           hasStops = searchRequest.hasStops,
-          isReferredRide = searchRequest.driverIdentifier $> True
+          isReferredRide = searchRequest.driverIdentifier $> True,
+          ..
         },
       bookingParties
     )
@@ -335,7 +336,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       DQuote.DeliveryDetails _ -> makeDeliveryParties bookingId
       _ -> pure []
     buildBookingDetails = case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> (buildOneWayDetails Nothing)
+      DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails Nothing
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
       DQuote.DeliveryDetails _ -> DRB.DeliveryDetails <$> buildDeliveryDetails
       DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})

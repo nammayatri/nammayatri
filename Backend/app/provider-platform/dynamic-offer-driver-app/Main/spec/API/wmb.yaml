@@ -1,0 +1,96 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+  LatLong: Kernel.External.Maps.Types
+  ServiceTierType: Domain.Types.Common
+
+module: WMB
+
+types:
+  RouteInfo:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+
+  AvailableRoutesList:
+    routeInfo: RouteInfo
+    source: StopInfo
+    destination: StopInfo
+    vehicleDetails: VehicleDetails
+
+  StopInfo:
+    name: Text
+    code: Text
+    lat: Maybe Double
+    long: Maybe Double
+
+  VehicleDetails:
+    number: Text
+    _type: ServiceTierType
+
+  TripLinkReq:
+    vehicleNumber: Text
+    routeCode: Text
+
+  TripLinkResp:
+    tripTransactionId: Text
+    vehicleNum: Text
+    vehicleType: ServiceTierType
+    source: StopInfo
+    destination: StopInfo
+
+  EndTripStatus:
+    enum: "SUCCESS,WAITING_FOR_ADMIN_APPROVAL"
+
+  TripStartReq:
+    location: LatLong
+
+  TripEndReq:
+    location: LatLong
+
+  TripEndResp:
+    result: EndTripStatus
+
+apis:
+  - GET:
+      endpoint: /ui/wmb/availableRoutes/{vehicleNumber}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        vehicleNumber: Text
+      response:
+        type: "[AvailableRoutesList]"
+  - POST:
+      endpoint: /ui/wmb/trip/link
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: TripLinkReq
+      response:
+        type: TripLinkResp
+
+  - GET:
+      endpoint: /ui/wmb/trip/active
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: TripLinkResp
+
+  - POST:
+      endpoint: /ui/wmb/trip/{tripTransactionId}/start
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Text
+      request:
+        type: TripStartReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /ui/wmb/trip/{tripTransactionId}/end
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Text
+      request:
+        type: TripEndReq
+      response:
+        type: TripEndResp

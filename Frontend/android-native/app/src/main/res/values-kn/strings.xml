@@ -51,4 +51,5 @@
     <string name="call_support">ಬೆಂಬಲವನ್ನು ಕರೆಯಿರಿ</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"ಯಾವುದೇ ಅತಿರಿಕ್ತ ಹಣ ಇಲ್ಲ. ಯಾವುದೇ ಸೂಚನೆಗಳಿಲ್ಲ. ಯಾವುದೇ ಕಾಯಲು ವೆಚ್ಚಗಳಿಲ್ಲ."</string>
     <string name="third_party_booking">"ತೃತೀಯ ಪಕ್ಷದ ಬುಕಿಂಗ್"</string>
+    <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
 </resources>

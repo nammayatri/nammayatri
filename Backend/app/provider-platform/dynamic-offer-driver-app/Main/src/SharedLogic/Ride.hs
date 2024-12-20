@@ -107,7 +107,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking)
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
@@ -169,7 +169,9 @@ buildRideDetails ride driver vehicle = do
         vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
         defaultServiceTierName = defaultServiceTierName,
-        createdAt = Just now
+        createdAt = Just now,
+        merchantId = ride.merchantId,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId
       }
 
 buildRide ::

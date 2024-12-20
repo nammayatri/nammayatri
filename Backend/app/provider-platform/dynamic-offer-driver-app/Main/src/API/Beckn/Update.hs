@@ -44,11 +44,11 @@ update ::
   SignatureAuthResult ->
   Update.UpdateReqV2 ->
   FlowHandler AckResponse
-update _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
+update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId req.updateReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "updateAPI" "Received update API call."
-    dUpdateReq <- ACL.buildUpdateReq subscriber req
+    dUpdateReq <- ACL.buildUpdateReq merchantId subscriber req
     let bookingId = DUpdate.getBookingId dUpdateReq
     Redis.whenWithLockRedis (updateLockKey bookingId.getId) 60 $ do
       fork "update request processing" $

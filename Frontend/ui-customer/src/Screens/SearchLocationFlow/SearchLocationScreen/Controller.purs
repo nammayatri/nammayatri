@@ -52,8 +52,9 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
 import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute, getFareProductTypeByData, fetchImage, FetchImageFrom(..))
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines, getKeyInSharedPrefKeys)
+import JBridge (currentPosition, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines, getKeyInSharedPrefKeys)
 import JBridge as JB
+import Engineering.Helpers.Utils as EHU
 import Log (trackAppActionClick)
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -200,7 +201,7 @@ eval CurrentLocation state = do
 
 eval (LocationListItemAC savedLocations (LocationListItemController.FavClick item) ) state = do 
   if (DA.length savedLocations >= 20) then do
-    void $ pure $ toast $ getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES
+    void $ pure $ EHU.showToast $ getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES
     continue state
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
@@ -802,7 +803,7 @@ quotesFlow res state = do
     in { quoteDetails : quoteDetails, index : index, activeIndex : 0 , fareDetails : fareDetails}
     ) sortedByFare)
   if DA.length rentalsQuoteList == 0 then do 
-    void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
+    void $ pure $ EHU.showToast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
     exit $ RentalsScreen state {props {showLoader = false}}
     else 
     continueWithCmd state { 

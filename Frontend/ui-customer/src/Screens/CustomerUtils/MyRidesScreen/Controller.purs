@@ -33,11 +33,11 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 import Engineering.Helpers.Commons (strToBool, os)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Engineering.Helpers.Utils (getFixedTwoDecimals, showToast)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink, getCityConfig)
 import JBridge (firebaseLogEvent)
-import JBridge (toast, differenceBetweenTwoUTCInMinutes)
+import JBridge (differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -137,7 +137,7 @@ eval (ScrollStateChanged scrollState) state =  case scrollState of
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
 eval (IndividualRideCardActionController (IndividualRideCardController.OnRideToastAC)) state = do 
-  void $ pure $ toast $ getString ALREADY_HAVE_AN_ACTIVE_RIDE
+  void $ pure $ showToast $ getString ALREADY_HAVE_AN_ACTIVE_RIDE
   continue state
 
 eval (OnFadeComplete _ ) state = do

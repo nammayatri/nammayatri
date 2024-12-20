@@ -26,7 +26,6 @@ module Lib.Yudhishthira.Types
     mkKaalChakraJobData,
     mkKaalChakraJobDataFromUpdateTagData,
     UpdateKaalBasedTagsData (..),
-    mkUpdateKaalBasedTagsData,
     mkUpdateTagDataFromKaalChakraJobData,
     RunKaalChakraJobRes (..),
     RunKaalChakraJobResForUser (..),
@@ -359,9 +358,6 @@ data UpdateKaalBasedTagsData = UpdateKaalBasedTagsData
     batchDelayInSec :: Int
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-mkUpdateKaalBasedTagsData :: UpdateKaalBasedTagsJobReq -> UpdateKaalBasedTagsData
-mkUpdateKaalBasedTagsData UpdateKaalBasedTagsJobReq {..} = UpdateKaalBasedTagsData {..}
 
 mkKaalChakraJobDataFromUpdateTagData :: UpdateKaalBasedTagsJobReq -> Bool -> KaalChakraJobData
 mkKaalChakraJobDataFromUpdateTagData UpdateKaalBasedTagsJobReq {..} parseQueryResults = KaalChakraJobData {..}

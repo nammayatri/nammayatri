@@ -279,7 +279,8 @@ instance decodeJsonWebLinkParams :: DecodeJson WebLinkParams where decodeJson = 
 
 type GullakConfig = {
   image :: String,
-  enabled :: Boolean
+  enabled :: Boolean,
+  videoUrl :: Maybe String
 }
 type StuckRideFilterConfig = {
   estimatedDurationFallback :: Int,

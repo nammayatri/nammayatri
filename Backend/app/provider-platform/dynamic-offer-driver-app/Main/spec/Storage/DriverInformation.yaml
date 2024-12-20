@@ -106,6 +106,7 @@ DriverInformation:
     softBlockStiers: "Maybe [ServiceTierType]"
     softBlockExpiryTime: Maybe UTCTime
     softBlockReasonFlag: Maybe Text
+    isBlockedForReferralPayout: Maybe Bool
 
   default:
     active: "false"

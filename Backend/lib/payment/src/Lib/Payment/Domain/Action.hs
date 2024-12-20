@@ -122,6 +122,7 @@ createPaymentIntentService ::
     HasShortDurationRetryCfg r c
   ) =>
   Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Id Ride ->
   Text ->
@@ -131,7 +132,7 @@ createPaymentIntentService ::
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
+createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
   mbExistingOrder <- QOrder.findById (cast rideId)
   case mbExistingOrder of
@@ -226,7 +227,8 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             isRetargeted = False,
             retargetLink = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantOperatingCityId = mbMerchantOpCityId
           }
 
     buildTransaction ::
@@ -269,7 +271,8 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             mandateMaxAmount = Nothing,
             splitSettlementResponse = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantOperatingCityId = order.merchantOperatingCityId
           }
 
 cancelPaymentIntentService ::
@@ -364,16 +367,17 @@ createOrderService ::
     BeamFlow m r
   ) =>
   Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId personId createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId createOrderReq createOrderCall = do
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId personId createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -453,11 +457,12 @@ buildPaymentOrder ::
     BeamFlow m r
   ) =>
   Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId personId req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   pure
@@ -493,7 +498,8 @@ buildPaymentOrder merchantId personId req resp = do
         isRetargeted = False,
         retargetLink = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        merchantOperatingCityId = mbMerchantOpCityId
       }
 
 -- order status -----------------------------------------------------
@@ -662,6 +668,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         juspayResponse = respDump,
         bankErrorCode,
         bankErrorMessage,
+        merchantOperatingCityId = order.merchantOperatingCityId,
         ..
       }
 
@@ -745,9 +752,10 @@ createExecutionService ::
   ) =>
   (Payment.MandateExecutionReq, Text) ->
   Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
   (Payment.MandateExecutionReq -> m Payment.MandateExecutionRes) ->
   m Payment.MandateExecutionRes
-createExecutionService (request, orderId) merchantId executionCall = do
+createExecutionService (request, orderId) merchantId mbMerchantOpCityId executionCall = do
   executionOrder <- mkExecutionOrder request
   QOrder.create executionOrder
   executionResp <- withShortRetry $ executionCall request
@@ -789,7 +797,8 @@ createExecutionService (request, orderId) merchantId executionCall = do
             isRetargeted = False,
             retargetLink = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantOperatingCityId = mbMerchantOpCityId
           }
 
 --- refunds api ----
@@ -843,6 +852,7 @@ createPayoutService ::
     BeamFlow m r
   ) =>
   Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Maybe [Text] ->
   Maybe EntityName ->
@@ -850,7 +860,7 @@ createPayoutService ::
   PT.CreatePayoutOrderReq ->
   (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
+createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -888,7 +898,8 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName city createPay
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantOperatingCityId = getId <$> mbMerchantOpCityId
           }
 
 payoutStatusService ::
@@ -929,6 +940,7 @@ payoutStatusUpdates status_ orderId statusResp = do
                     PT.PayoutTransaction
                       { id = uuid,
                         merchantId = order.merchantId,
+                        merchantOperatingCityId = order.merchantOperatingCityId,
                         payoutOrderId = Id orderId,
                         transactionRef = transactionRef,
                         gateWayRefId = gatewayRefId,

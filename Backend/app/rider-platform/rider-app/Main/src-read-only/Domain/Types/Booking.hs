@@ -38,6 +38,7 @@ data Booking = Booking
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
+    disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

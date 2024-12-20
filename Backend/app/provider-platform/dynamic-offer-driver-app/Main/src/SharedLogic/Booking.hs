@@ -70,7 +70,7 @@ cancelBooking booking mbDriver transporter = do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
     updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
-    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing
 
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
@@ -93,7 +93,8 @@ cancelBooking booking mbDriver transporter = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
-            distanceUnit = booking.distanceUnit
+            distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId
           }
 
 removeBookingFromRedis :: (MonadFlow m, CacheFlow m r) => DRB.Booking -> m ()

@@ -265,7 +265,7 @@ selectResult estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   res <- runMaybeT $ do
     when (UEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    booking <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id [NEW, CONFIRMED, TRIP_ASSIGNED, AWAITING_REASSIGNMENT, CANCELLED]
+    booking <- MaybeT . runInReplica $ QBooking.findByTransactionIdAndStatus estimate.requestId.getId [NEW, CONFIRMED, TRIP_ASSIGNED, AWAITING_REASSIGNMENT, CANCELLED]
     let bookingId = if booking.status == TRIP_ASSIGNED then Just booking.id else Nothing
     let bookingIdV2 = Just booking.id
     return $ QuotesResultResponse {selectedQuotes = Nothing, ..}

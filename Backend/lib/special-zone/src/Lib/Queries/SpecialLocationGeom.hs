@@ -16,6 +16,7 @@ module Lib.Queries.SpecialLocationGeom where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Id
 import Lib.Tabular.SpecialLocationGeom
 import qualified Lib.Types.SpecialLocation as D
 
@@ -24,12 +25,13 @@ create = Esq.create
 
 updateSpecialLocation :: D.SpecialLocation -> SqlDB ()
 updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
+  let merchantOperatingCityId' = Kernel.Types.Id.getId <$> merchantOperatingCityId
   set
     tbl
     [ SpecialLocationGeomLocationName =. val locationName,
       SpecialLocationGeomCategory =. val category,
       SpecialLocationGeomGeom =. val geom,
-      SpecialLocationGeomMerchantOperatingCityId =. val merchantOperatingCityId,
+      SpecialLocationGeomMerchantOperatingCityId =. val merchantOperatingCityId',
       SpecialLocationGeomUpdatedAt =. val updatedAt
     ]
   where_ $

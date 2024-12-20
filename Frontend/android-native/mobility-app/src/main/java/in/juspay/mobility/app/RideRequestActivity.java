@@ -121,6 +121,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
             int stops = rideRequestBundle.getInt("middleStopCount", 0);
+            boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     tollCharges,
@@ -167,7 +168,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getBoolean("isFavourite"),
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime,
-                    stops
+                    stops,
+                    roundTrip
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -184,7 +186,7 @@ public class RideRequestActivity extends AppCompatActivity {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant || model.isFavourite()) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant || model.isFavourite() || model.getRoundTrip()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
@@ -206,6 +208,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
                 holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
+                holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }

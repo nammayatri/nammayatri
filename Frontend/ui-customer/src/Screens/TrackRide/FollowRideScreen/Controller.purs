@@ -22,7 +22,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isNothing, maybe)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowRunner, liftFlow)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
-import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
+import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, getLayoutBounds, setMapPadding)
 import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo)
@@ -65,6 +65,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
 import Helpers.API as HelpersAPI
 import Services.API as API
+import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
@@ -238,7 +239,7 @@ eval action state = case action of
             }
           }
     if driverInfoCardState.status == "CANCELLED" then do
-      void $ pure $ toast $ getString RIDE_CANCELLED
+      void $ pure $ EHU.showToast $ getString RIDE_CANCELLED
       exit $ Exit state{props{chatCallbackInitiated = false}} true
     else if isNothing state.data.driverInfoCardState || (fromMaybe mockDriverInfo state.data.driverInfoCardState).status /= driverInfoCardState.status
       then exit $ RestartTracking newState

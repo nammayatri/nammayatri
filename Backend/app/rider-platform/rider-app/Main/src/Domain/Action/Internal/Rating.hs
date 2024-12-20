@@ -16,6 +16,8 @@ module Domain.Action.Internal.Rating where
 
 import Data.Foldable ()
 import Data.OpenApi
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride (RideStatus (..))
@@ -75,7 +77,7 @@ rating apiKey FeedbackReq {..} = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance Nothing
+      newRating <- buildRating ride.id ride.merchantId ride.merchantOperatingCityId booking.riderId ratingValue feedbackDetails wasOfferedAssistance Nothing
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
@@ -102,8 +104,18 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
   void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> Maybe (Id D.MediaFile) -> m DRating.Rating
-buildRating rideId riderId ratingValue feedbackDetails wasOfferedAssistance mediaId = do
+buildRating ::
+  MonadFlow m =>
+  Id DRide.Ride ->
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Id DP.Person ->
+  Int ->
+  Maybe Text ->
+  Maybe Bool ->
+  Maybe (Id D.MediaFile) ->
+  m DRating.Rating
+buildRating rideId merchantId merchantOperatingCityId riderId ratingValue feedbackDetails wasOfferedAssistance mediaId = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

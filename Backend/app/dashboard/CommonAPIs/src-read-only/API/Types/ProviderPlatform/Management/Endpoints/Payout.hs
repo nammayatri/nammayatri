@@ -106,6 +106,13 @@ data RetryPayoutsReq = RetryPayoutsReq {limit :: Kernel.Prelude.Int, offset :: K
 instance Kernel.Types.HideSecrets.HideSecrets RetryPayoutsReq where
   hideSecrets = Kernel.Prelude.identity
 
+data SetDriversBlockStateReq = SetDriversBlockStateReq {driverIds :: [Kernel.Types.Id.Id Dashboard.Common.Driver], blockState :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets SetDriversBlockStateReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data UpdateFraudStatusReq = UpdateFraudStatusReq
   { isFlagConfirmed :: Kernel.Prelude.Bool,
     firstRideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
@@ -118,7 +125,7 @@ data UpdateFraudStatusReq = UpdateFraudStatusReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateFraudStatusReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA))
+type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA :<|> PostPayoutPayoutDriversSetBlockState))
 
 type GetPayoutPayoutReferralHistory =
   ( "payout" :> "referral" :> "history" :> QueryParam "areActivatedRidesOnly" Kernel.Prelude.Bool
@@ -176,6 +183,8 @@ type PostPayoutPayoutPendingPayout = ("payout" :> "pendingPayout" :> ReqBody '[J
 
 type PostPayoutPayoutDeleteVPA = ("payout" :> "deleteVPA" :> ReqBody '[JSON] DeleteVpaReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostPayoutPayoutDriversSetBlockState = ("payout" :> "drivers" :> "setBlockState" :> ReqBody '[JSON] SetDriversBlockStateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
     getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutHistoryRes,
@@ -183,13 +192,14 @@ data PayoutAPIs = PayoutAPIs
     postPayoutPayoutRetryFailed :: FailedRetryPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutRetryAllWithStatus :: RetryPayoutsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutPendingPayout :: PendingPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutDeleteVPA :: DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutPayoutDeleteVPA :: DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutDriversSetBlockState :: SetDriversBlockStateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
-    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA = payoutClient
+    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA :<|> postPayoutPayoutDriversSetBlockState = payoutClient
 
 data PayoutUserActionType
   = GET_PAYOUT_PAYOUT_REFERRAL_HISTORY
@@ -199,6 +209,7 @@ data PayoutUserActionType
   | POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS
   | POST_PAYOUT_PAYOUT_PENDING_PAYOUT
   | POST_PAYOUT_PAYOUT_DELETE_VPA
+  | POST_PAYOUT_PAYOUT_DRIVERS_SET_BLOCK_STATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

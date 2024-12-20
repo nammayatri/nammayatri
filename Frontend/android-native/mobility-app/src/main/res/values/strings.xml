@@ -94,4 +94,5 @@
     <string name="includes">Includes</string>
     <string name="stops_info">%1$d Stops (incl. stop charge)</string>
     <string name="stops">%1$d Stops</string>
+    <string name="round_trip">Round Trip</string>
 </resources>

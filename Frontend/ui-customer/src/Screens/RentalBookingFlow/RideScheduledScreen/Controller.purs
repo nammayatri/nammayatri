@@ -30,7 +30,7 @@ import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
 import Screens.Types (RideScheduledScreenState, City(..),NotificationBody)
 import Resources.Constants (cancelReasons, dummyCancelReason)
-import JBridge (hideKeyboardOnNavigation, toast)
+import JBridge (hideKeyboardOnNavigation)
 import Services.API
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData

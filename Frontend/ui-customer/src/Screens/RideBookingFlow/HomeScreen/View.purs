@@ -115,8 +115,9 @@ import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList, disableChat, isParentView)
-import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
+import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
+import Engineering.Helpers.Utils as EHU
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
@@ -326,7 +327,7 @@ screen initialState =
                   let isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
                   when (DS.null initialState.props.repeatRideTimerId && initialState.props.repeateRideTimerStoped == false && not isBlindPerson) $  startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
                 else if (initialState.props.isRepeatRide && not isRepeatRideVariantAvailable) then do
-                    void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
+                    void $ pure $ EHU.showToast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
                 else pure unit
                 when initialState.data.iopState.providerSelectionStage $
                   startTimer initialState.data.currentCityConfig.iopConfig.autoSelectTime "providerSelectionStage" "1" push ProviderAutoSelected
@@ -2935,7 +2936,7 @@ getEstimate action flowStatusAction count duration push state id = do
               codeMessage = decodeError errResp.errorMessage "errorMessage"
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
             -- _ <- pure $ logEvent state.data.logField "ny_fs_active_booking_found_on_search"
-            void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+            void $ pure $ EHU.showToast "ACTIVE BOOKING ALREADY PRESENT"
             doAff do liftEffect $ push $ flowStatusAction
           else do
             void $ delay $ Milliseconds duration
@@ -2998,7 +2999,7 @@ getEditLocResults pollingId action exitAction count duration push state = do
             else if isJust bookingUpdateRequestDetails.errorObj then do
               let (ErrorObj err) = fromMaybe (ErrorObj {errorCode : "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER", errorMessage : ""}) bookingUpdateRequestDetails.errorObj
               void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
-              void $ pure $ toast err.errorCode
+              void $ pure $ EHU.showToast err.errorCode
               doAff do liftEffect $ push $ exitAction
             else do
               void $ delay $ Milliseconds duration
@@ -3007,9 +3008,9 @@ getEditLocResults pollingId action exitAction count duration push state = do
             let errResp = err.response
                 codeMessage = decodeError errResp.errorMessage "errorMessage"
             if err.code == 400 then do
-              if codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then void $ pure $ toast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
-              else if codeMessage == "RIDE_NOT_SERVICEABLE" then void $ pure $ toast "RIDE NOT SERVICEABLE"
-              else void $ pure $ toast codeMessage
+              if codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then void $ pure $ EHU.showToast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
+              else if codeMessage == "RIDE_NOT_SERVICEABLE" then void $ pure $ EHU.showToast "RIDE NOT SERVICEABLE"
+              else void $ pure $ EHU.showToast codeMessage
               void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
               doAff do liftEffect $ push $ exitAction
             else do
@@ -3017,7 +3018,7 @@ getEditLocResults pollingId action exitAction count duration push state = do
               getEditLocResults pollingId action exitAction (usableCount - 1) duration push state
       else do
         void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
-        void $ pure $ toast "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER"
+        void $ pure $ EHU.showToast "SOMETHING WENT WRONG. PLEASE TRY AGAIN LATER"
         doAff do liftEffect $ push $ exitAction
 
 -- Polling for IOP estimates
@@ -3048,7 +3049,7 @@ getEstimatePolling pollingId action flowStatusAction count duration push state =
                   let errResp = err.response
                       codeMessage = decodeError errResp.errorMessage "errorMessage"
                   if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-                      void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+                      void $ pure $ EHU.showToast "ACTIVE BOOKING ALREADY PRESENT"
                       doAff do liftEffect $ push $ flowStatusAction
                   else do
                       void $ delay $ Milliseconds duration

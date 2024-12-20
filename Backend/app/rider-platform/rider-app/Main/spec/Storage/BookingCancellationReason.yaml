@@ -6,6 +6,7 @@ imports:
   Booking:  Domain.Types.Booking
   Ride: Domain.Types.Ride
   LatLong: Kernel.External.Maps
+  Person: Domain.Types.Person
 
 BookingCancellationReason:
   tableName: booking_cancellation_reason
@@ -26,6 +27,7 @@ BookingCancellationReason:
     driverCancellationLocation : Maybe LatLong
     driverDistToPickup : Maybe Distance
     distanceUnit : DistanceUnit
+    riderId: Maybe (Id Person)
     createdAt: UTCTime
     updatedAt: UTCTime
 

@@ -88,6 +88,11 @@ updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.S
 updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFollowsRide followsRide id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFreqLocGeohashes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFreqLocGeohashes frequentLocGeohashes id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.frequentLocGeohashes frequentLocGeohashes, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateHasDisability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateHasDisability hasDisability id = do
   _now <- getCurrentTime
@@ -158,6 +163,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
       Se.Set Beam.firstName firstName,
       Se.Set Beam.followsRide followsRide,
+      Se.Set Beam.frequentLocGeohashes frequentLocGeohashes,
       Se.Set Beam.gender gender,
       Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
       Se.Set Beam.hasCompletedSafetySetup hasCompletedSafetySetup,

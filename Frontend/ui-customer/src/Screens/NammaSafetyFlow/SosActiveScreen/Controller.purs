@@ -38,6 +38,7 @@ import Timers (clearTimerWithId, waitingCountdownTimerV2Impl, startTimer)
 import Engineering.Helpers.Commons as EHC
 import Types.EndPoint as EndPoint
 import Data.String as DS
+import Engineering.Helpers.Utils as EHU
 import Common.Types.App as CTA
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 import Common.Resources.Constants as Constants
@@ -229,10 +230,10 @@ eval (SafetyAudioRecordingAction (SafetyAudioRecording.ShareAudio PrimaryButtonC
 eval (UploadMultiPartDataCallback _ fileId) state = do
   void $ pure $ JB.toggleBtnLoader "" false
   if DS.null fileId then do
-    void $ pure $ JB.toast "Failed to upload media file. Please try again."
+    void $ pure $ EHU.showToast "Failed to upload media file. Please try again."
     continue state 
   else do
-    void $ pure $ JB.toast "Audio shared successfully"
+    void $ pure $ EHU.showToast "Audio shared successfully"
     continue state {props { recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false } }
 eval (SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording) state = 
   continueWithCmd state { props { audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false } } [do

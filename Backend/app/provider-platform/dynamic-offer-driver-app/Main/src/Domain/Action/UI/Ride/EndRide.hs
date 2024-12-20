@@ -335,8 +335,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         estimatedTollCharges = rideOld.estimatedTollCharges
         estimatedTollNames = rideOld.estimatedTollNames
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
+    advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
     tripEndPoints <- do
-      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+      let mbAdvanceRideId = (.id) <$> advanceRide
+      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId
       pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
@@ -431,7 +433,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
-      advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
@@ -513,7 +514,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
-      (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False)
+      (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
@@ -553,7 +554,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,
-              distanceUnit = booking.distanceUnit
+              distanceUnit = booking.distanceUnit,
+              merchantOperatingCityId = Just booking.merchantOperatingCityId
             }
       let finalFare = Fare.fareSum fareParams
           distanceDiff = recalcDistance - oldDistance

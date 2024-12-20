@@ -38,11 +38,12 @@ import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn1, runEffectFn4)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC, getGlobalPayload)
-import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
+import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, uploadFile, uploadMultiPartData, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable, Eval)
+import Engineering.Helpers.Utils (showToast)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Resources.Constants (maxImageUploadInIssueReporting)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
@@ -321,7 +322,7 @@ eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timerID timeInMinut
 eval (ImageUploadCallback image imageName imagePath) state = do
   let images' = if length state.data.addImagesState.imageMediaIds == maxImageUploadInIssueReporting
                 then do
-                  pure $ toast $ getString MAX_IMAGES
+                  void $ pure $ showToast $ getString MAX_IMAGES
                   state.data.addImagesState.images
                 else
                   snoc state.data.addImagesState.images { image, imageName }
@@ -451,7 +452,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
           pure NoAction
         ] $ SelectIssueOption (state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption } })
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -513,7 +514,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
       else
         exit $ CallSupport state'
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (CancelCall (PrimaryButton.OnClick)) state =

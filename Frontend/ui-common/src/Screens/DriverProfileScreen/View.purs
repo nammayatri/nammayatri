@@ -73,7 +73,7 @@ getDriverProfileWithImages push state = do
                 liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
                 pure unit
             Left _ -> do
-                void $ pure $ JB.toast $ getString NOT_AVAILABLE
+                void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
                 liftFlowBT $ push $ GoBack
                 pure unit
 
@@ -90,7 +90,7 @@ getDriverProfile push state = do
             EHC.liftFlow $ push $ GetDriverProfileAPIResponseAction resp
             pure unit
         Left _ -> do
-            void $ pure $ JB.toast $ getString NOT_AVAILABLE
+            void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
             EHC.liftFlow $ push $ GoBack
             pure unit
 

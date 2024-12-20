@@ -9,6 +9,7 @@ import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Common
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -247,18 +248,24 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  DBBL.BookingLocation ->
+  m DL.Location
+buildLocation merchantId merchantOperatingCityId DBBL.BookingLocation {..} = do
   return $
     DL.Location
       { id = cast id,
+        merchantId = Just merchantId,
         ..
       }
 
 upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
 upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantOperatingCityId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) (buildLocation (Id merchantId) (Id <$> merchantOperatingCityId)) loc
   fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create pickupLoc >> QLM.upsert fromLocationMapping
   return pickupLoc
@@ -266,6 +273,6 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
 upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
 upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantOperatingCityId = do
   toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-  dropLoc <- buildLocation toLocation
+  dropLoc <- buildLocation (Id merchantId) (Id <$> merchantOperatingCityId) toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
