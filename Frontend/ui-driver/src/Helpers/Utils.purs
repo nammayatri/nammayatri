@@ -112,6 +112,7 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import JBridge as JB
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -1222,3 +1223,10 @@ getHvErrorMsg errorCode =
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
+
+isTokenWithExpValid :: String -> Boolean
+isTokenWithExpValid token = do
+  let tokenWithExp = DS.split (DS.Pattern "<$>") token
+      cachedToken = fromMaybe "" (tokenWithExp DA.!! 0)
+      isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (ReExport.getCurrentUTC "")) > 0
+  isTokenValid && not (DS.null cachedToken)
