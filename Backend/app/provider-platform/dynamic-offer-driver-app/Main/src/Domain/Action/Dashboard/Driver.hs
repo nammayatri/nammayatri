@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
@@ -74,6 +75,7 @@ module Domain.Action.Dashboard.Driver
     bulkReviewRCVariant,
     updateDriverTag,
     registerRCForFleetWithoutDriver,
+    addDriversInFleet,
     updateFleetOwnerInfo,
     getFleetOwnerInfo,
     linkRCWithDriverForFleet,
@@ -116,6 +118,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Common as DrInfo
@@ -149,10 +152,12 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -1051,6 +1056,90 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   void $ runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
+
+---------------------------------------------------------------------
+
+data CreateDriversCSVRow = CreateDriversCSVRow
+  { driverName :: Text,
+    driverMobileNumber :: Text
+  }
+
+data DriverDetails = DriverDetails
+  { driverName :: Text,
+    driverMobileNumber :: Text
+  }
+
+instance FromNamedRecord CreateDriversCSVRow where
+  parseNamedRecord r =
+    CreateDriversCSVRow
+      <$> r .: "driver_name"
+      <*> r .: "driver_mobile_number"
+
+instance FromMultipart Tmp Common.CreateDriversReq where
+  fromMultipart form = do
+    Common.CreateDriversReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp Common.CreateDriversReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+addDriversInFleet :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateDriversReq -> Flow APISuccess
+addDriversInFleet merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  driverDetails <- readCsv req.file
+  mapM_ (processDriver merchantOpCity) driverDetails
+  pure Success
+  where
+    processDriver :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver moc req_ = do
+      let authData =
+            DReg.AuthReq
+              { mobileNumber = Just req_.driverMobileNumber,
+                mobileCountryCode = Just "+91",
+                merchantId = moc.merchantId.getId,
+                merchantOperatingCity = Just opCity,
+                email = Nothing,
+                name = Just req_.driverName,
+                identifierType = Just DP.MOBILENUMBER,
+                registrationLat = Nothing,
+                registrationLon = Nothing
+              }
+      mobileNumberHash <- getDbHash req_.driverMobileNumber
+      oldPerson <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
+      person <- case oldPerson of
+        Nothing -> DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
+        Just p -> return p
+      checkAssoc <- B.runInReplica $ FDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
+      when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      FDV.create assoc
+
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CreateDriversCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM parseDriverInfo v >>= (pure . V.toList)
+
+    parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
+    parseDriverInfo idx row = do
+      driverName <- cleanCSVField idx row.driverName "Driver name"
+      driverMobileNumber <- cleanCSVField idx row.driverMobileNumber "Mobile number"
+      pure $ DriverDetails driverName driverMobileNumber
+
+    cleanField = replaceEmpty . T.strip
+
+    replaceEmpty :: Text -> Maybe Text
+    replaceEmpty = \case
+      "" -> Nothing
+      "no constraint" -> Nothing
+      "no_constraint" -> Nothing
+      x -> Just x
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
 ---------------------------------------------------------------------
 

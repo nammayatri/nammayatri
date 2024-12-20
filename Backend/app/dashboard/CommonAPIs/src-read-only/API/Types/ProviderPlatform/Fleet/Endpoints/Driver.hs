@@ -15,6 +15,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -45,6 +46,13 @@ data AddVehicleReq = AddVehicleReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets AddVehicleReq where
+  hideSecrets = Kernel.Prelude.identity
+
+newtype CreateDriversReq = CreateDriversReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets CreateDriversReq where
   hideSecrets = Kernel.Prelude.identity
 
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
@@ -221,7 +229,7 @@ data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyFleetJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (PostDriverFleetAddVehicleHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicleHelper :<|> GetDriverFleetGetAllDriverHelper :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetGetFleetDriverAssociationHelper :<|> GetDriverFleetGetFleetVehicleAssociationHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> PostDriverFleetLinkRCWithDriverHelper))
+type API = ("driver" :> (PostDriverFleetAddVehicleHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicleHelper :<|> GetDriverFleetGetAllDriverHelper :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetGetFleetDriverAssociationHelper :<|> GetDriverFleetGetFleetVehicleAssociationHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> PostDriverFleetAddDriversHelper :<|> PostDriverFleetLinkRCWithDriverHelper))
 
 type PostDriverFleetAddVehicle =
   ( Capture "mobileNo" Kernel.Prelude.Text :> "fleet" :> "addVehicle" :> QueryParam "countryCode" Kernel.Prelude.Text :> ReqBody '[JSON] AddVehicleReq
@@ -605,6 +613,15 @@ type PostDriverFleetDriverVerifyJoiningOtpHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
+type PostDriverFleetAddDrivers = ("fleet" :> "addDrivers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateDriversReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverFleetAddDriversHelper =
+  ( "fleet" :> "addDrivers" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> ReqBody '[JSON] CreateDriversReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 type PostDriverFleetLinkRCWithDriver = ("fleet" :> "linkRCWithDriver" :> ReqBody '[JSON] LinkRCWithDriverForFleetReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverFleetLinkRCWithDriverHelper =
@@ -633,13 +650,14 @@ data DriverAPIs = DriverAPIs
     getDriverFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
     postDriverFleetSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
     postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverFleetAddDrivers :: Kernel.Prelude.Text -> CreateDriversReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetLinkRCWithDriver :: Kernel.Prelude.Text -> LinkRCWithDriverForFleetReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    postDriverFleetAddVehicle :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleDriverRcStatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> postDriverFleetLinkRCWithDriver = driverClient
+    postDriverFleetAddVehicle :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleDriverRcStatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> postDriverFleetAddDrivers :<|> postDriverFleetLinkRCWithDriver = driverClient
 
 data DriverUserActionType
   = POST_DRIVER_FLEET_ADD_VEHICLE
@@ -660,6 +678,7 @@ data DriverUserActionType
   | GET_DRIVER_FLEET_OWNER_INFO
   | POST_DRIVER_FLEET_SEND_JOINING_OTP
   | POST_DRIVER_FLEET_VERIFY_JOINING_OTP
+  | POST_DRIVER_FLEET_ADD_DRIVERS
   | POST_DRIVER_FLEET_LINK_RC_WITH_DRIVER
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

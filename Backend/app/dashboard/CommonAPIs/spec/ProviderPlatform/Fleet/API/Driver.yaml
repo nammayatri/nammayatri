@@ -429,6 +429,25 @@ apis:
               type: VerifyFleetJoiningOtpReq
             response:
               type: APISuccess
+  - POST: # AddDriversAPI
+      endpoint: /fleet/addDrivers
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriversReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDrivers/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: CreateDriversReq
+            response:
+              type: APISuccess
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
       auth: ApiAuthV2
@@ -574,6 +593,10 @@ types:
     - driverMobileCountryCode: Maybe Text
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
+    - derive: "'HideSecrets"
+  CreateDriversReq:
+    - recordType: NewType
+    - file: FilePath
     - derive: "'HideSecrets"
 
 extraOperations:
