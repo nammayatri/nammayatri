@@ -1712,6 +1712,7 @@ getMl =
     , upcoming_ride: "വരാനിരിക്കുന്ന"
     , all: "എല്ലാം"
     , tomorrow: "നാളെ"
+    , we_are_not_able_to_fetch_your_current_location : "നിങ്ങളുടെ നിലവിലെ സ്ഥാനം കണ്ടെത്താൻ കഴിയുന്നില്ല."
     , you_have_an_upcoming: "നിങ്ങള്ക്ക് ഒരു വരാനിരിക്കുന്ന"
     , booking: "ബുക്കിംഗ്"
     , intercity_ride_accepted: "അന്തരനഗര യാത്ര സ്വീകരിച്ചത് "

@@ -1712,6 +1712,7 @@ getBn =
     , upcoming_ride: "আসন্ন"
     , all: "সব"
     , tomorrow: "আগামীকাল"
+    , we_are_not_able_to_fetch_your_current_location : "আমরা আপনার বর্তমান অবস্থান নির্ধারণ করতে পারছি না।"
     , you_have_an_upcoming: "আপনার একটি আসন্ন"
     , booking: "বুকিং"
     , intercity_ride_accepted: "আন্তঃনগর যাত্রা গৃহীত "

@@ -159,7 +159,8 @@ dummyAPI = BookingAPIEntity{
 type RideRequestScreenProps= {
   cardHeight :: Int,
   receivedResponse :: Boolean,
-  shouldCall :: Boolean
+  shouldCall :: Boolean,
+  noLocationFlag :: Boolean
 }
 type PillViewConfig ={
   rideType ::  Maybe (CTA.TripCategoryTag),
@@ -196,6 +197,7 @@ initData _ = {
       cardHeight : 0
     ,receivedResponse: false
     , shouldCall : true
+    , noLocationFlag : false
     }
 }
 
@@ -232,13 +234,13 @@ cardData = [
 
 rideTypePills :: Boolean -> Array PillViewConfig
 rideTypePills includeIntercity =
-  ([ { pillViewText: getString LType.ALL
-    , rideType: Nothing
-    , isSelected: true
-    , activeColor: Color.black900
-    }
-  ])
-    <> (if includeIntercity then
+    ([ { rideType: Just CTA.Rental
+              , pillViewText: getString LType.RENTAL
+              , isSelected: false
+              , activeColor: Color.blueGreen
+              }
+      ])
+          <> (if includeIntercity then
         [ { rideType: Just CTA.InterCity
           , pillViewText: getString LType.INTERCITY
           , isSelected: false
@@ -247,12 +249,6 @@ rideTypePills includeIntercity =
         ]
       else
         [])
-          <> ([ { rideType: Just CTA.Rental
-              , pillViewText: getString LType.RENTAL
-              , isSelected: false
-              , activeColor: Color.blueGreen
-              }
-            ])
 
 dayPills :: String -> Array PillViewConfig
 dayPills _ = [

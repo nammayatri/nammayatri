@@ -1712,6 +1712,7 @@ getEn =
     , upcoming_ride: "Upcoming"
     , all: "All"
     , tomorrow: "Tomorrow"
+    , we_are_not_able_to_fetch_your_current_location : "We are not able to fetch your current location."
     , you_have_an_upcoming: "You have an upcoming"
     , booking: "Booking"
     , intercity_ride_accepted: "Intercity Ride accepted"

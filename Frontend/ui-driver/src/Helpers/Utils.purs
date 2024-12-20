@@ -971,6 +971,7 @@ getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
   SA.HATCHBACK_TIER -> "ic_hatchback_ac"
   SA.TAXI -> "ic_taxi"
   SA.TAXI_PLUS -> "ny_ic_sedan_ac"
+  SA.SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
   _ -> "ny_ic_sedan"
 
 getLatestAndroidVersion :: Merchant -> Int
@@ -1056,6 +1057,7 @@ driverVehicleToVechicleServiceTier vehicle =
         "AC Mini" -> SA.ECO
         "AUTO_RICKSHAW"  ->  SA.AUTO_RICKSHAW
         "XL Cab" -> SA.SUV_TIER
+        "XL Plus" -> SA.SUV_PLUS_TIER
         _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
@@ -1084,6 +1086,7 @@ vehicleVariantImage vehicle =
                   "AUTO"  ->  "ny_ic_auto_left_view"
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
+                  "SUV_PLUS" -> "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"
 
 getVehicleVariantName :: VehicleCategory -> String

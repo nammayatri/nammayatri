@@ -1712,6 +1712,7 @@ getKn =
     , upcoming_ride: "ಮುಂದಿನ"
     , all: "ಎಲ್ಲಾ"
     , tomorrow: "ನಾಳೆ"
+    , we_are_not_able_to_fetch_your_current_location : "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಕಂಡುಹಿಡಿಯಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
     , you_have_an_upcoming: " ನಿಮ್ಮ ಬಳಿ ಮುಂಬರುವ"
     , booking: "ಬುಕಿಂಗ್"
     , intercity_ride_accepted: "ಅಂತರನಗರ ಸವಾರಿ ಸ್ವೀಕಾರಿಸಲಾಗಿದೆ "

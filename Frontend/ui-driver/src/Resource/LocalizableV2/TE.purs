@@ -1712,6 +1712,7 @@ getTe =
     , upcoming_ride: "రాబోయే"
     , all: "అన్ని"
     , tomorrow: "రేపు"
+    , we_are_not_able_to_fetch_your_current_location : "మీ ప్రస్తుత స్థానాన్ని పొందడం సాధ్యం కాలేదు."
     , you_have_an_upcoming: "మీకు రాబోయే"
     , booking: "బుకింగ్"
     , intercity_ride_accepted: "అంతర్రాష్ట్రీయ సవారి ఆమోదించబడింది"

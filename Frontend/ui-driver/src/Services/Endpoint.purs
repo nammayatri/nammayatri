@@ -16,7 +16,7 @@
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
-import Prelude (show, unit, (<>), (==), (*) , (&&))
+import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
 import Services.Config (getBaseUrl)
 
 triggerOTP :: String -> String
@@ -391,7 +391,7 @@ demandHotspots :: String -> String
 demandHotspots _ = (getBaseUrl "") <> "/driver/demandHotspots"
 
 getScheduledBookingList :: String -> String -> String -> String ->String -> String -> String -> String
-getScheduledBookingList limit offset from to  tripCategory lat lon  =  (getBaseUrl "") <> "/driver/scheduledBooking/list?limit="<>limit<>"&offset="<>offset<> (if from == "null" then "" else "&from=" <> from) <> (if to == "null" then "" else "&to=" <> to)<>(if lat == "0.0" && lon == "0.0" then ""  else ("&currentLocation=" <> lat <> "," <> lon))  
+getScheduledBookingList limit offset from to  tripCategory lat lon  =  (getBaseUrl "") <> "/driver/scheduledBooking/list?limit="<>limit<>"&offset="<>offset<> (if from == "null" then "" else "&from=" <> from) <> (if to == "null" then "" else "&to=" <> to)<>(if lat == "0.0" || lon == "0.0" then ""  else ("&currentLocation=" <> lat <> "," <> lon)) <> ( if tripCategory == "" then "" else "&tripCategory=" <> tripCategory)  
 
 scheduleBookingAccept :: String -> String
 scheduleBookingAccept bookingId = (getBaseUrl "") <> "/driver/accept/scheduledBooking?bookingId="<>bookingId
