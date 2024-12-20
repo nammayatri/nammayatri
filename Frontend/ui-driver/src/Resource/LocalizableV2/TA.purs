@@ -1715,6 +1715,7 @@ getTa =
     , upcoming_ride: "வரவிருக்கும்"
     , all: "எல்லாம்"
     , tomorrow: "நாளை"
+    , we_are_not_able_to_fetch_your_current_location : "உங்கள் தற்போதைய இருப்பிடத்தை பெற முடியவில்லை."
     , you_have_an_upcoming: "உங்களுக்கு வரவிருக்கும்"
     , booking: "முன்பதிவு"
     , intercity_ride_accepted: "இடைநகர் சவாரி ஏற்கப்பட்டது "

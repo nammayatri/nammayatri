@@ -1731,6 +1731,7 @@ newtype Keymap
   , upcoming_ride :: String
   , all :: String
   , tomorrow :: String
+  , we_are_not_able_to_fetch_your_current_location :: String
   , you_have_an_upcoming :: String
   , booking :: String
   , intercity_ride_accepted :: String
@@ -6929,6 +6930,9 @@ all = a
 
 tomorrow :: Proxy "tomorrow"
 tomorrow = a
+
+we_are_not_able_to_fetch_your_current_location :: Proxy "we_are_not_able_to_fetch_your_current_location"
+we_are_not_able_to_fetch_your_current_location = a 
 
 you_have_an_upcoming :: Proxy "you_have_an_upcoming"
 you_have_an_upcoming = a
