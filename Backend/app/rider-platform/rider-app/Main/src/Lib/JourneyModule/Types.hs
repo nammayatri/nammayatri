@@ -1,14 +1,20 @@
 module Lib.JourneyModule.Types where
 
-import qualified Domain.Types.SearchRequest as SR
-import qualified Domain.Types.FRFSSearch as FRFSSR
-import qualified Domain.Types.Trip as Trip
+import Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.SearchRequest as DSR
+import Kernel.External.MultiModal.Interface
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
-data JourneyInitData leg = JourneyInitData
-  { legs: [leg]
-  , parentSearchId :: Id SearchRequest
-  , merchantId :: Id Merchant
-  , merchantOperatingCityId :: Id MerchantOperatingCity
+data JourneyInitData = JourneyInitData
+  { legs :: [MultiModalLeg],
+    parentSearchId :: Id DSR.SearchRequest,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    estimatedDistance :: HighPrecDistance,
+    estimatedDuration :: Seconds
+    maximumWalkDistance :: Meters
   }
 
 data LegInfo = LegInfo
@@ -43,14 +49,14 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
       }
 
 mkTaxiLegConfirmReq :: LegInfo -> TaxiLegRequest
-mkTaxiLegConfirmReq LegInfo {..} = 
+mkTaxiLegConfirmReq LegInfo {..} =
   TaxiLegConfirm $ TaxiLegConfirmRequest
     { skipBooking = skipBooking
     , estimateId = legId
     }
 
 mkConfirmReq :: LegInfo -> TaxiLegRequest
-mkConfirmReq legInfo = 
+mkConfirmReq legInfo =
   case legInfo.travelMode of
     Trip.Taxi -> mkTaxiLegConfirmReq legInfo
     _ -> MetroLegConfirm MetroLegConfirmRequest
