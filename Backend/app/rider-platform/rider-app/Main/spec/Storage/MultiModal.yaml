@@ -9,6 +9,13 @@ imports:
   Location: Domain.Types.Location
   Person: Domain.Types.Person
   JourneySearchData: Lib.JourneyPlannerTypes
+  PolylinePoints: Kernel.External.Maps.Google.MapsClient.Types
+  GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
+  LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
+  MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
+  MultiModalRouteDetails: Kernel.External.MultiModal.Interface.Types
+  MultiModalAgency: Kernel.External.MultiModal.Interface.Types
+
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -183,3 +190,81 @@ WalkLegMultimodal:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+JourneyLeg:
+  fields:
+    id: Id JourneyLeg
+    distance: Distance
+    journeyId: Id Journey
+    duration: Seconds
+    polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
+    mode: GeneralVehicleType
+    startLocation: LatLngV2 #LocationV2     #Location.latLng
+    endLocation: LatLngV2 #LocationV2
+    fromStopDetails: Maybe MultiModalStopDetails
+    toStopDetails: Maybe MultiModalStopDetails
+    routeDetails: Maybe MultiModalRouteDetails
+    agency: Maybe MultiModalAgency
+    fromArrivalTime: Maybe UTCTime
+    fromDepartureTime: Maybe UTCTime
+    toArrivalTime: Maybe UTCTime
+    toDepartureTime: Maybe UTCTime
+    sequenceNumber: Int
+
+  beamFields:
+    distance:
+      distance: HighPrecDistance
+      distanceUnit: DistanceUnit
+    fromStopDetails:
+      fromStopCode: Maybe Text
+      fromStopName: Maybe Text
+      fromStopGtfsId: Maybe Text
+    toStopDetails:
+      toStopCode: Maybe Text
+      toStopName: Maybe Text
+      toStopGtfsId: Maybe Text
+    routeDetails:
+      routeGtfsId: Maybe Text
+      routeLongName: Maybe Text
+      routeShortName: Maybe Text
+    agency:
+      agencyGtfsId: Maybe Text
+      agencyName: Maybe Text
+    startLocation:
+      startLocationLat: Maybe Double
+      startLocationLon: Maybe Double
+    endLocation:
+      endLocationLat: Maybe Double
+      endLocationLon: Maybe Double
+
+
+  fromTType:
+    distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
+    fromStopDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> fromStopCode <*> fromStopGtfsId <*> gtfsId)|E
+    toStopDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> toStopCode <*> toStopName <*> toStopGtfsId)|E
+    routeDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails <$> routeGtfsId <*> routeLongName <*> routeShortName)|E
+    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency <$> agencyGtfsId <*> agencyName)|E)
+    startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> startLocationLat <*> startLocationLon|E
+    endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> endLocationLat <*> endLocationLon|E
+
+  toTType:
+    distance: ((.value))|I
+    distanceUnit: ((.unit))|I
+    fromStopCode:  (fromStopDetails >>= (.stopCode))|E
+    fromStopName:  (fromStopDetails >>= (.name))|E
+    fromStopGtfsId: (fromStopDetails >>= (.gtfsId))|E
+    toStopCode:  (toStopDetails >>= (.stopCode))|E
+    toStopName:  (toStopDetails >>= (.name))|E
+    toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
+    routeGtfsId: (routeDetails >>= (.gtfsId))|E
+    routeLongName: (routeDetails >>= (.longName))|E
+    routeShortName: (routeDetails >>= (.shortName))|E
+    agencyGtfsId: (routeDetails >>= (.gtfsId))|E
+    agencyName: (routeDetails >>= (.name))|E
+    startLocationLat: (startLocation <&> (.latitude))|E
+    startLocationLon: (startLocation <&> (.longitude))|E
+    endLocationLat: (endLocation <&> (.latitude))|E
+    endLocationLon: (endLocation <&> (.longitude))|E
+
+  constraints:
+    id: PrimaryKey
+    journeyId: "!SecondaryKey"
