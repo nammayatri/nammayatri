@@ -347,6 +347,28 @@ sortByEstimatedFare resultList = do
 getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
 getJourneys searchRequest = do
   if searchRequest.hasMultimodal
+    allJourneys <- QJourney.findBySearchId searchRequest.id
+    forM allJourneys \journey -> do
+      journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
+      journeyLegs <-
+        forM journeyLegs \journeyLeg -> do
+          return $
+            JourneyLeg
+              { journeyLegOrder = journeyLeg.sequenceNumber,
+                journeyMode = journeyLeg.mode,
+                estimate = Nothing,                                     -- call fare api or remove field
+                quote = Nothing                                         -- call fare api or remove field
+              }
+      return $
+        JourneyData
+          { totalPrice = journey.estimatedFare,
+            modes = journey.modes,
+            journeyLegs
+          }
+
+
+
+    ------------------------------------- to depricate -------------------------------------------------------------------------------------------------------------------------
     then do
       allJourneys <- QJourney.findBySearchId searchRequestId
       journeyNeeded <- pure $ listToMaybe allJourneys
@@ -426,4 +448,6 @@ getJourneys searchRequest = do
           logDebug $ "journey unavailable for searchId: " <> searchRequestId.getId <> show err
           return Nothing
         Right journey -> return journey
+
+  --------------------------------------------------------------------------------------------------------------------------------------------------------------------
     else return Nothing
