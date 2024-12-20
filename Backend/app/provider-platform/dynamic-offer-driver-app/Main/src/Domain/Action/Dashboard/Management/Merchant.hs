@@ -2292,12 +2292,10 @@ configureMessageProviderFailover merchantOperatingCity req = do
   merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   case req.priorityOrder of
     Just priorityOrder -> do
-      when (notEmpty priorityOrder.smsProviders) do
-        let updatedConfig = merchantServiceUsageConfig {DMSUC.smsProvidersPriorityList = priorityOrder.smsProviders}
-        CQMSUC.updateMerchantServiceUsageConfig updatedConfig
-      when (notEmpty priorityOrder.whatsappProviders) do
-        let updatedConfig = merchantServiceUsageConfig {DMSUC.whatsappProvidersPriorityList = priorityOrder.whatsappProviders}
-        CQMSUC.updateMerchantServiceUsageConfig updatedConfig
+      let smsProviders = fromMaybe merchantServiceUsageConfig.smsProvidersPriorityList (nonEmpty priorityOrder.smsProviders)
+          whatsappProviders = fromMaybe merchantServiceUsageConfig.whatsappProvidersPriorityList (nonEmpty priorityOrder.whatsappProviders)
+          updatedConfig = merchantServiceUsageConfig {DMSUC.smsProvidersPriorityList = smsProviders, DMSUC.whatsappProvidersPriorityList = whatsappProviders}
+      CQMSUC.updateMerchantServiceUsageConfig updatedConfig
     Nothing -> do
       let messageProviderPriorityList = reorderList merchantServiceUsageConfig.smsProvidersPriorityList
           whatsappProviderPriorityList = reorderList merchantServiceUsageConfig.whatsappProvidersPriorityList
@@ -2305,13 +2303,13 @@ configureMessageProviderFailover merchantOperatingCity req = do
       CQMSUC.updateMerchantServiceUsageConfig updatedConfig
   pure ()
 
+nonEmpty :: [a] -> Maybe [a]
+nonEmpty [] = Nothing
+nonEmpty xs = Just xs
+
 reorderList :: [a] -> [a]
 reorderList [] = []
 reorderList (x : xs) = xs ++ [x]
-
-notEmpty :: [a] -> Bool
-notEmpty [] = True
-notEmpty _ = False
 
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
