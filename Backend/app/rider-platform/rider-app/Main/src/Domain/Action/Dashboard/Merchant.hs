@@ -31,6 +31,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import Control.Applicative
+import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -698,8 +699,8 @@ configureMessageProviderFailover :: DMOC.MerchantOperatingCity -> Common.ConfigF
 configureMessageProviderFailover merchantOperatingCity req = do
   case req.priorityOrder of
     Just priorityOrder -> do
-      when (notEmpty priorityOrder.smsProviders) do CQMSUC.updateSmsProvidersPriorityList priorityOrder.smsProviders merchantOperatingCity.id
-      when (notEmpty priorityOrder.whatsappProviders) do CQMSUC.updateWhatsappProvidersPriorityList priorityOrder.whatsappProviders merchantOperatingCity.id
+      when (notNull priorityOrder.smsProviders) do CQMSUC.updateSmsProvidersPriorityList priorityOrder.smsProviders merchantOperatingCity.id
+      when (notNull priorityOrder.whatsappProviders) do CQMSUC.updateWhatsappProvidersPriorityList priorityOrder.whatsappProviders merchantOperatingCity.id
     Nothing -> do
       merchantServiceUsageConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
       let messageProviderPriorityList = reorderList merchantServiceUsageConfig.smsProvidersPriorityList
@@ -711,10 +712,6 @@ configureMessageProviderFailover merchantOperatingCity req = do
 reorderList :: [a] -> [a]
 reorderList [] = []
 reorderList (x : xs) = xs ++ [x]
-
-notEmpty :: [a] -> Bool
-notEmpty [] = True
-notEmpty _ = False
 
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC

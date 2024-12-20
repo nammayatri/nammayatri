@@ -811,7 +811,7 @@ data ConfigFailoverReq = ConfigFailoverReq
   { merchantOperatingCity :: Kernel.Prelude.Maybe Context.City,
     priorityOrder :: Kernel.Prelude.Maybe PriorityListWrapperType
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets ConfigFailoverReq where
@@ -847,5 +847,5 @@ data PriorityListWrapperType = PriorityListWrapperType
     smsProviders :: [SmsService],
     whatsappProviders :: [WhatsappService]
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
