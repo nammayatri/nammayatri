@@ -1793,6 +1793,7 @@ getProxy str = case str of
   UPCOMING_RIDE -> \a -> a @~ upcoming_ride
   ALL -> \a -> a @~ all
   TOMORROW -> \a -> a @~ tomorrow
+  WE_ARE_NOT_ABLE_TO_FETCH_YOUR_CURRENT_LOCATION -> \a -> a @~ we_are_not_able_to_fetch_your_current_location
   YOU_HAVE_AN_UPCOMING -> \a -> a @~ you_have_an_upcoming
   BOOKING -> \a -> a @~ booking
   INTERCITY_RIDE_ACCEPTED -> \a -> a @~ intercity_ride_accepted
