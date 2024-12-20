@@ -42,6 +42,7 @@ data BookingT f = BookingT
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

@@ -282,7 +282,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         paymentUrl = booking.paymentUrl,
         createdAt = booking.createdAt,
         updatedAt = booking.updatedAt,
-        hasDisability = hasDisability,
+        hasDisability = isJust booking.disabilityTag,
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
         isValueAddNP,
