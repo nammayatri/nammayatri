@@ -235,7 +235,6 @@ makeBookingAPIEntity ::
   [FareBreakup] ->
   Maybe DExophone.Exophone ->
   Maybe Payment.PaymentMethodId ->
-  Maybe Bool ->
   Bool ->
   Maybe DSos.SosStatus ->
   DBppDetails.BppDetails ->
@@ -243,7 +242,7 @@ makeBookingAPIEntity ::
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
   m BookingAPIEntity
-makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   rides <- mapM buildRideAPIEntity allRides
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
@@ -282,7 +281,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         paymentUrl = booking.paymentUrl,
         createdAt = booking.createdAt,
         updatedAt = booking.updatedAt,
-        hasDisability = isJust booking.disabilityTag,
+        hasDisability = (Just . isJust) booking.disabilityTag,
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
         isValueAddNP,
@@ -442,14 +441,13 @@ buildBookingAPIEntity booking personId = do
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
   mbCancellationReason <-
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
   where
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
