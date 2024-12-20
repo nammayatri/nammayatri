@@ -145,7 +145,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -264,8 +264,9 @@ buildBooking ::
   Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
+  Maybe Text ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled disabilityTag = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -326,7 +327,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           tripCategory = quote.tripCategory,
           initiatedBy = searchRequest.initiatedBy,
           hasStops = searchRequest.hasStops,
-          isReferredRide = searchRequest.driverIdentifier $> True
+          isReferredRide = searchRequest.driverIdentifier $> True,
+          ..
         },
       bookingParties
     )
@@ -335,7 +337,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       DQuote.DeliveryDetails _ -> makeDeliveryParties bookingId
       _ -> pure []
     buildBookingDetails = case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> (buildOneWayDetails Nothing)
+      DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails Nothing
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
       DQuote.DeliveryDetails _ -> DRB.DeliveryDetails <$> buildDeliveryDetails
       DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})

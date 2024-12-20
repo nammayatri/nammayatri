@@ -221,6 +221,7 @@ Booking:
     tripCategory: Maybe TripCategory
     initiatedBy: Maybe TripParty
     isReferredRide: Maybe Bool
+    disabilityTag: Maybe Text
 
   beamFields:
     estimatedDistance:
