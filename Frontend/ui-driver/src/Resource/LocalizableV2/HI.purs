@@ -1715,6 +1715,7 @@ getHi =
     , upcoming_ride: "आगामी"
     , all: "सभी"
     , tomorrow: "कल"
+    , we_are_not_able_to_fetch_your_current_location : "हम आपके वर्तमान स्थान को प्राप्त नहीं कर पा रहे हैं।"
     , you_have_an_upcoming: "आपके पास एक आगामी"
     , booking: "बुकिंग"
     , intercity_ride_accepted: "अंतर-शहर सवारी स्वीकार की गई"
