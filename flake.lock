@@ -282,11 +282,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1734703943,
-        "narHash": "sha256-CTRvSdfbhrZuNBUdetEW/VV3YytyFY8TEiYjVenCzyA=",
+        "lastModified": 1734806286,
+        "narHash": "sha256-F7XW88SuJ/YNel0lcE7MZYs+kpG85QXHEm76lOTaIrg=",
         "owner": "rsrohitsingh682",
         "repo": "common",
-        "rev": "793fafd78da4aab544a701fedbaecd7312c5116d",
+        "rev": "bede31abc389562bf9ae44fc223247e834e8ab96",
         "type": "github"
       },
       "original": {
@@ -3028,16 +3028,15 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1734377833,
-        "narHash": "sha256-lQ4X1SLtORS2PQRSsEU0sBC0rmsCvxy4Rn37zJuDYLQ=",
-        "owner": "rsrohitsingh682",
+        "lastModified": 1734797603,
+        "narHash": "sha256-ulZN7ps8nBV31SE+dwkDvKIzvN6hroRY8sYOT0w+E28=",
+        "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "d1cacdd558f6540ff9f1fd08ca423fd355b2e5ee",
+        "rev": "f0f0dc4920a903c3e08f5bdb9246bb572fcae498",
         "type": "github"
       },
       "original": {
-        "owner": "rsrohitsingh682",
-        "ref": "cabal2nix",
+        "owner": "cachix",
         "repo": "git-hooks.nix",
         "type": "github"
       }
