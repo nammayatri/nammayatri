@@ -8,7 +8,7 @@
   };
 
   inputs = {
-    common.url = "github:nammayatri/common";
+    common.url = "github:rsrohitsingh682/common/IFD";
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
