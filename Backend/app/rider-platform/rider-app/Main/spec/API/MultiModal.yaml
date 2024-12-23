@@ -7,6 +7,7 @@ imports:
   FRFSStationAPI : API.Types.UI.FRFSTicketService
   TravelMode : Domain.Types.Trip
   Location : Domain.Types.Location
+  LegInfo: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -21,15 +22,7 @@ types:
     estimatedDuration: Seconds
     estimatedFare: PriceAPIEntity
     estimatedDistance: Distance
-    legs: [JourneyLegResp]
-  JourneyLegResp:
-    legNumber: Int
-    legId: Text # searchRequestId or frfsSearchRequestId or walkLegId
-    estimatedDuration: Seconds
-    estimatedFare: PriceAPIEntity
-    estimatedDistance: Distance
-    travelMode: TravelMode
-    journeyLegInfo: JourneyLegInfo
+    legs: [LegInfo]
 
   JourneyLegInfo:
     enum: "Walk JourneyLegWalkInfo, Taxi JourneyLegTaxiInfo, Bus JourneyLegBusInfo, Metro JourneyLegMetroInfo"
