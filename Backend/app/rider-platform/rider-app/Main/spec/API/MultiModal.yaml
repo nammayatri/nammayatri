@@ -11,11 +11,6 @@ imports:
 module: MultimodalConfirm
 
 types:
-  JourneyConfirmReq:
-    journeyConfirmReqElements: "[JourneyConfirmReqElement]"
-  JourneyConfirmReqElement:
-    journeyLegOrder: Int
-    skipBooking: Bool
   JourneyInfoReq:
     legsReq: [JourneyLegsReq]
   JourneyLegsReq:
@@ -75,10 +70,14 @@ apis:
       endpoint: /multimodal/{journeyId}/confirm
       params:
         journeyId: Id Journey
-      request:
-        type: JourneyConfirmReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /multimodal/{journeyId}/booking/info
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyInfoResp
 
   - POST:
       endpoint: /multimodal/{searchRequestId}/switch/{estimateId}
