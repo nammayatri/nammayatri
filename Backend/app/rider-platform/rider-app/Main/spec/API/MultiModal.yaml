@@ -16,7 +16,7 @@ types:
   JourneyLegsReq:
     legNumber: Int
     originAddress: LocationAddress
-    stopsAddress: [LocationAddress]
+    destinationAddress: LocationAddress
   JourneyInfoResp:
     estimatedDuration: Seconds
     estimatedFare: PriceAPIEntity
@@ -59,7 +59,7 @@ types:
 
 apis:
   - POST:
-      endpoint: '/multimodal/{journeyId}/info'
+      endpoint: /multimodal/{journeyId}/info
       params:
         journeyId: Id Journey
       request:

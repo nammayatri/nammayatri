@@ -236,6 +236,10 @@ JourneyLeg:
       endLocationLat: Maybe Double
       endLocationLon: Maybe Double
 
+  queries:
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
 
   fromTType:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
