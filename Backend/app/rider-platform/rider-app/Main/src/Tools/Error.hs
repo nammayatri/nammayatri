@@ -681,6 +681,24 @@ instance IsHTTPError SafetyError where
 
 instance IsAPIError SafetyError
 
+data JourneyError
+  = JourneyNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''JourneyError
+
+instance IsBaseError JourneyError where
+  toMessage = \case
+    JourneyNotFound journeyId -> Just ("Journey with id: " <> journeyId <> " not found.")
+
+instance IsHTTPError JourneyError where
+  toErrorCode = \case
+    JourneyNotFound _ -> "JOURNEY_NOT_FOUND"
+  toHttpCode = \case
+    JourneyNotFound _ -> E400
+
+instance IsAPIError JourneyError
+
 data CancellationError
   = CancellationNotSupported
   deriving (Eq, Show, IsBecknAPIError)
