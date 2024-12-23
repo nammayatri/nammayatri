@@ -798,37 +798,14 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , relativeLayout
-        [ height $ V 165
-        , width $ V 165
-        ]
-        [ linearLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          , gravity CENTER
-          , onClick push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-          , rippleColor Color.rippleShade
-          ]
-          [ imageView
-              [ imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_refresh_black"
-              , height $ V 60
-              , width $ V 60
-              ]
-          , textView
-              $ [ text config.driverUpiQrCard.qrfailText
-                ]
-              <> FontStyle.body1 TypoGraphy
-          ]
-        , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ]
-            $ imageView
-                [ height $ V 165
-                , width $ V 165
-                , margin $ MarginVertical 8 13
-                , id $ getNewIDWithTag config.driverUpiQrCard.id
-                , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-                ]
-        ]
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ]
+        $ imageView
+            [ height $ V 165
+            , width $ V 165
+            , margin $ MarginVertical 8 13
+            , id $ getNewIDWithTag config.driverUpiQrCard.id
+            , qr (Qr config.driverUpiQrCard.paymentVpa 165 0)
+            ]
     ]
   ]
 

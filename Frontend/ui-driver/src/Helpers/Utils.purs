@@ -1223,7 +1223,6 @@ getHvErrorMsg errorCode =
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
 
-
 getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
 getSrcDestConfig state = 
   if state.props.currentStage == ST.RideAccepted then
