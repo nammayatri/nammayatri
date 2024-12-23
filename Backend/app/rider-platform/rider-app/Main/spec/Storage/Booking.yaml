@@ -222,6 +222,7 @@ Booking:
     initiatedBy: Maybe TripParty
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
+    journeyLegOrder: Maybe Int
 
   beamFields:
     estimatedDistance:

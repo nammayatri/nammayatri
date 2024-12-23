@@ -21,6 +21,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyPlannerTypes as JPT
 import Servant
 import Storage.Queries.Estimate as QEstimate
@@ -31,64 +32,48 @@ import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
 
+postMultimodalInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.JourneyInfoReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalInfo (_personId, _merchantId) journeyId req = do
+  addAllLegs journeyId req.legsReq
+  journey <- JM.getJourney journeyId
+  legs <- JN.getAllLegsInfo journeyId
+  return $ 
+    JourneyInfoResp
+      { estimatedDuration = journey.estimatedDuration
+      , estimatedFare = journey.estimatedFare
+      , estimatedDistance = journey.estimatedDistance
+      , legs
+      }
+
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm (personId, merchantId) journeyId journeyConfirmReq = do
-  journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (InvalidRequest "Journey not found")
-  let selectReq =
-        Select.DSelectReq
-          { customerExtraFee = Nothing,
-            customerExtraFeeWithCurrency = Nothing,
-            autoAssignEnabled = True,
-            autoAssignEnabledV2 = Just True,
-            paymentMethodId = Nothing,
-            otherSelectedEstimates = Nothing,
-            isAdvancedBookingEnabled = Nothing,
-            deliveryDetails = Nothing,
-            disabilityDisable = Nothing
-          }
-  let skippedBookings = filter (\journeyConfirmReqElement -> journeyConfirmReqElement.skipBooking) journeyConfirmReq.journeyConfirmReqElements
-
-  searchReqs <- QSearchRequest.findAllByJourneyId journeyId
-  forM_ searchReqs \searchReq -> do
-    journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
-    estimateId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "estimateId not found")
-    let searchReqLegOrder = journeyLegInfo.journeyLegOrder
-        skippedSearchReq = find (\skippedBooking -> skippedBooking.journeyLegOrder == searchReqLegOrder) skippedBookings
-    case skippedSearchReq of
-      Just _ -> do
-        QSearchRequest.updateSkipBooking searchReq.id (Just True)
-        reqEstimate <- QEstimate.findById (Id estimateId) >>= fromMaybeM (InvalidRequest "Estimate not found")
-        initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "estimatedFare not found")
-        newEstimatedPrice <- initialFare `subtractPrice` reqEstimate.estimatedTotalFare
-        QJourney.updateEstimatedFare (Just newEstimatedPrice) journeyId
-      Nothing -> do
-        pId <- personId & fromMaybeM (InvalidRequest "personId not found")
-        void $ Select.select pId (Id estimateId) selectReq
-
-  frfsSearchReqs <- QFRFSSearch.findAllByJourneyId journeyId
-  forM_ frfsSearchReqs \frfsSearchReq -> do
-    journeyLegInfo <- frfsSearchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
-    quoteId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "estimateId not found")
-    let searchReqLegOrder = journeyLegInfo.journeyLegOrder
-        skippedSearchReq = find (\skippedBooking -> skippedBooking.journeyLegOrder == searchReqLegOrder) skippedBookings
-    case skippedSearchReq of
-      Just _ -> do
-        QFRFSSearch.updateSkipBooking frfsSearchReq.id (Just True)
-        reqQuote <- QFRFSQuote.findById (Id quoteId) >>= fromMaybeM (InvalidRequest "quote not found")
-        initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "estimatedFare not found")
-        newEstimatedPrice <- initialFare `subtractPrice` reqQuote.price
-        QJourney.updateEstimatedFare (Just newEstimatedPrice) journeyId
-      Nothing -> do
-        void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
-
+postMultimodalConfirm (_, _) journeyId = do
+  journey <- JM.getJourney journeyId
+  JM.startJourney journey.id
   pure Kernel.Types.APISuccess.Success
+
+getMultimodalBookingInfo ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+getMultimodalBookingInfo (personId, merchantId) journeyId = do
+  journey <- JM.getJourney journeyId
+  allLegs <- JM.getAllLegsInfo journeyId
 
 getMultimodalSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
