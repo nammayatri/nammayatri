@@ -2,11 +2,11 @@ module Lib.JourneyLeg.Bus where
 
 
 data BusLegUpdateData = BusLegUpdateData
-{ id : Id LegID
-  userLocation : Location
-  busLocation : Location
-  startTime : Maybe UTCTime
-}
+  { id :: Id LegID,
+    userLocation :: Location,
+    busLocation :: Location,
+    startTime :: Maybe UTCTime
+  }
 
 data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData | BusLegRequestUpdate BusLegUpdateData
 
