@@ -36,6 +36,15 @@ postMultimodalInfo ::
   )
 postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
+  journey <- JM.getJourney journeyId
+  legs <- getAllLegsInfo journeyId
+  return $ 
+    JourneyInfoResp
+      { estimatedDuration = journey.estimatedDuration
+      , estimatedFare = journey.estimatedFare
+      , estimatedDistance = journey.estimatedDistance
+      , legs
+      }
 
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
