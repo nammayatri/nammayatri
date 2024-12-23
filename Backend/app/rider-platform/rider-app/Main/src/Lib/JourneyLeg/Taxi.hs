@@ -7,6 +7,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Lib.JourneyLeg.Types as JT
 
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
@@ -142,8 +143,24 @@ instance JourneyLeg TaxiLegRequest m where
 
   cancel (TaxiLeg _legData) = return ()
   
-  getState (TaxiLeg _legData) = return InPlan
-  
+  getState (TaxiLegGetState searchId) = do
+     searchReq <- QSearchRequest.findById searchId >>= fromMaybeM ("Internal Error in searchId :" <> searchId)
+     booking <- QBooking.findByTransactionId searchId
+     ride <- QRide.findByRBId booking.id
+     case (booking, ride) of
+       (Just bookings , Just rides) -> do
+           let journeyLegStatus = mapRideStatusToJourneyLegStatus rides.status
+           return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
+        (Just bookings , Nothing) -> do
+           return $ JT.JourneyLegState { status = Assigning , currentPosition = Nothing }
+        (_, _) -> do
+           isSkipped <- searchReq.journeyLegInfo.isSkipped
+           isCancelled <- searchReq.journeyLegInfo.isCancelled
+           case (isSkipped, isCancelled) of
+             (False, False) -> return $ JT.JourneyLegState { status = InPlan , currentPosition = Nothing}
+             (True, False) ->  return $ JT.JourneyLegState { status = Skipped , currentPosition = Nothing}
+             (_, _) ->  return $ JT.JourneyLegState { status = Cancelled, currentPosition = Nothing }
+
   get (TaxiLegGetState srId) = do
     mbBooking <- QBooking.findByTransactionId srId
     case mbBooking of
