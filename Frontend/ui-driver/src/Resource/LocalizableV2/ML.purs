@@ -1779,4 +1779,5 @@ getMl =
     , choose_preferred_metro : "പ്രിയപ്പെട്ട മെട്രോ തിരഞ്ഞെടുക്കുക"
     , metro_warriors : "മെട്രോ വാരിയേഴ്സ്"
     , search : "തിരയുക" 
+    , load_qr : "QR ലോഡ് ചെയ്യുക"
     }

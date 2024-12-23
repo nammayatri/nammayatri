@@ -1779,4 +1779,5 @@ getOd =
     , choose_preferred_metro : "ପସନ୍ଦର ମେଟ୍ରୋ ବାଛନ୍ତୁ"
     , metro_warriors : "ମେଟ୍ରୋ ୱାରିଅର୍"
     , search : "ଖୋଜନ୍ତୁ"
+    , load_qr : "QR ଲୋଡ୍ କରନ୍ତୁ"
   }

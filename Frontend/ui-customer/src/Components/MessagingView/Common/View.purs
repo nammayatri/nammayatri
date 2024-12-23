@@ -38,7 +38,6 @@ import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
-import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUp

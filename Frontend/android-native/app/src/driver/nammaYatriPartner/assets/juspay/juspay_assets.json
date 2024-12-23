@@ -747,6 +747,7 @@
       "ny_ic_referral_earned" : true,
       "ny_ic_referral_related_faq" : true,
       "ny_ic_refresh" : true,
+      "ny_ic_refresh_black" : true,
       "ny_ic_refresh_unfilled" : true,
       "ny_ic_regular_pill" : true,
       "ny_ic_rental_info" : true,
