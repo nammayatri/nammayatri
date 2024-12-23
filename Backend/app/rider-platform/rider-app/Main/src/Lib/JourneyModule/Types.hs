@@ -3,10 +3,13 @@ module Lib.JourneyModule.Types where
 import Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SearchRequest as DSR
+import Domain.Types.Ride as DRide
+import Domain.Types.Booking as DBooking
 import Kernel.External.MultiModal.Interface
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import API.Types.RiderPlatform.Management.FRFSTicket
+import qualified Storage.Queries.Transformers.Booking as QTB
 
 data JourneyInitData = JourneyInitData
   { legs :: [MultiModalLeg],
@@ -57,6 +60,26 @@ data UpdateJourneyReq = UpdateJourneyReq
     updatedAt :: Kernel.Prelude.UTCTime
   }
 
+mkLegInfoFromBookingAndRide :: DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
+mkLegInfoFromBookingAndRide booking _mRide = do
+  toLocation <- getToLocation bookingDetails
+  return $
+    LegInfo
+      { skipBooking = False
+      , legId = booking.id
+      , travelMode = Trip.Taxi
+      , startTime = booking.startTime
+      , order = booking.journeyLegOrder
+      , estimatedDuration = booking.estimatedDistance
+      , estimatedFare = booking.estimatedFare
+      , estimatedDistance = booking.estimatedDistance
+      , legExtraInfo = 
+          Taxi $ TaxiLegExtraInfo 
+            { origin = booking.fromLocation
+            , destination = QTB.getToLocation booking.bookingDetails
+            }
+      }
+  
 mkLegInfoFromSearchRequest :: SR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest SR.SearchRequest {..} = do
   mbEstimatedFare <- 

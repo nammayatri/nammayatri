@@ -31,5 +31,5 @@ instance JourneyLeg BusLeg m where
       -- mark status with respect to user -  AtRiskOfMissing, Missed
     return ()
   cancel (BusLeg _legData) = return ()
-  getState (BusLeg _legData) = return InPlan
-  get (BusLeg _legData) = return _legData
+  getState (BusLeg _legData) = return ()
+  get (BusLeg _legData) = return ()

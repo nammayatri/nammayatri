@@ -100,9 +100,14 @@ getJourneyLegs journeyId = QJourneyLeg.findAllByJourneyId journeyId
 -- Return complete data with search and bookings
 getAllLegsInfo :: Id Journey -> m [LegInfo]
 getAllLegsInfo journeyId = do
-  taxiLegs <- QSearchRequest.findAllByJourneyId journeyId >>= mapM mkLegInfoFromSearchRequest
-  publicTransportLegs <- QFRFSSearch.findAllByJourneyId journeyId >>= mapM mkLegInfoFromFrfsSearchRequest
-  return $ sortBy (.order) (taxiLegs <> publicTransportLegs)
+  allLegsRawData <- getJourneyLegs journeyId
+  allLegsInfo <- allLegsRawData `forM` \leg -> do
+    case leg.mode of
+      Trip.Taxi -> JL.get $ TaxiGetStateRequest leg.legId
+      Trip.Walk -> JL.get $ WalkGetStateRequest leg.legId
+      Trip.Metro -> JL.get $ MetroGetStateRequest leg.legId
+      _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+  return $ sortBy (.order) allLegsInfo
 
 startJourney :: Id Journey -> ConfirmReq -> m () -- confirm request
 startJourney journeyId = do
