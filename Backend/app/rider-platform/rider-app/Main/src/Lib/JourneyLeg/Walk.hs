@@ -1,19 +1,19 @@
 module Lib.JourneyLeg.Walk where
 
 data WalkLegUpdateData = WalkLegUpdateData
-  { id : Id LegID
-    mbFromLocation : Location
-    mbtoLocation : Location
-    mbStartTime : Maybe UTCTime
-    status : JourneyLegStatus
+  { id :: Id LegID
+    mbFromLocation :: Location
+    mbtoLocation :: Location
+    mbStartTime :: Maybe UTCTime
+    status :: JourneyLegStatus
   }
 
 data WalkSearchData = WalkSearchData 
   { fromLocation :: Location
   , stops :: [Location]
   , merchantId :: Id Merchant
-  , personId: Id Person
-  , merchantOperatingCity: Id MerchantOperatingCity
+  , personId :: Id Person
+  , merchantOperatingCity :: Id MerchantOperatingCity
   }
 
 data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData

@@ -128,39 +128,36 @@ addTaxiLeg journey journeyLeg currentLegReq = do
   taxiSearchReq <- mkTaxiSearchReq parentSearchReq journeyLeg (TaxiSearchRequestData { origin = startLocation, stops = [endLocation] })
   JL.search taxiSearchReq
 
-getCurrentLeg :: JourneyLeg leg m => Journey -> m leg
-getCurrentLeg
-  -- get the current leg based on status
-  -- loop through all legs and based on getState
-  journeyLegs <- getAllLegs journeyId
+getCurrentLeg :: JourneyLeg leg m => Id Journey -> Maybe [leg] -> m leg
+getCurrentLeg journeyId mbJourneyLegs = do
+  journeyLegs <- maybe (getAllLegs journeyId) return mbJourneyLegs
   let currentLeg = find (\leg -> notElem leg.status [completedStatus]) journeyLegs
   return currentLeg
 
 getRemainingLegs :: JourneyLeg leg m => Id Journey -> m [leg]
 getRemainingLegs journeyId = do
-  -- get the remaining legs
   journeyLegs <- getAllLegs journeyId
-  let remainingLegs = filter (\leg -> notElem leg.status [completedStatus]) journeyLegs
+  let remainingLegs = dropWhile (\leg -> notElem leg.status [completedStatus]) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
---   filter -> based on status
 
--- createLeg :: RequiedData (OTP response for each leg)
 deleteLeg :: JourneyLeg leg m => leg -> m ()
-  JL.cancel leg
-  -- remove it from the journey mark it deleted/skipped
+deleteLeg leg = do
+  let cancelReq = mkCancelReq leg
+  JL.cancel cancelReq
 
-updateLeg :: JourneyLeg leg m => UpdateJourneyLeg -> leg -> m ()
-  -- update the leg
-  -- update it in the journey
+updateLeg :: JourneyLeg leg m => leg -> leg -> m ()
+updateLeg 
+  let updateReq = mkUpdateReq leg
+  JL.update leg
 
-skipJourney :: Journey -> [leg] -> m ()
+-- skipJourney :: Journey -> [leg] -> m ()
 -- skipJourney journey
     -- getRemainingLegs
-    map update [leg]
+    -- map update [leg]
     -- @@ call cancel for current leg
 
-endJourney :: Journey -> m ()
-endJourney
+-- endJourney :: Journey -> m ()
+-- endJourney
 -- if last leg then update leg
 -- loop through and delete/update legs and journey as required
 -- call leg level cancel
@@ -170,4 +167,6 @@ replaceLeg journey oldLegs newLeg =
   forM_ (deleteLeg journey) oldLegs >> addLeg journey newLeg
 
 extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
+extendLeg journey oldLegs newLeg =
   forM_ (deleteLeg journey) oldLegs >> updateLeg journey newLeg
+
