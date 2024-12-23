@@ -13,6 +13,7 @@ data MetroLegConfirmRequest
 data MetroLegRequest
   = MetroLegRequestSearch MultiModalLeg MetroSearchData
   | MetroLegConfirm MetroLegConfirmRequest
+  | MetroLegGetState (Id Frfs.FRFSSearch)
 
 instance JourneyLeg MetroLeg m where
   search (MetroLegRequestSearch multimodalLeg metroLegSearchData) = do
@@ -22,4 +23,8 @@ instance JourneyLeg MetroLeg m where
   update (MetroLeg _legData) = return ()
   cancel (MetroLeg _legData) = return ()
   getState (MetroLeg _legData) = return InPlan
-  get (MetroLeg _legData) = return _legData
+  
+  get (MetroLegGetState srId) = do
+    -- TODO: No booking for metro, we can handle for bookings once booking is there
+    searchReq <- QFRFSSearch.findById srId
+    return $ mkLegInfoFromFrfsSearchRequest searchReq

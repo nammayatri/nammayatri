@@ -32,7 +32,7 @@ type ConfirmJourneyLeg leg m = leg -> m ()
 type CancelJourneyLeg leg m = leg -> m ()
 type UpdateJourneyLeg leg m = leg -> m ()
 type GetJourneyLegState leg m = leg -> m JourneyLegState
-type GetJourneyLeg leg m = leg -> m MultiModalLeg
+type GetJourneyLeg leg m = leg -> m LegInfo
 
 class JourneyLeg leg m where
   search :: SearchJourneyLeg leg m

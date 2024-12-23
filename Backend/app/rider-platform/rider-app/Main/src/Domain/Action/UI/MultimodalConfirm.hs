@@ -43,7 +43,7 @@ postMultimodalInfo ::
 postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
   journey <- JM.getJourney journeyId
-  legs <- getAllLegsInfo journeyId
+  legs <- JN.getAllLegsInfo journeyId
   return $ 
     JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration
@@ -73,7 +73,7 @@ getMultimodalBookingInfo ::
   )
 getMultimodalBookingInfo (personId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
-  legsInfo <- JM.getAllLegs journeyId
+  allLegs <- JM.getAllLegsInfo journeyId
 
 getMultimodalSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
