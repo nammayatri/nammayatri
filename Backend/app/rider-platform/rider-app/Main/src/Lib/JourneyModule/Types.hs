@@ -49,6 +49,14 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     frequency :: Seconds
   }
 
+data UpdateJourneyReq = UpdateJourneyReq
+  { fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    legsDone :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    modes :: Kernel.Prelude.Maybe [Domain.Types.Common.TravelMode],
+    totalLegs :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+
 mkLegInfoFromSearchRequest :: SR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest SR.SearchRequest {..} = do
   mbEstimatedFare <- 
@@ -132,3 +140,17 @@ mkSearchReqLocation address latLng = do
     { gps = LatLong {lat = latLng.latitude, lon = latLng.longitude},
       address = address
     },
+
+mkCancelReq :: JourneyLeg a => LegInfo -> a
+mkCancelReq legInfo =
+  case legInfo.travelMode of
+      Trip.Taxi -> TaxiLegCancelRequest {searchId = legInfo.legId}
+      _ -> MetroLegCancelRequest req {searchId = legInfo.legId}
+
+
+-- mkUpdateReq :: LegInfo -> TaxiLegRequest
+-- mkUpdateReq legInfo =
+--   case legInfo.travelMode of
+--       Trip.Taxi -> TaxiLegUpdateRequest req
+--       _ -> MetroLegUpdateRequest req
+-- -- handle other cases
