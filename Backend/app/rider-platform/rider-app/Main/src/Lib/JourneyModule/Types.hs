@@ -61,3 +61,13 @@ mkConfirmReq legInfo =
     Trip.Taxi -> mkTaxiLegConfirmReq legInfo
     _ -> MetroLegConfirm MetroLegConfirmRequest
     -- handle other cases
+
+mkTaxiSearchReq :: SearchRequest -> DJourenyLeg.JourneyLeg -> TaxiSearchRequestData -> TaxiLegRequest
+mkTaxiSearchReq sr jl tsrd = TaxiLegRequestSearch sr jl tsrd
+
+mkSearchReqLocation :: LocationAddress -> LatLngV2 -> SearchReqLocation
+mkSearchReqLocation address latLng = do
+  SearchReqLocation
+    { gps = LatLong {lat = latLng.latitude, lon = latLng.longitude},
+      address = address
+    },
