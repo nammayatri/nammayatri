@@ -199,7 +199,7 @@ config = {
     vpa : "",
     vpaIcon : "",
     collectCashText : "",
-    qrfailText : ""
+    paymentVpa : ""
   },
   noVpaCard : {
     title : "",
@@ -341,7 +341,7 @@ type DriverUpiQrCard = {
   vpa :: String,
   vpaIcon :: String,
   collectCashText :: String,
-  qrfailText :: String
+  paymentVpa :: String
 }
 
 type NoVpaCard = {
