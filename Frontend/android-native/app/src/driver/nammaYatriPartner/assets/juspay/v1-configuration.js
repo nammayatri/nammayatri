@@ -2698,7 +2698,7 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : true
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
+          "enableVariantBasedSubscription" : true,
           "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
