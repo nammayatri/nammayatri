@@ -854,6 +854,7 @@ eval BackPressed state = do
                 , recentSearchs {predictionArray = recentlySearchedLocations}
                 , destinationSuggestions = suggestedDestinations
                 , source = state.props.currentLocation.place
+                , sourceAddress = encodeAddress state.props.currentLocation.place [] state.props.sourcePlaceId state.props.currentLocation.lat state.props.currentLocation.lng
                 , rentalsInfo = state.data.rentalsInfo
                 , settingSideBar
                   { gender = state.data.settingSideBar.gender
