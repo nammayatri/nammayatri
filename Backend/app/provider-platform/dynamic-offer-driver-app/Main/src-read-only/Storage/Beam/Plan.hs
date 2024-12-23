@@ -27,6 +27,7 @@ data PlanT f = PlanT
     id :: B.C f Kernel.Prelude.Text,
     isDeprecated :: B.C f Kernel.Prelude.Bool,
     isOfferApplicable :: B.C f Kernel.Prelude.Bool,
+    listingPriority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: B.C f Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
