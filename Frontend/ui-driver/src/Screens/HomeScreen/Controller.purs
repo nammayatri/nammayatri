@@ -82,7 +82,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..)) as LT
 import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>), const)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Core (getPushFn)
@@ -140,6 +140,7 @@ import Services.API (DriverProfileDataRes(..))
 import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
+import Constants.Configs (getPolylineAnimationConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -492,6 +493,7 @@ data Action = NoAction
             | ClickMetroWarriors
             | MetroWarriorPopupAC PopUpModal.Action
             | MetroWarriorSwitchAction SwitchButtonView.Action
+            | UpdateState ST.HomeScreenState
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1238,7 +1240,10 @@ eval (ChatViewActionController (ChatView.Navigate)) state = do
 
 eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do
   let newState = state {props {showDottedRoute = not state.props.showDottedRoute} }
-  updateAndExit newState $ UpdateRoute newState
+  continueWithCmd newState [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRoute newState
+    pure NoAction
+  ]
 
 eval (RideActionModalAction (RideActionModal.WaitingInfo)) state = do
   continue state {data{activeRide {waitTimeInfo = true }}}
@@ -1312,7 +1317,10 @@ eval (CurrentLocation lat lng) state = do
   exit $ UpdatedState newState
 eval (ModifyRoute lat lon) state = do
   let newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
-  exit $ UpdateRoute newState
+  continueWithCmd newState [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRoute newState
+    pure NoAction
+  ]
 
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
@@ -1800,6 +1808,8 @@ eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
 
 eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
 
+eval (UpdateState newState) _ = continue newState 
+
 eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
@@ -2123,3 +2133,75 @@ fetchStageFromRideStatus activeRide =
     COMPLETED -> ST.RideCompleted
     CANCELLED -> ST.HomeScreen
     _ -> ST.HomeScreen
+
+updateRoute :: ST.HomeScreenState -> Flow GlobalState Unit
+updateRoute state = do
+  void $ pure $ JB.exitLocateOnMap ""   
+  push <- liftFlow $ getPushFn Nothing "HomeScreen"
+  let srcDestConfig = HU.getSrcDestConfig state
+      srcLat = srcDestConfig.srcLat
+      srcLon = srcDestConfig.srcLon
+      destLat = srcDestConfig.destLat
+      destLon = srcDestConfig.destLon
+      source = srcDestConfig.source
+      destination = srcDestConfig.destination
+      routeType = if state.props.currentStage == ST.RideAccepted then "pickup" else "trip"
+
+      srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker", primaryText = source }
+      destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0}
+      
+  if (state.data.activeRide.tripType == ST.Rental) && (state.props.currentStage == ST.RideStarted ) && isNothing state.data.activeRide.nextStopAddress then do
+      liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
+      void $ pure $ removeAllPolylines ""
+  else if state.data.config.feature.enableSpecialPickup && state.props.currentStage == ST.RideAccepted && state.data.activeRide.specialLocationTag == Just "SpecialZonePickup" then do
+    liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
+    let specialPickupZone = HU.findSpecialPickupZone destLat destLon
+    case specialPickupZone of
+      Just pickupZone -> do
+        void $ pure $ removeAllPolylines ""
+        let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = destLat
+                                                                                      , lon = destLon
+                                                                                      , geoJson = pickupZone.geoJson
+                                                                                      , points = pickupZone.gates
+                                                                                      , locationName = pickupZone.locationName
+                                                                                      , navigateToNearestGate = false
+                                                                                      , specialZoneMarkerConfig { showZoneLabel = true
+                                                                                                                , showLabelActionImage = true }
+                                                                                      , locateOnMapPadding = { left : 2.0, top : 2.0, right : 2.0, bottom : 4.0 } }
+        pure unit
+      Nothing -> pure unit
+  else if state.props.showDottedRoute then do
+    let coors = (Remote.walkCoordinate srcLon srcLat destLon destLat)
+    liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
+    let _ = removeAllPolylines ""
+        normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig Nothing "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+    liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+  else if not Array.null state.data.route then do
+    let shortRoute = (state.data.route Array.!! 0)
+    case shortRoute of
+      Just (Route route) -> do
+        let coor = Remote.walkCoordinates route.points
+        liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
+        let _ = JB.removeMarker "ic_vehicle_side"
+            _ = removeAllPolylines ""
+        let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+        pure unit
+      Nothing -> pure unit
+  else do
+    eRouteAPIResponse <- Remote.getRoute (Remote.makeGetRouteReq srcLat srcLon destLat destLon) routeType
+    case eRouteAPIResponse of
+      Right (GetRouteResp routeApiResponse) -> do
+        let shortRoute = (routeApiResponse Array.!! 0)
+        case shortRoute of
+          Just (Route route) -> do
+            let coor = Remote.walkCoordinates route.points
+            liftFlow $ push $ UpdateState state { data { activeRide { actualRideDistance = if state.props.currentStage == ST.RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } }
+            void $ pure $ JB.removeMarker "ny_ic_auto"
+            void $ pure $ removeAllPolylines ""
+            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+            pure unit
+          Nothing -> pure unit   
+      Left err -> pure unit
+  pure unit

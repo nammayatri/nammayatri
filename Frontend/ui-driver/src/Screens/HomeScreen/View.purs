@@ -339,13 +339,13 @@ screen initialState (GlobalState globalState) =
 
 getActiveRideDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
 getActiveRideDetails push delayTime retryCount = do 
-  lift $ lift $ doAff $ liftEffect $ push $ UpdateRetryRideList false
   if retryCount > 0 then do
     (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
     case (DA.find (\(RidesInfo x) -> x.bookingType == Just CURRENT) activeRideResponse.list) of
       Just ride -> do
         let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
         lift $ lift $ doAff $ liftEffect $ push $ RideActiveAction ride advancedRide
+        lift $ lift $ doAff $ liftEffect $ push $ UpdateRetryRideList false
       Nothing -> do 
         void $ lift $ lift $ delay $ Milliseconds delayTime
         getActiveRideDetails push (delayTime * 2.0) (retryCount - 1)

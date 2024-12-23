@@ -1720,7 +1720,8 @@ getRideCompletedConfig state = let
       id = "renderQRViewOnRideComplete",
       vpa = payerVpa,
       vpaIcon = fetchImage FF_ASSET pspIcon,
-      collectCashText = getString OR_COLLECT_CASH_DIRECTLY
+      collectCashText = getString OR_COLLECT_CASH_DIRECTLY,
+      paymentVpa = "upi://pay?pa=" <> payerVpa <> "&am=" <> (show $ state.data.endRideData.finalAmount)
     },
     noVpaCard {
       title = getString SETUP_AUTOPAY_TO_ACCEPT_PAYMENT,

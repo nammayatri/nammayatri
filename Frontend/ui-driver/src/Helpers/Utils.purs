@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -1240,3 +1240,32 @@ isTokenWithExpValid token = do
       cachedToken = fromMaybe "" (tokenWithExp DA.!! 0)
       isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (ReExport.getCurrentUTC "")) > 0
   isTokenValid && not (DS.null cachedToken)
+  
+getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
+getSrcDestConfig state = 
+  if state.props.currentStage == ST.RideAccepted then
+    {
+      srcLat : state.data.currentDriverLat,
+      srcLon : state.data.currentDriverLon,
+      destLat : state.data.activeRide.src_lat,
+      destLon : state.data.activeRide.src_lon,
+      source : "",
+      destination : state.data.activeRide.source
+    }
+  else if state.data.activeRide.tripType == ST.Rental then
+    {
+      srcLat : fromMaybe state.data.activeRide.src_lat state.data.activeRide.lastStopLat,
+      srcLon : fromMaybe state.data.activeRide.src_lon state.data.activeRide.lastStopLon,
+      destLat : fromMaybe 0.0 state.data.activeRide.nextStopLat,
+      destLon : fromMaybe 0.0 state.data.activeRide.nextStopLon,
+      source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
+      destination : fromMaybe "" state.data.activeRide.nextStopAddress
+    }
+  else {
+      srcLat : state.data.activeRide.src_lat,
+      srcLon : state.data.activeRide.src_lon,
+      destLat : state.data.activeRide.dest_lat,
+      destLon : state.data.activeRide.dest_lon,
+      source : state.data.activeRide.source,
+      destination : fromMaybe "" state.data.activeRide.destination
+  }

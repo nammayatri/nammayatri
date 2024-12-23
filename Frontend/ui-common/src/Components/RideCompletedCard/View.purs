@@ -798,13 +798,14 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
-          height $ V 165
-        , width $ V 165
-        , margin $ MarginVertical 8 13
-        , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-      ]
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ]
+        $ imageView
+            [ height $ V 165
+            , width $ V 165
+            , margin $ MarginVertical 8 13
+            , id $ getNewIDWithTag config.driverUpiQrCard.id
+            , qr (Qr config.driverUpiQrCard.paymentVpa 165 0)
+            ]
     ]
   ]
 
