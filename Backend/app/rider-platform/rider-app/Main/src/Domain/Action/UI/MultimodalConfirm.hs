@@ -26,6 +26,17 @@ import Storage.Queries.Journey as QJourney
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
+postMultimodalInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.JourneyInfoReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalInfo (_personId, _merchantId) journeyId req = do
+  addAllLegs journeyId req.legsReq
+
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -38,14 +49,14 @@ postMultimodalConfirm (_, _) journeyId = do
   JM.startJourney journey.id
   pure Kernel.Types.APISuccess.Success
 
-getMultimodalInfo  ::
+getMultimodalBookingInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-getMultimodalInfo (personId, merchantId) journeyId = do
+getMultimodalBookingInfo (personId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legsInfo <- JM.getAllLegs journeyId
 

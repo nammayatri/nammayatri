@@ -682,6 +682,7 @@ instance IsAPIError SafetyError
 
 data JourneyError
   = JourneyNotFound Text
+  | JourneyLegReqDataNotFound Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''JourneyError
@@ -689,12 +690,15 @@ instanceExceptionWithParent 'HTTPException ''JourneyError
 instance IsBaseError JourneyError where
   toMessage = \case
     JourneyNotFound journeyId -> Just ("Journey with id: " <> journeyId <> " not found.")
+    JourneyLegReqDataNotFound sequenceNumber -> Just ("Request data for journey leg number: " <> show sequenceNumber <> " not found!")
 
 instance IsHTTPError JourneyError where
   toErrorCode = \case
     JourneyNotFound _ -> "JOURNEY_NOT_FOUND"
+    JourneyLegReqDataNotFound _ -> "JOURNEY_LEG_REQ_DATA_NOT_FOUND"
   toHttpCode = \case
     JourneyNotFound _ -> E400
+    JourneyLegReqDataNotFound _ -> E400
 
 instance IsAPIError JourneyError
 

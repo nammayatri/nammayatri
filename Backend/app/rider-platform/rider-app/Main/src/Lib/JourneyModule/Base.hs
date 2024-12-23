@@ -93,19 +93,40 @@ convertMultiModalModeToTripMode input distance maximumWalkDistance = case input 
 getJourney :: Id Journey -> m Journey
 getJourney id = JQ.findById id >>= fromMaybeM (JourneyNotFound id.getId)
 
-getAllLegs :: Id Journey -> m LegInfo
-getAllLegs journeyId = do
+-- Return only the OTP raw data without the search and bookings
+getJourneyLegs :: Id Journey -> m [JourneyLeg]
+getJourneyLegs journeyId = QJourneyLeg.findAllByJourneyId journeyId
+
+-- Return complete data with search and bookings
+getAllLegsInfo :: Id Journey -> m [LegInfo]
+getAllLegsInfo journeyId = do
   taxiLegs <- QSearchRequest.findAllByJourneyId journeyId >>= mapM mkLegInfoFromSearchRequest
   publicTransportLegs <- QFRFSSearch.findAllByJourneyId journeyId >>= mapM mkLegInfoFromFrfsSearchRequest
   return $ sortBy (.order) (taxiLegs <> publicTransportLegs)
 
 startJourney :: Id Journey -> ConfirmReq -> m () -- confirm request
 startJourney journeyId = do
-  allLegs <- getAllLegs journeyId
+  allLegs <- getAllLegsInfo journeyId
   mapM (JL.confirm . mkConfirmReq) allLegs
 
-addLeg :: JourneyLeg leg m => leg -> m ()
-addLeg leg = JL.search leg -- output could be the search request
+addAllLegs :: Id Journey -> [JourneyLegsReq] -> m ()
+addAllLegs journeyId legsReq = do
+  journey <- getJourney journeyId
+  journeyLegs <- getJourneyLegs journeyId
+  journeyLegs `forM` \journeyLeg -> do
+    case journeyLeg.mode of
+      Taxi -> do
+        currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
+        addTaxiLeg journey journeyLeg currentLegReq
+      _ -> return () -- handle metro and other cases
+
+addTaxiLeg :: Journey -> JourneyLeg -> JourneyLegsReq -> m ()
+addTaxiLeg journey journeyLeg currentLegReq = do
+  parentSearchReq <- QSearchRequest.findById journey.searchRequestId
+  let startLocation = mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
+  let endLocation = mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
+  taxiSearchReq <- mkTaxiSearchReq parentSearchReq journeyLeg (TaxiSearchRequestData { origin = startLocation, stops = [endLocation] })
+  JL.search taxiSearchReq
 
 getCurrentLeg :: JourneyLeg leg m => Journey -> m leg
 getCurrentLeg

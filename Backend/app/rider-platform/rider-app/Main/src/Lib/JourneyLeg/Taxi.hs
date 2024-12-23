@@ -1,6 +1,9 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
+import qualified Domain.Types.JourneyLeg as DJourenyLeg
+import qualified Domain.Action.UI.Search as DSearch
+import qualified Domain.Types.SearchRequest as DSR
 
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
@@ -9,13 +12,6 @@ mapRideStatusToJourneyLegStatus status = case status of
   INPROGRESS  -> Ongoing
   COMPLETED   -> Completed
   CANCELLED   -> Cancelled
-
-data TaxiSearchRequest = TaxiSearchRequest
-  { personId: Id Person
-  , bundleVersion :: Maybe Text
-  , fromLocation :: Location
-  , stops :: [Location]
-  }
 
 data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
   { searchRequestId :: Id SearchRequest
@@ -26,7 +22,12 @@ data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
 
 data TaxiLegUpdateData = EditLocation Location EditLocationReq | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
 
-data TaxiLegConfirmRequest = TaxiLegConfirmRequest
+data TaxiSearchRequestData = TaxiSearchRequestData
+  { origin :: SearchReqLocation
+  , stops :: [SearchReqLocation]
+  }
+
+data TaxiLegConfirmRequest = TaxiLegConfirmReques
   { skipBooking :: Bool,
     personId :: Id Person,
     merchantId :: Id Merchant,
@@ -34,15 +35,63 @@ data TaxiLegConfirmRequest = TaxiLegConfirmRequest
   }
 
 data TaxiLegRequest 
-  = TaxiLegRequestSearch MultiModalLeg TaxiSearchRequest
+  = TaxiLegRequestSearch DSR.SearchRequest DJourenyLeg.JourneyLeg TaxiSearchRequestData
   | TaxiLegConfirm TaxiLegConfirmRequest
   | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
 
 instance JourneyLeg TaxiLegRequest m where
-  search (TaxilegRequestSearch multimodalLeg taxiLegSearchData) = do
-    QSR.create multimodalLeg taxiLegSearchData
-    dSearchRes <- search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ (Just journeySearchData)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+  search (TaxilegRequestSearch parentSearchReq multimodalLeg taxiLegSearchData) = do
+    let journeySearchData = mkJourneySearchData
+    legSearchReq <- mkOneWaySearchReq
+    dSearchRes <- 
+      DSearch.search
+        parentSearchReq.riderId
+        legSearchReq
+        parentSearchReq.bundleVersion
+        parentSearchReq.clientVersion
+        parentSearchReq.clientConfigVersion
+        parentSearchReq.clientRnVersion
+        parentSearchReq.clientId
+        parentSearchReq.device
+        False
+        (Just journeySearchData)
+    fork "search cabs" . withShortRetry $ do
+      becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+      let generatedJson = encode becknTaxiReqV2
+      logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 taxiLegSearchData.merchantId
+    where
+      lastAndRest :: [a] -> Maybe (a, [a])
+      lastAndRest [] = Nothing  -- Handle empty list case
+      lastAndRest xs = Just (last xs, init xs)
+     
+      mkOneWaySearchReq = do
+        (destination, stops) <- lastAndRest taxiLegSearchData.stops & fromMaybeM (InvalidRequest "Destination is required!")
+        return $ 
+          OneWaySearch $
+            OneWaySearchReq
+              { origin = taxiLegSearchData.origin
+                isSourceManuallyMoved = False,
+                isDestinationManuallyMoved = False,
+                isSpecialLocation = False, -- Fix it later
+                startTime = multimodalLeg.fromDepartureTime,
+                isReallocationEnabled = parentSearchReq.isReallocationEnabled,
+                quotesUnifiedFlow = parentSearchReq.quotesUnifiedFlow,
+                sessionToken = parentSearchReq.sessionToken,
+                placeNameSource = parentSearchReq.placeNameSource,
+                driverIdentifier = Nothing,
+                ..
+              }
+
+      mkJourneySearchData = 
+        JourneySearchData
+          { journeyId = multimodalLeg.journeyId,
+            journeyLegOrder :: Int,
+            agency = multimodalLeg.agency,
+            skipBooking = False,
+            convenienceCost = Nothing,
+            pricingId = Nothing
+          }
   
   confirm (TaxiLegConfirm req) = do
     now <- getCurrentTime
