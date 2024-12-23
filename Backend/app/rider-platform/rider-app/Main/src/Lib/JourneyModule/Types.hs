@@ -55,7 +55,7 @@ mkTaxiLegConfirmReq LegInfo {..} =
     , estimateId = legId
     }
 
-mkConfirmReq :: LegInfo -> TaxiLegRequest
+mkConfirmReq :: JourneyLeg a => LegInfo -> a
 mkConfirmReq legInfo =
   case legInfo.travelMode of
     Trip.Taxi -> mkTaxiLegConfirmReq legInfo
