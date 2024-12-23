@@ -1779,4 +1779,5 @@ getTa =
     , choose_preferred_metro : "பிடித்த மெட்ரோவைத் தேர்வு செய்யவும்"
     , metro_warriors : "மெட்ரோ வாரியர்ஸ்"
     , search : "தேடுக"
+    , load_qr : "QR லோடு செய்க"
     }

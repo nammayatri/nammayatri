@@ -1779,4 +1779,5 @@ getKn =
     , choose_preferred_metro : "ಆದ್ಯತೆಯ ಮೆಟ್ರೋಅನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , metro_warriors : "ಮೆಟ್ರೋ ವಾರಿಯರ್ಸ್"
     , search : "ಹುಡುಕಿ"
+    , load_qr : "QR ಅನ್ನು ಲೋಡ್ ಮಾಡಿ"
     }

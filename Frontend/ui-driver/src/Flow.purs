@@ -2839,7 +2839,7 @@ homeScreenFlow = do
       homeScreenFlow
     UPDATE_ROUTE state -> do
       void $ pure $ JB.exitLocateOnMap ""   
-      let srcDestConfig = getSrcDestConfig state
+      let srcDestConfig = HU.getSrcDestConfig state
           srcLat = srcDestConfig.srcLat
           srcLon = srcDestConfig.srcLon
           destLat = srcDestConfig.destLat
@@ -2891,18 +2891,21 @@ homeScreenFlow = do
             pure unit
           Nothing -> pure unit
       else do
-        GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
-        let shortRoute = (routeApiResponse !! 0)
-        case shortRoute of
-          Just (Route route) -> do
-            let coor = walkCoordinates route.points
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-            pure $ removeMarker "ny_ic_auto"
-            void $ pure $ removeAllPolylines ""
-            let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-            liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
-            pure unit
-          Nothing -> pure unit            
+        eRouteAPIResponse <- lift $ lift $ Remote.getRoute (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+        case eRouteAPIResponse of
+          Right (GetRouteResp routeApiResponse) -> do
+            let shortRoute = (routeApiResponse !! 0)
+            case shortRoute of
+              Just (Route route) -> do
+                let coor = walkCoordinates route.points
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+                pure $ removeMarker "ny_ic_auto"
+                void $ pure $ removeAllPolylines ""
+                let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+                liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+                pure unit
+              Nothing -> pure unit   
+          Left err -> pure unit          
       homeScreenFlow
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
@@ -3025,7 +3028,7 @@ homeScreenFlow = do
         Left _ -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
     UPDATE_ROUTE_ON_STAGE_SWITCH state -> do
-      let srcDestConfig = getSrcDestConfig state
+      let srcDestConfig = HU.getSrcDestConfig state
           srcLat = srcDestConfig.srcLat
           srcLon = srcDestConfig.srcLon
           destLat = srcDestConfig.destLat
@@ -3035,18 +3038,21 @@ homeScreenFlow = do
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
           srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
           destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0 }
-      GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
-      let shortRoute = (routeApiResponse !! 0)
-      case shortRoute of
-        Just (Route route) -> do
-          let coor = walkCoordinates route.points
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-          pure $ removeMarker "ny_ic_auto"
-          void $ pure $ removeAllPolylines ""
-          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
-          pure unit
-        Nothing -> pure unit
+      eRouteAPIResponse <- lift $ lift $ Remote.getRoute (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+      case eRouteAPIResponse of
+        Right (GetRouteResp routeApiResponse) -> do
+          let shortRoute = (routeApiResponse !! 0)
+          case shortRoute of
+            Just (Route route) -> do
+              let coor = walkCoordinates route.points
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+              pure $ removeMarker "ny_ic_auto"
+              void $ pure $ removeAllPolylines ""
+              let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+              liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
+              pure unit
+            Nothing -> pure unit   
+        Left err -> pure unit  
       homeScreenFlow
     GO_TO_BENEFITS_SCREEN_FROM_HOME -> referralFlow
     GO_TO_ADD_UPI_SCREEN -> do
@@ -4487,37 +4493,6 @@ uploadParcelImageFlow = do
       setValueToLocalStore PARCEL_IMAGE_UPLOADED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0,  otpIncorrect = false, zoneRideBooking = false}})
       homeScreenFlow
-
-getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
-getSrcDestConfig state = 
-  if state.props.currentStage == RideAccepted then
-    {
-      srcLat : state.data.currentDriverLat,
-      srcLon : state.data.currentDriverLon,
-      destLat : state.data.activeRide.src_lat,
-      destLon : state.data.activeRide.src_lon,
-      source : "",
-      destination : state.data.activeRide.source
-    }
-  else if state.data.activeRide.tripType == ST.Rental then
-    {
-      srcLat : fromMaybe state.data.activeRide.src_lat state.data.activeRide.lastStopLat,
-      srcLon : fromMaybe state.data.activeRide.src_lon state.data.activeRide.lastStopLon,
-      destLat : fromMaybe 0.0 state.data.activeRide.nextStopLat,
-      destLon : fromMaybe 0.0 state.data.activeRide.nextStopLon,
-      source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
-      destination : fromMaybe "" state.data.activeRide.nextStopAddress
-    }
-  else {
-      srcLat : state.data.activeRide.src_lat,
-      srcLon : state.data.activeRide.src_lon,
-      destLat : state.data.activeRide.dest_lat,
-      destLon : state.data.activeRide.dest_lon,
-      source : state.data.activeRide.source,
-      destination : fromMaybe "" state.data.activeRide.destination
-  }
-
-
 
 rideRequestScreenFlow :: FlowBT String Unit 
 rideRequestScreenFlow = do
