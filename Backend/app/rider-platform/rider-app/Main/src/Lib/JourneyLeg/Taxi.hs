@@ -4,6 +4,9 @@ import qualified API.UI.Select as DSelect
 import qualified Domain.Types.JourneyLeg as DJourenyLeg
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
 
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
@@ -37,7 +40,8 @@ data TaxiLegConfirmRequest = TaxiLegConfirmReques
 data TaxiLegRequest 
   = TaxiLegRequestSearch DSR.SearchRequest DJourenyLeg.JourneyLeg TaxiSearchRequestData
   | TaxiLegConfirm TaxiLegConfirmRequest
-  | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID) 
+  | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID)
+  | TaxiLegGetState (Id DSR.SearchRequest)
 
 instance JourneyLeg TaxiLegRequest m where
   search (TaxilegRequestSearch parentSearchReq multimodalLeg taxiLegSearchData) = do
@@ -137,7 +141,16 @@ instance JourneyLeg TaxiLegRequest m where
             return ()
 
   cancel (TaxiLeg _legData) = return ()
-    -- call cancelV2
-    -- update JourneyLegStatus: Cancelled
+  
   getState (TaxiLeg _legData) = return InPlan
-  get (TaxiLeg _legData) = return _legData
+  
+  get (TaxiLegGetState srId) = do
+    mbBooking <- QBooking.findByTransactionId srId
+    case mbBooking of
+      Just booking <- do
+        mRide <- QRide.findByRBId booking.Id
+        mkLegInfoFromBookingAndRide booking mbRide
+      Nothing -> do
+        searchReq <- QSearchRequest.findById srId
+        mkLegInfoFromSearchRequest searchReq
+
