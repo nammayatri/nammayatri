@@ -63,21 +63,15 @@ data DecodeAddress
   | SavedLoc SavedReqLocationAPIEntity
 
 decodeLocationAddress :: Maybe LocationAddress -> String
-decodeLocationAddress (Just (LocationAddress add)) = 
-    if (all isNothing [add.city, add.area, add.country, add.building, add.door, add.street, add.city, add.areaCode, add.ward]) then
-          ""
-        else if (trim (fromMaybe ""  add.city) == "" && trim (fromMaybe ""  add.area) == "" && trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
-          ((fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
-        else if (trim (fromMaybe ""  add.area) == "" && trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
-          ((fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
-        else if (trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
-          ((fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
-        else if (trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
-          ((fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
-        else if (trim (fromMaybe ""  add.door) == "") then
-          ((fromMaybe ""  add.building) <> ", " <> (fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
-        else
-          ((fromMaybe ""  add.door) <> ", " <> (fromMaybe ""  add.building) <> ", " <> (fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+decodeLocationAddress (Just (LocationAddress add)) =
+  let
+    components = [add.door, add.building, add.street, add.area, add.city, add.state, add.country]
+    nonEmptyComponents = filter (\comp -> trim (fromMaybe "" comp) /= "") components
+  in
+    if all isNothing [add.city, add.area, add.country, add.building, add.door, add.street, add.areaCode] then
+      ""
+    else
+      joinWith ", " (map (fromMaybe "") nonEmptyComponents)
 decodeLocationAddress Nothing = ""
 
 decodeAddress :: DecodeAddress -> String
@@ -86,21 +80,13 @@ decodeAddress addressWithCons =
     (BookingLocationAPIEntity address) = case addressWithCons of
       Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
+    components = [address.door, address.building, address.street, address.area, address.city, address.state, address.country]
+    nonEmptyComponents = filter (\comp -> trim (fromMaybe "" comp) /= "") components
   in
-    if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+    if all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.areaCode] then
       ""
-    else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "") then
-      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
     else
-      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+      joinWith ", " (map (fromMaybe "") nonEmptyComponents)
 
 encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
 encodeAddress fullAddress addressComponents placeId lat lon =
@@ -413,4 +399,4 @@ locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
-mailToLink = "mailto:" 
+mailToLink = "mailto:"
