@@ -91,7 +91,7 @@ convertMultiModalModeToTripMode input distance maximumWalkDistance = case input 
   MultiModal.Unspecified -> DTrip.Taxi
 
 getJourney :: Id Journey -> m Journey
-getJourney id = JQ.findById id
+getJourney id = JQ.findById id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getAllLegs :: Id Journey -> m LegInfo
 getAllLegs journeyId = do
