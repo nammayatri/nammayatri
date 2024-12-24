@@ -534,19 +534,19 @@ paymentUnderMaintenanceConfig state = let
       visibility = GONE
       },
     primaryText {
-      text = getStringV2 payment_under_maintenance, 
+      text = "Payment Under Maintenance", 
       gravity = CENTER,
       margin = MarginTop 16
       },
     secondaryText { 
-      text = getStringV2 payments_temporarily_unavailable,
+      text = "Payments are temporarily unavailable and will be back soon. Please try again later",
       margin = MarginTop 4
       },
     option1 {
       visibility = false
       },
     option2 { 
-      text = (getStringV2 okay),
+      text = (getString OKAY),
       padding = (Padding 16 0 16 0)
     },
     cornerRadius = (Corners 15.0 true true true true),
