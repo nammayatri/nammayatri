@@ -203,6 +203,7 @@ import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverPanCard as QPanCard
@@ -460,9 +461,10 @@ enableDriver merchantShortId opCity reqDriverId = do
 
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+  mbDriverLicense <- QDL.findByDriverId driverId
 
-  when (isNothing mVehicle && null linkedRCs) $
-    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
+  when (isNothing mVehicle && null linkedRCs && isNothing mbDriverLicense) $
+    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs or no DL are linked to them")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
