@@ -9,6 +9,9 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Lib.JourneyLeg.Types as JT
 import qualified Lib.JourneyLeg.Types as JLT
+import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Journey as QJourney
 
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
@@ -18,14 +21,21 @@ mapRideStatusToJourneyLegStatus status = case status of
   COMPLETED   -> Completed
   CANCELLED   -> Cancelled
 
-data TaxiLegUpdateVariantData  = TaxiLegUpdateVariantData
-  { searchRequestId :: Id SearchRequest
-  , estimateId :: Id Estimate
-  , merchantId :: Id Merchant
-  , personId :: Id Person
+
+data EditLocationRequest = EditLocationRequest
+  {  origin :: Maybe DRide.EditLocation
+  ,  destination :: Maybe DRide.EditLocation
+  ,  personId :: Id Person
+  ,  merchantId :: Id Merchant
+  ,  rideId :: Id Ride
   }
 
-data TaxiLegUpdateData = EditLocation Location EditLocationReq | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
+data TaxiLegUpdateVariantData = TaxiLegUpdateVariantData
+  { searchRequestId :: Id SearchRequest
+  , estimateId :: Id Estimate
+  }
+
+data TaxiLegUpdateData = EditLocation EditLocationRequest | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
 
 data TaxiSearchRequestData = TaxiSearchRequestData
   { origin :: SearchReqLocation
@@ -126,31 +136,34 @@ instance JourneyLeg TaxiLegRequest m where
             disabilityDisable = Nothing
           }
       void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
-  
+
   update (TaxiLegRequest $ TaxiLegRequestUpdate taxiLegUpdateRequest legId) =
-    -- Handle the specific type of update
     case taxiLegUpdateRequest of
-        EditLocation EditLocationReq -> do
-            -- Handle edit pickup and edit destination flow
-            editLocation rideId  (personId, merchantId) editLocationReq
-            return ()
+        EditLocation editLocationRequest -> do
+              let editLocationReq = 
+                DRide.EditLocationReq
+                {
+                  origin = editLocationRequest.origin
+                  destination = editLocationRequest.destination
+                }
+            editLocation editLocationRequest.rideId  (editLocationRequest.personId, editLocationRequest.merchantId) editLocationReq
         TaxiUpdateStartTime newStartTime -> do
-          -- Cancel previous scheduled ride and create new search and then confirm
+          -- Cancel previous scheduled ride and create new search
           return ()
-        UpdateVariant newVariant -> do
-            searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
-            journeyLegInfo <- searchRequest.journeyLegInfo & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
+        UpdateVariant taxiLegUpdateVariant -> do
+            searchRequest <- QSearchRequest.findById taxiLegUpdateVariant.searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
+            journeyLegInfo <- searchRequest.x & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
             oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
             oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
-            newEstimate <- QEstimate.findById estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
-            QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
+            newEstimate <- QEstimate.findById taxiLegUpdateVariant.estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
+            QSearchRequest.updatePricingId taxiLegUpdateVariant.searchRequestId (Just (taxiLegUpdateVariant.estimateId).getId)
             let journeyId = journeyLegInfo.journeyId
             journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
             initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
             price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
             newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
             QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
-            return ()
+            return newEstimate
 
   cancel (TaxiLeg _legData) = return ()
     -- call cancelV2
