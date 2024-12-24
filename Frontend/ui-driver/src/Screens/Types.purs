@@ -1101,7 +1101,18 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
+, whereIsMyBusData :: WhereIsMyBusData
 }
+-- | Represents the current state of bus-related data
+type WhereIsMyBusData = {
+  availableRoutes :: Maybe API.AvailableRoutesList,
+  trip :: Maybe BusTrip,
+  endTripStatus :: Maybe String,
+  lastCompletedTrip :: Maybe API.TripTransactionDetails,
+  fleetConfig :: Maybe API.BusFleetConfigResp
+}
+-- Represents either a current or assigned bus trip
+data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
 
 type FavouritePopUp = {
   visibility :: Boolean,
@@ -1425,8 +1436,18 @@ type HomeScreenProps =  {
   showParcelIntroductionPopup :: Boolean,
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
-  bus_input_data :: String
+  bus_input_data :: String,
+  showRecentBusTripModal :: Boolean,
+  whereIsMyBusConfig :: WhereIsMyBusConfig
  }
+
+type WhereIsMyBusConfig = {
+  showSelectAvailableBusRoutes :: Boolean,
+  selectRouteStage :: Boolean,
+  selectedRoute :: Maybe API.AvailableRoutes,
+  tripTransactionId :: Maybe String,
+  selectedIndex :: Int
+}
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,
@@ -1957,6 +1978,8 @@ data HomeScreenStage =  HomeScreen
                       | RideCompleted
                       | ChatWithCustomer
                       | NotAssigned
+                      | TripAssigned
+                      | RideTracking
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
 instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow
@@ -1974,6 +1997,10 @@ data NotificationType =  DRIVER_REACHED
                       | DRIVER_REACHED_DESTINATION
                       | TO_METRO_COINS
                       | FROM_METRO_COINS
+                      | WMB_TRIP_ASSIGNED
+                      | WMB_TRIP_STARTED
+                      | WMB_TRIP_FINISHED
+                      | DRIVER_REQUEST_REJECTED
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -3347,4 +3374,20 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type EducationScreenState = {
+  videoUrl :: String,
+  headerText :: String,
+  instructionText :: String,
+  buttonText :: String,
+  descriptionList :: Array RC.WMBEducationDescription
+}
+
+type QrCodeScannerState = {
+  headerText :: String
+}
+
+type BusQrCodeData = {
+  vehicleNumber :: String
 }

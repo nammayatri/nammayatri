@@ -36,7 +36,7 @@ import Effect.Uncurried
 import Engineering.Helpers.Commons (screenHeight, screenWidth, os, callbackMapper, parseFloat, liftFlow)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, encode)
-import Foreign.Generic (decodeJSON)
+import Foreign.Generic (decodeJSON, encodeJSON)
 import Language.Types (STR(..))
 import Prelude
 import Presto.Core.Flow (Flow, doAff)
@@ -1106,3 +1106,29 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
 foreign import triggerReloadApp :: String ->Effect Unit
 
 foreign import rsEncryption :: String -> String
+
+-- Where Is My Bus Cache Implementation 
+type RecentBusTrip = {
+  routeCode :: String,
+  sourceCode :: String,
+  sourceName :: String,
+  destCode :: String,
+  destName :: String,
+  vehicleType :: String,
+  vehicleNumber :: String
+}
+
+cacheKeyRecentTrips = "RECENT_BUS_TRIPS"
+
+removeRecentBusTrip :: Unit
+removeRecentBusTrip = removeKeysInSharedPrefs cacheKeyRecentTrips
+
+saveRecentBusTrip :: RecentBusTrip -> Effect Unit
+saveRecentBusTrip newTrip = setEnvInNativeSharedPrefKeysImpl cacheKeyRecentTrips (encodeJSON newTrip)
+
+getRecentBusTrip :: Maybe RecentBusTrip
+getRecentBusTrip = do
+  let tripsStr = getKeyInSharedPrefKeys cacheKeyRecentTrips
+  case runExcept $ decodeJSON tripsStr of
+    Right trip -> Just trip
+    Left _ -> Nothing

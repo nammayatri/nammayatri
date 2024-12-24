@@ -333,26 +333,10 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : true
   }
+  , "showBusEducationVideo" : true
+  , "whereIsMyBusEducationVideo" : "https://www.youtube.com/watch?v=TJmTHuuYx3k"
   , "cityConfig" : getAllCityConfig()
   })
-}
-
-let defRateCardConfig = {
-    "showLearnMore" : false,
-    "learnMoreVideoLink" : ""
-  }
-
-let staticSubscriptionConfig = [
-  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
-  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
-]
-
-let defaultStartAudioConfig = {
-  "acCab" : {},
-  "nonAcCab" : {},
-  "auto" : {},
-  "bike" : {}
 }
 
 let getAllCityConfig = () => {
@@ -422,8 +406,9 @@ let getAllCityConfig = () => {
         "freeSeconds" : 180,
         "perMinCharges" : 2.0
       }
-    },
-    "assets" :{
+    }
+  , "rideStartAudio" : defaultStartAudioConfig
+  , "assets" :{
       "auto_image" : "ny_ic_auto_side_view",
       "onboarding_auto_image" : "ny_ic_auto_side",
       "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
@@ -450,7 +435,6 @@ let getAllCityConfig = () => {
         "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
       }
     }
-  , "rideStartAudio" : defaultStartAudioConfig
   };
   
   let cityConfigs = [
@@ -575,6 +559,12 @@ let getAllCityConfig = () => {
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },
+      rideStartAudio : {
+        acCab : {},
+        nonAcCab : {},
+        auto : {},
+        bike : {}
+      },
       enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
@@ -588,3 +578,21 @@ let getAllCityConfig = () => {
   ];
   return cityConfigs;
 }
+
+let defaultStartAudioConfig = {
+  "acCab" : {},
+  "nonAcCab" : {},
+  "auto" : {},
+  "bike" : {}
+}
+
+let defRateCardConfig = {
+  "showLearnMore" : false,
+  "learnMoreVideoLink" : ""
+}
+
+let staticSubscriptionConfig = [
+{"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+{"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+{"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]

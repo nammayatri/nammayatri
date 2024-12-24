@@ -39,6 +39,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Control.Monad.Except (runExcept)
@@ -67,7 +68,8 @@ import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
-import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime, liftFlow)
+import Engineering.Helpers.RippleCircles (upsertMarkerLabel)
 import Engineering.Helpers.Commons as EHC
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
@@ -141,6 +143,7 @@ import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
+import Components.SelectRouteButton as RouteDisplayController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -330,6 +333,13 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | GoToScanBusQR ST.HomeScreenState
+                    | StartBusRide ST.HomeScreenState
+                    | LinkAndStartBusRide ST.HomeScreenState
+                    | GoToBusEducationScreen ST.HomeScreenState
+                    | WMBEndTrip ST.HomeScreenState
+                    | WMBCancelEndTrip ST.HomeScreenState
+                    | GoToWMBActiveRide ST.HomeScreenState API.TripTransactionDetails
 
 data Action = NoAction
             | BackPressed
@@ -496,6 +506,14 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | RideTrackingModalAction RideTrackingModal.Action
+            | ChooseBusRoute PopUpModal.Action
+            | StartBusTrip PrimaryButtonController.Action
+            | SelectBusRoute RouteDisplayController.Action
+            | ScanQrCode
+            | WMBTripActiveAction API.TripTransactionDetails
+            | WMBEndTripModalAC PopUpModal.Action
+            | WMBEndTripAC String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -760,7 +778,7 @@ eval (Notification notificationType notificationBody) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
-  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER]) then do
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER, show ST.WMB_TRIP_ASSIGNED, show ST.WMB_TRIP_STARTED, show ST.WMB_TRIP_FINISHED]) then do
     exit $ FcmNotification notificationType notificationBody state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
     let city = getValueToLocalStore DRIVER_LOCATION
@@ -1265,6 +1283,28 @@ eval (RideStartRemainingTime seconds status timerId) state = do
     void $ pure $ TF.clearTimerWithId timerId
     updateAndExit state { props {rideStartRemainingTime = -1}} $ NotifyDriverArrived state { props {rideStartRemainingTime = -1}} 
   else continue state { props {rideStartRemainingTime = seconds}}
+
+eval (WMBEndTripModalAC action) state = do
+  case action of
+    PopUpModal.OnButton1Click -> do
+      let endTripStatus = getValueToLocalStore WMB_END_TRIP_STATUS 
+      case endTripStatus of
+        _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS 
+          continue state {props{endRidePopUp = false}}
+        "AWAITING_APPROVAL" -> exit $ WMBCancelEndTrip state
+        _ -> exit $ WMBEndTrip state
+    PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
+    _ -> continue state
+
+eval (WMBEndTripAC endTripStatus) state = 
+  case endTripStatus of
+    _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
+      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
+      void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+      continue state
+    _ -> exit $ WMBEndTrip state
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1367,6 +1407,9 @@ eval (TimeUpdate time lat lng errorCode) state = do
             checkPermissionAndUpdateDriverMarker false 
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
+            if (HU.specialVariantsForTracking Common.FunctionCall) then
+              void $ showMarkerOnMap "ny_ic_bus_marker" (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lng)
+              else pure unit
             checkPermissionAndUpdateDriverMarker true
       else pure unit
       case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
@@ -1447,7 +1490,8 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  if (HU.specialVariantsForTracking Common.FunctionCall) then exit $ DriverAvailabilityStatus state status
+  else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
   else if not state.props.rcActive then do
@@ -1468,9 +1512,9 @@ eval (SwitchDriverStatus status) state = do
           lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
           showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
           popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
-          checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+          checkIfLastWasSilentOrSpecialVariant = state.props.driverStatusSet == ST.Silent || HU.specialVariantsForTracking Common.FunctionCall
       case status of
-        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilentOrSpecialVariant, silentPopUpView = not checkIfLastWasSilentOrSpecialVariant }}
         _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
 
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
@@ -1816,7 +1860,40 @@ eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
 
 eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
 
-eval (UpdateState newState) _ = continue newState 
+eval (UpdateState newState) _ = continue newState
+
+eval (ChooseBusRoute action) state = 
+  case action of
+    PopUpModal.SelectRoute (RouteDisplayController.Select index busRouteNumber) ->
+      let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
+          newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
+      in continue newState
+    PopUpModal.SelectRouteButton RouteDisplayController.Click -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.OnButton1Click -> do
+      exit $ LinkAndStartBusRide state
+    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = state.props.whereIsMyBusConfig.selectRouteStage}}}
+    PopUpModal.OnButton2Click -> do
+      continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
+    _ -> update state
+
+eval (StartBusTrip PrimaryButtonController.OnClick) state =
+      case state.data.whereIsMyBusData.trip of
+        Just (ST.ASSIGNED_TRIP _) -> exit $ StartBusRide state
+        _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = true}}} else update state
+
+eval (SelectBusRoute RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
+
+eval (ScanQrCode) state = exit $ GoToScanBusQR state
+
+
+eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{peekHeight = getPeekHeight state}}
+
+eval (RideTrackingModalAction (RideTrackingModal.EndRide)) state = continue state {props{endRidePopUp = true}}
+
+eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
+  if state.props.currentStage /= ST.RideTracking && state.props.currentStage /= ST.TripAssigned then
+    exit $ GoToWMBActiveRide state (API.TripTransactionDetails tripDetails)
+  else continue state
 
 eval _ state = update state 
 
@@ -2155,7 +2232,7 @@ updateRoute state = do
       destination = srcDestConfig.destination
       routeType = if state.props.currentStage == ST.RideAccepted then "pickup" else "trip"
 
-      srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker", primaryText = source }
+      srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = HU.getCategorySpecificSrcMarkerIcon Common.FunctionCall, primaryText = source }
       destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0}
       
   if (state.data.activeRide.tripType == ST.Rental) && (state.props.currentStage == ST.RideStarted ) && isNothing state.data.activeRide.nextStopAddress then do
@@ -2213,3 +2290,10 @@ updateRoute state = do
           Nothing -> pure unit   
       Left err -> pure unit
   pure unit
+
+
+showMarkerOnMap :: String -> Number -> Number -> Effect Unit
+showMarkerOnMap markerName lat lng = do
+  let markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+  void $ pure $ JB.removeMarker markerName
+  void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "DriverTrackingHomeScreenMap")

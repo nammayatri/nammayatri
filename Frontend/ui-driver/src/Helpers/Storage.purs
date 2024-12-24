@@ -165,6 +165,14 @@ data KeyStore = USER_NAME
                 | LAST_EXECUTED_TIME
                 | SHOW_PARCEL_INTRODUCTION_POPUP
                 | METRO_STATIONS_LIST
+                | IS_BUS_VARIANT_ACTIVE
+                | BUS_EDUCATION_SCREEN_VISTED
+                | WMB_END_TRIP_STATUS
+                | BUS_VEHICLE_NUMBER_HASH
+                | WMB_END_TRIP_STATUS_POLLING
+                | WMB_END_TRIP_REQUEST_ID
+                | ONBOARDING_VEHICLE_CATEGORY
+                | TRACKING_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
