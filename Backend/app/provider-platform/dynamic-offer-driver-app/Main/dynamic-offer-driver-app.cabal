@@ -311,6 +311,7 @@ library
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
+      SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
       SharedLogic.Allocator.Jobs.Mandate.Execution
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
@@ -511,6 +512,7 @@ library
       Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
       Storage.Queries.DriverReferralExtra
+      Storage.Queries.DriverRequestExtra
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
       Storage.Queries.ExophoneExtra
@@ -1075,6 +1077,7 @@ library
       Storage.Queries.OrphanInstances.DriverQuote
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
+      Storage.Queries.OrphanInstances.DriverRequest
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.DriverStats
       Storage.Queries.OrphanInstances.Exophone

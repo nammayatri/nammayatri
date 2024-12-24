@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Driver
     driverAadhaarInfo,
     getDriverPersonNumbers,
     getDriverPersonId,
+    getDriverRequests,
     listDrivers,
     driverActivity,
     enableDriver,
@@ -88,6 +89,7 @@ module Domain.Action.Dashboard.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     mapServiceName,
+    respondDriverRequest,
   )
 where
 
@@ -108,6 +110,7 @@ import Data.List (partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
 import Data.Ord (Down (..))
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Vector as V
@@ -120,6 +123,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
@@ -130,6 +134,7 @@ import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.DriverRequest as DTR
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -204,6 +209,7 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.DriverRequest as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -216,11 +222,13 @@ import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Status as QDocStatus
+import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Notifications as Notification
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
@@ -1033,6 +1041,84 @@ addVehicle merchantShortId opCity reqDriverId req = do
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
+
+------------------------------------------------------------------------------------------------------------------------------------------
+respondDriverRequest :: ShortId DM.Merchant -> Context.City -> Text -> Common.RequestRespondReq -> Flow APISuccess
+respondDriverRequest merchantShortId opCity _ req = do
+  Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.driverRequestId) 60 $ do
+    merchant <- findMerchantByShortId merchantShortId
+    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.driverRequestId) >>= fromMaybeM (InvalidRequest "DriverRequest not found")
+    driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
+    case driverRequest.status of
+      Nothing -> QDR.updateStatusWithReason (castReqStatus (Just req.status)) (Just req.reason) (Id req.driverRequestId)
+      _ -> throwError $ InvalidRequest "Request already processed"
+    void $ case req.status of
+      DC.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = Just DTR.REJECTED, reason = Just req.reason}
+      _ -> pure () -- success notification to be handled in particular use case if required
+  pure Success
+  where
+    notificationTitle = "Request Rejected!"
+    message req_ =
+      cs $
+        unwords
+          [ "Sorry, your request for",
+            (show req_.requestType) <> " has been rejected",
+            "Check the app for more details."
+          ]
+
+------------------------------------------------------------------------------------------------------------------------------------------
+getDriverRequests :: ShortId DM.Merchant -> Context.City -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.RequestStatus -> Maybe Common.RequestType -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestResp
+getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbReqType mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo (castReqStatus mbStatus) (castReqType mbReqType) mbLimit mbOffset
+  driverRequestList <- mapM buildDriverRequestListItem driverRequests
+  pure $ Common.DriverRequestResp driverRequestList
+  where
+    buildDriverRequestListItem dtr@DTR.DriverRequest {..} = do
+      tripTransaction <- B.runInReplica $ QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (InvalidRequest "Trip Transaction not found")
+      driver <- B.runInReplica $ QPerson.findById dtr.requestorId >>= fromMaybeM (PersonDoesNotExist dtr.requestorId.getId)
+      driverMobileNumber <- case driver.mobileNumber of
+        Just phoneNumber -> do
+          decryptedPhoneNumber <- decrypt phoneNumber
+          pure $ Just decryptedPhoneNumber
+        _ -> pure Nothing
+      pure $
+        Common.DriverRequestDetails
+          { raisedAt = createdAt,
+            tripCode = tripTransaction.tripCode,
+            driverName = Just $ driver.firstName <> " " <> (fromMaybe "" driver.lastName),
+            vehicleRegistrationNumber = tripTransaction.vehicleNumber,
+            requestType = castReqTypeToCommon requestType,
+            status = castStatusToCommon status,
+            ..
+          }
+
+castReqType :: Maybe Common.RequestType -> Maybe DTR.RequestType
+castReqType = \case
+  Just Common.END_RIDE -> Just DTR.END_RIDE
+  Just Common.CHANGE_ROUTE -> Just DTR.CHANGE_ROUTE
+  _ -> Nothing
+
+castReqStatus :: Maybe Common.RequestStatus -> Maybe DTR.RequestStatus
+castReqStatus = \case
+  Just Common.APPROVED -> Just DTR.APPROVED
+  Just Common.REJECTED -> Just DTR.REJECTED
+  Just Common.REVOKED -> Just DTR.REVOKED
+  _ -> Nothing
+
+castReqTypeToCommon :: DTR.RequestType -> Common.RequestType
+castReqTypeToCommon = \case
+  DTR.END_RIDE -> Common.END_RIDE
+  DTR.CHANGE_ROUTE -> Common.CHANGE_ROUTE
+
+castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
+castStatusToCommon = \case
+  Just DTR.APPROVED -> Just Common.APPROVED
+  Just DTR.REJECTED -> Just Common.REJECTED
+  Just DTR.REVOKED -> Just Common.REVOKED
+  _ -> Nothing
 
 --------------------------------------------------------------------
 

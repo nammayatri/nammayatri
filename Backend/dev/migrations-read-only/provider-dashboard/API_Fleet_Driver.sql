@@ -81,5 +81,17 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 ------- SQL updates -------
 
+-- {"api":"GetDriverFleetGetDriverRequests","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_DRIVER_REQUESTS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'GET_DRIVER_REQUESTS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverFleetRespondDriverRequest","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET RESPOND_DRIVER_REQUEST","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_RESPOND_DRIVER_REQUEST' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'RESPOND_DRIVER_REQUEST' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
 -- {"api":"PostDriverFleetAddVehicles","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_VEHICLES' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'ADD_VEHICLES' ) ON CONFLICT DO NOTHING;

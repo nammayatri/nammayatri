@@ -20,6 +20,7 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.DriverRequest as DTR
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -65,6 +66,7 @@ data AllocatorJobType
   | WeeklyUpdateTag
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
+  | FleetAlert
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -99,6 +101,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWeeklyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SWeeklyUpdateTag jobData
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
+  restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -150,6 +153,17 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data FleetAlertJobData = FleetAlertJobData
+  { fleetOwnerId :: Id DP.Driver,
+    entityId :: Id DTR.DriverRequest,
+    appletId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FleetAlert
+
+type instance JobContent 'FleetAlert = FleetAlertJobData
 
 newtype UnblockSoftBlockedDriverRequestJobData = UnblockSoftBlockedDriverRequestJobData
   { driverId :: Id DP.Driver

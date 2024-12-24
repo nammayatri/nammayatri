@@ -123,6 +123,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
+    fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     freeTrialDays :: Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,

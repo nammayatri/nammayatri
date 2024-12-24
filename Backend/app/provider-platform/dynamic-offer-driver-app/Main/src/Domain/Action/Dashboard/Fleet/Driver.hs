@@ -20,6 +20,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetSendJoiningOtp,
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
+    getDriverFleetGetDriverRequests,
+    postDriverFleetRespondDriverRequest,
     postDriverFleetAddVehicles,
     putDriverDashboardFleetWmbTripDelete,
   )
@@ -52,6 +54,27 @@ postDriverFleetAddVehicle ::
   Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity phoneNo fleetOwnerId mbMobileCountryCode =
   DDriver.addVehicleForFleet merchantShortId opCity phoneNo mbMobileCountryCode fleetOwnerId
+
+getDriverFleetGetDriverRequests ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Common.RequestStatus ->
+  Maybe Common.RequestType ->
+  Maybe Int ->
+  Maybe Int ->
+  Flow Common.DriverRequestResp
+getDriverFleetGetDriverRequests = DDriver.getDriverRequests
+
+postDriverFleetRespondDriverRequest ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.RequestRespondReq ->
+  Flow APISuccess
+postDriverFleetRespondDriverRequest = DDriver.respondDriverRequest
 
 postDriverFleetAddRCWithoutDriver ::
   ShortId DM.Merchant ->

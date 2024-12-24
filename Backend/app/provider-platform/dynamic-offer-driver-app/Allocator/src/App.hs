@@ -44,6 +44,7 @@ import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
+import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
@@ -109,6 +110,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFleetAlert)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)

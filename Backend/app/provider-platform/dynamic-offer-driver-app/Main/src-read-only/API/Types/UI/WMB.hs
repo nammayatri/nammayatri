@@ -6,6 +6,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Common
 import qualified Domain.Types.TripTransaction
+import qualified Domain.Types.DriverRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -24,6 +25,10 @@ data EndTripStatus
   = SUCCESS
   | WAITING_FOR_ADMIN_APPROVAL
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RequestDetails = RequestDetails {description :: Kernel.Prelude.Maybe Data.Text.Text, requestType :: Domain.Types.DriverRequest.RequestType}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.Maps.Types.LatLong, longName :: Data.Text.Text, shortName :: Data.Text.Text, startPoint :: Kernel.External.Maps.Types.LatLong}
