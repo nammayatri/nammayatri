@@ -21,6 +21,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString)
 import Effect.Aff (Error, makeAff, nonCanceler)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (markPerformance)
@@ -36,6 +37,7 @@ import Engineering.Helpers.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..),TripType(..))
+import Storage
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Debug
@@ -145,8 +147,8 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
     EnableGoto updatedState locationId -> do
-      let destLat = updatedState.data.activeRide.dest_lat
-          destLon = updatedState.data.activeRide.dest_lon
+      let destLat = if updatedState.data.activeRide.dest_lat /= 0.0 then updatedState.data.activeRide.dest_lat else (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)
+          destLon = if updatedState.data.activeRide.dest_lon /= 0.0 then updatedState.data.activeRide.dest_lon else (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON)
       LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon destLat destLon 700 false true
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENABLE_GOTO_API updatedState locationId (lat <> "," <> lon))
