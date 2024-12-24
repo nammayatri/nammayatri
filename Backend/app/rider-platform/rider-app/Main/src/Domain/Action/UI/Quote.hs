@@ -204,7 +204,9 @@ data GetQuotesRes = GetQuotesRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data JourneyData = JourneyData
-  { totalPrice :: HighPrecMoney,
+  { totalMinFare :: HighPrecMoney,
+    totalMaxFare :: HighPrecMoney,
+    duration :: Just Seconds,
     modes :: [DTrip.TravelMode],
     journeyLegs :: [JourneyLeg]
   }
@@ -213,8 +215,7 @@ data JourneyData = JourneyData
 data JourneyLeg = JourneyLeg
   { journeyLegOrder :: Int,
     journeyMode :: DTrip.TravelMode,
-    estimate :: Maybe UEstimate.EstimateAPIEntity,
-    quote :: Maybe FRFSTicketService.FRFSQuoteAPIRes
+    duartion :: Seconds
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -346,108 +347,25 @@ sortByEstimatedFare resultList = do
 
 getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
 getJourneys searchRequest = do
-  if searchRequest.hasMultimodal
-    allJourneys <- QJourney.findBySearchId searchRequest.id
-    forM allJourneys \journey -> do
-      journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
-      journeyLegs <-
-        forM journeyLegs \journeyLeg -> do
-          return $
-            JourneyLeg
-              { journeyLegOrder = journeyLeg.sequenceNumber,
-                journeyMode = journeyLeg.mode,
-                estimate = Nothing,                                     -- call fare api or remove field
-                quote = Nothing                                         -- call fare api or remove field
-              }
-      return $
-        JourneyData
-          { totalPrice = journey.estimatedFare,
-            modes = journey.modes,
-            journeyLegs
-          }
-
-
-
-    ------------------------------------- to depricate -------------------------------------------------------------------------------------------------------------------------
+  if searchRequest.hasMultimodalSearch
     then do
-      allJourneys <- QJourney.findBySearchId searchRequestId
-      journeyNeeded <- pure $ listToMaybe allJourneys
-      journeyData <- try @_ @SomeException $
-        case journeyNeeded of
-          Just journey -> do
-            searchReqs <- QSR.findAllByJourneyId journey.id
-            searchReqJourneyData <- do
-              forM searchReqs \searchReq -> do
-                journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
-                estimateId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "estimateId not found")
-                estimate <- QEstimate.findById (Id estimateId) >>= fromMaybeM (InvalidRequest "estimate not found")
-                estimateApiEntity <- UEstimate.mkEstimateAPIEntity False estimate
-                return $
-                  JourneyLeg
-                    { journeyLegOrder = journeyLegInfo.journeyLegOrder,
-                      journeyMode = DTrip.Taxi,
-                      estimate = Just estimateApiEntity,
-                      quote = Nothing
-                    }
-            frfsSearchReqs <- QFRFSSearch.findAllByJourneyId journey.id
-            frfsSearchReqJourneyData <-
-              forM frfsSearchReqs \frfsSearchReq -> do
-                journeyLegInfo <- frfsSearchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeyLegInfo not found")
-                quoteId <- journeyLegInfo.pricingId & fromMaybeM (InvalidRequest "quoteId not found")
-                quote <- QFRFSQuote.findById (Id quoteId) >>= fromMaybeM (InvalidRequest "quote not found")
-                (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
-                let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-                    discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
-                let quoteRes =
-                      FRFSTicketService.FRFSQuoteAPIRes
-                        { quoteId = quote.id,
-                          _type = quote._type,
-                          price = quote.price.amount,
-                          priceWithCurrency = mkPriceAPIEntity quote.price,
-                          quantity = quote.quantity,
-                          validTill = quote.validTill,
-                          vehicleType = quote.vehicleType,
-                          discountedTickets = quote.discountedTickets,
-                          eventDiscountAmount = quote.eventDiscountAmount,
-                          ..
-                        }
-                let journeyMode = case quote.vehicleType of
-                      BecknSpec.BUS -> DTrip.Bus
-                      BecknSpec.METRO -> DTrip.Metro
-                return $
-                  JourneyLeg
-                    { journeyLegOrder = journeyLegInfo.journeyLegOrder,
-                      journeyMode,
-                      estimate = Nothing,
-                      quote = Just quoteRes
-                    }
-            logDebug $ "journey data for search request: " <> show searchReqJourneyData <> show frfsSearchReqJourneyData
-            let journeyLegs = sortOn (.journeyLegOrder) $ (concat [searchReqJourneyData, frfsSearchReqJourneyData])
-            let sumPrice =
-                  sum $
-                    map
-                      ( \leg -> do
-                          case (leg.estimate, leg.quote) of
-                            (Just estimate, _) -> estimate.estimatedTotalFareWithCurrency.amount.getHighPrecMoney
-                            (_, Just quote) -> quote.priceWithCurrency.amount.getHighPrecMoney
-                            (_, _) -> 0.0
-                      )
-                      journeyLegs
+      allJourneys <- QJourney.findBySearchId searchRequest.id
+      forM allJourneys \journey -> do
+        journeyLegsFromOtp <- getJourneyLegs journey.id
+        journeyLegs <- do
+          forM journeyLegs \journeyLeg -> do
             return $
-              Just $
-                [ JourneyData
-                    { totalPrice = HighPrecMoney {getHighPrecMoney = sumPrice},
-                      modes = journey.modes,
-                      journeyLegs
-                    }
-                ]
-          Nothing ->
-            pure Nothing
-      case journeyData of
-        Left err -> do
-          logDebug $ "journey unavailable for searchId: " <> searchRequestId.getId <> show err
-          return Nothing
-        Right journey -> return journey
-
-  --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+              JourneyLeg
+                { journeyLegOrder = journeyLeg.sequenceNumber,
+                  journeyMode = journeyLeg.mode,
+                  duration = journeyLeg.duration
+                }
+        return $
+          JourneyData
+            { totalMinFare = journey.estimatedMinFare,
+              totalMaxFare = joureny.estimatedMaxFare,
+              modes = journey.modes,
+              journeyLegs,
+              duration = journey.estimatedDuration
+            }
     else return Nothing

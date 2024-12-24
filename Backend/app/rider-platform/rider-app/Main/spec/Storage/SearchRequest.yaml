@@ -76,6 +76,10 @@ SearchRequest:
     initiatedBy: Maybe TripParty
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
+    hasMultimodalSearch: Maybe Bool
+
+  default:
+    hasMultimodalSearch: "false"
 
   types:
     SearchRequestStatus:
@@ -213,6 +217,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       params: [initiatedBy]
       where: id
+
+    updateHasMultimodalSearch:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [hasMultimodalSearch]
 
   constraints:
     id: PrimaryKey

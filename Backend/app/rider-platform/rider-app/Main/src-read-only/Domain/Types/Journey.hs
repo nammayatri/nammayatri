@@ -19,6 +19,8 @@ data Journey = Journey
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    estimatedMaxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legsDone :: Kernel.Prelude.Int,
