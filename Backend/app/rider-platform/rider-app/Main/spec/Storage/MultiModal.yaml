@@ -8,14 +8,12 @@ imports:
   Currency: Kernel.Types.Common
   Location: Domain.Types.Location
   Person: Domain.Types.Person
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
   PolylinePoints: Kernel.External.Maps.Google.MapsClient.Types
-  GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
   MultiModalRouteDetails: Kernel.External.MultiModal.Interface.Types
   MultiModalAgency: Kernel.External.MultiModal.Interface.Types
-
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -134,6 +132,10 @@ WalkLegMultimodal:
 
   derives: "Generic, Show"
 
+  types:
+    WalkLegStatus:
+      enum: "InPlan, Ongoing, Completed"
+
   fields:
     id: Id WalkLegMultimodal
     startTime: UTCTime
@@ -143,6 +145,7 @@ WalkLegMultimodal:
     toLocation: Maybe Location
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
+    status: WalkLegStatus
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
 
@@ -153,6 +156,10 @@ WalkLegMultimodal:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
       where: id
 
   beamFields:
@@ -198,8 +205,8 @@ JourneyLeg:
     distance: Distance
     journeyId: Id Journey
     duration: Seconds
-    polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
-    mode: GeneralVehicleType
+    # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
+    mode: TravelMode
     startLocation: LatLngV2 #LocationV2     #Location.latLng
     endLocation: LatLngV2 #LocationV2
     fromStopDetails: Maybe MultiModalStopDetails

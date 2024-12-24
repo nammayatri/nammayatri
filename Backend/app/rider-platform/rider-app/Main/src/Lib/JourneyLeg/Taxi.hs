@@ -7,20 +7,29 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
-import qualified Lib.JourneyLeg.Types as JT
-import qualified Lib.JourneyLeg.Types as JLT
+import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Journey as QJourney
 
-mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
-mapRideStatusToJourneyLegStatus status = case status of
-  UPCOMING    -> InPlan
-  NEW         -> Booked
-  INPROGRESS  -> Ongoing
-  COMPLETED   -> Completed
-  CANCELLED   -> Cancelled
+data TaxiLegRequestSearchData = TaxiLegRequestSearchData
+  { parentSearchReq :: DSR.SearchRequest
+  , journeyLegData :: DJourenyLeg.JourneyLeg
+  , origin :: SearchReqLocation
+  , stops :: [SearchReqLocation]
+  }
 
+data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
+  { skipBooking :: Bool,
+    personId :: Id Person,
+    merchantId :: Id Merchant,
+    estimateId :: Id Estimate
+  }
+
+data ChangeServiceTierData = ChangeServiceTierData
+  { searchRequestId :: Id SearchRequest
+  , estimateId :: Id Estimate
+  }
 
 data EditLocationRequest = EditLocationRequest
   {  origin :: Maybe DRide.EditLocation
@@ -30,26 +39,19 @@ data EditLocationRequest = EditLocationRequest
   ,  rideId :: Id Ride
   }
 
-data TaxiLegUpdateVariantData = TaxiLegUpdateVariantData
-  { searchRequestId :: Id SearchRequest
-  , estimateId :: Id Estimate
+data TaxiLegRequestUpdateData = EditLocation EditLocationRequest | ChangeServiceTier ChangeServiceTierData
+
+data TaxiLegRequestCancelData
+
+newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
+  { searchId :: Id SearchRequest
   }
 
-data TaxiLegUpdateData = EditLocation EditLocationRequest | TaxiUpdateStartTime UTCTime | UpdateVariant TaxiLegUpdateVariantData
-
-data TaxiSearchRequestData = TaxiSearchRequestData
-  { origin :: SearchReqLocation
-  , stops :: [SearchReqLocation]
+newtype TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
+  { searchId :: Id SearchRequest
   }
 
-data TaxiLegConfirmRequest = TaxiLegConfirmReques
-  { skipBooking :: Bool,
-    personId :: Id Person,
-    merchantId :: Id Merchant,
-    estimateId :: Id Estimate
-  }
-
-data TaxiGetFareData = TaxiGetFareData
+data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData
   { startLocation :: LatLngV2
     endLocation :: LatLngV2
     distance :: Distance,
@@ -58,18 +60,20 @@ data TaxiGetFareData = TaxiGetFareData
     merchantOpCity :: DMOC.MerchantOperationCity
   }
 
-data TaxiLegRequest 
-  = TaxiLegRequestSearch DSR.SearchRequest DJourenyLeg.JourneyLeg TaxiSearchRequestData
-  | TaxiLegConfirm TaxiLegConfirmRequest
-  | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID)
-  | TaxiLegGetState (Id DSR.SearchRequest)
-  | TaxiLegGetFareRequest TaxiGetFareData
+data TaxiLegRequest
+  = TaxiLegRequestSearch TaxiLegRequestSearchData
+  | TaxiLegRequestConfirm TaxiLegRequestConfirmData
+  | TaxiLegRequestUpdate TaxiLegRequestUpdateData
+  | TaxiLegRequestCancel TaxiLegRequestCancelData
+  | TaxiLegRequestGetInfo TaxiLegRequestGetInfoData
+  | TaxiLegRequestGetState TaxiLegRequestGetStateData
+  | TaxiLegRequestGetFare TaxiLegRequestGetFareData
 
 instance JourneyLeg TaxiLegRequest m where
-  search (TaxilegRequestSearch parentSearchReq multimodalLeg taxiLegSearchData) = do
+  search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
     let journeySearchData = mkJourneySearchData
     legSearchReq <- mkOneWaySearchReq
-    dSearchRes <- 
+    dSearchRes <-
       DSearch.search
         parentSearchReq.riderId
         legSearchReq
@@ -85,22 +89,22 @@ instance JourneyLeg TaxiLegRequest m where
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       let generatedJson = encode becknTaxiReqV2
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 taxiLegSearchData.merchantId
+      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 parentSearchReq.merchantId
     where
       lastAndRest :: [a] -> Maybe (a, [a])
       lastAndRest [] = Nothing  -- Handle empty list case
       lastAndRest xs = Just (last xs, init xs)
-     
+
       mkOneWaySearchReq = do
-        (destination, stops) <- lastAndRest taxiLegSearchData.stops & fromMaybeM (InvalidRequest "Destination is required!")
-        return $ 
+        (destination, stops) <- lastAndRest stops & fromMaybeM (InvalidRequest "Destination is required!")
+        return $
           OneWaySearch $
             OneWaySearchReq
-              { origin = taxiLegSearchData.origin
+              { origin = origin
                 isSourceManuallyMoved = False,
                 isDestinationManuallyMoved = False,
                 isSpecialLocation = False, -- Fix it later
-                startTime = multimodalLeg.fromDepartureTime,
+                startTime = journeyLegData.fromDepartureTime,
                 isReallocationEnabled = parentSearchReq.isReallocationEnabled,
                 quotesUnifiedFlow = parentSearchReq.quotesUnifiedFlow,
                 sessionToken = parentSearchReq.sessionToken,
@@ -109,17 +113,17 @@ instance JourneyLeg TaxiLegRequest m where
                 ..
               }
 
-      mkJourneySearchData = 
+      mkJourneySearchData =
         JourneySearchData
-          { journeyId = multimodalLeg.journeyId,
+          { journeyId = journeyLegData.journeyId,
             journeyLegOrder :: Int,
-            agency = multimodalLeg.agency,
+            agency = journeyLegData.agency,
             skipBooking = False,
             convenienceCost = Nothing,
             pricingId = Nothing
           }
-  
-  confirm (TaxiLegConfirm req) = do
+
+  confirm (TaxiLegRequestConfirm req) = do
     now <- getCurrentTime
     let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime newTime oldTime) :: Integer) >= 300 -- 5 minutes buffer
     unless shouldSkipBooking $
@@ -137,66 +141,54 @@ instance JourneyLeg TaxiLegRequest m where
           }
       void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
 
-  update (TaxiLegRequest $ TaxiLegRequestUpdate taxiLegUpdateRequest legId) =
+  update (TaxiLegRequestUpdate taxiLegUpdateRequest) =
     case taxiLegUpdateRequest of
-        EditLocation editLocationRequest -> do
-              let editLocationReq = 
-                DRide.EditLocationReq
-                {
-                  origin = editLocationRequest.origin
-                  destination = editLocationRequest.destination
-                }
-            editLocation editLocationRequest.rideId  (editLocationRequest.personId, editLocationRequest.merchantId) editLocationReq
-        TaxiUpdateStartTime newStartTime -> do
-          -- Cancel previous scheduled ride and create new search
-          return ()
-        UpdateVariant taxiLegUpdateVariant -> do
-            searchRequest <- QSearchRequest.findById taxiLegUpdateVariant.searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
-            journeyLegInfo <- searchRequest.x & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
-            oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
-            oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
-            newEstimate <- QEstimate.findById taxiLegUpdateVariant.estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
-            QSearchRequest.updatePricingId taxiLegUpdateVariant.searchRequestId (Just (taxiLegUpdateVariant.estimateId).getId)
-            let journeyId = journeyLegInfo.journeyId
-            journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
-            initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
-            price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
-            newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
-            QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
-            return newEstimate
+      EditLocation editLocationRequest -> do
+        let editLocationReq =
+          DRide.EditLocationReq
+            { origin = editLocationRequest.origin
+              destination = editLocationRequest.destination
+            }
+        void $ editLocation editLocationRequest.rideId  (editLocationRequest.personId, editLocationRequest.merchantId) editLocationReq
+      UpdateVariant taxiLegUpdateVariant -> do
+        searchRequest <- QSearchRequest.findById taxiLegUpdateVariant.searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
+        journeyLegInfo <- searchRequest.x & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
+        oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
+        oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
+        newEstimate <- QEstimate.findById taxiLegUpdateVariant.estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
+        QSearchRequest.updatePricingId taxiLegUpdateVariant.searchRequestId (Just (taxiLegUpdateVariant.estimateId).getId)
+        let journeyId = journeyLegInfo.journeyId
+        journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
+        initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
+        price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
+        newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
+        QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
-  cancel (TaxiLeg _legData) = return ()
-    -- call cancelV2
-    -- update JourneyLegStatus: Cancelled
-  getState (TaxiLegGetState searchId) = do
-     searchReq <- QSearchRequest.findById searchId >>= fromMaybeM ("Internal Error in searchId :" <> searchId)
-     booking <- QBooking.findByTransactionId searchId
-     ride <- QRide.findByRBId booking.id
-     case (booking, ride) of
-       (Just bookings , Just rides) -> do
-           let journeyLegStatus = mapRideStatusToJourneyLegStatus rides.status
-           return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
-        (Just bookings , Nothing) -> do
-           return $ JT.JourneyLegState { status = Assigning , currentPosition = Nothing }
-        (_, _) -> do
-           isSkipped <- searchReq.journeyLegInfo.isSkipped
-           isCancelled <- searchReq.journeyLegInfo.isCancelled
-           case (isSkipped, isCancelled) of
-             (False, False) -> return $ JT.JourneyLegState { status = InPlan , currentPosition = Nothing}
-             (True, False) ->  return $ JT.JourneyLegState { status = Skipped , currentPosition = Nothing}
-             (_, _) ->  return $ JT.JourneyLegState { status = Cancelled, currentPosition = Nothing }
+  cancel (TaxiLegRequestCancel _legData) = return ()
 
-  get (TaxiLegGetState srId) = do
-    mbBooking <- QBooking.findByTransactionId srId
+  getState (TaxiLegRequestGetState req) = do
+    mbBooking <- QBooking.findByTransactionId req.searchId
+    case mbBooking of
+      Just booking <- do
+        mbRide <- QRide.findByRBId booking.Id
+        let journeyLegStatus = getTexiLegStatusFromBooking booking mbRide
+        return $ JT.JourneyLegState { status = journeyLegStatus , currentPosition = Nothing }
+      Nothing -> do
+        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        let journeyLegStatus = getTexiLegStatusFromSearch searchReq
+        return $ JT.JourneyLegState { status = journeyLegStatus , currentPosition = Nothing}
+
+  getInfo (TaxiLegRequestGetInfoData req) = do
+    mbBooking <- QBooking.findByTransactionId req.searchId
     case mbBooking of
       Just booking <- do
         mRide <- QRide.findByRBId booking.Id
         mkLegInfoFromBookingAndRide booking mbRide
       Nothing -> do
-        searchReq <- QSearchRequest.findById srId
+        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         mkLegInfoFromSearchRequest searchReq
 
-  getFare (TaxiLegGetFareRequest taxiGetFareData) = do
+  getFare (TaxiLegRequestGetFare taxiGetFareData) = do
     let calculateFareReq =
       CallBPPInternal.CalculateFareReq
         { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latLng.latitude, lon = taxiGetFareData.startLocation.latLng.longitude},
@@ -205,4 +197,4 @@ instance JourneyLeg TaxiLegRequest m where
           mbDuartion = Just taxiGetFareData.duration
         }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
-    return JLT.GetFareResponse {estimatedMinFare = fareData.minFare, estimatedMaxFare =  fareData.maxFare}
+    return JT.GetFareResponse {estimatedMinFare = fareData.minFare, estimatedMaxFare =  fareData.maxFare}
