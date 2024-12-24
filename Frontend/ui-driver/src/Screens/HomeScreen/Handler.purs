@@ -223,3 +223,6 @@ homeScreen = do
     GoToMetroWarriors updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_WARRIOR updatedState)
+    GoToScanBusQR updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SCAN_BUS_QR updatedState)

@@ -330,6 +330,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | GoToScanBusQR ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -496,6 +497,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | ChooseBusRoute PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1447,6 +1449,7 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
+  -- exit $ GoToScanBusQR state
   if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
@@ -1816,7 +1819,14 @@ eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
 
 eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
 
-eval (UpdateState newState) _ = continue newState 
+eval (UpdateState newState) _ = continue newState
+
+eval (ChooseBusRoute action) state = 
+  case action of
+    PopUpModal.SelectRouteButton _ -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.OnButton1Click -> do
+      continue state
+    _ -> update state
 
 eval _ state = update state 
 

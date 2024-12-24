@@ -622,3 +622,30 @@ export const renderSlider = function (cb) {
 // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
 //   cb(reqCode)(bundle)(); 
 // };
+
+export const startQRScanner = 
+  function (callback) {
+    return function (action) {
+      return function(parentId){
+        if (typeof JBridge.startQRScanner === "function")
+        {
+          try {
+            const cb = callbackMapper.map(function (data) {
+              console.log("scanQrCode", data);
+              const parsedQrData = JSON.parse(data);
+              console.log(parsedQrData,parsedQrData.error,parsedQrData.data)
+              callback(action(parsedQrData.error)(parsedQrData.data))();
+              JBridge.stopScanning();
+            })
+            JBridge.startQRScanner(parentId, cb);
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+        else
+        {
+          
+        }
+      }
+    }
+}

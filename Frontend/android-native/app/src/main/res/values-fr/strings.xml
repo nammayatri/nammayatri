@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="tip_included"> pourboire inclus!</string>
     <string name="ride_rejected"> Course rejetée</string>
     <string name="request"> Demande </string>
@@ -52,6 +52,8 @@
     <string name="third_party_booking">"Réservation par un tiers"</string>
     <string name="navigate_to_location">Navigate to location</string>
     <string name="close">Close</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
     <string name="message_from_customer">Message from Customer</string>
     <string name="round_trip">Aller-retour</string>
 </resources>

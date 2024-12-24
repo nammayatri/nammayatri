@@ -167,6 +167,8 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
 
+foreign import startQRScanner :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> String -> Effect Unit
+
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
   case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of

@@ -203,6 +203,7 @@ initData =
         }
       , isSpecialLocWarrior : false
       , bus_number : ""
+      , availableRoutes : Nothing
     }
   , props:
       { isFreeRide: false
@@ -304,6 +305,10 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
+      , whereIsMyBusConfig: {
+          showSelectAvailableBusRoutes : true -- FOR_TEST_REVERT
+        , selectRouteStage : false
+      }
       }
   }
 

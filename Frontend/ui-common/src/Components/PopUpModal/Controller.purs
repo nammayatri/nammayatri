@@ -28,6 +28,7 @@ import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
+import Components.PrimaryButton as PrimaryButton
 import JBridge
 import Effect (Effect)
 
@@ -48,6 +49,10 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | BusNumber PrimaryEditTextController.Action
+            | BusType PrimaryEditTextController.Action
+            | SelectRouteButton PrimaryButton.Action
+            | SelectRoute Int String
 
 type Config = {
     primaryText :: TextConfig,
@@ -101,7 +106,23 @@ type Config = {
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    whereIsMyBusConfig :: WhereIsMyBusConfig
+}
+
+type WhereIsMyBusConfig = {
+  visibility :: Visibility,
+  selectRouteStage :: Boolean,
+  busNumber :: PrimaryEditTextController.Config,
+  busType :: PrimaryEditTextController.Config,
+  selectRouteButton :: PrimaryButton.Config,
+  availableRouteList :: Array RouteInfo
+}
+
+type RouteInfo = {
+  busRouteNumber :: String,
+  sourceText :: String,
+  destination :: String
 }
 
 type DeliveryDetailsConfig = {
@@ -270,6 +291,10 @@ type PopUpHeaderConfig = {
   , imageConfig :: ImageConfig
   , gravity :: Gravity
   }
+
+
+
+data BusStage = BUS_INFO | ROUTE_INFO
 
 config :: Config
 config = {
@@ -732,6 +757,52 @@ config = {
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
   , completeProfileLayout : Mb.Nothing
+  , whereIsMyBusConfig : {
+    visibility : GONE,
+    selectRouteStage : false,
+    busNumber : PrimaryEditTextController.config,
+    busType : PrimaryEditTextController.config,
+    selectRouteButton : PrimaryButton.config,
+    availableRouteList : [
+      {
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      }, {
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      }, {
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      },{
+        busRouteNumber : "v1",
+        sourceText : "howrah",
+        destination : "sealdah"
+      }
+    ]
+  }
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

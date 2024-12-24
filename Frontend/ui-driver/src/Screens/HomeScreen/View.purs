@@ -483,6 +483,7 @@ view push state =
           completeYourProfile push state 
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
+      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
   ]
   where 
     currentDate = HU.getCurrentUTC "" 
@@ -3374,4 +3375,14 @@ busOnline push state =
         ]
       ]
     ]
+  ]
+  
+chooseBusRouteModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chooseBusRouteModal push state =
+  linearLayout
+  [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
   ]

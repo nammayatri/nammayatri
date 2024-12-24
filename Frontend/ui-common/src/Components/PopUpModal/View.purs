@@ -17,7 +17,7 @@ module Components.PopUpModal.View where
 import Prelude 
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView)
-import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig, RouteInfo(..), dummyDeliveryPrimaryText)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
@@ -67,6 +67,8 @@ import Prim.Boolean (True)
 import Debug
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
+import Components.PrimaryButton as PrimaryButton
+import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -399,6 +401,7 @@ view push state =
              ]
           ]
         , deliveryView push state
+        , whereIsMyBusView push state
         , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
@@ -864,3 +867,128 @@ checkBoxView push state =
             ]
         ]
     ]
+
+whereIsMyBusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+whereIsMyBusView push state =
+    linearLayout
+    [ height WRAP_CONTENT,
+      width MATCH_PARENT,
+      orientation VERTICAL,
+      visibility state.whereIsMyBusConfig.visibility
+    ][
+        busInfo push state,
+        selectAvailableBusRoutes push state
+    ]
+
+busInfo :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+busInfo push state = 
+    linearLayout
+    [ height WRAP_CONTENT,
+    width MATCH_PARENT,
+    orientation VERTICAL,
+    visibility $ boolToVisibility $ not state.whereIsMyBusConfig.selectRouteStage 
+    ][
+        busNumber push state,
+        busType push state,
+        selectRoute push state
+    ]
+
+busNumber :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+busNumber push state = PrimaryEditText.view (push <<< BusNumber) $ state.whereIsMyBusConfig.busNumber
+
+busType :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+busType push state = PrimaryEditText.view (push <<< BusType) $ state.whereIsMyBusConfig.busType
+
+selectRoute :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+selectRoute push state =
+    linearLayout
+    [ height WRAP_CONTENT,
+    width MATCH_PARENT,
+    orientation VERTICAL
+    ][
+        textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ "Route Number"
+        , color Color.black800
+        , margin $ MarginBottom 8
+        ] <> FontStyle.body3 TypoGraphy,
+        PrimaryButton.view (push <<< SelectRouteButton) $ state.whereIsMyBusConfig.selectRouteButton
+    ]
+
+selectAvailableBusRoutes :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+selectAvailableBusRoutes push state = 
+    linearLayout
+    [ height WRAP_CONTENT,
+    width MATCH_PARENT,
+    orientation VERTICAL,
+    visibility $ boolToVisibility $ state.whereIsMyBusConfig.selectRouteStage 
+    ][
+        scrollView
+        [ height $ V (screenHeight unit - 600)
+        , width MATCH_PARENT
+        ]
+        [
+            routeList push state.whereIsMyBusConfig.availableRouteList
+        ]
+    ]
+
+routeList :: forall w. (Action -> Effect Unit) -> Array RouteInfo -> PrestoDOM (Effect Unit) w
+routeList push routeList =
+    linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER_HORIZONTAL
+    , margin $ MarginTop 16
+    ] $ ( mapWithIndex (\index item -> routeItem push item index (length routeList)) routeList )
+
+routeItem :: forall w. (Action -> Effect Unit) -> RouteInfo -> Int -> Int -> PrestoDOM (Effect Unit) w
+routeItem push route index len = 
+    linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , cornerRadius 8.0
+  , padding $ if index == len - 1 then Padding 0 0 0 32 else Padding 0 0 0 16
+  , gravity CENTER
+  ] $ [ 
+    linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , background Color.white900
+          , cornerRadius 8.0
+          , stroke $ "1," <> Color.grey900
+          , padding $ Padding 20 16 20 16
+          , onClick push $ const $ SelectRoute index route.busRouteNumber
+          ]
+          [
+            textView $ [
+                textFromHtml $ "<span><strong>S-102</strong></span>"
+                , color Color.black900
+                , height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , maxLines 2
+                , ellipsize true
+            ] <> FontStyle.subHeading3 TypoGraphy,
+            linearLayout [
+                color Color.black600,
+                margin $ Margin 8 0 8 0,
+                background Color.black600,
+                gravity CENTER,
+                width $ V 6,
+                height $ V 6,
+                cornerRadius 32.0 
+            ] [],
+            textView $
+            [
+                text "Howrah Station → Airport",
+                color Color.black700
+                , height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , maxLines 2
+                , ellipsize true
+
+            ] <> FontStyle.body20 TypoGraphy
+  ]]

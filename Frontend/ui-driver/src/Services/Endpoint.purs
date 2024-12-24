@@ -413,3 +413,19 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
+
+busAvailableRoutes :: String -> String 
+busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes/" <> vehicleNo
+
+busTripLink :: String -> String
+busTripLink _ = getBaseUrl("") <> "/wmb/trip/link"
+
+busActiveTrip :: String -> String
+busActiveTrip _ = getBaseUrl("") <> "/wmb/trip/active"
+
+busTripStart :: String -> String
+busTripStart tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/start"
+
+busTripEnd :: String -> String
+busTripEnd tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/end"
+
