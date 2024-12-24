@@ -21,8 +21,8 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.JourneyModule.Base as JM
-import qualified Lib.JourneyPlannerTypes as JPT
 import Servant
 import Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSQuote as QFRFSQuote
@@ -44,12 +44,12 @@ postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
   journey <- JM.getJourney journeyId
   legs <- JN.getAllLegsInfo journeyId
-  return $ 
+  return $
     JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration
-      , estimatedFare = journey.estimatedFare
-      , estimatedDistance = journey.estimatedDistance
-      , legs
+      { estimatedDuration = journey.estimatedDuration,
+        estimatedFare = journey.estimatedFare,
+        estimatedDistance = journey.estimatedDistance,
+        legs
       }
 
 postMultimodalConfirm ::

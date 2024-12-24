@@ -59,7 +59,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
-import qualified Lib.JourneyPlannerTypes as JPT
+import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder

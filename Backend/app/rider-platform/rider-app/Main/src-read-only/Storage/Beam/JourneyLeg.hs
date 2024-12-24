@@ -7,6 +7,7 @@ module Storage.Beam.JourneyLeg where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
@@ -31,8 +32,8 @@ data JourneyLegT f = JourneyLegT
     id :: B.C f Kernel.Prelude.Text,
     journeyId :: B.C f Kernel.Prelude.Text,
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    mode :: B.C f Kernel.External.MultiModal.Interface.Types.GeneralVehicleType,
-    polylinePoints :: B.C f Kernel.External.Maps.Google.MapsClient.Types.PolylinePoints,
+    mode :: B.C f Domain.Types.Common.TravelMode,
+    -- polylinePoints :: B.C f Kernel.External.Maps.Google.MapsClient.Types.PolylinePoints,
     routeGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeLongName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeShortName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -35,7 +35,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import qualified Lib.JourneyPlannerTypes as JPT
+import qualified Lib.JourneyLeg.Types as JPT
 import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

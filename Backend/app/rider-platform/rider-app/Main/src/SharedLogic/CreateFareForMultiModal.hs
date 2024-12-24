@@ -19,7 +19,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyPlannerTypes as JPT
+import qualified Lib.JourneyLeg.Types as JPT
 import qualified Storage.Queries.Journey as QJourney
 import Tools.Error
 
