@@ -81,4 +81,9 @@
     <string name="stops">%1$d স্টপস</string>
     <string name="round_trip">রাউন্ড ট্রিপ</string>
     <string name="points">পয়েন্ট</string>
+    <string name="bus_number">বাস নম্বর</string>
+    <string name="route_number">রুট নম্বর</string>
+    <string name="bus_type">বাসের ধরণ</string>
+    <string name="start_ride">যাত্রা শুরু করুন</string>
+    <string name="bus_ride_started_successfully">বাস যাত্রা সফলভাবে শুরু হয়েছে</string>
 </resources>

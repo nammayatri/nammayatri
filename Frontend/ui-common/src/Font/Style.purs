@@ -544,6 +544,7 @@ data Style = Body1
   | Body16
   | Body17
   | Body18
+  | Body20
   | Heading
   | Heading0
   | Heading1
@@ -584,6 +585,7 @@ getFontStyle style styleType = case style of
   Body16 -> body16 styleType
   Body17 -> body17 styleType
   Body18 -> body18 styleType
+  Body20 -> body20 styleType
   Heading -> heading styleType
   Heading0 -> h0 styleType
   Heading1 -> h1 styleType

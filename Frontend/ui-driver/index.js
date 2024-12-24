@@ -27,7 +27,7 @@ console.log("APP_PERF ON JOS READY  END: ", new Date().getTime());
 
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
-window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION", "USER_FAVOURITE_DRIVER", "FROM_METRO_COINS", "TO_METRO_COINS"]);
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION", "USER_FAVOURITE_DRIVER", "FROM_METRO_COINS", "TO_METRO_COINS", "WMB_TRIP_ASSIGNED", "WMB_TRIP_STARTED", "WMB_TRIP_FINISHED", "DRIVER_REQUEST_REJECTED"]);
 
 window.fetchCachedSessionInfo = (key) => {
   window.cacheMap = window.cacheMap || {};

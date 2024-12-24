@@ -1866,6 +1866,29 @@ newtype Keymap = Keymap {
     , poor_cancellation_score :: String
     , good :: String
     , poor :: String
+  , route_bus_number :: String
+  , select_route_number :: String
+  , scan_bus_qr :: String
+  , bus_no :: String
+  , route_no :: String
+  , bus_type_ :: String
+  , recent_ride :: String
+  , assigned_rides :: String
+  , on_duty :: String
+  , end_duty :: String
+  , send_request :: String
+  , send_end_ride_request_to_your_depot :: String
+  , waiting_for_depot_response :: String
+  , waiting_for_depot_manager_response :: String
+  , cancel_request :: String
+  , scan_the_qr_to_start_new_ride :: String
+  , duty_started_depot_manager_will_assign_ride :: String
+  , introducing_yatri_sathi_bus_tracking :: String
+  , on_ride :: String
+  , your_duty_has_started_please_start_the_ride :: String
+  , ending_your_ride_will_stop_tracking :: String
+  , yes_end_ride :: String
+  , route_number :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7407,3 +7430,71 @@ good = a
 poor :: Proxy "poor"
 poor = a
 
+route_bus_number :: Proxy "route_bus_number"
+route_bus_number = Proxy
+
+route_number :: Proxy "route_number"
+route_number = Proxy
+
+select_route_number :: Proxy "select_route_number"
+select_route_number = Proxy
+
+scan_bus_qr :: Proxy "scan_bus_qr"
+scan_bus_qr = Proxy
+
+bus_no :: Proxy "bus_no"
+bus_no = Proxy
+
+route_no :: Proxy "route_no"
+route_no = Proxy
+
+bus_type_ :: Proxy "bus_type_"
+bus_type_ = Proxy
+
+recent_ride :: Proxy "recent_ride"
+recent_ride = Proxy
+
+assigned_rides :: Proxy "assigned_rides"
+assigned_rides = Proxy
+
+on_duty :: Proxy "on_duty"
+on_duty = Proxy
+
+end_duty :: Proxy "end_duty"
+end_duty = Proxy
+
+send_request :: Proxy "send_request"
+send_request = Proxy
+
+send_end_ride_request_to_your_depot :: Proxy "send_end_ride_request_to_your_depot"
+send_end_ride_request_to_your_depot = Proxy
+
+waiting_for_depot_response :: Proxy "waiting_for_depot_response"
+waiting_for_depot_response = Proxy
+
+waiting_for_depot_manager_response :: Proxy "waiting_for_depot_manager_response"
+waiting_for_depot_manager_response = Proxy
+
+cancel_request :: Proxy "cancel_request"
+cancel_request = Proxy
+
+scan_the_qr_to_start_new_ride :: Proxy "scan_the_qr_to_start_new_ride"
+scan_the_qr_to_start_new_ride = Proxy
+
+duty_started_depot_manager_will_assign_ride :: Proxy "duty_started_depot_manager_will_assign_ride"
+duty_started_depot_manager_will_assign_ride = Proxy
+
+introducing_yatri_sathi_bus_tracking :: Proxy "introducing_yatri_sathi_bus_tracking"
+introducing_yatri_sathi_bus_tracking = Proxy
+
+on_ride :: Proxy "on_ride"
+on_ride = Proxy
+
+your_duty_has_started_please_start_the_ride :: Proxy "your_duty_has_started_please_start_the_ride"
+your_duty_has_started_please_start_the_ride = Proxy
+
+ending_your_ride_will_stop_tracking :: Proxy "ending_your_ride_will_stop_tracking"
+ending_your_ride_will_stop_tracking = Proxy
+
+yes_end_ride :: Proxy "yes_end_ride"
+yes_end_ride = Proxy

@@ -100,4 +100,9 @@
     <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
     <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
     <string name="points">Points</string>
+    <string name="bus_number">Bus Number</string>
+    <string name="route_number">Route Number</string>
+    <string name="bus_type">Bus Type</string>
+    <string name="start_ride">Start Ride</string>
+    <string name="bus_ride_started_successfully">Bus ride started successfully</string>
 </resources>

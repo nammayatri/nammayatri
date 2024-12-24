@@ -74,3 +74,5 @@ import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI
 import Screens.MeterScreen.Handler (meterScreen) as UI
 import Screens.MeterRideScreen.Handler (meterRideScreen) as UI
 import Screens.ExtraChargeInfoScreen.Handler (extraChargeInfoScreen) as UI
+import Screens.EducationScreen.View (educationScreen) as UI
+import Screens.QrCodeScanner.View (qrCodeScanner) as UI

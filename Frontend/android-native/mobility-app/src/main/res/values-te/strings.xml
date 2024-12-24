@@ -83,8 +83,13 @@
 <string name="third_party_booking">"థర్డ్ పార్టీ బుకింగ్"</string>
 <string name="parking_charges">%1$.0f₹ పార్కింగ్</string>
 <string name="includes">కలిపి</string>
-    <string name="stops_info">%1$d నిలిపి స్థానాలు (స్టాప్ ఛార్జ్ తో కలిపి)</string>
-    <string name="stops">%1$d నిలిపి స్థానాలు</string>
-    <string name="round_trip"> రౌండ్ ట్రిప్</string>
-    <string name="points">పాయింట్లు</string>
+<string name="stops_info">%1$d నిలిపి స్థానాలు (స్టాప్ ఛార్జ్ తో కలిపి)</string>
+<string name="stops">%1$d నిలిపి స్థానాలు</string>
+<string name="round_trip"> రౌండ్ ట్రిప్</string>
+<string name="points">పాయింట్లు</string>
+<string name="bus_number">బస్ నంబర్</string>
+<string name="route_number">మార్గం నంబర్</string>
+<string name="bus_type">బస్ రకం</string>
+<string name="start_ride">ప్రయాణం ప్రారంభించండి</string>
+<string name="bus_ride_started_successfully">బస్ ప్రయాణం విజయవంతంగా ప్రారంభించబడింది</string>
 </resources>

@@ -31,6 +31,8 @@ import Data.Foldable (foldl)
 import Data.Ord (compare)
 import LocalStorage.Cache
 import Foreign.Object (empty)
+import Data.Function (on)
+import Data.String as DS
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -565,3 +567,26 @@ evaluateFarePolicy :: (Array Types.Conditions) -> Int -> String -> Number
 evaluateFarePolicy conditions distance variant = do
   let sortedFares = DA.reverse $ DA.sortBy (\a b -> compare a.maxDistance b.maxDistance) conditions
   foldl (\acc item -> if distance <= item.maxDistance && distance >= item.minDistance && ((fromMaybe variant item.variant) == variant) then item.ratio else acc) 0.0 sortedFares
+
+-- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)
+pollingConfig :: String -> Types.PollingConfig
+pollingConfig functionName =
+  let config = fetchRemoteConfigString "polling_configs"
+      pollingConfigList = decodeForeignObject (parseJSON config) defaultPollingConfigList
+      compareStrings = on (==) DS.trim
+      mbPollingConfig = DA.find (\item -> compareStrings item.functionName functionName) pollingConfigList.pollingConfigList
+  in fromMaybe defaultPollingConfig mbPollingConfig
+  where
+    defaultPollingConfigList :: Types.PollingConfigList
+    defaultPollingConfigList = {
+      pollingConfigList: []
+    }
+
+    defaultPollingConfig :: Types.PollingConfig
+    defaultPollingConfig = {
+      functionName : "",
+      disable : true,
+      pollingIntervalInMilliSecond : 0,
+      pollingIntervalDelayMultiplier : 0,
+      pollingRetryCount : 0
+    }

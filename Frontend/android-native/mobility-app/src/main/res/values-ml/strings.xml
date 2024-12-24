@@ -82,4 +82,9 @@
     <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
     <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
     <string name="points">പോയിന്റുകൾ</string>
+    <string name="bus_number">ബസ് നമ്പർ</string>
+    <string name="route_number">റൂട്ട് നമ്പർ</string>
+    <string name="bus_type">ബസിന്റെ തരം</string>
+    <string name="start_ride">യാത്ര തുടങ്ങുക</string>
+    <string name="bus_ride_started_successfully">ബസ് യാത്ര വിജയകരമായി തുടങ്ങി</string>
 </resources>

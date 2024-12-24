@@ -60,6 +60,8 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
+import Screens.QrCodeScanner.ScreenData as QrCodeScannerScreenData
+import Screens.EducationScreen.ScreenData as EducationScreenData
 import Screens.Types
 import Toast.ScreenData as ToastScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
@@ -156,6 +158,8 @@ newtype GlobalState = GlobalState {
   , meterScreen :: MeterScreenState
   , meterRideScreen :: MeterRideScreenState
   , extraChargeInfoScreen :: ExtraChargeInfoScreenState.ExtraChargeInfoScreenState
+  , qrCodeScanner :: QrCodeScannerState
+  , educationScreen :: EducationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -222,6 +226,8 @@ defaultGlobalState = GlobalState {
 , meterScreen: MeterScreenData.initData
 , meterRideScreen: MeterRideScreenData.initData
 , extraChargeInfoScreen : ExtraChargeInfoScreenState.initData
+, qrCodeScanner : QrCodeScannerScreenData.initData
+, educationScreen : EducationScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -298,6 +304,8 @@ data ScreenType =
   | MeterScreenStateType (MeterScreenState -> MeterScreenState)
   | MeterRideScreenStateType (MeterRideScreenState -> MeterRideScreenState)
   | ExtraChargeInfoScreenStateType (ExtraChargeInfoScreenState.ExtraChargeInfoScreenState ->ExtraChargeInfoScreenState.ExtraChargeInfoScreenState)
+  | BusQrScanScreenStateType (QrCodeScannerState -> QrCodeScannerState)
+  | EducationScreenStateType (EducationScreenState -> EducationScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -509,6 +517,14 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
                           | UPDATE_STOPS_STATUS HomeScreenState
                           | GO_TO_METER_RIDE_SCREEN
+                          | GO_TO_SCAN_BUS_QR HomeScreenState
+                          | GO_START_BUS_RIDE HomeScreenState
+                          | LINK_AND_START_BUS_RIDE HomeScreenState
+                          | GO_TO_EDUCATION_SCREEN HomeScreenState
+                          | WMB_END_TRIP HomeScreenState
+                          | WMB_CANCEL_END_TRIP HomeScreenState
+                          | WMB_ACTIVE_RIDE HomeScreenState TripTransactionDetails
+                          | WMB_TRIP_REFRESH HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

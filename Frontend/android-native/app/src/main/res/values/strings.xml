@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="tip_included"> tip included!</string>
     <string name="ride_rejected"> Ride Rejected</string>
     <string name="request">Request</string>
@@ -58,4 +58,6 @@
     <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
     <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
     <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>

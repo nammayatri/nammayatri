@@ -16,7 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..))
+import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..), AvailableRoutes(..), BusVehicleDetails(..), AvailableRoutesList(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -206,6 +206,13 @@ initData =
       , overchargingTag : Nothing
       , driverBlocked : false
       , blockedExpiryTime : ""
+      , whereIsMyBusData : { 
+          availableRoutes : Nothing,
+          trip : Nothing, 
+          endTripStatus : Nothing,
+          lastCompletedTrip : Nothing,
+          fleetConfig : Nothing
+          }
     }
   , props:
       { isFreeRide: false
@@ -310,6 +317,14 @@ initData =
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false
+      , showRecentBusTripModal : false
+      , whereIsMyBusConfig: {
+          showSelectAvailableBusRoutes : false
+        , selectRouteStage : false
+        , selectedRoute : Nothing
+        , tripTransactionId : Nothing
+        , selectedIndex : -1
+      }
       }
   }
 
@@ -439,3 +454,45 @@ initialParkingData = {
 
 
 data DriverStatusChangeEntry = DriverStatusChangeNormalEntry | DriverStatusChangeMeterRideEntry
+
+dummyStopInfo :: StopInfo
+dummyStopInfo = StopInfo
+  { name: "Dummy Stop"
+  , code: "DS001"
+  , lat: Just 12.9715987
+  , long: Just 77.594566
+  }
+
+dummyRouteInfo :: RouteInfo
+dummyRouteInfo = RouteInfo
+  { code : "RI001"
+  , shortName : "S-12"
+  , longName : "Bus Name"
+  , startPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
+  , endPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
+  }
+
+dummyBusVehicleDetails :: BusVehicleDetails
+dummyBusVehicleDetails = BusVehicleDetails
+  {
+    number : "S102"
+  , _type : "BUS_AC"
+  }
+
+dummyAvailableRoutes :: AvailableRoutes
+dummyAvailableRoutes = AvailableRoutes
+  { routeInfo : dummyRouteInfo
+  , source : dummyStopInfo
+  , destination : dummyStopInfo
+  , vehicleDetails : dummyBusVehicleDetails
+  , roundRouteCode : Nothing
+  }
+
+dummyAvailableRoutesList :: AvailableRoutesList
+dummyAvailableRoutesList = AvailableRoutesList []

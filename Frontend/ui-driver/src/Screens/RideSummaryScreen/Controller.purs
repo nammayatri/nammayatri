@@ -145,7 +145,7 @@ eval (ShowMapInterCity slat slon dlat dlon key lat lon) state = continueWithCmd 
    [ do
         _ <- case state.data.route of
               Just (Route route) -> do
-                let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "" }
+                let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = getCategorySpecificSrcMarkerIcon CTA.FunctionCall, primaryText = "" }
                 let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
                 let coor = walkCoordinates route.points
                 let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig)
@@ -161,7 +161,7 @@ eval (ShowMapRental slat slon key lat lon) state = continueWithCmd state
                Just (Route route) -> do
                   let center = {lat: slat, lng: slon}
                   let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_hatchback_nav_on_map", primaryText = "" }
-                  let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
+                  let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = getCategorySpecificSrcMarkerIcon CTA.FunctionCall, primaryText = "", anchorU = 0.5, anchorV = 1.0 }
                   let coor = walkCoordinates route.points
                   let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig)
                   JB.drawRoute [normalRoute] (EHC.getNewIDWithTag "DriverSavedLoc1")

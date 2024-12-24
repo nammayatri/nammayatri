@@ -36,7 +36,7 @@ import Effect.Uncurried
 import Engineering.Helpers.Commons (screenHeight, screenWidth, os, callbackMapper, parseFloat, liftFlow)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, encode)
-import Foreign.Generic (decodeJSON)
+import Foreign.Generic (decodeJSON, encodeJSON)
 import Language.Types (STR(..))
 import Prelude
 import Presto.Core.Flow (Flow, doAff)
@@ -44,6 +44,8 @@ import Presto.Core.Types.Language.Flow
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Eq.Generic (genericEq)
 import Data.Array (head, (!!))
+import Debug (spy)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON)
 
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -1128,3 +1130,13 @@ voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> Boolea
 voiceToText = runEffectFn4 voiceToTextImpl
 
 
+-- Where Is My Bus Cache Implementation 
+type RecentBusTrip = {
+  routeCode :: String,
+  sourceCode :: String,
+  sourceName :: String,
+  destCode :: String,
+  destName :: String,
+  vehicleType :: String,
+  vehicleNumber :: String
+}

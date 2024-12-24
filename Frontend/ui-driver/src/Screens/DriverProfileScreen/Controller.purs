@@ -69,6 +69,7 @@ import Mobility.Prelude(boolToInt)
 import Screens (ScreenName(..)) as Screen
 import Components.ExtraChargeCard as ExtraChargeCard
 import Components.DriverProfileScoreCard as DriverProfileScoreCard
+import Helpers.Utils as HU
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -796,17 +797,29 @@ getSelectedLanguages state =
 --   ) listRes
 
 optionList :: DriverProfileScreenState -> Array Listtype
-optionList state =
-    [
-      {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"},
+optionList state = do
+  let specialVariantsForTracking = HU.specialVariantsForTracking FunctionCall
+  if specialVariantsForTracking 
+    then [] 
+    else 
+      [ {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"}
       -- {menuOptions: DOCUMENTS , icon: fetchImage FF_ASSET "ic_document"},
-      {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"},
-      {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"},
-      {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"},
-      {menuOptions: HELP_AND_FAQS , icon: fetchImage FF_ASSET "ny_ic_head_phones"},
-      {menuOptions: LIVE_STATS_DASHBOARD , icon: fetchImage FF_ASSET "ic_graph_black"},
-      {menuOptions: ABOUT_APP , icon: fetchImage FF_ASSET "ny_ic_about"},
-      {menuOptions: DRIVER_LOGOUT , icon: fetchImage FF_ASSET "ny_ic_logout_grey"}
+      , {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"}
+      ]
+  <>
+    [ {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"}
+    , {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"}
+    , {menuOptions: HELP_AND_FAQS , icon: fetchImage FF_ASSET "ny_ic_head_phones"}
+    ]
+  <> 
+    ( if (HU.specialVariantsForTracking FunctionCall) 
+        then [] 
+        else 
+          [ {menuOptions: LIVE_STATS_DASHBOARD , icon: fetchImage FF_ASSET "ic_graph_black"} ]
+    )
+  <>
+    [ {menuOptions: ABOUT_APP , icon: fetchImage FF_ASSET "ny_ic_about"}
+    , {menuOptions: DRIVER_LOGOUT , icon: fetchImage FF_ASSET "ny_ic_logout_grey"}
     ]
 
 updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions

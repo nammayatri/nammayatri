@@ -812,13 +812,19 @@ public class LocationUpdateService extends Service {
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
-
-                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed")) {
+                    String vehicleCategory = getValueFromStorage("VEHICLE_CATEGORY");
+                    String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
+                    boolean isBusRCNotAssigned = false;
+                    isBusRCNotAssigned = vehicleCategory != null &&
+                        vehicleCategory.equals("BusCategory") && 
+                        (vehicleVariant == null || vehicleVariant.equals("__failed") || vehicleVariant.equals(""));
+                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && !isBusRCNotAssigned) {
                         Log.d(LOG_TAG, "DriverUpdateLoc TOKEN | ValidTime Passed");
                         baseHeaders.put("source", log);
                         String merchantId = getValueFromStorage("MERCHANT_ID");
-                        String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
+
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
+
                         if (merchantId != null && vehicleVariant != null && driverMode != null) {
                             baseHeaders.put("mId", merchantId);
                             baseHeaders.put("vt", vehicleVariant);
@@ -827,7 +833,8 @@ public class LocationUpdateService extends Service {
                             baseHeaders.put("mId", merchantID);
                             baseHeaders.put("vt", vVariant);
                             baseHeaders.put("dm", drMode);
-                        } else {
+                        } 
+                        else {
                             MobilityAPIResponse apiResponse = callAPIHandler.callAPI(baseUrl+"/driver/profile", baseHeaders, "{}","GET");
                             try {
                                 JSONObject resp = new JSONObject(apiResponse.getResponseBody());
@@ -847,6 +854,9 @@ public class LocationUpdateService extends Service {
                                     baseHeaders.put("vt", vVariant);
                                     updateStorage("VEHICLE_VARIANT", vVariant);
                                 }
+                                if ( resp.has("vehicleCategory") && resp.getString("vehicleCategory").equals("BUS") ) {
+                                    updateStorage("VEHICLE_CATEGORY", "BusCategory");
+                                }
                             } catch (JSONException e) {
                                 e.printStackTrace();
                                 Bundle params = new Bundle();
@@ -855,7 +865,6 @@ public class LocationUpdateService extends Service {
                             }
                         }
                         Log.d(LOG_TAG, "LocationPayload Size - " + locationPayload.length());
-
                         MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
 
                         Log.d(LOG_TAG, "DriverUpdateLoc API  RespCode - " + apiResponse.getStatusCode() + " RespBody - " + apiResponse.getResponseBody());

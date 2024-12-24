@@ -108,7 +108,7 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
-                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ Remote.makeDriverRegistrationStatusReq true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
                 driverProfileResp <- Remote.fetchDriverProfile false
@@ -483,17 +483,17 @@ profileView push state =
                     , relativeLayout[
                         height WRAP_CONTENT
                       , width MATCH_PARENT
-                      ][
-                        tabImageView state push
-                      , completedProfile state push
+                      ]
+                      [ if (not $ HU.specialVariantsForTracking FunctionCall) then tabImageView state push else singleImageView push state
+                      , if (not $ HU.specialVariantsForTracking FunctionCall) then completedProfile state push else textView [visibility GONE]
                       ]
                     , nameAndMoreDetailsView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
                     ]
-                , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state -- TODO: Once APIs are deployed this code can be uncommented
-                , if state.props.screenType == ST.DRIVER_DETAILS && state.data.config.showPaymentDetails then payment push state else dummyTextView
-                , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
+                , if state.props.screenType == ST.DRIVER_DETAILS && (not $ HU.specialVariantsForTracking FunctionCall) then driverDetailsView push state else vehicleDetailsView push state -- TODO: Once APIs are deployed this code can be uncommented
+                , if state.props.screenType == ST.DRIVER_DETAILS && state.data.config.showPaymentDetails && (not $ HU.specialVariantsForTracking FunctionCall) then payment push state else dummyTextView
+                , if state.props.screenType == ST.DRIVER_DETAILS && (not $ HU.specialVariantsForTracking FunctionCall) then additionalDetails push state else dummyTextView
                 -- , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
                 ]
             ]
@@ -728,6 +728,7 @@ tabView state push =
     , background Color.white900
     , padding $ Padding 6 6 6 6
     , gravity CENTER
+    , visibility $ boolToVisibility $ not $ HU.specialVariantsForTracking FunctionCall
     ]
     [ textView
         [ height WRAP_CONTENT
@@ -2812,3 +2813,47 @@ getVehicleImage category state =
         "ny_ic_black_yellow_auto_side_view"
       else
         "ny_ic_auto_side_view"
+
+singleImageView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+singleImageView push state =
+  let
+    vc = getVehicleCategory state
+    driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
+      "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
+      "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.TruckCategory -> "ny_ic_new_avatar_profile"
+      "FEMALE" -> "ny_ic_profile_female"
+      _ -> "ny_ic_generic_mascot"
+  in
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_HORIZONTAL
+    , padding $ PaddingVertical 16 16
+    , background Color.blue600
+    , orientation HORIZONTAL
+    ]
+    [ linearLayout
+      [ height $ V 88
+      , width $ V 88
+      , cornerRadius 44.0
+      ]
+      [ ( if state.data.profileImg == Nothing then
+            imageView
+              [ height $ V 88
+              , width $ V 88
+              , imageWithFallback $ fetchImage FF_ASSET driverImage
+              ]
+          else
+            linearLayout
+              [ height $ V 88
+              , width $ V 88
+              , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
+              , id (getNewIDWithTag "driver_prof_img")
+              ]
+              []
+        )
+      ]
+    ]

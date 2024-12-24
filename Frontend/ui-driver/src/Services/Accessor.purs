@@ -121,3 +121,52 @@ _types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { ty
 
 _overchargingTag :: forall a b c. Newtype a { overchargingTag :: b | c } => Lens' a b
 _overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap ((unwrap oldRec) { overchargingTag = newVal }))
+
+
+_routeCode :: forall a b c. Newtype a { code :: b | c } => Lens' a b
+_routeCode = lens (unwrap >>> _.code) (\oldRec newVal -> wrap ((unwrap oldRec) { code = newVal }))
+
+_routeShortName :: forall a b c. Newtype a { shortName :: b | c } => Lens' a b
+_routeShortName = lens (unwrap >>> _.shortName) (\oldRec newVal -> wrap ((unwrap oldRec) { shortName = newVal }))
+
+_routeLongName :: forall a b c. Newtype a { longName :: b | c } => Lens' a b
+_routeLongName = lens (unwrap >>> _.longName) (\oldRec newVal -> wrap ((unwrap oldRec) { longName = newVal }))
+
+_routeStartPoint :: forall a b c. Newtype a { startPoint :: b | c } => Lens' a b
+_routeStartPoint = lens (unwrap >>> _.startPoint) (\oldRec newVal -> wrap ((unwrap oldRec) { startPoint = newVal }))
+
+_routeEndPoint :: forall a b c. Newtype a { endPoint :: b | c } => Lens' a b
+_routeEndPoint = lens (unwrap >>> _.endPoint) (\oldRec newVal -> wrap ((unwrap oldRec) { endPoint = newVal }))
+
+_busNumber :: forall a b c. Newtype a { number :: b | c } => Lens' a b
+_busNumber = lens (unwrap >>> _.number) (\oldRec newVal -> wrap ((unwrap oldRec) { number = newVal }))
+
+_busType :: forall a b c. Newtype a { _type :: b | c } => Lens' a b
+_busType = lens (unwrap >>> _._type) (\oldRec newVal -> wrap ((unwrap oldRec) { _type = newVal }))
+
+_stopName :: forall a b c. Newtype a { name :: b | c } => Lens' a b
+_stopName = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name = newVal }))
+
+_stopCode :: forall a b c. Newtype a { code :: b | c } => Lens' a b
+_stopCode = lens (unwrap >>> _.code) (\oldRec newVal -> wrap ((unwrap oldRec) { code = newVal }))
+
+_stopLat :: forall a b c. Newtype a { lat :: b | c } => Lens' a b
+_stopLat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) { lat = newVal }))
+
+_stopLong :: forall a b c. Newtype a { long :: b | c } => Lens' a b
+_stopLong = lens (unwrap >>> _.long) (\oldRec newVal -> wrap ((unwrap oldRec) { long = newVal }))
+
+_routeInfo :: forall a b c. Newtype a { routeInfo :: b | c } => Lens' a b
+_routeInfo = lens (unwrap >>> _.routeInfo) (\oldRec newVal -> wrap ((unwrap oldRec) { routeInfo = newVal }))
+
+_source :: forall a b c. Newtype a { source :: b | c } => Lens' a b
+_source = lens (unwrap >>> _.source) (\oldRec newVal -> wrap ((unwrap oldRec) { source = newVal }))
+
+_destination :: forall a b c. Newtype a { destination :: b | c } => Lens' a b
+_destination = lens (unwrap >>> _.destination) (\oldRec newVal -> wrap ((unwrap oldRec) { destination = newVal }))
+
+_vehicleDetails :: forall a b c. Newtype a { vehicleDetails :: b | c } => Lens' a b
+_vehicleDetails = lens (unwrap >>> _.vehicleDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleDetails = newVal }))
+
+_allowStartRideFromQR :: forall a b c. Newtype a { allowStartRideFromQR :: b | c } => Lens' a b
+_allowStartRideFromQR = lens (unwrap >>> _.allowStartRideFromQR) (\oldRec newVal -> wrap ((unwrap oldRec) { allowStartRideFromQR = newVal }))

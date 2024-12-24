@@ -87,4 +87,9 @@
     <string name="stops">%1$d நிறுத்தங்கள்</string>
     <string name="round_trip">சுற்றுலா பயணம்</string>
     <string name="points">புள்ளிகள்</string>
+    <string name="bus_number">பஸ் எண்</string>
+    <string name="route_number">தொடர் எண்</string>
+    <string name="bus_type">பஸ் வகை</string>
+    <string name="start_ride">பயணம் தொடங்கவும்</string>
+    <string name="bus_ride_started_successfully">பஸ் பயணம் வெற்றிகரமாக தொடங்கப்பட்டது</string>
 </resources>

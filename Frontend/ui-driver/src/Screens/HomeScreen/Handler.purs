@@ -232,3 +232,24 @@ homeScreen = do
     MeterRideScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_RIDE_SCREEN)
+    GoToScanBusQR updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SCAN_BUS_QR updatedState)
+    StartBusRide updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_START_BUS_RIDE updatedState)
+    LinkAndStartBusRide updateState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updateState)
+      App.BackT $ App.BackPoint <$> (pure $ LINK_AND_START_BUS_RIDE updateState)
+    GoToBusEducationScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_EDUCATION_SCREEN updatedState)
+    WMBEndTrip state -> 
+      App.BackT $ App.BackPoint <$> (pure $ WMB_END_TRIP state)
+    WMBCancelEndTrip state -> 
+      App.BackT $ App.BackPoint <$> (pure $ WMB_CANCEL_END_TRIP state)
+    GoToWMBActiveRide state tripDetails -> 
+      App.BackT $ App.BackPoint <$> (pure $ WMB_ACTIVE_RIDE state tripDetails)
+    WMBTripRefresh updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ WMB_TRIP_REFRESH updatedState)

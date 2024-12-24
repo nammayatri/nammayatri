@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
 import Services.Config (getBaseUrl, getCustomerBaseUrl)
 
@@ -97,8 +97,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: Boolean -> String
-driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
+driverRegistrationStatus :: Boolean -> Maybe String -> String
+driverRegistrationStatus queryParam onboardingVehicleCategory = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> (maybe "" (\vc -> "&onboardingVehicleCategory=" <> (show vc)) onboardingVehicleCategory)
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -434,3 +434,38 @@ addDestination rideId = (getBaseUrl "dummy") <> "/meterRide/" <> rideId <> "/add
 
 getMeterPrice :: String -> String
 getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rideId
+
+busAvailableRoutes :: String -> String 
+busAvailableRoutes _ = (getBaseUrl "") <>  "/wmb/availableRoutes"
+
+busTripLink :: String -> String
+busTripLink _ = (getBaseUrl "") <> "/wmb/trip/link"
+
+busActiveTrip :: String -> String
+busActiveTrip _ = (getBaseUrl "") <> "/wmb/trip/active"
+
+busTripStart :: Maybe String -> String
+busTripStart transactionId' = case transactionId' of
+  Just transactionId -> (getBaseUrl "") <> "/wmb/trip/" <> transactionId <> "/start"
+  Nothing -> (getBaseUrl "") <> "/wmb/qr/start"
+
+busTripEnd :: String -> String
+busTripEnd tripTransactionId = (getBaseUrl "") <> "/wmb/trip/" <> tripTransactionId <> "/end"
+
+getBusRideHistory :: String -> String -> Maybe String -> String
+getBusRideHistory limit offset status' = 
+  case status' of
+    Just status -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset<>"&status=" <> status
+    Nothing -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset
+
+getBusFleetConfig :: String -> String
+getBusFleetConfig _ = getBaseUrl "" <> "/fleet/config"
+
+postFleetConsent :: String -> String
+postFleetConsent _ = getBaseUrl "" <> "/fleet/consent"
+
+postWmbRequestsCancel :: String -> String
+postWmbRequestsCancel approvalRequestId = getBaseUrl "" <> "/wmb/requests/" <> approvalRequestId <> "/cancel"
+
+getWmbRequestsStatus :: String -> String
+getWmbRequestsStatus approvalRequestId = (getBaseUrl "") <> "/wmb/requests/" <> approvalRequestId <> "/status"

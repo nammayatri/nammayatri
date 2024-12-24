@@ -25,6 +25,8 @@ type AppConfigDriver a =
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
     waitTimeConfig :: WaitTimeConfig,
+    showBusEducationVideo :: Boolean,
+    whereIsMyBusEducationVideo :: String,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,

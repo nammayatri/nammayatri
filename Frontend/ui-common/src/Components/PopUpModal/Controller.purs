@@ -28,6 +28,8 @@ import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
+import Components.PrimaryButton as PrimaryButton
+import Components.SelectRouteButton as SelectRouteButton
 import JBridge
 import Effect (Effect)
 import Language.Strings (getString)
@@ -50,6 +52,10 @@ instance showAction :: Show Action where
   show (PersonAddress var1) = "PersonAddress_" <> show var1
   show (PersonInstruction var1) = "PersonInstruction_" <> show var1
   show (CheckBoxClick) = "CheckBoxClick"
+  show (BusNumber var1) = "BusNumber_" <> show var1
+  show (BusType var1) = "BusType_" <> show var1
+  show (SelectRouteButton _) = "SelectRouteButton"
+  show (SelectRoute _) = "SelectRoute"
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -68,6 +74,10 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | BusNumber PrimaryEditTextController.Action
+            | BusType PrimaryEditTextController.Action
+            | SelectRouteButton SelectRouteButton.Action
+            | SelectRoute SelectRouteButton.Action
 
 type Config = {
     primaryText :: TextConfig,
@@ -125,13 +135,31 @@ type Config = {
     deliveryDetailsConfig :: DeliveryDetailsConfig,
     externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     voiceToTextConfig :: VoiceToTextConfig,
-    goldTierRewardConfig :: CoinWarningConfig
+    goldTierRewardConfig :: CoinWarningConfig,
+    whereIsMyBusConfig :: WhereIsMyBusConfig
 }
 
 
 type VoiceToTextConfig = {
   id :: String,
   enabled :: Boolean
+}
+
+type WhereIsMyBusConfig = {
+  visibility :: Visibility,
+  selectRouteStage :: Boolean,
+  busNumber :: PrimaryEditTextController.Config,
+  routeNumberLabel :: String,
+  busType :: PrimaryEditTextController.Config,
+  selectRouteButton :: RouteInfo,
+  isRouteSelected :: Boolean,
+  availableRouteList :: Array RouteInfo
+}
+
+type RouteInfo = {
+  busRouteNumber :: String,
+  sourceText :: String,
+  destination :: String
 }
 
 type DeliveryDetailsConfig = {
@@ -213,7 +241,8 @@ type ButtonConfig = {
   showShimmer :: Boolean,
   gravity :: Gravity,
   enableRipple :: Boolean,
-  rippleColor :: String
+  rippleColor :: String,
+  layoutGravity :: Mb.Maybe String
 }
 
 type DismissPopupConfig =
@@ -313,6 +342,9 @@ type CoinWarningConfig = {
   coinImage :: ImageConfig,
   arrowImage :: ImageConfig
 }  
+
+
+data BusStage = BUS_INFO | ROUTE_INFO
 
 config :: Config
 config = {
@@ -451,6 +483,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
   } 
   , option1 : {
       background : Color.white900
@@ -479,6 +512,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , option2 : {
       background : Color.black900
@@ -507,6 +541,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -730,7 +765,7 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       isClickable : false,
-      visibility : VISIBLE,
+      visibility : GONE,
       textStyle : Tags,
       accessibilityHint : "", 
       suffixImage : {
@@ -804,6 +839,20 @@ config = {
           padding: PaddingLeft 8
         }
     } 
+  , whereIsMyBusConfig : {
+    visibility : GONE,
+    selectRouteStage : false,
+    busNumber : PrimaryEditTextController.config,
+    busType : PrimaryEditTextController.config,
+    routeNumberLabel : "",
+    selectRouteButton :  {
+        busRouteNumber : "",
+        sourceText : "",
+        destination : ""
+      },
+    isRouteSelected : false,
+    availableRouteList : []
+  }
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

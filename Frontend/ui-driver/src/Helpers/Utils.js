@@ -690,3 +690,41 @@ export function rentalPickupTimeFormat(input) {
   return `${isToday ? 'Today' : 'Tomorrow'} ${hours}:${minutes.toString().padStart(2, '0')}${ampm} - ${day} ${month}`;
 }
 
+
+export const startQRScanner = 
+  function (callback) {
+    return function (action) {
+      return function(parentId){
+        if (typeof JBridge.startQRScanner === "function")
+        {
+          try {
+            const cb = callbackMapper.map(function (data) {
+              const parsedQrData = JSON.parse(data);
+              callback(action(parsedQrData.error)(parsedQrData.data))();
+              JBridge.stopScanning();
+            })
+            JBridge.startQRScanner(parentId, cb);
+          } catch (e) {
+            console.warn(e);
+            callback(action('PARSE_ERROR')(''))();
+          }
+        }
+        else
+        {
+          console.log("QR Scanner not available");
+          callback(action('QR_SCANNER_NOT_AVAILABLE')(''))();
+        }
+      }
+    }
+}
+
+export const stopScanning = function () {
+  try{
+    if (typeof JBridge.stopScanning === "function") {
+      JBridge.stopScanning();
+    }
+  }
+  catch(e){
+    console.warn(e);
+  }
+}

@@ -23,6 +23,7 @@ import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Data.Function.Uncurried (runFn2)
+import Control.Alt ((<|>))
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -33,6 +34,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
@@ -94,6 +96,10 @@ import Resource.Localizable.StringsV2 as StringsV2
 import Foreign.Object (lookup, empty)
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Services.Accessor as Acc
+import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
+import Data.Lens ((^.))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -204,6 +210,144 @@ endRidePopUp state = let
     option2 {text = (getString END_RIDE), enableRipple = true}
   }
 in popUpConfig'
+
+---------------------------------------- endTripPopUp -----------------------------------------
+endTripPopUp :: ST.HomeScreenState -> PopUpModal.Config
+endTripPopUp state =
+  let config' = PopUpModal.config
+      endTripPopUp' = 
+        config' {
+            primaryText {text = (getString END_RIDE)},
+            secondaryText {text = if checkPrivateBus then StringsV2.getStringV2 LT2.ending_your_ride_will_stop_tracking else StringsV2.getStringV2 LT2.send_end_ride_request_to_your_depot},
+            optionButtonOrientation = "VERTICAL",
+            backgroundClickable = false,
+            option1 {
+              text = if checkPrivateBus then StringsV2.getStringV2 LT2.yes_end_ride else StringsV2.getStringV2 LT2.send_request,
+              enableRipple = true, 
+              width = MATCH_PARENT, 
+              margin = Margin 16 0 16 4,
+              background = Color.red,
+              color = Color.white900,
+              strokeColor = Color.red
+            },
+            option2 {
+              text = StringsV2.getStringV2 LT2.cancel, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = if checkPrivateBus then Color.black600 else Color.white900
+            },
+            popUpHeaderConfig = config'.popUpHeaderConfig {visibility = GONE}
+          }
+  in endTripPopUp'
+  where
+    checkPrivateBus = maybe false (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig
+
+---------------------------------------- waitingForDepoRespPopUp -----------------------------------------
+waitingForDepoRespPopUp :: ST.HomeScreenState -> PopUpModal.Config
+waitingForDepoRespPopUp state =
+  let config' = PopUpModal.config
+      waitingForDepoRespPopUp' = 
+        config' {
+            primaryText {text = StringsV2.getStringV2 LT2.waiting_for_depot_response},
+            secondaryText {text = StringsV2.getStringV2 LT2.waiting_for_depot_manager_response},
+            optionButtonOrientation = "VERTICAL",
+            backgroundClickable = false,
+            option1 {
+              text = StringsV2.getStringV2 LT2.cancel_request, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = Color.white900,
+              layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_black_red_clock" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 24 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in waitingForDepoRespPopUp'
+
+---------------------------------------- wmbEndRideRejectedPopUp -----------------------------------------
+wmbEndRideRejectedPopUp :: ST.HomeScreenState -> PopUpModal.Config
+wmbEndRideRejectedPopUp state =
+  let config' = PopUpModal.config
+      wmbEndRideRejectedPopUp' = 
+        config' {
+            primaryText {text =  "End ride request rejected by \n depot manager!"}, --StringsV2.getStringV2 LT2.waiting_for_depot_manager_response},
+            secondaryText {visibility=GONE},
+            option1 {
+              text = StringsV2.getStringV2 LT2.okay, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = Margin 16 12 16 4,
+              background = Color.black900,
+              color = Color.yellow900,
+              strokeColor = Color.black900
+              -- layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_excalmation_custom" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 16 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in wmbEndRideRejectedPopUp'
+
+---------------------------------------- wmbEndRideSuccessfullPopUp -----------------------------------------
+wmbEndRideSuccessfullPopUp :: ST.HomeScreenState -> PopUpModal.Config
+wmbEndRideSuccessfullPopUp state =
+  let config' = PopUpModal.config
+      wmbEndRideSuccessfullPopUp' = 
+        config' {
+            primaryText {text =  "End Ride!"}, 
+            secondaryText {text = "Your ride has been ended successfully."},
+            option1 {
+              text = StringsV2.getStringV2 LT2.okay, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = Margin 16 12 16 4,
+              background = Color.black900,
+              color = Color.yellow900,
+              strokeColor = Color.black900
+              -- layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 16 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in wmbEndRideSuccessfullPopUp'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config
@@ -979,6 +1123,36 @@ driverStatusIndicators = [
         textColor : Color.white900
     }
 ]
+
+busDriverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+busDriverStatusIndicators state = 
+  let isRideTracking = state.props.currentStage == ST.RideTracking
+      offlineIndicator = if isRideTracking then [] else [makeOfflineIndicator]
+      onlineIndicator = [makeOnlineIndicator isRideTracking]
+  in offlineIndicator <> onlineIndicator
+  where
+    makeOfflineIndicator = {
+      status : ST.Offline,
+      background : Color.red,
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
+      textColor : Color.white900
+    }
+    makeOnlineIndicator isRideTracking = 
+      if isRideTracking then 
+        {
+          status : ST.Online,
+          background : Color.lightMint,
+          imageUrl : HU.fetchImage HU.COMMON_ASSET "ic_outline_status_online_green",
+          textColor : Color.green900
+        }
+      else
+        {
+          status : ST.Online,
+          background : Color.darkMint,
+          imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
+          textColor : Color.white900
+        }
+
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
@@ -3217,3 +3391,148 @@ rideEndStopsWarningPopup state = PopUpModal.config {
     , height = V 190
     }
   }
+
+chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
+chooseBusRouteModalPopup state = 
+  let 
+    (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
+    vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ state.props.whereIsMyBusConfig.selectedRoute <|> (availableRoutesList DA.!! 0)
+    selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
+    config' = PopUpModal.config {
+      padding = Padding 16 16 16 0,
+      primaryText
+      {
+        visibility = GONE
+      }
+    , headerInfo
+      {
+        visibility = GONE
+      }
+    , backgroundClickable = false
+    , secondaryText
+      { 
+        text = StringsV2.getStringV2 LT2.route_number,
+        color = Color.black800,
+        padding = Padding 0 0 0 0,
+        margin = Margin 0 0 0 12,
+        gravity = LEFT,
+        textStyle = FontStyle.Body1,
+        visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
+      }
+    , whereIsMyBusConfig {
+        visibility = VISIBLE,
+        selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
+        busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
+        busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type),
+        routeNumberLabel = StringsV2.getStringV2 LT2.route_number,
+        selectRouteButton = selectRouteButtonConfig state.props.whereIsMyBusConfig.selectedRoute,
+        isRouteSelected = isJust state.props.whereIsMyBusConfig.selectedRoute,
+        availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
+    }
+    , option1 {
+      background = Color.green900
+      , strokeColor = Color.green900
+      , color = Color.white900
+      , text = getString START_RIDE
+      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , width = MATCH_PARENT
+      , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 0 0 0 0
+      , padding = Padding 0 0 0 0
+      , visibility = state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
+    , dismissPopupConfig { visibility = VISIBLE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
+    }
+  in config'
+  where
+    primaryTextConfig text topLabel =
+      PrimaryEditTextController.config {
+          editText 
+          {
+            color = Color.black800,
+            singleLine = true,
+            placeholder = "",
+            text = text,
+            padding = Padding 0 16 20 16,
+            enabled = false,
+            textStyle = FontStyle.SubHeading3
+          },
+          stroke = "1," <> Color.grey700,
+          topLabel { 
+            text = topLabel,
+            color = Color.black800,
+            textStyle = FontStyle.Body3
+            }, 
+          width = MATCH_PARENT,
+          background = Color.grey700,
+          cornerRadius = 8.0,
+          margin = Margin 0 0 0 24,
+          id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
+      }
+    transformAvailableRouteList (API.AvailableRoutesList availableRoutesList) = 
+          map (\route -> 
+                {
+                  busRouteNumber : route ^. (Acc._routeInfo) ^. (Acc._routeCode),
+                  sourceText : route ^. (Acc._source) ^. (Acc._stopName),
+                  destination : route ^. (Acc._destination) ^. (Acc._stopName)
+                }) availableRoutesList
+    selectRouteButtonConfig (Just selectedRoute) = 
+             {
+                busRouteNumber : selectedRoute ^. Acc._routeInfo ^. Acc._routeCode,
+                sourceText : selectedRoute ^. Acc._source  ^. Acc._stopName,
+                destination : selectedRoute ^. Acc._destination ^. Acc._stopName
+            } 
+    selectRouteButtonConfig Nothing = {
+                busRouteNumber : StringsV2.getStringV2 LT2.select_route_number,
+                sourceText : "",
+                destination : ""
+            } 
+
+startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+startBusTripButtonConfig state = PrimaryButton.config
+  { textConfig
+    { text = getString START_RIDE
+    , height = WRAP_CONTENT
+    , textStyle = SubHeading3
+    , weight = Just 1.0
+    , color = Color.white900
+    }
+  , height = WRAP_CONTENT
+  , gravity = CENTER
+  , cornerRadius = 8.0
+  , stroke = "1," <> Color.white900
+  , background = Color.green900
+  , margin = Margin 10 0 10 16
+  , padding = Padding 16 14 16 14
+  }
+
+-------------------------- RideTrackingModal --------------------
+
+rideTrackingModalConfig :: ST.HomeScreenState -> RideTrackingModal.Config
+rideTrackingModalConfig state = 
+  case state.data.whereIsMyBusData.trip of
+    Just (ST.CURRENT_TRIP tripDetails) -> mkConfig tripDetails
+    Just (ST.ASSIGNED_TRIP tripDetails) -> mkConfig tripDetails
+    _ -> RideTrackingModal.config
+  where
+    mkConfig (API.TripTransactionDetails tripDetails) =
+        let config = RideTrackingModal.config
+        in
+          config {
+            sourceStopName = tripDetails.source ^. Acc._stopName,
+            destinationStopName = tripDetails.destination ^. Acc._stopName,
+            busNumber = tripDetails.vehicleNumber,
+            busType = tripDetails.vehicleType,
+            routeNumber = tripDetails.routeInfo ^. Acc._routeCode
+          }

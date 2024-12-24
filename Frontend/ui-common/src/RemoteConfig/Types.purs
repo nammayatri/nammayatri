@@ -354,3 +354,15 @@ type Conditions = {
   variant :: Maybe String,
   ratio :: Number
 }
+  
+type PollingConfigList = {
+  pollingConfigList :: Array PollingConfig
+}
+
+type PollingConfig = {
+  functionName :: String,
+  disable :: Boolean,
+  pollingIntervalInMilliSecond :: Int,
+  pollingIntervalDelayMultiplier :: Int,
+  pollingRetryCount :: Int
+}

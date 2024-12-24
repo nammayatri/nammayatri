@@ -456,3 +456,6 @@ seaGreen = "#288B43"
 
 gunMetalBlue:: Color
 gunMetalBlue = "#2C2F3A"
+
+lightMint :: Color
+lightMint = "#1A53BB6F"

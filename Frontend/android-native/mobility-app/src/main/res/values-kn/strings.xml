@@ -86,4 +86,9 @@
     <string name="stops">%1$d ನಿಲ್ದಾಣಗಳು</string>
     <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
     <string name="points">ಪಾಯಿಂಟ್‌ಗಳು</string>
+    <string name="bus_number">ಬಸ್ ಸಂಖ್ಯೆ</string>
+    <string name="route_number">ಮಾರ್ಗ ಸಂಖ್ಯೆ</string>
+    <string name="bus_type">ಬಸ್ ಪ್ರಕಾರ</string>
+    <string name="start_ride">ಪ್ರಯಾಣ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="bus_ride_started_successfully">ಬಸ್ ಪ್ರಯಾಣ ಯಶಸ್ವಿಯಾಗಿ ಪ್ರಾರಂಭವಾಯಿತು</string>
 </resources>

@@ -47,7 +47,10 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), split, take) as DS
+import Services.Accessor (_stopLat, _stopLong, _stopName, _routeEndPoint, _lon)
+import Services.API as API
 import Data.String as DS
+import Data.Lens ((^.))
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
@@ -73,12 +76,12 @@ import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore)
-import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location, RecentBusTrip)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -182,6 +185,9 @@ foreign import downloadQR  :: String -> Effect Unit
 
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import rentalPickupTimeFormat :: String -> String
+foreign import startQRScanner :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> String -> Effect Unit
+
+foreign import stopScanning :: Unit -> Effect Unit
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson =
@@ -1293,6 +1299,25 @@ getSrcDestConfig state = do
       source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
       destination : fromMaybe "" state.data.activeRide.nextStopAddress
     }
+  else if state.props.currentStage == ST.RideTracking then
+    case state.data.whereIsMyBusData.trip of
+        Just (ST.CURRENT_TRIP (API.TripTransactionDetails trip)) -> do
+          {
+            srcLat : state.data.currentDriverLat,
+            srcLon : state.data.currentDriverLon,
+            destLat : (trip.routeInfo ^. _routeEndPoint) ^. _stopLat,
+            destLon : (trip.routeInfo ^. _routeEndPoint) ^. _lon,
+            source : "",
+            destination : trip.destination ^. _stopName
+          }
+        _ -> {
+          srcLat : 0.0,
+          srcLon : 0.0,
+          destLat : 0.0,
+          destLon : 0.0,
+          source : "",
+          destination : ""
+        }
   else {
       srcLat : if hasStops then state.data.currentDriverLat else state.data.activeRide.src_lat,
       srcLon : if hasStops then state.data.currentDriverLon else state.data.activeRide.src_lon,
@@ -1344,3 +1369,71 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_TIME_THRESHOLD locationUpdateServiceConfig.maxTimeThreshold
   void $ pure $ Storage.setValueToLocalStore LOCATION_PRIORITY locationUpdateServiceConfig.priority
+  
+isAmbulance :: String -> Boolean
+isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+  
+-- Don't Worry this is done for special variants like BUS drivers, only for tracking
+specialVariantsForTracking :: LazyCheck -> Boolean
+specialVariantsForTracking _ = do
+  case (getValueToLocalStore VEHICLE_CATEGORY) of
+    "BusCategory" -> true
+    _ -> false
+
+isGovtBusDriver :: Boolean
+isGovtBusDriver = false
+
+getCategorySpecificSrcMarkerIcon :: LazyCheck -> String
+getCategorySpecificSrcMarkerIcon _ = do
+  case (getValueToLocalStore VEHICLE_CATEGORY) of
+    "BusCategory" -> ""
+    _ -> "ny_ic_src_marker"
+
+tripDetailsToRecentTrip :: API.TripTransactionDetails -> RecentBusTrip
+tripDetailsToRecentTrip tripDetails = 
+  let unwrappedTrip = unwrap tripDetails
+      unwrappedSource = unwrap unwrappedTrip.source
+      unwrappedDest = unwrap unwrappedTrip.destination
+      unwrappedRoute = unwrap unwrappedTrip.routeInfo
+  in
+    { routeCode: unwrappedRoute.code
+    , sourceCode: unwrappedSource.code
+    , sourceName: unwrappedSource.name
+    , destCode: unwrappedDest.code
+    , destName: unwrappedDest.name
+    , vehicleType: unwrappedTrip.vehicleType
+    , vehicleNumber: unwrappedTrip.vehicleNumber
+    }
+
+recentTripToTripDetails :: RecentBusTrip -> API.TripTransactionDetails
+recentTripToTripDetails trip =
+  API.TripTransactionDetails
+    { tripTransactionId: ""
+    , vehicleNumber: trip.vehicleNumber
+    , vehicleType: trip.vehicleType
+    , source: wrap 
+        { name: trip.sourceName
+        , code: trip.sourceCode
+        , lat: Nothing
+        , long: Nothing
+        }
+    , destination: wrap 
+        { name: trip.destName
+        , code: trip.destCode
+        , lat: Nothing
+        , long: Nothing
+        }
+    , status:  API.TRIP_COMPLETED
+    , routeInfo: wrap
+        { code: trip.routeCode
+        , shortName: trip.routeCode
+        , longName: trip.sourceName <> " - " <> trip.destName
+        , startPoint: dummyLatLong
+        , endPoint: dummyLatLong
+        }
+    , endRideApprovalRequestId : Nothing
+    }
+  where
+    dummyLatLong :: API.LatLong
+    dummyLatLong = wrap { lat: 0.0, lon: 0.0 }
