@@ -1,0 +1,46 @@
+FleetMemberAssociation:
+  tableName: fleet_member_association
+
+  fields:
+    fleetMemberId : Text
+    fleetOwnerId : Text
+    enabled : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    fleetMemberId: PrimaryKey
+    fleetOwnerId: SecondaryKey
+
+  queries:
+    findByfleetMemberIdAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetMemberId, fleetOwnerId, enabled]
+
+    findAllMemberByFleetOwnerId:
+      kvFunction: findAllWithKV
+      where: fleetOwnerId
+
+    updateFleetMemberActiveStatus:
+      kvFunction: updateOneWithKV
+      params: [enabled]
+      where:
+        and: [fleetMemberId, fleetOwnerId]
+
+    deleteByMemberId:
+      kvFunction: deleteWithKV
+      where: fleetMemberId
+
+  cachedQueries:
+    findByPrimaryKey:
+      keyParams: [fleetMemberId]
+      dbQuery: findByPrimaryKey
+      dbQueryParams: [fleetMemberId]
+      queryType: FindAndCache
+
+  # extraOperations:
+  #   - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

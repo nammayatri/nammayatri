@@ -363,7 +363,11 @@ let defaultConfigs =
       , _defaultImports = defaultImports
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
-        [ GeneratorType.DOMAIN_HANDLER
+        [ GeneratorType.DOMAIN_TYPE
+        , GeneratorType.BEAM_TABLE
+        , GeneratorType.BEAM_QUERIES
+        , GeneratorType.CACHED_QUERIES
+        , GeneratorType.DOMAIN_HANDLER
         , GeneratorType.DOMAIN_HANDLER_DASHBOARD
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
