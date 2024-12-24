@@ -25,6 +25,7 @@ data JourneyLeg = JourneyLeg
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
     id :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    legId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Kernel.External.MultiModal.Interface.Types.GeneralVehicleType,
     polylinePoints :: Kernel.External.Maps.Google.MapsClient.Types.PolylinePoints,
     routeDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails,

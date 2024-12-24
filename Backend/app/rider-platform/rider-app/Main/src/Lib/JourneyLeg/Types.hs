@@ -27,7 +27,10 @@ data JourneyLeg = JourneyLeg
     sequenceNumber : Int
   }
 
+data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney}
+
 type SearchJourneyLeg leg m = leg -> m ()
+type GetFareJourneyLeg leg m =  leg -> m GetFareResponse
 type ConfirmJourneyLeg leg m = leg -> m ()
 type CancelJourneyLeg leg m = leg -> m ()
 type UpdateJourneyLeg leg m = leg -> m ()
@@ -36,6 +39,7 @@ type GetJourneyLeg leg m = leg -> m LegInfo
 
 class JourneyLeg leg m where
   search :: SearchJourneyLeg leg m
+  getFare :: GetFareJourneyLeg leg m
   confirm :: ConfirmJourneyLeg leg m
   update :: UpdateJourneyLeg leg m
   cancel :: CancelJourneyLeg leg m

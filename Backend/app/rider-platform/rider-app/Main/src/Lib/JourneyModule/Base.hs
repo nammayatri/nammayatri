@@ -4,91 +4,75 @@ import qualified Storage.Queries.Journey as QJourney
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
-import qualified Domain.Types.Trip as DTrip
-import Kernel.Utils.Common
 import qualified Kernel.External.MultiModal.Interface as ExternalInterface
 import qualified Storage.Journey.Queries as JQ
 import qualified Domain.Types.Journey as DJ
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Lib.JourneyModule.Types
+import Lib.JourneyModule.Utils as Utils
+import qualified Domain.Types.Trip as DTrip
+import SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified Kernel.Types.Common
+import qualified Storage.Merchant.Queries as QMerchant
 
 init :: JourneyLeg leg m => JourneyInitData leg -> m Journey
 init journeyReq = do
   journeyId <- generateGUID
   let journeyLegsCount = length journeyReq.legs
-      modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) journeyReq.maximumWalkDistance) journeyReq.legs
-  let journey =
-        DJourney.Journey
-          { convenienceCost = 0,
-            estimatedDistance = journeyReq.estimatedDistance,
-            estimatedDuration = Just journeyReq.estiamtedDuration,
-            estimatedFare = Nothing,                                 -- call fare api
-            fare = Nothing,
-            id = Id journeyId,
-            legsDone = 0,
-            totalLegs = journeyLegsCount,
-            modes = modes,
-            searchRequestId = journeyReq.parentSearchId,
-            merchantId = Just journeyReq.merchantId,
-            merchantOperatingCityId = Just journeyReq.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
-          }
+      modes = map (\x -> Utils.convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) journeyReq.maximumWalkDistance) journeyReq.legs
+
+  totalFares <-
+    Utils.mapWithIndex
+      ( \idx leg -> do
+          journeyLegId <- generateGUID
+          tripMode <- Utils.convertMultiModalModeToTripMode $ leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
+          merchant <- QMerchant.findById journeyReq.merchantId >>= fromMaybeM (MerchantDoesNotExist $ "merchantId:- " <> merchantId.getId)
+          merchantOpCity <- CQMOC.findById journeyReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOpCityId: " <> journeyReq.merchantOperatingCityId.getId)
+          let getFareReq =
+            { startLocation = leg.startLocation,
+              endLocation = leg.endLocation,
+              distance
+            }
+          getFareReq <-
+            case tripMode of
+              DTrip.Taxi -> 
+                TaxiLegGetFareRequest $ TaxiGetFareData
+                  { startLocation = leg.startLocation,
+                    endLocation = leg.endLocation,
+                    distance = leg.distance,
+                    duration = leg.duration,
+                    merchant,
+                    merchantOpCity
+                  }
+              Dtrip.Bus -> 
+                BusLegGetFareRequest $ BusGetFareData
+                  { startLocation = leg.startLocation,
+                    endLocation = leg.endLocation
+                  }
+              Dtrip.Metro -> 
+                MetroLegGetFareRequest $ MetroGetFareData
+                  { startLocation = leg.startLocation,
+                    endLocation = leg.endLocation
+                  }
+              Dtrip.Walk -> 
+                WalkLegGetFareRequest $ WalkGetFareData
+                  { startLocation = leg.startLocation,
+                    endLocation = leg.endLocation
+                  }
+          totalLegFare <- JourneyLegTypes.getFare getFareReq
+          let journeyLeg <- mkJourneyLeg leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId
+          QJourneyLeg.create journeyLeg
+
+          return totalLegFare
+      )
+      journeyReq.legs
+
+  journey <- mkJourney journeyReq.estimatedDistance journeyReq.estiamtedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId totalFares journeyReq.legs journeyReq.maximumWalkDistance
   QJourney.create journey
 
-  mapWithIndex
-    ( \idx leg -> do
-        journeyLegId <- generateGUID
-
-        let journeyLeg <-
-              DJourenyLeg.JourneyLeg
-                { agency = leg.agency,
-                  distance = leg.distance,
-                  duration = leg.duration,
-                  endLocation = leg.endLocation,
-                  fromArrivalTime = leg.fromArrivalTime,
-                  fromDepartureTime = leg.fromDepartureTime,
-                  fromStopDetails = leg.fromStopDetails,
-                  id = journeyLegId,
-                  journeyId,
-                  mode = leg.mode,
-                  polylinePoints = leg.polyline.encodedPolyline,
-                  routeDetails = leg.routeDetails,
-                  sequenceNumber = idx,
-                  startLocation = leg.startLocation.latLng,
-                  toArrivalTime = leg.toArrivalTime,
-                  toDepartureTime = leg.toDepartureTime,
-                  toStopDetails = leg.toStopDetails.latLng,
-                  merchantId = Just journeyReq.merchantId,
-                  merchantOperatingCityId = Just journeyReq.merchantOperatingCityId,
-                  createdAt = currentTime,
-                  updatedAt = currentTime
-                }
-        QJourneyLeg.create journeyLeg
-    )
-    journeyReq.legs
-
-    logDebug $ "journey for multi-modal: " <> show journey
-
-    return journey
-
-mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
-mapWithIndex f xs = go 0 xs
-  where
-    go _ [] = return []
-    go idx (x : xs') = do
-      y <- f idx x
-      ys <- go (idx + 1) xs'
-      return (y : ys)
-
-convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.TravelMode
-convertMultiModalModeToTripMode input distance maximumWalkDistance = case input of
-  MultiModal.MetroRail -> DTrip.Metro
-  MultiModal.Walk -> if (distance > maximumWalkDistance) then DTrip.Taxi else DTrip.Walk
-  MultiModal.Bus -> DTrip.Bus
-  MultiModal.Unspecified -> DTrip.Taxi
+  logDebug $ "journey for multi-modal: " <> show journey
+  return journey
 
 getJourney :: Id Journey -> m Journey
 getJourney id = JQ.findById id >>= fromMaybeM (JourneyNotFound id.getId)

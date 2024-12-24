@@ -1,5 +1,7 @@
 module Lib.JourneyLeg.Bus where
 
+import qualified Lib.JourneyLeg.Types as JLT
+
 
 data BusLegUpdateData = BusLegUpdateData
   { id :: Id LegID,
@@ -8,7 +10,12 @@ data BusLegUpdateData = BusLegUpdateData
     startTime :: Maybe UTCTime
   }
 
-data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData | BusLegRequestUpdate BusLegUpdateData
+data BusLegRequest = BusLegRequestSearch MultiModalLeg BusSearchData | BusLegRequestConfirm BusConfirmData | BusLegRequestUpdate BusLegUpdateData | BusLegGetFareRequest BusGetFareData
+
+data BusGetFareData = BusGetFareData
+  { startLocation :: LatLngV2,
+    endLocation :: LatLngV2
+  }
 
 instance JourneyLeg BusLeg m where
   search (BusLegRequestSearch multimodalLeg busLegSearchData) = do
@@ -33,3 +40,6 @@ instance JourneyLeg BusLeg m where
   cancel (BusLeg _legData) = return ()
   getState (BusLeg _legData) = return ()
   get (BusLeg _legData) = return ()
+
+  getFare (BusLegGetFareRequest _busGetFareData) =  do
+    return JLT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 20}, estimatedMaxFare =  HighPrecMoney {getHighPrecMoney = 20}}

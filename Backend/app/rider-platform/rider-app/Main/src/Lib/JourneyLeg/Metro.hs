@@ -1,4 +1,6 @@
 module Lib.JourneyLeg.Metro where
+  
+import qualified Lib.JourneyLeg.Types as JLT
 
 mapServiceStatusToJourneyLegStatus :: ServiceStatus -> JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
@@ -14,7 +16,12 @@ data MetroLegRequest
   = MetroLegRequestSearch MultiModalLeg MetroSearchData
   | MetroLegConfirm MetroLegConfirmRequest
   | MetroLegGetState (Id Frfs.FRFSSearch)
+  | MetroLegGetFareRequest MetroGetFareData
 
+data MetroGetFareData = MetroGetFareData
+  { startLocation :: LatLngV2,
+    endLocation :: LatLngV2
+  }
 instance JourneyLeg MetroLeg m where
   search (MetroLegRequestSearch multimodalLeg metroLegSearchData) = do
     FRFSSearch.create multimodalLeg metroLegSearchData
@@ -28,3 +35,6 @@ instance JourneyLeg MetroLeg m where
     -- TODO: No booking for metro, we can handle for bookings once booking is there
     searchReq <- QFRFSSearch.findById srId
     return $ mkLegInfoFromFrfsSearchRequest searchReq
+
+  getFare (MetroLegGetFareRequest _metroGetFareData) =  do
+    return JLT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare =  HighPrecMoney {getHighPrecMoney = 10}}
