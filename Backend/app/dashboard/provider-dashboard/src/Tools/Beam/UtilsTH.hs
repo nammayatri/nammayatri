@@ -22,7 +22,7 @@ import Kernel.Utils.Version as Reexport
 import Language.Haskell.TH
 
 currentSchemaName :: String
-currentSchemaName = "atlas_driver_offer_bpp"
+currentSchemaName = "atlas_bpp_dashboard"
 
 mkTableInstances :: Name -> String -> Q [Dec]
 mkTableInstances name table = TH.mkTableInstances name table currentSchemaName
