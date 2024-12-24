@@ -10,6 +10,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified Storage.Queries.Transformers.Booking as QTB
+import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.JourneyLeg as DJL
+import qualified Lib.JourneyLeg.Types as JLT
 
 data JourneyInitData = JourneyInitData
   { legs :: [MultiModalLeg],
@@ -177,3 +182,60 @@ mkCancelReq legInfo =
 --       Trip.Taxi -> TaxiLegUpdateRequest req
 --       _ -> MetroLegUpdateRequest req
 -- -- handle other cases
+
+
+mkJourney :: Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> JLT.GetFareResponse -> [MultiModalLeg] -> Meters -> DJ.Journey
+mkJourney estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId totalFares legs maximumWalkDistance = do
+  let journeyLegsCount = length legs
+      modes = map (\x -> Utils.convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
+  retrun $
+    DJourney.Journey
+      { convenienceCost = 0,
+        estimatedDistance = estimatedDistance,
+        estimatedDuration = Just estiamtedDuration,
+        estimatedFare = Nothing,
+        fare = Nothing,
+        id = Id journeyId,
+        legsDone = 0,
+        totalLegs = journeyLegsCount,
+        modes = modes,
+        searchRequestId = parentSearchId,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now,
+        estimatedMinFare = sumHighPrecMoney $ totalFares.estimatedMinFare,
+        estimatedMaxFare = sumHighPrecMoney $ totalFares.estimatedMaxFare
+      }
+
+mkJourneyLeg :: MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> DJL.JourneyLeg
+mkJounreyleg leg merchantId merchantOpCityId journeyId = do
+  currentTime <- getCurrentTime
+  return $
+    DJL.JourneyLeg
+      { agency = leg.agency,
+        distance = leg.distance,
+        duration = leg.duration,
+        endLocation = leg.endLocation,
+        fromArrivalTime = leg.fromArrivalTime,
+        fromDepartureTime = leg.fromDepartureTime,
+        fromStopDetails = leg.fromStopDetails,
+        id = journeyLegId,
+        journeyId,
+        mode = leg.mode,
+        polylinePoints = leg.polyline.encodedPolyline,
+        routeDetails = leg.routeDetails,
+        sequenceNumber = idx,
+        startLocation = leg.startLocation.latLng,
+        toArrivalTime = leg.toArrivalTime,
+        toDepartureTime = leg.toDepartureTime,
+        toStopDetails = leg.toStopDetails.latLng,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        createdAt = currentTime,
+        updatedAt = currentTime,
+        legId = Nothing
+      }
+
+sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
+sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney

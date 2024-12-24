@@ -32,6 +32,8 @@ Journey:
     convenienceCost: Int
     totalLegs: Int
     legsDone: Int
+    estimatedMinFare: Maybe HighPrecMoney
+    estimatedMaxFare: Maybe HighPrecMoney
 
   beamFields:
     fare:
@@ -209,6 +211,7 @@ JourneyLeg:
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
     sequenceNumber: Int
+    legId: Maybe Text
 
   beamFields:
     distance:
