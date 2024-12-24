@@ -33,7 +33,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
-import Services.Backend (driverRegistrationStatusBT)
+import Services.Backend (driverRegistrationStatusBT, makeDriverRegistrationStatusReq)
 import Styles.Colors as Color
 import Common.Types.App
 import Types.App (defaultGlobalState)
@@ -61,7 +61,7 @@ screen initialState screenType =
           void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
             if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
-              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ makeDriverRegistrationStatusReq true
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
         if initialState.props.isAlternateMobileNumberExists then do

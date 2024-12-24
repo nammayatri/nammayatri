@@ -359,3 +359,16 @@ getRideEndAudioConfig city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideEndAudioConfig
         cityValue = getCityBasedConfig value $ toLower city
     getCityBasedConfig value $ toLower city
+
+wmbEducationConfigs :: String -> Types.WMBEducationConfig
+wmbEducationConfigs language =
+  let config = fetchRemoteConfigString ("wmb_education_configs_" <> language)
+  in decodeForeignObject (parseJSON config) defaultWMBEducationConfig
+  where
+    defaultWMBEducationConfig :: Types.WMBEducationConfig
+    defaultWMBEducationConfig = {
+      videoUrl : "",
+      title : "",
+      isWMBEducationEnabled : false,
+      descriptionList : [{ description : "", imageUrl: ""}]
+    }
