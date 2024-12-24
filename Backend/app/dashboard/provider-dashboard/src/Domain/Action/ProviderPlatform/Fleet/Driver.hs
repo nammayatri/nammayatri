@@ -18,6 +18,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetSendJoiningOtp,
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
+    postDriverFleetAddVehicles,
   )
 where
 
@@ -193,3 +194,9 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLinkRCWithDriver) fleetOwnerId req
+
+postDriverFleetAddVehicles :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateVehiclesReq -> Flow APISuccess
+postDriverFleetAddVehicles merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicles) apiTokenInfo.personId.getId req

@@ -15,6 +15,25 @@ imports:
 module: Driver
 
 apis:
+  - POST: # BulkUploadVehicleForFleetAPI
+      endpoint: /fleet/addVehicles
+      auth: ApiAuthV2
+      multipart:
+        type: CreateVehiclesReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
+      helperApi:
+        - POST:
+            endpoint: /fleet/addVehicles/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: CreateVehiclesReq
+            response:
+              type: APISuccess
   - POST: # AddVehicleForFleetAPI
       endpoint: /{mobileNo}/fleet/addVehicle
       auth: ApiAuthV2
@@ -554,6 +573,10 @@ types:
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
+    - derive: "'HideSecrets"
+  CreateVehiclesReq:
+    - recordType: NewType
+    - file: FilePath
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
     - blocked: Bool
