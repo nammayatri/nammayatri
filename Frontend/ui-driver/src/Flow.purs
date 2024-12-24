@@ -123,6 +123,7 @@ import Screens.CustomerReferralTrackerScreen.Types as CRST
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
@@ -173,7 +174,9 @@ import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
 import Screens.MetroWarriorsScreen.Controller (getMetroWarriorFromLocationId, makeStationsData)
+import Screens.QrCodeScanner.Controller as QrCodeScannerController
 import Data.Newtype (unwrap)
+import Foreign.Generic (decodeJSON)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3095,6 +3098,14 @@ homeScreenFlow = do
       updateWarriorSettings $ not state.data.isSpecialLocWarrior
       homeScreenFlow
     GO_TO_METRO_WARRIOR state -> metroWarriorsScreenFlow
+    GO_TO_SCAN_BUS_QR state -> busQrScanScreenFlow (\qrData -> do
+      case runExcept $ decodeJSON $ EHC.atobImpl qrData of
+        Right (response :: ST.BusQrCodeData) -> do
+          availableRoutes <- Remote.getAvailableRoutesBT response.busNumber
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { availableRoutes = Just $ availableRoutes }, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true }}})
+          homeScreenFlow
+        Left _ -> pure unit
+      )
   homeScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
@@ -4653,6 +4664,14 @@ metroWarriorsScreenFlow = do
           pure unit
       metroWarriorsScreenFlow
     _ -> metroWarriorsScreenFlow
+
+busQrScanScreenFlow :: (_ -> FlowBT String Unit) -> FlowBT String Unit
+busQrScanScreenFlow callback = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.qrCodeScanner currentState.qrCodeScanner
+  case action of
+    QrCodeScannerController.GoToHomeScreen -> homeScreenFlow
+    QrCodeScannerController.ExecuteCallback qrData -> callback qrData
 
 disableGoTo :: GetDriverInfoResp -> FlowBT String Unit
 disableGoTo (GetDriverInfoResp getDriverInfoResp) = do

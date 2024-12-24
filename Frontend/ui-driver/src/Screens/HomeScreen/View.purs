@@ -467,6 +467,7 @@ view push state =
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
+      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -3128,3 +3129,13 @@ metroWarriorsToggleView push state =
 
     switchButtonView push isActive = 
       SwitchButtonView.view (push <<< MetroWarriorSwitchAction) $ SwitchButtonView.config {isActive = isActive}
+
+chooseBusRouteModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chooseBusRouteModal push state =
+  linearLayout
+  [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
+  ]

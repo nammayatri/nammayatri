@@ -1857,3 +1857,86 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
       "txnId" : txnId
     }
     
+------------------------------------------ Where is my bus ------------------------------------------
+
+-- Fetch Available Routes
+getAvailableRoutes :: String -> Flow GlobalState (Either ErrorResponse AvailableRoutesList)
+getAvailableRoutes vehicleNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.busAvailableRoutes vehicleNumber) unwrapResponse $ callAPI headers $ GetAvailableRoutes ""
+  where
+    unwrapResponse (x) = x
+
+getAvailableRoutesBT :: String -> FlowBT String AvailableRoutesList
+getAvailableRoutesBT vehicleNumber = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes "")
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+-- Link Trip
+linkTrip :: TripLinkReq -> Flow GlobalState (Either ErrorResponse TripLinkResp)
+linkTrip req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.busTripLink "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse (x) = x
+
+linkTripBT :: TripLinkReq -> FlowBT String TripLinkResp
+linkTripBT req = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.busTripLink "") identity errorHandler (lift $ lift $ callAPI headers req)
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+-- Fetch Active Trip
+getActiveTrip :: Flow GlobalState (Either ErrorResponse TripLinkResp)
+getActiveTrip = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.busActiveTrip "") unwrapResponse $ callAPI headers $ GetActiveBusTrip ""
+  where
+    unwrapResponse (x) = x
+
+getActiveTripBT :: FlowBT String TripLinkResp
+getActiveTripBT = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.busActiveTrip "") identity errorHandler (lift $ lift $ callAPI headers $ GetActiveBusTrip "")
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+-- Start Trip
+startTrip :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+startTrip tripTransactionId latlong = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.busTripStart tripTransactionId) unwrapResponse $ callAPI headers (mkStartTripReq tripTransactionId latlong)
+  where
+    unwrapResponse (x) = x
+
+startTripBT :: String -> LatLong -> FlowBT String ApiSuccessResult
+startTripBT tripTransactionId latlong = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.busTripStart tripTransactionId) identity errorHandler (lift $ lift $ callAPI headers (mkStartTripReq tripTransactionId latlong))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+
+mkStartTripReq :: String -> LatLong -> TripStartReq
+mkStartTripReq tripTransactionId latlong = TripStartReq tripTransactionId (BusLocation {location : latlong})
+
+-- End Trip
+endTrip :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+endTrip tripTransactionId latlong = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.busTripEnd tripTransactionId) unwrapResponse $ callAPI headers (mkEndTripReq tripTransactionId latlong)
+  where
+    unwrapResponse (x) = x
+
+endTripBT :: String -> LatLong -> FlowBT String ApiSuccessResult
+endTripBT tripTransactionId latlong = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.busTripEnd tripTransactionId) identity errorHandler (lift $ lift $ callAPI headers (mkEndTripReq tripTransactionId latlong))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+mkEndTripReq :: String -> LatLong -> TripEndReq
+mkEndTripReq tripTransactionId latlong = TripEndReq tripTransactionId (BusLocation {location : latlong})

@@ -324,6 +324,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | GoToScanBusQR ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -481,6 +482,7 @@ data Action = NoAction
             | ClickMetroWarriors
             | MetroWarriorPopupAC PopUpModal.Action
             | MetroWarriorSwitchAction SwitchButtonView.Action
+            | ChooseBusRoute PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1407,31 +1409,32 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
-  else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
-  else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
-  else if not state.props.rcActive then do
-    void $ pure $ toast $ getString LT.PLEASE_ADD_RC
-    exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
-  else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
-    continueWithCmd state [ do
-          _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
-          _ <- pure $ toast (getString LT.DEMO_MODE_DISABLED)
-          _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
-          _ <- getCurrentPosition (showDriverMarker "ny_ic_auto" true) constructLatLong
-          pure NoAction
-          ]
-  else if state.props.driverStatusSet == status then continue state
-  else if not state.data.isVehicleSupported && status /= ST.Offline && state.props.rcActive then continue state { props{ vehicleNSPopup = true }}
-    else do
-      let maxDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
-          lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
-          showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
-          popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
-          checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
-      case status of
-        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
-        _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
+  exit $ GoToScanBusQR state
+  -- if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  -- else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
+  -- else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
+  -- else if not state.props.rcActive then do
+  --   void $ pure $ toast $ getString LT.PLEASE_ADD_RC
+  --   exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
+  -- else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
+  --   continueWithCmd state [ do
+  --         _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
+  --         _ <- pure $ toast (getString LT.DEMO_MODE_DISABLED)
+  --         _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
+  --         _ <- getCurrentPosition (showDriverMarker "ny_ic_auto" true) constructLatLong
+  --         pure NoAction
+  --         ]
+  -- else if state.props.driverStatusSet == status then continue state
+  -- else if not state.data.isVehicleSupported && status /= ST.Offline && state.props.rcActive then continue state { props{ vehicleNSPopup = true }}
+  --   else do
+  --     let maxDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
+  --         lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
+  --         showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
+  --         popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
+  --         checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+  --     case status of
+  --       ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+  --       _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
 
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
@@ -1769,6 +1772,13 @@ eval (MetroWarriorPopupAC PopUpModal.OnButton1Click) state = do
   updateAndExit newState $ EnableGoto newState state.data.driverGotoState.selectedGoTo
 
 eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { props { showMetroWarriorWarningPopup = false }}
+
+eval (ChooseBusRoute action) state = 
+  case action of
+    PopUpModal.SelectRouteButton _ -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.OnButton1Click -> do
+      continue state
+    _ -> update state
 
 eval _ state = update state 
 

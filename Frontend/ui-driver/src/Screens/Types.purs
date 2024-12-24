@@ -1097,6 +1097,7 @@ type HomeScreenData =  {
 , blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
 , isSpecialLocWarrior :: Boolean
+, availableRoutes :: Maybe API.AvailableRoutesList
 }
 
 type PlansState = {
@@ -1413,8 +1414,14 @@ type HomeScreenProps =  {
   intercityInfoPopUp :: Boolean,
   retryRideList :: Boolean,
   showParcelIntroductionPopup :: Boolean,
-  showMetroWarriorWarningPopup :: Boolean
+  showMetroWarriorWarningPopup :: Boolean,
+  whereIsMyBusConfig :: WhereIsMyBusConfig
  }
+
+type WhereIsMyBusConfig = {
+  showSelectAvailableBusRoutes :: Boolean,
+  selectRouteStage :: Boolean
+}
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,
@@ -3327,4 +3334,17 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type EducationScreenState = {
+  videoUrl :: String
+}
+
+type QrCodeScannerState = {
+  isError :: Boolean,
+  qrData :: String
+}
+
+type BusQrCodeData = {
+  busNumber :: String
 }

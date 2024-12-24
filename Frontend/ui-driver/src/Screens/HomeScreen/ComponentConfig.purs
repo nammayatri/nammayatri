@@ -91,6 +91,7 @@ import Debug
 import Control.Apply as CA
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -3009,3 +3010,102 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
       width = MATCH_PARENT
     }
   }
+
+chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
+chooseBusRouteModalPopup state = 
+  let 
+    config' = PopUpModal.config {
+      padding = Padding 16 16 16 24,
+      primaryText
+      {
+        visibility = GONE
+      }
+    , headerInfo
+      {
+        visibility = GONE
+      }
+    , backgroundClickable = false
+    , secondaryText
+      { 
+        text = "Route/Bus Number",
+        color = Color.black800,
+        textStyle = FontStyle.Body1,
+        visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
+      }
+    , whereIsMyBusConfig {
+        visibility = VISIBLE,
+        selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
+        busNumber = primaryTextConfig "V1" "BUS NUMBER",
+        busType = primaryTextConfig "AC" "BUS Type",
+        selectRouteButton = primaryButtonConfig
+    }
+    , option1 {
+      background = Color.green900
+      , strokeColor = Color.white900
+      , color = Color.white900
+      , text = getString START_RIDE
+      , isClickable = false
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = false
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , visibility = state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
+    , dismissPopupConfig { visibility = VISIBLE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
+    }
+  in config'
+  where
+    primaryTextConfig text topLabel =
+      PrimaryEditTextController.config {
+          editText 
+          {
+            color = Color.black800,
+            singleLine = true,
+            placeholder = "",
+            text = text,
+            padding = Padding 0 16 20 16,
+            enabled = false,
+            textStyle = FontStyle.SubHeading3
+          },
+          topLabel { 
+            text = topLabel,
+            color = Color.black800,
+            textStyle = FontStyle.Body3
+            }, 
+          width = MATCH_PARENT,
+          background = Color.grey700,
+          cornerRadius = 8.0,
+          margin = Margin 0 0 0 24,
+          id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
+      }
+    primaryButtonConfig = 
+      PrimaryButton.config {
+        textConfig {
+          textFromHtml = Just "<b>Select Route Number</b>",
+          color = Color.grey900,
+          textStyle = SubHeading3,
+          gravity = LEFT,
+          width = V $ (EHC.screenWidth unit) - 100
+        },
+        isSuffixImage = true,
+        suffixImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_drop_down",
+          gravity = RIGHT
+        },
+        gravity = CENTER_VERTICAL,
+        background = Color.white900,
+        margin = Margin 0 0 0 24,
+        padding = Padding 20 16 20 16,
+        height = V 54,
+        viewbackground = Color.black900, 
+        stroke = "1," <> Color.grey900
+      }

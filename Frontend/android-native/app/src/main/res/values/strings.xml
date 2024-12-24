@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="tip_included"> tip included!</string>
     <string name="ride_rejected"> Ride Rejected</string>
     <string name="request">Request</string>
@@ -54,4 +54,6 @@
     <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
     <string name="third_party_booking">"Third Party Booking"</string>
     <string name="title_dynamicfeature" translatable="false">dynamicfeature</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>

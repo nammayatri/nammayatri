@@ -59,6 +59,7 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
+import Screens.QrCodeScanner.ScreenData as QrCodeScannerScreenData
 import Screens.Types
 import Toast.ScreenData as ToastScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
@@ -148,6 +149,7 @@ newtype GlobalState = GlobalState {
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   , uploadParcelImageScreen :: UploadParcelImageScreenState
   , metroWarriorsScreen :: MetroWarriorsScreenState
+  , qrCodeScanner :: QrCodeScannerState
   }
 
 defaultGlobalState :: GlobalState
@@ -211,6 +213,7 @@ defaultGlobalState = GlobalState {
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
 , metroWarriorsScreen : MetroWarriorsScreenData.initData
+, qrCodeScanner : QrCodeScannerScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -488,6 +491,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
                           | UPDATE_METRO_WARRIOR HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
+                          | GO_TO_SCAN_BUS_QR HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
