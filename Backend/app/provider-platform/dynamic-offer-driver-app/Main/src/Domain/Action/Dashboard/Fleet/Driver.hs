@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetSendJoiningOtp,
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
+    postDriverFleetAddDrivers,
   )
 where
 
@@ -61,6 +62,14 @@ postDriverFleetAddRCWithoutDriver ::
   Common.RegisterRCReq ->
   Flow APISuccess
 postDriverFleetAddRCWithoutDriver = DDriver.registerRCForFleetWithoutDriver
+
+postDriverFleetAddDrivers ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.CreateDriversReq ->
+  Flow APISuccess
+postDriverFleetAddDrivers = DDriver.addDriversInFleet
 
 getDriverFleetGetAllVehicle ::
   ShortId DM.Merchant ->
