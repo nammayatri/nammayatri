@@ -120,8 +120,10 @@ ApprovalRequest:
 
   fields:
     id: Id ApprovalRequest
+    requestorId: Id Person
+    requesteeId: Id Person
     requestType: ApprovalRequestData
-    title: Text
+    title: RequestType
     body: Text
     status: RequestStatus
     reason: Maybe Text
@@ -130,6 +132,26 @@ ApprovalRequest:
 
   constraints:
     id: PrimaryKey
+
+  queries:
+    updateStatusWithReason:
+      kvFunction: updateOneWithKV
+      params: [status, reason]
+      where: id
+
+    findByTripReqAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [tripTransactionId, requestType, status]
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestStatus>
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FleetConfig:
   tableName: fleet_config

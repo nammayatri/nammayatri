@@ -36,6 +36,7 @@ type API =
       :> "trip"
       :> "link"
       :> ReqBody '[JSON] API.Types.UI.WMB.TripLinkReq
+      :> ReqBody '[JSON] API.Types.UI.WMB.TripLinkReq
       :> Post
            '[JSON]
            API.Types.UI.WMB.TripTransactionDetails
@@ -92,10 +93,35 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.WMB.TripEndResp
+      :<|> TokenAuth
+      :> "ui"
+      :> "wmb"
+      :> "trip"
+      :> Capture
+           "tripTransactionId"
+           Data.Text.Text
+      :> "request"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.WMB.RequestDetails
+      :> Post
+           '[JSON]
+           API.Types.UI.WMB.DriverReqResp
+      :<|> TokenAuth
+      :> "ui"
+      :> "wmb"
+      :> "requests"
+      :> Capture
+           "driverRequestId"
+           Data.Text.Text
+      :> "cancel"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getUiWmbAvailableRoutes :<|> postUiWmbTripLink :<|> getUiWmbTripActive :<|> getUiWmbTripList :<|> postUiWmbTripStart :<|> postUiWmbTripEnd
+handler = getUiWmbAvailableRoutes :<|> postUiWmbTripLink :<|> getUiWmbTripActive :<|> getUiWmbTripList :<|> postUiWmbTripStart :<|> postUiWmbTripEnd :<|> postUiWmbTripRequest :<|> postUiWmbRequestsCancel
 
 getUiWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -159,3 +185,24 @@ postUiWmbTripEnd ::
     Environment.FlowHandler API.Types.UI.WMB.TripEndResp
   )
 postUiWmbTripEnd a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripEnd (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postUiWmbTripRequest ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Data.Text.Text ->
+    API.Types.UI.WMB.RequestDetails ->
+    Environment.FlowHandler API.Types.UI.WMB.DriverReqResp
+  )
+postUiWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postUiWmbRequestsCancel ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Data.Text.Text ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postUiWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

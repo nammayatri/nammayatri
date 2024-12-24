@@ -817,6 +817,7 @@ TransporterConfig:
     includeDriverCurrentlyOnRide: Bool
     defaultPopupDelay: Seconds
     popupDelayToAddAsPenalty: Maybe Seconds
+    fleetAlertThreshold: Maybe Seconds
     thresholdCancellationScore: Maybe Int
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
@@ -1365,6 +1366,7 @@ TransporterConfig:
         - rideTimeEstimatedThreshold
         - defaultPopupDelay
         - popupDelayToAddAsPenalty
+        - fleetAlertThreshold
         - thresholdCancellationScore
         - minRidesForCancellationScore
         - mediaFileUrlPattern

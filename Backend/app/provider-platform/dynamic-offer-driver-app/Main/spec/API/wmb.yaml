@@ -3,6 +3,8 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   LatLong: Kernel.External.Maps.Types
   ServiceTierType: Domain.Types.Common
+  ToParamSchema: Kernel.Prelude
+  RequestType: Domain.Types.DriverRequest
   TripStatus: Domain.Types.TripTransaction
 
 module: WMB
@@ -67,6 +69,13 @@ types:
     requestId: Maybe Text
     result: EndTripStatus
 
+  RequestDetails:
+    requestType: RequestType
+    description: Maybe Text
+
+  DriverReqResp:
+    requestId: Text
+
 apis:
   - GET:
       endpoint: /ui/wmb/availableRoutes/{vehicleNumber}
@@ -118,3 +127,20 @@ apis:
         type: TripEndReq
       response:
         type: TripEndResp
+
+  - POST:
+      endpoint: /ui/wmb/trip/{tripTransactionId}/request
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Text
+      request:
+        type: RequestDetails
+      response:
+        type: DriverReqResp
+  - POST:
+      endpoint: /ui/wmb/requests/{driverRequestId}/cancel
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        driverRequestId: Text
+      response:
+        type: APISuccess

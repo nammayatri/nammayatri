@@ -63,6 +63,54 @@ apis:
             response:
               type: APISuccess
             validation: API.Types.ProviderPlatform.validateAddVehicleReq
+  - GET: # GetAllDriverRequestsAPI
+      endpoint: /fleet/getDriverRequests
+      auth: ApiAuthV2
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbStatus: RequestStatus
+        - mbReqType: RequestType
+        - mbLimit: Int
+        - mbOffset: Int
+      response:
+        type: DriverRequestResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS
+      helperApi:
+        - GET:
+            endpoint: /fleet/driverRequests/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - from: UTCTime
+              - to: UTCTime
+              - status: RequestStatus
+              - reqType: RequestType
+              - limit: Int
+              - offset: Int
+            response:
+              type: DriverRequestResp
+  - POST: # RespondDriverRequestsAPI
+      endpoint: /fleet/respond/driverRequest/
+      auth: ApiAuthV2
+      request:
+        type: RequestRespondReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET RESPOND_DRIVER_REQUEST
+      helperApi:
+        - POST:
+            endpoint: /fleet/{fleetOwnerId}/driverRequest/respond
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: RequestRespondReq
+            response:
+              type: APISuccess
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
       auth: ApiAuthV2
@@ -636,6 +684,30 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
+  RequestStatus:
+    - enum: "APPROVED, REJECTED, REVOKED"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
+  RequestType:
+    - enum: "END_RIDE, CHANGE_ROUTE"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
+  DriverRequestDetails:
+    - requestType: RequestType
+    - description: Maybe Text
+    - reason: Maybe Text
+    - raisedAt: UTCTime
+    - status: Maybe RequestStatus
+    - tripCode: Maybe Text
+    - driverName: Maybe Text
+    - driverMobileNumber: Maybe Text
+    - vehicleRegistrationNumber: Text
+  RequestRespondReq:
+    - status: RequestStatus
+    - driverRequestId: Text
+    - reason: Text
+    - derive: "'HideSecrets"
+  DriverRequestResp:
+    - recordType: NewType
+    - requests: [DriverRequestDetails]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

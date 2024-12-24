@@ -121,6 +121,7 @@ data TransporterConfigT f = TransporterConfigT
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,
+    fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,

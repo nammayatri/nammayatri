@@ -18,6 +18,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetSendJoiningOtp,
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
+    getDriverFleetGetDriverRequests,
+    postDriverFleetRespondDriverRequest,
     postDriverFleetAddVehicles,
     putDriverDashboardFleetWmbTripDelete,
   )
@@ -202,6 +204,18 @@ postDriverFleetAddVehicles merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicles) apiTokenInfo.personId.getId req
+
+getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.RequestStatus -> Maybe Common.RequestType -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestResp
+getDriverFleetGetDriverRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbStatus mbReqType mbLimit mbOffset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetDriverRequests) apiTokenInfo.personId.getId mbFrom mbTo mbStatus mbReqType mbLimit mbOffset
+
+postDriverFleetRespondDriverRequest :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.RequestRespondReq -> Flow APISuccess
+postDriverFleetRespondDriverRequest merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing $ Just req
+  T.withTransactionStoring transaction $
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRespondDriverRequest) apiTokenInfo.personId.getId req
 
 putDriverDashboardFleetWmbTripDelete :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.TripTransaction -> Flow APISuccess)
 putDriverDashboardFleetWmbTripDelete merchantShortId opCity apiTokenInfo tripTransactionId = do

@@ -42,6 +42,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.defaultPopupDelay defaultPopupDelay,
       Se.Set Beam.popupDelayToAddAsPenalty popupDelayToAddAsPenalty,
+      Se.Set Beam.fleetAlertThreshold fleetAlertThreshold,
       Se.Set Beam.thresholdCancellationScore thresholdCancellationScore,
       Se.Set Beam.minRidesForCancellationScore minRidesForCancellationScore,
       Se.Set Beam.mediaFileUrlPattern mediaFileUrlPattern,

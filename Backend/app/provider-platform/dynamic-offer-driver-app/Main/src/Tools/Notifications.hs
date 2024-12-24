@@ -22,6 +22,7 @@ import Domain.Action.UI.SearchRequestForDriver
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import Domain.Types.DriverRequest as DTR
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -1285,6 +1286,37 @@ sendCoinsNotification merchantOpCityId notificationTitle message driver mbToken 
           fcmEntityIds = getId driver.id,
           fcmEntityData = entityData,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.COINS_SUCCESS Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCM.FCMNotificationTitle notificationTitle
+    body =
+      FCMNotificationBody message
+
+requestRejectionNotification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  DTR.DriverRequest ->
+  m ()
+requestRejectionNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig Nothing (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId mbToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.DRIVER_REQUEST_REJECTED,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId driver.id,
+          fcmEntityData = entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_REQUEST_REJECTED Nothing,
           fcmOverlayNotificationJSON = Nothing,
           fcmNotificationId = Nothing
         }
