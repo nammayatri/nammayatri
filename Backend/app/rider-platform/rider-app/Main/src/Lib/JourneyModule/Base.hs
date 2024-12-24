@@ -10,67 +10,29 @@ import qualified Domain.Types.Journey as DJ
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Lib.JourneyModule.Types
-import Lib.JourneyModule.Utils as Utils
+import Lib.JourneyModule.Utils
 import qualified Domain.Types.Trip as DTrip
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Kernel.Types.Common
 import qualified Storage.Merchant.Queries as QMerchant
 
-init :: JourneyLeg leg m => JourneyInitData leg -> m Journey
+init :: JourneyInitData -> m Journey
 init journeyReq = do
   journeyId <- generateGUID
   let journeyLegsCount = length journeyReq.legs
-      modes = map (\x -> Utils.convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) journeyReq.maximumWalkDistance) journeyReq.legs
-
   totalFares <-
-    Utils.mapWithIndex
+    mapWithIndex
       ( \idx leg -> do
           journeyLegId <- generateGUID
-          tripMode <- Utils.convertMultiModalModeToTripMode $ leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
-          merchant <- QMerchant.findById journeyReq.merchantId >>= fromMaybeM (MerchantDoesNotExist $ "merchantId:- " <> merchantId.getId)
-          merchantOpCity <- CQMOC.findById journeyReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOpCityId: " <> journeyReq.merchantOperatingCityId.getId)
-          let getFareReq =
-            { startLocation = leg.startLocation,
-              endLocation = leg.endLocation,
-              distance
-            }
-          getFareReq <-
-            case tripMode of
-              DTrip.Taxi -> 
-                TaxiLegGetFareRequest $ TaxiGetFareData
-                  { startLocation = leg.startLocation,
-                    endLocation = leg.endLocation,
-                    distance = leg.distance,
-                    duration = leg.duration,
-                    merchant,
-                    merchantOpCity
-                  }
-              Dtrip.Bus -> 
-                BusLegGetFareRequest $ BusGetFareData
-                  { startLocation = leg.startLocation,
-                    endLocation = leg.endLocation
-                  }
-              Dtrip.Metro -> 
-                MetroLegGetFareRequest $ MetroGetFareData
-                  { startLocation = leg.startLocation,
-                    endLocation = leg.endLocation
-                  }
-              Dtrip.Walk -> 
-                WalkLegGetFareRequest $ WalkGetFareData
-                  { startLocation = leg.startLocation,
-                    endLocation = leg.endLocation
-                  }
+          getFareReq <- mkGetFareReq journeyReq.merchantId journeyReq.merchantOperatingCityId leg
           totalLegFare <- JourneyLegTypes.getFare getFareReq
-          let journeyLeg <- mkJourneyLeg leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId
+          let journeyLeg <- mkJourneyLeg leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
           QJourneyLeg.create journeyLeg
-
           return totalLegFare
       )
       journeyReq.legs
-
   journey <- mkJourney journeyReq.estimatedDistance journeyReq.estiamtedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId totalFares journeyReq.legs journeyReq.maximumWalkDistance
   QJourney.create journey
-
   logDebug $ "journey for multi-modal: " <> show journey
   return journey
 
@@ -87,9 +49,9 @@ getAllLegsInfo journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   allLegsInfo <- allLegsRawData `forM` \leg -> do
     case leg.mode of
-      Trip.Taxi -> JL.get $ TaxiGetStateRequest leg.legId
-      Trip.Walk -> JL.get $ WalkGetStateRequest leg.legId
-      Trip.Metro -> JL.get $ MetroGetStateRequest leg.legId
+      Trip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData { searchId = cast leg.legId }
+      Trip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData { walkLegId = leg.legId }
+      Trip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData { searchId = cast leg.legId }
       _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
   return $ sortBy (.order) allLegsInfo
 
@@ -114,30 +76,30 @@ addTaxiLeg journey journeyLeg currentLegReq = do
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId
   let startLocation = mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
   let endLocation = mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
-  taxiSearchReq <- mkTaxiSearchReq parentSearchReq journeyLeg (TaxiSearchRequestData { origin = startLocation, stops = [endLocation] })
+  taxiSearchReq <- mkTaxiSearchReq parentSearchReq journeyLeg startLocation [endLocation]
   JL.search taxiSearchReq
 
-getCurrentLeg :: JourneyLeg leg m => Id Journey -> Maybe [leg] -> m leg
-getCurrentLeg journeyId mbJourneyLegs = do
-  journeyLegs <- maybe (getAllLegs journeyId) return mbJourneyLegs
+getCurrentLeg :: Id Journey -> Maybe LegInfo
+getCurrentLeg journeyId = do
+  journeyLegs <- getAllLegsInfo journeyId
   let currentLeg = find (\leg -> notElem leg.status [completedStatus]) journeyLegs
   return currentLeg
 
-getRemainingLegs :: JourneyLeg leg m => Id Journey -> m [leg]
+getRemainingLegs :: Id Journey -> m [LegInfo]
 getRemainingLegs journeyId = do
-  journeyLegs <- getAllLegs journeyId
+  journeyLegs <- getAllLegsInfo journeyId
   let remainingLegs = dropWhile (\leg -> notElem leg.status [completedStatus]) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
-deleteLeg :: JourneyLeg leg m => leg -> m ()
-deleteLeg leg = do
-  let cancelReq = mkCancelReq leg
-  JL.cancel cancelReq
+-- deleteLeg :: JourneyLeg leg m => leg -> m ()
+-- deleteLeg leg = do
+--   let cancelReq = mkCancelReq leg
+--   JL.cancel cancelReq
 
-updateLeg :: JourneyLeg leg m => leg -> leg -> m ()
-updateLeg 
-  let updateReq = mkUpdateReq leg
-  JL.update leg
+-- updateLeg :: JourneyLeg leg m => leg -> leg -> m ()
+-- updateLeg
+--   let updateReq = mkUpdateReq leg
+--   JL.update leg
 
 -- skipJourney :: Journey -> [leg] -> m ()
 -- skipJourney journey
@@ -151,11 +113,11 @@ updateLeg
 -- loop through and delete/update legs and journey as required
 -- call leg level cancel
 
-replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
-replaceLeg journey oldLegs newLeg =
-  forM_ (deleteLeg journey) oldLegs >> addLeg journey newLeg
+-- replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
+-- replaceLeg journey oldLegs newLeg =
+--   forM_ (deleteLeg journey) oldLegs >> addLeg journey newLeg
 
-extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
-extendLeg journey oldLegs newLeg =
-  forM_ (deleteLeg journey) oldLegs >> updateLeg journey newLeg
+-- extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
+-- extendLeg journey oldLegs newLeg =
+--   forM_ (deleteLeg journey) oldLegs >> updateLeg journey newLeg
 

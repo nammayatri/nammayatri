@@ -20,7 +20,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
-import qualified Lib.JourneyPlannerTypes
+import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data SearchRequest = SearchRequest
@@ -51,7 +51,7 @@ data SearchRequest = SearchRequest
     initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyPlannerTypes.JourneySearchData,
+    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

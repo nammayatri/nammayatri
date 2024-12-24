@@ -74,8 +74,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Types as JMTypes
-import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
