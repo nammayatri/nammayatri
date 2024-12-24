@@ -96,4 +96,8 @@
     <string name="stops_info">%1$d Stops (incl. stop charge)</string>
     <string name="stops">%1$d Stops</string>
     <string name="round_trip">Round Trip</string>
+    <string name="bus_number">Bus Number</string>
+    <string name="route_number">Route Number</string>
+    <string name="bus_type">Bus Type</string>
+    <string name="start_ride">Start Ride</string>
 </resources>
