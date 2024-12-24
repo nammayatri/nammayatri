@@ -3,6 +3,9 @@ module Lib.JourneyLeg.Walk where
 import qualified Lib.JourneyLeg.Types as JT
 
 
+import qualified Lib.JourneyLeg.Types as JLT
+
+
 data WalkLegUpdateData = WalkLegUpdateData
   { id :: Id LegID
     mbFromLocation :: Location
@@ -19,7 +22,12 @@ data WalkSearchData = WalkSearchData
   , merchantOperatingCity :: Id MerchantOperatingCity
   }
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData | WalkLegGetState (Id LegID)
+data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData | WalkLegGetState (Id LegID) | WalkLegGetFareRequest WalkGetFareData
+
+data WalkGetFareData = WalkGetFareData
+  { startLocation :: LatLngV2,
+    endLocation :: LatLngV2
+  }
 
 updateWalkLegById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Walkleg.Walkleg  ->  -> Id LegID -> m ()
 updateWalkLegById (Domain.Types.Walkleg.Walkleg {..}) legId = do
@@ -49,3 +57,7 @@ instance JourneyLeg WalkLeg m where
   get (WalkLegGetState legId) = do
     legData <- findById legId 
     return legData
+
+  getFare (BusLegGetFareRequest _busGetFareData) =  do
+    return JLT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0}, estimatedMaxFare =  HighPrecMoney {getHighPrecMoney = 0}}
+

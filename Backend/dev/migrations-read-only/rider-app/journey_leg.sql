@@ -32,3 +32,9 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN merchant_operating_city_id characte
 ALTER TABLE atlas_app.journey_leg ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_leg ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN leg_id text ;

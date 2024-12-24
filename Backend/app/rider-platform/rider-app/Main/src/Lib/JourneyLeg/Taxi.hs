@@ -8,6 +8,7 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Lib.JourneyLeg.Types as JT
+import qualified Lib.JourneyLeg.Types as JLT
 
 mapRideStatusToJourneyLegStatus :: RideStatus -> JourneyLegStatus
 mapRideStatusToJourneyLegStatus status = case status of
@@ -38,11 +39,21 @@ data TaxiLegConfirmRequest = TaxiLegConfirmReques
     estimateId :: Id Estimate
   }
 
+data TaxiGetFareData = TaxiGetFareData
+  { startLocation :: LatLngV2
+    endLocation :: LatLngV2
+    distance :: Distance,
+    duration :: Seconds,
+    merchant :: DM.Merchant
+    merchantOpCity :: DMOC.MerchantOperationCity
+  }
+
 data TaxiLegRequest 
   = TaxiLegRequestSearch DSR.SearchRequest DJourenyLeg.JourneyLeg TaxiSearchRequestData
   | TaxiLegConfirm TaxiLegConfirmRequest
   | TaxiLegRequestUpdate TaxiLegUpdateData (Id LegID)
   | TaxiLegGetState (Id DSR.SearchRequest)
+  | TaxiLegGetFareRequest TaxiGetFareData
 
 instance JourneyLeg TaxiLegRequest m where
   search (TaxilegRequestSearch parentSearchReq multimodalLeg taxiLegSearchData) = do
@@ -142,7 +153,8 @@ instance JourneyLeg TaxiLegRequest m where
             return ()
 
   cancel (TaxiLeg _legData) = return ()
-  
+    -- call cancelV2
+    -- update JourneyLegStatus: Cancelled
   getState (TaxiLegGetState searchId) = do
      searchReq <- QSearchRequest.findById searchId >>= fromMaybeM ("Internal Error in searchId :" <> searchId)
      booking <- QBooking.findByTransactionId searchId
@@ -171,3 +183,13 @@ instance JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequest.findById srId
         mkLegInfoFromSearchRequest searchReq
 
+  getFare (TaxiLegGetFareRequest taxiGetFareData) = do
+    let calculateFareReq =
+      CallBPPInternal.CalculateFareReq
+        { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latLng.latitude, lon = taxiGetFareData.startLocation.latLng.longitude},
+          dropLatLong = LatLong {lat = taxiGetFareData.endLocation.latLng.latitude, lon = taxiGetFareData.endLocation.latLng.longitude},
+          mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
+          mbDuartion = Just taxiGetFareData.duration
+        }
+    fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
+    return JLT.GetFareResponse {estimatedMinFare = fareData.minFare, estimatedMaxFare =  fareData.maxFare}
