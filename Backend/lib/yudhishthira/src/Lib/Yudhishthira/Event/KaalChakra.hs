@@ -43,29 +43,32 @@ import qualified Lib.Yudhishthira.Types.UserData as DUserData
 data Handle m action = Handle
   { getUserTags :: Id Yudhishthira.User -> m (Maybe [Yudhishthira.TagNameValue]), -- Nothing if user not found
     updateUserTags :: Id Yudhishthira.User -> [Yudhishthira.TagNameValue] -> m (),
-    createFetchUserDataJob :: Yudhishthira.UpdateKaalBasedTagsJobReq -> UTCTime -> m (),
-    createUpdateUserTagDataJob :: Yudhishthira.RunKaalChakraJobReq -> Id Yudhishthira.Event -> UTCTime -> m (),
     action :: Id Yudhishthira.User -> action -> m ()
   }
 
 --  which is log level in PROD?
-skipUpdateUserTagsHandler :: forall m action. (Monad m, Log m, Read action, Show action) => Handle m action
+skipUpdateUserTagsHandler :: forall m action. (Monad m, Log m, MonadThrow m, Read action, Show action) => Handle m action
 skipUpdateUserTagsHandler =
   Handle
     { getUserTags = \userId -> logInfo ("Skip update user tags in DB selected: userId: " <> show userId) >> pure (Just []),
       updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
-      createFetchUserDataJob = \updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData,
-      createUpdateUserTagDataJob = \kaalChakraData eventId _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; for event: " <> show eventId,
       action = \userId action -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId
     }
 
 kaalChakraEvent ::
+  forall m r.
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
 kaalChakraEvent req = do
   eventId <- getEventId req.chakra
-  kaalChakraEventInternal eventId req
+  handle (errHandler eventId) (kaalChakraEventInternal eventId req)
+  where
+    errHandler eventId err = case req.action of
+      Yudhishthira.RUN -> throwM @m @SomeException err
+      Yudhishthira.SCHEDULE _ -> do
+        logError $ "Fetch user data job failed: " <> show err
+        pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
 
 kaalChakraEventInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
@@ -105,9 +108,14 @@ updateUserTagsHandler ::
   Yudhishthira.UpdateKaalBasedTagsJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
 updateUserTagsHandler h req = do
-  if req.updateUserTags
-    then updateUserTagsHandlerInternal h req
-    else updateUserTagsHandlerInternal (skipUpdateUserTagsHandler @m @action) req
+  handle (errHandler req.eventId) $
+    if req.updateUserTags
+      then updateUserTagsHandlerInternal h req
+      else updateUserTagsHandlerInternal (skipUpdateUserTagsHandler @m @action) req
+  where
+    errHandler eventId (err :: SomeException) = do
+      logError $ "Update user tags job failed: " <> show err
+      pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
 
 updateUserTagsHandlerInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Read action, Show action) =>
