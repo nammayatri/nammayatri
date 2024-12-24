@@ -13,6 +13,7 @@ import Common.RemoteConfig.Utils as CommonRC
 initData :: OnBoardingSubscriptionScreenState
 initData = {
     data:{
+        config : getAppConfig appConfig,
         plansList : [dummyPlanConfig],
         selectedPlanItem : Nothing,
         subscriptionConfig : (getAppConfig appConfig).subscriptionConfig,

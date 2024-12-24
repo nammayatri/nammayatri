@@ -1561,7 +1561,7 @@ eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ Subscription
 eval (VehicleNotSupportedAC PopUpModal.OnButton1Click) state = continue state { props { vehicleNSPopup = false}}
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
-  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  _ <- pure $ showDialer state.data.cityConfig.supportNumber false
   continue state
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
@@ -1648,7 +1648,7 @@ eval (CoinEarnedPopupAC PopUpModal.DismissPopup) state = do
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (PaymentBannerAC (Banner.OnClick)) state = do
-  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  _ <- pure $ showDialer state.data.cityConfig.supportNumber false
   continue state
 
 eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
@@ -1715,7 +1715,7 @@ eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
 eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = continue state {data {plansState {showSwitchPlanModal = false}}}
 
 eval (SelectPlansModalAction SelectPlansModal.Support) state = do
-  void $ pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  void $ pure $ showDialer state.data.cityConfig.supportNumber false
   continue state
 
 eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButtonController.OnClick)) state = 
