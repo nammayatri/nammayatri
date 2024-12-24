@@ -89,7 +89,7 @@ originServiceability regToken = origin
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
+    _ :<|> destination :<|> _ = client (Proxy :: Proxy AppServ.API) regToken
 
 appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes

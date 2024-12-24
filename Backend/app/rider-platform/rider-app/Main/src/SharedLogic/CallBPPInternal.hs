@@ -607,3 +607,44 @@ getFare merchant city req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getFareClient merchantId city (Just apiKey) req) "GetFare" getFareApi
+
+data IsIntercityReq = IsIntercityReq
+  { pickupLatLong :: LatLong,
+    mbDropLatLong :: Maybe LatLong
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data IsIntercityResp = IsIntercityResp
+  { isInterCity :: Bool,
+    isCrossCity :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type GetIsInterCityAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "isInterCity"
+    :> Header "token" Text
+    :> ReqBody '[JSON] IsIntercityReq
+    :> Post '[JSON] IsIntercityResp
+
+getIsInterCityClient :: Text -> Maybe Text -> IsIntercityReq -> EulerClient IsIntercityResp
+getIsInterCityClient = client getIsInterCityApi
+
+getIsInterCityApi :: Proxy GetIsInterCityAPI
+getIsInterCityApi = Proxy
+
+getIsInterCity ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  IsIntercityReq ->
+  m IsIntercityResp
+getIsInterCity merchant req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi

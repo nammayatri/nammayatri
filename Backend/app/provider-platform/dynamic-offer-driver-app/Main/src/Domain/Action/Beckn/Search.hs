@@ -17,10 +17,13 @@ module Domain.Action.Beckn.Search
     DSearchRes (..),
     NearestDriverInfo (..),
     DSearchReqLocation (..),
+    IsIntercityReq (..),
+    IsIntercityResp (..),
     getNearestOperatingAndSourceCity,
     handler,
     validateRequest,
     buildEstimate,
+    getIsInterCity,
   )
 where
 
@@ -87,6 +90,7 @@ import Storage.Cac.DriverPoolConfig as CDP
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
@@ -706,28 +710,54 @@ validateRequest merchant sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity, destinationTravelCityName) <-
-    case sReq.dropLocation of
-      Just dropLoc -> do
-        (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
-        if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
-          then return (False, False, Nothing)
-          else do
-            mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
-            let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
-            -- Destination states should be in the allowed states of the origin state
-            if destinationCityState.state `elem` allowedStates
-              then do
-                if destinationCityState.city `elem` transporterConfig.crossTravelCities
-                  then return (True, True, mbDestinationTravelCityName)
-                  else return (True, False, mbDestinationTravelCityName)
-              else throwError (RideNotServiceableInState $ show destinationCityState.state)
-      Nothing -> pure (False, False, Nothing)
-
+  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
+
+data IsIntercityReq = IsIntercityReq
+  { pickupLatLong :: LatLong,
+    mbDropLatLong :: Maybe LatLong
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data IsIntercityResp = IsIntercityResp
+  { isInterCity :: Bool,
+    isCrossCity :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+getIsInterCity :: Id DM.Merchant -> Maybe Text -> IsIntercityReq -> Flow IsIntercityResp
+getIsInterCity merchantId apiKey IsIntercityReq {..} = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  unless (Just merchant.internalApiKey == apiKey) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant pickupLatLong
+  let bapCity = nearestOperatingCity.city
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
+  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong sourceCity merchant
+  return $ IsIntercityResp {..}
+
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchant = do
+  case mbDropLocation of
+    Just dropLoc -> do
+      (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
+      if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
+        then return (False, False, Nothing)
+        else do
+          mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
+          let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
+          -- Destination states should be in the allowed states of the origin state
+          if destinationCityState.state `elem` allowedStates
+            then do
+              if destinationCityState.city `elem` transporterConfig.crossTravelCities
+                then return (True, True, mbDestinationTravelCityName)
+                else return (True, False, mbDestinationTravelCityName)
+            else throwError (RideNotServiceableInState $ show destinationCityState.state)
+    Nothing -> pure (False, False, Nothing)
 
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
