@@ -31,9 +31,9 @@ mkJourneyLegSearch person info multimodalLeg = do
   taxiLegInfo = mkTaxiLegInfo info person
   case multimodalLeg.mode of
     Walk -> WalkLegRequestSearch $ multimodalLeg info
-    Taxi -> TaxilegRequestSearch $ 
+    Taxi -> TaxilegRequestSearch $
 1. Info api will give leg ids for all legs, along with route
-2. To get the fare of the legs, poll particular leg api 
+2. To get the fare of the legs, poll particular leg api
   e.g. rideSearch/{searchId}/results
 3. Switch Variant, estimates are already there because of polling of results
   1. /multimodal/{searchRequestId}/switch/{estimateId}
@@ -42,7 +42,7 @@ mkJourneyLegSearch person info multimodalLeg = do
 @prakhar
 1. Swith to auto, switch to walk
 2. check if current leg is auto, if yes and if replacing the very next leg then extend the leg
-3. 
+3.
 
 @hemant
 confirm

@@ -74,6 +74,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
@@ -100,7 +101,6 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
-import Lib.JourneyModule.Types as JMTypes
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq
   deriving (Generic, Show)
@@ -556,18 +556,23 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
   allRoutes <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
 
   journeys <-
-    forM allRoutes \route -> do
-      let initReq =
-        JMTypes.JourneyInitData
-          { parentSearchId = searchRequest.id
-          , merchantId
-          , merchantOperatingCityId
-          , legs = journeyLegs
-          , estimatedDistance = route.distance
-          , estimatedDuration = route.duration
-          , maximumWalkDistance
-          }
-        JM.init initReq
+    forM allRoutes \route ->
+      do
+        let initReq =
+              JMTypes.JourneyInitData
+                { parentSearchId = searchRequest.id,
+                  merchantId,
+                  merchantOperatingCityId,
+                  legs = journeyLegs,
+                  estimatedDistance = route.distance,
+                  estimatedDuration = route.duration,
+                  maximumWalkDistance
+                }
+      JM.init
+      initReq
+      QSearchRequest.updateHasMultimodalSearch
+      True
+      searchRequest.id
 
   -- call search
   -------------------------- to depricate ----------------------------------------------------------------------------------------------------------------------
@@ -606,7 +611,6 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId merchantOperatingCityId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientRnVersion clientId device isDashboardRequest_ now maximumWalkDistance originCity
       )
       allRoutes.routes
-
 
 makeChildSearchReqs ::
   Id Person.Person ->

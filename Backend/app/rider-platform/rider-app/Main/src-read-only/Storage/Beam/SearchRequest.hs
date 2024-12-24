@@ -49,6 +49,7 @@ data SearchRequestT f = SearchRequestT
     estimatedRideDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedRideStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
