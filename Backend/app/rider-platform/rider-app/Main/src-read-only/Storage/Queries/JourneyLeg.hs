@@ -4,6 +4,7 @@
 
 module Storage.Queries.JourneyLeg where
 
+import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -23,6 +24,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLeg.JourneyLeg] -> m ())
 createMany = traverse_ create
 
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLeg.JourneyLeg])
+findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -30,32 +34,33 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.agencyGtfsId ((routeDetails >>= (.gtfsId))),
-      Se.Set Beam.agencyName ((routeDetails >>= (.name))),
-      Se.Set Beam.distance (((.value)) distance),
-      Se.Set Beam.distanceUnit (((.unit)) distance),
+    [ Se.Set Beam.agencyGtfsId (routeDetails >>= (.gtfsId)),
+      Se.Set Beam.agencyName (routeDetails >>= (.name)),
+      Se.Set Beam.distance ((.value) distance),
+      Se.Set Beam.distanceUnit ((.unit) distance),
       Se.Set Beam.duration duration,
-      Se.Set Beam.endLocationLat ((endLocation <&> (.latitude))),
-      Se.Set Beam.endLocationLon ((endLocation <&> (.longitude))),
+      Se.Set Beam.endLocationLat (endLocation <&> (.latitude)),
+      Se.Set Beam.endLocationLon (endLocation <&> (.longitude)),
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,
-      Se.Set Beam.fromStopCode ((fromStopDetails >>= (.stopCode))),
-      Se.Set Beam.fromStopGtfsId ((fromStopDetails >>= (.gtfsId))),
-      Se.Set Beam.fromStopName ((fromStopDetails >>= (.name))),
+      Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),
+      Se.Set Beam.fromStopGtfsId (fromStopDetails >>= (.gtfsId)),
+      Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
+      Se.Set Beam.legId legId,
       Se.Set Beam.mode mode,
       Se.Set Beam.polylinePoints polylinePoints,
-      Se.Set Beam.routeGtfsId ((routeDetails >>= (.gtfsId))),
-      Se.Set Beam.routeLongName ((routeDetails >>= (.longName))),
-      Se.Set Beam.routeShortName ((routeDetails >>= (.shortName))),
+      Se.Set Beam.routeGtfsId (routeDetails >>= (.gtfsId)),
+      Se.Set Beam.routeLongName (routeDetails >>= (.longName)),
+      Se.Set Beam.routeShortName (routeDetails >>= (.shortName)),
       Se.Set Beam.sequenceNumber sequenceNumber,
-      Se.Set Beam.startLocationLat ((startLocation <&> (.latitude))),
-      Se.Set Beam.startLocationLon ((startLocation <&> (.longitude))),
+      Se.Set Beam.startLocationLat (startLocation <&> (.latitude)),
+      Se.Set Beam.startLocationLon (startLocation <&> (.longitude)),
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
-      Se.Set Beam.toStopCode ((toStopDetails >>= (.stopCode))),
-      Se.Set Beam.toStopGtfsId ((toStopDetails >>= (.gtfsId))),
-      Se.Set Beam.toStopName ((toStopDetails >>= (.name))),
+      Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),
+      Se.Set Beam.toStopGtfsId (toStopDetails >>= (.gtfsId)),
+      Se.Set Beam.toStopName (toStopDetails >>= (.name)),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -68,23 +73,24 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
-          { agency = (Kernel.External.MultiModal.Interface.Types.MultiModalAgency <$> agencyGtfsId <*> agencyName),
-            distance = (Kernel.Types.Common.Distance distance distanceUnit),
+          { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency <$> agencyGtfsId <*> agencyName,
+            distance = Kernel.Types.Common.Distance distance distanceUnit,
             duration = duration,
             endLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> endLocationLat <*> endLocationLon,
             fromArrivalTime = fromArrivalTime,
             fromDepartureTime = fromDepartureTime,
-            fromStopDetails = (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> fromStopCode <*> fromStopGtfsId <*> gtfsId),
+            fromStopDetails = Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> fromStopCode <*> fromStopGtfsId <*> gtfsId,
             id = Kernel.Types.Id.Id id,
             journeyId = Kernel.Types.Id.Id journeyId,
+            legId = legId,
             mode = mode,
             polylinePoints = polylinePoints,
-            routeDetails = (Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails <$> routeGtfsId <*> routeLongName <*> routeShortName),
+            routeDetails = Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails <$> routeGtfsId <*> routeLongName <*> routeShortName,
             sequenceNumber = sequenceNumber,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> startLocationLat <*> startLocationLon,
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
-            toStopDetails = (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> toStopCode <*> toStopName <*> toStopGtfsId),
+            toStopDetails = Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> toStopCode <*> toStopName <*> toStopGtfsId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -94,33 +100,34 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.agencyGtfsId = (routeDetails >>= (.gtfsId)),
-        Beam.agencyName = (routeDetails >>= (.name)),
-        Beam.distance = ((.value)) distance,
-        Beam.distanceUnit = ((.unit)) distance,
+      { Beam.agencyGtfsId = routeDetails >>= (.gtfsId),
+        Beam.agencyName = routeDetails >>= (.name),
+        Beam.distance = (.value) distance,
+        Beam.distanceUnit = (.unit) distance,
         Beam.duration = duration,
-        Beam.endLocationLat = (endLocation <&> (.latitude)),
-        Beam.endLocationLon = (endLocation <&> (.longitude)),
+        Beam.endLocationLat = endLocation <&> (.latitude),
+        Beam.endLocationLon = endLocation <&> (.longitude),
         Beam.fromArrivalTime = fromArrivalTime,
         Beam.fromDepartureTime = fromDepartureTime,
-        Beam.fromStopCode = (fromStopDetails >>= (.stopCode)),
-        Beam.fromStopGtfsId = (fromStopDetails >>= (.gtfsId)),
-        Beam.fromStopName = (fromStopDetails >>= (.name)),
+        Beam.fromStopCode = fromStopDetails >>= (.stopCode),
+        Beam.fromStopGtfsId = fromStopDetails >>= (.gtfsId),
+        Beam.fromStopName = fromStopDetails >>= (.name),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
+        Beam.legId = legId,
         Beam.mode = mode,
         Beam.polylinePoints = polylinePoints,
-        Beam.routeGtfsId = (routeDetails >>= (.gtfsId)),
-        Beam.routeLongName = (routeDetails >>= (.longName)),
-        Beam.routeShortName = (routeDetails >>= (.shortName)),
+        Beam.routeGtfsId = routeDetails >>= (.gtfsId),
+        Beam.routeLongName = routeDetails >>= (.longName),
+        Beam.routeShortName = routeDetails >>= (.shortName),
         Beam.sequenceNumber = sequenceNumber,
-        Beam.startLocationLat = (startLocation <&> (.latitude)),
-        Beam.startLocationLon = (startLocation <&> (.longitude)),
+        Beam.startLocationLat = startLocation <&> (.latitude),
+        Beam.startLocationLon = startLocation <&> (.longitude),
         Beam.toArrivalTime = toArrivalTime,
         Beam.toDepartureTime = toDepartureTime,
-        Beam.toStopCode = (toStopDetails >>= (.stopCode)),
-        Beam.toStopGtfsId = (toStopDetails >>= (.gtfsId)),
-        Beam.toStopName = (toStopDetails >>= (.name)),
+        Beam.toStopCode = toStopDetails >>= (.stopCode),
+        Beam.toStopGtfsId = toStopDetails >>= (.gtfsId),
+        Beam.toStopName = toStopDetails >>= (.name),
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
