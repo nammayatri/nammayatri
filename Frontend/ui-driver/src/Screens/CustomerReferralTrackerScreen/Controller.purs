@@ -33,7 +33,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
+import Helpers.Utils (getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, getCityConfig)
 import JBridge (pauseYoutubeVideo, copyToClipboard, toast, toggleBtnLoader, showDialer)
 import Language.Strings (getString)
 import Language.Types
@@ -46,6 +46,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.CustomerReferralTrackerScreen.Types
 import Screens.CustomerReferralTrackerScreen.Transformer (getDailyEarnings, getOrderStatus)
 import Domain.Payments as PP
+import Storage (getValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -158,7 +159,8 @@ eval (SelectEarning earning) state = do
   case earning.status of 
     Success -> continue newState{data {currentStage = TransactionHistory}}
     Failed -> do 
-      void $ pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+      let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+      void $ pure $ showDialer cityConfig.supportNumber false
       update state
     _ -> continue newState{data {currentStage = ReferralSteps}}
 
