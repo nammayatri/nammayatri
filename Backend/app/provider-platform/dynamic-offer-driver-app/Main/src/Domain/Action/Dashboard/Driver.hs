@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
@@ -67,6 +68,7 @@ module Domain.Action.Dashboard.Driver
     getAllDriverForFleet,
     VolunteerTransactionStorageReq (..),
     setServiceChargeEligibleFlagInDriverPlan,
+    addVehiclesInFleet,
     changeOperatingCity,
     getOperatingCity,
     updateRCInvalidStatus,
@@ -149,10 +151,12 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -1029,6 +1033,94 @@ addVehicle merchantShortId opCity reqDriverId req = do
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
+
+--------------------------------------------------------------------
+
+data VehicleDetailsCSVRow = VehicleDetailsCSVRow
+  { airConditioned :: Text,
+    color :: Text,
+    registrationNo :: Text,
+    model :: Text,
+    oxygen :: Text,
+    ventilator :: Text,
+    vehicleDoors :: Text,
+    vehicleSeatBelts :: Text,
+    vehicleManufacturer :: Text,
+    dateOfRegistration :: Text
+  }
+  deriving (Show)
+
+instance FromNamedRecord VehicleDetailsCSVRow where
+  parseNamedRecord r =
+    VehicleDetailsCSVRow
+      <$> r .: "air_conditioned"
+      <*> r .: "color"
+      <*> r .: "registration_no"
+      <*> r .: "model"
+      <*> r .: "oxygen"
+      <*> r .: "ventilator"
+      <*> r .: "vehicle_doors"
+      <*> r .: "vehicle_seat_belts"
+      <*> r .: "vehicle_manufacturer"
+      <*> r .: "date_of_registration"
+
+instance FromMultipart Tmp Common.CreateVehiclesReq where
+  fromMultipart form = do
+    Common.CreateVehiclesReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp Common.CreateVehiclesReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+addVehiclesInFleet :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateVehiclesReq -> Flow APISuccess
+addVehiclesInFleet merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  rcReq <- readCsv req.file merchantOpCity
+  when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
+  mapM_ (registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId) rcReq
+  pure Success
+  where
+    readCsv csvFile merchantOpCity = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector VehicleDetailsCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM (parseVehicleInfo merchantOpCity) v >>= (pure . V.toList)
+
+    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow Common.RegisterRCReq
+    parseVehicleInfo moc idx row = do
+      vehicleColour <- cleanCSVField idx row.color "Color"
+      vehicleModel <- cleanCSVField idx row.model "Model"
+      vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
+      vehicleManufacturer <- cleanCSVField idx row.vehicleManufacturer "Vehicle Manufacturer"
+      imageId <- generateGUID
+      let dateOfRegistration :: Maybe UTCTime = readMaybeCSVField idx row.dateOfRegistration "Registration Date"
+          operatingCity = show moc.city
+          airConditioned :: Maybe Bool = readMaybeCSVField idx row.airConditioned "Air Conditioned"
+          multipleRC = Just True
+          oxygen :: Maybe Bool = readMaybeCSVField idx row.oxygen "Oxygen"
+          ventilator :: Maybe Bool = readMaybeCSVField idx row.ventilator "Ventilator"
+          vehicleSeatBelts :: Maybe Int = readMaybeCSVField idx row.vehicleSeatBelts "Seat Belts"
+          vehicleDoors :: Maybe Int = readMaybeCSVField idx row.vehicleDoors "Vehicle Doors "
+      pure Common.RegisterRCReq {vehicleDetails = Just Common.DriverVehicleDetails {..}, ..}
+
+    cleanField = replaceEmpty . T.strip
+
+    replaceEmpty :: Text -> Maybe Text
+    replaceEmpty = \case
+      "" -> Nothing
+      "no constraint" -> Nothing
+      "no_constraint" -> Nothing
+      x -> Just x
+
+    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+    readMaybeCSVField _ fieldValue _ =
+      cleanField fieldValue >>= readMaybe . T.unpack
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
 ---------------------------------------------------------------------
 
