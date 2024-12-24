@@ -33,11 +33,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
-import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Types
 import SharedLogic.JobScheduler (RiderJobType (..))
+import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -92,7 +92,7 @@ postNammaTagRunJob merchantShortId opCity req = do
         QDBJ.markAsComplete oldJobId
 
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob (Handle.kaalChakraHandle mbMerchantId mbMerchantOpCityId) req
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -101,11 +101,7 @@ postNammaTagRunJob merchantShortId opCity req = do
         Lib.Yudhishthira.Types.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
-      case req.chakra of
-        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily mbMerchantId mbMerchantOpCityId scheduledTime jobData
-        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly mbMerchantId mbMerchantOpCityId scheduledTime jobData
-        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly mbMerchantId mbMerchantOpCityId scheduledTime jobData
-        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly mbMerchantId mbMerchantOpCityId scheduledTime jobData
+      Chakras.createFetchUserDataJob mbMerchantId mbMerchantOpCityId req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}

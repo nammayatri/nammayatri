@@ -405,7 +405,7 @@ data KaalChakraAction = RUN | SCHEDULE UTCTime
 data UsersSet = SINGLE_USER (Id User) | LIST_USERS [Id User] | ALL_USERS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ChakraBatchState = Continue Int | Completed
+data ChakraBatchState = Continue Int | Completed | Failed
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RunKaalChakraJobRes = RunKaalChakraJobRes
