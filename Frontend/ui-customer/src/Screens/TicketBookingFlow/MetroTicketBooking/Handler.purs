@@ -46,7 +46,8 @@ metroTicketBookingScreen = do
             App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)
         MyMetroTicketScreen -> do
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN)
-        GoToMetroRouteMap -> do
+        GoToMetroRouteMap state -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> state)
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_ROUTE_MAP)
         SelectSrcDest srcdest updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)

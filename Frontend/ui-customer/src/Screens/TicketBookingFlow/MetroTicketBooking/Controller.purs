@@ -72,7 +72,7 @@ data Action = BackPressed
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
                   | MyMetroTicketScreen
-                  | GoToMetroRouteMap
+                  | GoToMetroRouteMap ST.MetroTicketBookingScreenState
                   | GoToHome
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
@@ -134,7 +134,7 @@ eval DecrementTicket state = do
     then continue state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     else continue state
 
-eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
+eval MetroRouteMapAction state = exit $ GoToMetroRouteMap state
 
 eval (ChangeTicketTab ticketType cityMetroConfig) state = do 
   let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
