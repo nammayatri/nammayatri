@@ -27,6 +27,9 @@ import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
+import Data.Function (on)
+import Data.String as DS
+import Debug (spy)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -516,3 +519,26 @@ defaultInvoiceVariantConfig =
   , evAutoRickshaw: Nothing
   , default: Nothing
   }
+
+-- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)
+pollingConfig :: String -> Types.PollingConfig
+pollingConfig functionName =
+  let config = fetchRemoteConfigString "polling_configs"
+      pollingConfigList = decodeForeignObject (parseJSON config) defaultPollingConfigList
+      compareStrings = on (==) DS.trim
+      mbPollingConfig = DA.find (\item -> compareStrings item.functionName functionName) pollingConfigList.pollingConfigList
+  in fromMaybe defaultPollingConfig mbPollingConfig
+  where
+    defaultPollingConfigList :: Types.PollingConfigList
+    defaultPollingConfigList = {
+      pollingConfigList: []
+    }
+
+    defaultPollingConfig :: Types.PollingConfig
+    defaultPollingConfig = {
+      functionName : "",
+      disable : true,
+      pollingIntervalInMilliSecond : 0,
+      pollingIntervalDelayMultiplier : 0,
+      pollingRetryCount : 0
+    }
