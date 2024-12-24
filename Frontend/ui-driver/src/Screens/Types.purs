@@ -1741,7 +1741,8 @@ type OnBoardingSubscriptionScreenData = {
   freeTrialDays :: Maybe Int,
   freeTrialRides :: Maybe Int,
   totalRidesTaken :: Maybe Int,
-  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity
+  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity,
+  config :: AppConfig
 }
 
 type OnBoardingSubscriptionScreenProps = {

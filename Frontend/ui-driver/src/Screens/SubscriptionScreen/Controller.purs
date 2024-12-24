@@ -389,7 +389,8 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
       else updateAndExit update $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  void $ pure $ showDialer cityConfig.supportNumber false
   continue state
 
 eval (CallHelpCenter phone) state = do
