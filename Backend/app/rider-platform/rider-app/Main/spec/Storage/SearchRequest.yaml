@@ -24,7 +24,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripParty: Domain.Types.Trip
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
   DriverIdentifierType: Domain.Types.RefereeLink
   DriverIdentifier: Domain.Types.RefereeLink
 

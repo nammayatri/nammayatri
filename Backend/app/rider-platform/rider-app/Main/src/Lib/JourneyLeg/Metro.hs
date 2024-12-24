@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Metro where
-  
-import qualified Lib.JourneyLeg.Types as JLT
+
+import qualified Domain.Types.FRFSSearch as FRFSSearch
+import qualified Lib.JourneyModule.Types as JT
 
 mapServiceStatusToJourneyLegStatus :: ServiceStatus -> JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
@@ -10,31 +11,49 @@ mapServiceStatusToJourneyLegStatus status = case status of
   Verified -> Assigning -- Indicates the service is verified and assigning resources.
   Cancelled -> Cancelled -- Indicates the service has been cancelled.
 
-data MetroLegConfirmRequest
+data MetroLegRequestSearchData
+
+data MetroLegRequestUpdateData
+
+data MetroLegRequestConfirmData
+
+data MetroLegRequestCancelData
+
+data MetroLegRequestGetStateData
+
+newtype MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 data MetroLegRequest
-  = MetroLegRequestSearch MultiModalLeg MetroSearchData
-  | MetroLegConfirm MetroLegConfirmRequest
-  | MetroLegGetState (Id Frfs.FRFSSearch)
-  | MetroLegGetFareRequest MetroGetFareData
+  = MetroLegRequestSearch MetroLegRequestSearchData
+  | MetroLegRequestConfirm MetroLegRequestConfirmData
+  | MetroLegRequestUpdate MetroLegRequestUpdateData
+  | MetroLegRequestCancel MetroLegRequestCancelData
+  | MetroLegRequestGetFare MetroLegRequestGetFareData
+  | MetroLegRequestGetState MetroLegRequestGetStateData
+  | MetroLegRequestGetInfo MetroLegRequestGetInfoData
 
-data MetroGetFareData = MetroGetFareData
+data MetroLegRequestGetFareData = MetroLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2
   }
+
 instance JourneyLeg MetroLeg m where
-  search (MetroLegRequestSearch multimodalLeg metroLegSearchData) = do
-    FRFSSearch.create multimodalLeg metroLegSearchData
-    void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.METRO frfsSearchReq
-  confirm (MetroLegConfirm req) = return ()
-  update (MetroLeg _legData) = return ()
-  cancel (MetroLeg _legData) = return ()
-  getState (MetroLeg _legData) = return InPlan
-  
-  get (MetroLegGetState srId) = do
+  search (MetroLegRequestSearch _) = return () -- TODO: Implement this
+
+  confirm (MetroLegRequestConfirm _) = return ()
+
+  update (MetroLegRequestUpdate _) = return ()
+
+  cancel (MetroLegRequestCancel _) = return ()
+
+  getState (MetroLegRequestGetState _) = return ()
+
+  getInfo (MetroLegRequestGetInfo req) = do
     -- TODO: No booking for metro, we can handle for bookings once booking is there
-    searchReq <- QFRFSSearch.findById srId
+    searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
     return $ mkLegInfoFromFrfsSearchRequest searchReq
 
-  getFare (MetroLegGetFareRequest _metroGetFareData) =  do
-    return JLT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare =  HighPrecMoney {getHighPrecMoney = 10}}
+  getFare (MetroLegRequestGetFare _) = do
+    return JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}}

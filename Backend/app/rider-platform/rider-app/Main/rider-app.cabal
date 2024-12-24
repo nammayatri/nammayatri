@@ -287,7 +287,6 @@ library
       Lib.JourneyModule.Base
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
-      Lib.JourneyPlannerTypes
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal

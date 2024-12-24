@@ -1,63 +1,86 @@
 module Lib.JourneyLeg.Walk where
 
-import qualified Lib.JourneyLeg.Types as JT
+import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
+import qualified Lib.JourneyModule.Types as JT
+import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 
-
-import qualified Lib.JourneyLeg.Types as JLT
-
-
-data WalkLegUpdateData = WalkLegUpdateData
-  { id :: Id LegID
-    mbFromLocation :: Location
-    mbtoLocation :: Location
-    mbStartTime :: Maybe UTCTime
-    status :: JourneyLegStatus
+data WalkLegRequestSearchData = WalkLegRequestSearchData
+  { parentSearchReq :: DSR.SearchRequest,
+    journeyLegData :: DJourenyLeg.JourneyLeg,
+    origin :: SearchReqLocation,
+    destination :: SearchReqLocation
   }
 
-data WalkSearchData = WalkSearchData 
-  { fromLocation :: Location
-  , stops :: [Location]
-  , merchantId :: Id Merchant
-  , personId :: Id Person
-  , merchantOperatingCity :: Id MerchantOperatingCity
+newtype WalkLegRequestGetStateData = WalkLegRequestGetStateData
+  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
   }
 
-data WalkLegRequest = WalkLegRequestSearch MultiModalLeg WalkSearchData | WalkLegRequestConfirm WalkLegConfirmRequest | WalkLegRequestCancel WalkLegCancelRequest | WalkLegRequestUpdate WalkLegUpdateData | WalkLegGetState (Id LegID) | WalkLegGetFareRequest WalkGetFareData
-
-data WalkGetFareData = WalkGetFareData
-  { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
+newtype WalkLegRequestGetInfoData = WalkLegRequestGetInfoData
+  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
   }
 
-updateWalkLegById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Walkleg.Walkleg  ->  -> Id LegID -> m ()
-updateWalkLegById (Domain.Types.Walkleg.Walkleg {..}) legId = do
-   -- Function implementation goes here
-    -- You can now use legId along with the fields of the Walkleg record
+data WalkLegRequestGetFareData
+
+data WalkLegRequest
+  = WalkLegRequestSearch WalkLegRequestSearchData
+  | WalkLegRequestConfirm WalkLegRequestConfirmData
+  | WalkLegRequestUpdate WalkLegRequestUpdateData
+  | WalkLegRequestCancel WalkLegRequestCancelData
+  | WalkLegRequestGetInfo WalkLegRequestGetInfoData
+  | WalkLegRequestGetState WalkLegRequestGetStateData
+  | WalkLegRequestGetFare WalkLegRequestGetFareData
+
 instance JourneyLeg WalkLeg m where
-  search (WalkLegRequestSearch multimodalLeg walkLegSearchData) = do
-    WL.create $ mkWalkLegSearch multimodalLeg walkLegSearchData
-  confirm (WalkLeg _legData) = return () -- return nothing
-  update (WalkLegRequest $ WalkLegRequestUpdate walkLegUpdateData) = do
-    WL.updateWalkLegById $ walkLegUpdateData walkLegUpdateData.id
-    -- WalkLegUpdateRequest :: id, mbFromLocation, mbtoLocation, mbStartTime
-  cancel (WalkLeg $ Cancel WalkLegCancelRequest) JourneyLegStatus = return ()
-    -- update JourneyLegStatus: Cancelled
-    WalkLegCancelRequest :: id
+  search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do
+    fromLocation <- buildSearchReqLoc merchantId merchantOperatingCityId origin
+    toLocation <- buildSearchReqLoc merchantId merchantOperatingCityId destination
+    now <- getCurrentTime
+    id <- generateGUID
+    let journeySearchData =
+          JT.JourneySearchData
+            { journeyId = journeyLegData.journeyId.getId,
+              journeyLegOrder = journeyLegData.sequenceNumber,
+              agency = journeyLegData.agency <&> (.name),
+              skipBooking = False,
+              convenienceCost = 0,
+              pricingId = Nothing
+            }
+    let walkLeg =
+          DWalkLeg.WalkLegMultimodal
+            { id,
+              estimatedDistance = journeyLegData.distance,
+              estimatedDuration = Just journeyLegData.duration,
+              fromLocation = fromLocation,
+              toLocation = Just toLocation,
+              journeyLegInfo = Just journeySearchData,
+              riderId = parentSearchReq.riderId,
+              startTime = fromMaybe now journeyLegData.fromArrivalTime,
+              merchantId = Just parentSearchReq.merchantId,
+              status = InPlan,
+              merchantOperatingCityId = Just parentSearchReq.merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+    QWalkLeg.create walkLeg
 
-  getState (WalkLegGetState legId) = do
-    legData <- findById legId 
-    if legData.isSkipped == False && legData.isCancelled == False 
-      then do
-        if legData.legNo > 1 then return $ JT.JourneyLegState { status = InPlan, currentPosition = Nothing }
-          else return $ JT.JourneyLegState { status = Ongoing, currentPosition = Nothing }
-      else if legData.isSkipped == True
-        then return $ JT.JourneyLegState { status = Skipped, currentPosition = Nothing }
-        else return $ JT.JourneyLegState { status = Cancelled, currentPosition = Nothing }
-   
-  get (WalkLegGetState legId) = do
-    legData <- findById legId 
-    return legData
+  confirm (WalkLegRequestConfirm _) = return () -- return nothing
 
-  getFare (BusLegGetFareRequest _busGetFareData) =  do
-    return JLT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0}, estimatedMaxFare =  HighPrecMoney {getHighPrecMoney = 0}}
+  update (WalkLegRequestUpdate _) = return ()
 
+  cancel (WalkLegRequestCancel _) = return ()
+
+  getState (WalkLegRequestGetState req) = do
+    legData <- QWalkLeg.findById req.walkLegId
+    let status = getWalkLegStatusFromWalkLeg legData
+    return $ JT.JourneyLegState {status = status, currentPosition = Nothing}
+
+  getInfo (WalkLegRequestGetInfo req) = do
+    legData <- QWalkLeg.findById req.walkLegId
+    return $ mkWalkLegInfoFromWalkLegData legData
+
+  getFare (WalkLegRequestGetFare _) = do
+    return $
+      JT.GetFareResponse
+        { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
+          estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0}
+        }
