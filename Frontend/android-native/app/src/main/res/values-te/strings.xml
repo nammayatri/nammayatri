@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 <string name="tip_included">"టిప్ చేర్చబడింది!"</string>
 <string name="ride_rejected">రైడ్ తిరస్కరించబడింది</string>
 <string name="request">వినతి</string>
@@ -53,5 +53,7 @@
 <string name="call_support">మద్దతుకు కాల్ చేయండి</string>
 <string name="no_additional_fare_tips_and_waiting_charges">"అదనపు చార్జీలు లేవు. టిప్స్ లేవు. వెయిటింగ్ ఛార్జీలు లేవు."</string>
 <string name="third_party_booking">"థర్డ్ పార్టీ బుకింగ్"</string>
-    <string name="round_trip">రౌండ్ ట్రిప్</string>
+<string name="round_trip">రౌండ్ ట్రిప్</string>
+<string name="zxing_msg_default_status" tools:override="true">""</string>
+<string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>
