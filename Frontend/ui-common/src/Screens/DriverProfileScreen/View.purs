@@ -4,7 +4,7 @@ import Prelude
 import Screens.DriverProfileScreenCommon.Controller (Action(..), eval, ScreenOutput, getVariant, getPillText, getAspirationsText)
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, maxLines, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, horizontalScrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar, scrollBarX, shimmerFrameLayout)
+import PrestoDOM 
 import Effect (Effect)
 import Animation as Anim
 import Styles.Colors as Color
@@ -172,6 +172,8 @@ back push state =
     , height $ V 22
     , margin $ if DA.null state.data.displayImages then Margin 15 20 0 0 else  Margin 15 20 0 12
     , onClick push $ const GoBack
+    , accessibilityHint "Back : Button"
+    , accessibility ENABLE
     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_bold"
     ]
 
