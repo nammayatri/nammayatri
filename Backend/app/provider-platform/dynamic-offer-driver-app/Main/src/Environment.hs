@@ -62,6 +62,7 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
+import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -144,7 +145,8 @@ data AppCfg = AppCfg
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
-    nyGatewayUrl :: BaseUrl
+    nyGatewayUrl :: BaseUrl,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic, FromDhall)
 
@@ -242,7 +244,8 @@ data AppEnv = AppEnv
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
-    nyGatewayUrl :: BaseUrl
+    nyGatewayUrl :: BaseUrl,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic)
 

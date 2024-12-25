@@ -11,6 +11,8 @@ imports:
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
+  LatLong: Kernel.External.Maps.Types
+  TimeBound: Kernel.Types.TimeBound
 
 module: Driver
 
@@ -429,6 +431,114 @@ apis:
               type: VerifyFleetJoiningOtpReq
             response:
               type: APISuccess
+#  ----------------------------------------------------------------------
+
+  - POST: #consent API
+      endpoint: /{fleetOwnerId}/{driverId}/fleet/consent/{otp}
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+        driverId: Text
+        otp: Text
+      # request:
+        # type: FleetConsentReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_CONSENT_API
+
+  - GET: # Fleet All Routes API
+      endpoint: /fleet/routes
+      auth: ApiAuthV2
+      query:
+        - mbCurrentLocation: LatLong
+        - mbSearchString: Text
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/routes
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - mbCurrentLocation: LatLong
+              - mbSearchString: Text
+            response:
+              type: RouteAPIResp
+
+  - GET: # Fleet Possible Routes API
+      endpoint: /fleet/possibleRoutes/{startLocation}
+      auth: ApiAuthV2
+      params:
+        startLocation: LatLong
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_POSSIBLE_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/possibleRoutes/{startLocation}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              startLocation: LatLong
+            response:
+              type: RouteAPIResp
+
+  - POST: # Fleet Trip Planner API
+      endpoint: /fleet/tripPlanner/{driverId}/{vehicleNo}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        vehicleNo: Text
+      request:
+        type: TripPlannerReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_PLANNER_API
+      helperApi:
+        - POST:
+            endpoint: /{fleetOwnerId}/fleet/tripPlanner/{driverId}/{vehicleNo}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              driverId: Id Driver
+              vehicleNo: Text
+            request:
+              type: TripPlannerReq
+            response:
+              type: APISuccess
+
+  - GET: # Fleet Get trip transactions API
+      endpoint: /fleet/trip/transactions/{driverId}/{vehicleNo}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        vehicleNo: Text
+      query:
+        - mbDate: Day
+      response:
+        type: TripTransactionResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}/{vehicleNo}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              driverId: Id Driver
+              vehicleNo: Text
+            query:
+              - mbDate: Day
+            response:
+              type: TripTransactionResp
+
+# --------------------------------------------------------------------------
   - POST: # AddDriversAPI
       endpoint: /fleet/addDrivers
       auth: ApiAuthV2
@@ -598,6 +708,50 @@ types:
     - recordType: NewType
     - file: FilePath
     - derive: "'HideSecrets"
+  # FleetConsentReq:
+  #   - otp: Text
+  #   - driverId: Text
+    # - derive: "'HideSecrets"
+  RouteAPIResp:
+    # - fleetOwnerId: Text
+    - listItem: [RouteRespItem]
+    - summary: Summary
+    - derive: "'HideSecrets"
+  RouteRespItem:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - distance: Maybe Int
+    - totalStops: Maybe Int
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+  TripPlannerReq:
+    - trips: [TripDetail]
+    - summary: Summary
+    - derive: "'HideSecrets"
+  TripDetail:
+    - routeCode: Text
+    - roundTrip: Maybe RoundTripDetail
+    - derive: "'HideSecrets"
+  RoundTripDetail:
+    - frequency: Int
+    - derive: "'HideSecrets"
+  TripTransactionResp:
+    - trips: [TripTransactionDetail]
+    - totalTrips: Int
+  TripStatus:
+    - enum: "Upcoming, TripAssigned, TripStarted, TripCompleted"
+    - derive: "HttpInstance"
+  TripTransactionDetail:
+    - routeCode: Text
+    - tripSequence: Int
+    - tripStartTime: UTCTime
+    - tripEndTime: Maybe UTCTime
+    - tripStatus: TripStatus
+    - derive: "'HideSecrets'"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -19,17 +19,24 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
     postDriverFleetAddDrivers,
+    postDriverFleetConsent,
+    getDriverFleetRoutes,
+    getDriverFleetPossibleRoutes,
+    postDriverFleetTripPlanner,
+    getDriverFleetTripTransactions,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
+import Data.Time (Day)
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
@@ -175,3 +182,30 @@ postDriverFleetAddDrivers merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddDrivers) apiTokenInfo.personId.getId req
+
+postDriverFleetConsent :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Text -> Text -> Flow APISuccess
+postDriverFleetConsent merchantShortId opCity apiTokenInfo fleetOwnerId driverId otp = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just $ Id driverId) T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetConsent) fleetOwnerId driverId otp
+
+getDriverFleetRoutes :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe LatLong -> Maybe Text -> Flow Common.RouteAPIResp
+getDriverFleetRoutes merchantShortId opCity apiTokenInfo mbCurrentLocation mbSearchString = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetRoutes) apiTokenInfo.personId.getId mbCurrentLocation mbSearchString
+
+getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> LatLong -> Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes merchantShortId opCity apiTokenInfo startLocation = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetPossibleRoutes) apiTokenInfo.personId.getId startLocation
+
+postDriverFleetTripPlanner :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Common.TripPlannerReq -> Flow APISuccess
+postDriverFleetTripPlanner merchantShortId opCity apiTokenInfo driverId vehicleNo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetTripPlanner) apiTokenInfo.personId.getId driverId vehicleNo req
+
+getDriverFleetTripTransactions :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Maybe Day -> Flow Common.TripTransactionResp
+getDriverFleetTripTransactions merchantShortId opCity apiTokenInfo driverId vehicleNo mbDate = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetTripTransactions) apiTokenInfo.personId.getId driverId vehicleNo mbDate
