@@ -392,4 +392,5 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , urlShortnerConfig = common.urlShortnerConfig
     }

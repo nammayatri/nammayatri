@@ -66,6 +66,11 @@ module Domain.Action.Dashboard.Driver
     getFleetDriverAssociation,
     getFleetVehicleAssociation,
     getAllDriverForFleet,
+    postDriverFleetConsent,
+    getDriverFleetRoutes,
+    getDriverFleetPossibleRoutes,
+    postDriverFleetTripPlanner,
+    getDriverFleetTripTransactions,
     VolunteerTransactionStorageReq (..),
     setServiceChargeEligibleFlagInDriverPlan,
     changeOperatingCity,
@@ -188,6 +193,7 @@ import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
@@ -221,8 +227,10 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
+import qualified UrlShortner.Common as UrlShortner
 import Utils.Common.Cac.KeyNameConstants
 
 -- FIXME: not tested yet because of no onboarding test data
@@ -1095,7 +1103,8 @@ addDriversInFleet merchantShortId opCity fleetOwnerId req = do
   where
     processDriver :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriver moc req_ = do
-      let authData =
+      let driverMobile = req_.driverMobileNumber
+          authData =
             DReg.AuthReq
               { mobileNumber = Just req_.driverMobileNumber,
                 mobileCountryCode = Just "+91",
@@ -1109,13 +1118,16 @@ addDriversInFleet merchantShortId opCity fleetOwnerId req = do
               }
       mobileNumberHash <- getDbHash req_.driverMobileNumber
       oldPerson <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
-      person <- case oldPerson of
-        Nothing -> DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
-        Just p -> return p
-      checkAssoc <- B.runInReplica $ FDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
-      when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      FDV.create assoc
+      case oldPerson of
+        Nothing -> void $ DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
+        Just person_ -> do
+          fork "Sending Auth SMS for driver" $ do
+            dInfo <- QDriverInfo.findById person_.id >>= fromMaybeM DriverInfoNotFound
+            transporterConfig <- CTC.findByMerchantOpCityId moc.id Nothing >>= fromMaybeM (TransporterConfigNotFound moc.id.getId)
+            fleetOwner <- B.runInReplica $ QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
+            case dInfo.verified of
+              True -> sendAuthUrlToDriver driverMobile moc.merchantId moc.id fleetOwner person_.id.getId transporterConfig
+              False -> sendDeepLinkForAuth person_ driverMobile moc.merchantId moc.id fleetOwner opCity transporterConfig
 
     readCsv csvFile = do
       csvData <- L.runIO $ BS.readFile csvFile
@@ -1141,6 +1153,116 @@ addDriversInFleet merchantShortId opCity fleetOwnerId req = do
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =
       cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+sendAuthUrlToDriver :: Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Text -> TransporterConfig -> Flow ()
+sendAuthUrlToDriver mobileNumber merchantId merchantOpCityId fleetOwner driverId transporterConfig = do
+  smsCfg <- asks (.smsCfg)
+  let countryCode = fromMaybe "+91" fleetOwner.mobileCountryCode
+      phoneNumber = countryCode <> mobileNumber
+      otp = "" -- ?
+      authUrl = (fromMaybe "" transporterConfig.bppDashboardUrl) <> "/driver/" <> fleetOwner.id.getId <> "/" <> driverId <> "/fleet/consent/" <> otp
+
+  url <- getShortUrlForFleet authUrl
+  withLogTag ("sending Auth SMS") $ do
+    (mbSender, message) <-
+      MessageBuilder.buildFleetAuthForDriverMessage merchantOpCityId $
+        MessageBuilder.BuildFleetAuthForDriverMessage
+          { fleetOwnerName = fleetOwner.firstName,
+            fleetAuthUrl = url
+          }
+    let sender = fromMaybe smsCfg.sender mbSender
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+
+sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Context.City -> TransporterConfig -> Flow ()
+sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId fleetOwner opCity transporterConfig = do
+  let countryCode = fromMaybe "+91" person.mobileCountryCode
+  res <-
+    DReg.authWithOtp
+      True
+      DReg.AuthReq
+        { mobileNumber = Just mobileNumber,
+          mobileCountryCode = Just countryCode,
+          merchantId = merchantId.getId,
+          merchantOperatingCity = Just opCity,
+          registrationLat = Nothing,
+          registrationLon = Nothing,
+          name = Just person.firstName,
+          email = person.email,
+          identifierType = Just DP.MOBILENUMBER
+        }
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+
+  let phoneNumber = countryCode <> mobileNumber
+      baseUrl = fromMaybe "https://nammayatri.in/p?vp={#vp#}" transporterConfig.appUrl -- or add in fleeetConfig
+      url = buildAuthUrl [("vp", "wmb_fleet")] baseUrl
+      deepLink = url <> "&authId=" <> res.authId.getId <> "&otp=" <> res.otpCode
+  deepLinkShortUrl <- getShortUrlForFleet deepLink
+  smsCfg <- asks (.smsCfg)
+  withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
+    (mbSender, message) <-
+      MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
+        MessageBuilder.BuildFleetDeepLinkAuthMessage
+          { fleetOwnerName = fleetOwner.firstName,
+            deepLinkUrl = deepLinkShortUrl
+          }
+    let sender = fromMaybe smsCfg.sender mbSender
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+
+buildTemplate :: [(Text, Text)] -> Text -> Text
+buildTemplate paramVars template =
+  foldl'
+    ( \msg (findKey, replaceVal) ->
+        T.replace (Notify.templateText findKey) replaceVal msg
+    )
+    template
+    paramVars
+
+buildAuthUrl :: [(Text, Text)] -> Text -> Text
+buildAuthUrl extraQueryParams urlPattern = buildTemplate extraQueryParams urlPattern
+
+getShortUrlForFleet :: (CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
+getShortUrlForFleet baseUrl = do
+  let shortUrlReq =
+        UrlShortner.GenerateShortUrlReq
+          { baseUrl,
+            customShortCode = Nothing,
+            shortCodeLength = Nothing,
+            expiryInHours = Just 12,
+            urlCategory = UrlShortner.FLEET_AUTH
+          }
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  pure res.shortUrl
+
+postDriverFleetConsent :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Text -> Flow APISuccess
+postDriverFleetConsent merchantShortId opCity fleetOwnerId driverId _otp = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  -- TODO: add rate limit
+  let personId = Id driverId
+  checkAssoc <- B.runInReplica $ FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
+  when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+  assoc <- FDA.makeFleetDriverAssociation personId fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+  FDV.create assoc
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonNotFound driverId)
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCity.id "FLEET_CONSENT" Nothing Nothing driver.language
+  whenJust mbMerchantPN $ \merchantPN -> do
+    Notify.notifyDriver merchantOpCity.id merchantPN.fcmNotificationType merchantPN.title merchantPN.body driver driver.deviceToken
+  pure Success
+
+getDriverFleetRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Maybe LatLong -> Maybe Text -> Flow Common.RouteAPIResp
+getDriverFleetRoutes _merchantShortId _opCity _fleetOwnerId _mbCurrentLocation _mbSearchString = do error "Logic yet to be decided"
+
+getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> Context.City -> Text -> LatLong -> Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes _merchantShortId _opCity _fleetOwnerId _startLocation = do error "Logic yet to be decided"
+
+postDriverFleetTripPlanner :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Common.TripPlannerReq -> Flow APISuccess
+postDriverFleetTripPlanner _merchantShortId _opCity _fleetOwnerId _reqDriverId _vehicleNo _req = do error "Logic yet to be decided"
+
+getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Maybe Day -> Flow Common.TripTransactionResp
+getDriverFleetTripTransactions _merchantShortId _opCity _fleetOwnerId _reqDriverId _vehicleNo _reqDay = do error "Logic yet to be decided"
 
 ---------------------------------------------------------------------
 
