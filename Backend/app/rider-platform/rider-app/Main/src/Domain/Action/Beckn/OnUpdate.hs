@@ -512,6 +512,43 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
+    searchReq <- QSR.findById booking.transactionId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+    case searchReq.journeyId of 
+      Just journeyId -> do
+        legs <- JM.getAllLegsInfo journeyId
+        let mbReferredLeg = JM.getLeg searchReq.id legs
+        case mbReferredLeg of 
+          Just referredLeg -> do
+            case legs !! (referredLeg.order + 1) of
+              Just legToUpdate -> do
+                distRes <- 
+                  Maps.getDistance merchantId merchantOpCityId $
+                    Maps.GetDistanceReq
+                      { origin = legToUpdate.startLocation,
+                        destination = legToUpdate.endLocation,
+                        travelMode = Just Maps.CAR,
+                        sourceDestinationMapping = Nothing,
+                        distanceUnit = METER -- need to make config from merchant table
+                      }
+                
+                let newLeg = legToUpdate {
+                  mode = Unspecified,
+                  duration = distRes.duration, 
+                  distance = distRes.distance,
+                  fromStopDetails = Nothing,
+                  toStopDetails = Nothing,
+                  routeDetails = Nothing,
+                  fromArrivalTime = Nothing,
+                  fromDepartureTime = Nothing,
+                  toArrivalTime = Nothing,
+                  toDepartureTime = Nothing,
+                  agency = Nothing
+                }
+                let mbLastLegToSwitch = foldl' (\acc x -> if isNothing acc || x.mode == Unspecified then Just x else Nothing) Nothing (drop (journeyLegToSwitch.order - 1) journeyLegs) 
+                    lastLegToSwitch = maybe legToUpdate identity mbLastLegToSwitch
+                mapM JM.replaceLeg (filter (\leg -> leg.order <= lastLegToSwitch.order) (drop (legToUpdate.order - 1) journeyLegs)) newLeg
+            Nothing -> logInfo "Leg not found in journey"
+          Nothing -> logInfo "Leg not found in journey"
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language
@@ -526,7 +563,43 @@ onUpdate = \case
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
-      else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
+      else do
+        searchReq <- QSR.findById booking.transactionId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+        case searchReq.journeyId of 
+          Just journeyId -> do
+            legs <- JM.getAllLegsInfo journeyId -- can be optimized with findByJourneyIdAndOrderId
+            let mbReferredLeg = JM.getLeg searchReq.id legs
+            case mbReferredLeg of 
+              Just referredLeg -> do
+                case legs !! (referredLeg.order + 1) of
+                  Just legToUpdate -> do
+                    distRes <- 
+                      Maps.getDistance merchantId merchantOpCityId $
+                        Maps.GetDistanceReq
+                          { origin = startLocation,
+                            destination = legToUpdate.endLocation,
+                            travelMode = Just Maps.CAR,
+                            sourceDestinationMapping = Nothing,
+                            distanceUnit = METER -- need to make config from merchant table
+                          }
+                    
+                    let newLeg = legToUpdate {
+                      mode = Unspecified,
+                      duration = distRes.duration, 
+                      distance = distRes.distance,
+                      fromStopDetails = Nothing,
+                      toStopDetails = Nothing,
+                      routeDetails = Nothing,
+                      fromArrivalTime = Nothing,
+                      fromDepartureTime = Nothing,
+                      toArrivalTime = Nothing,
+                      toDepartureTime = Nothing,
+                      agency = Nothing
+                    }
+                mapM JM.replaceLeg [legToUpdate] newLeg
+              Nothing -> logInfo "Leg not found in journey"
+          Nothing -> do
+            Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
@@ -683,3 +756,4 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         createdAt = now,
         updatedAt = now
       }
+

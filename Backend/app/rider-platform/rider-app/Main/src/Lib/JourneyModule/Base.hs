@@ -43,6 +43,9 @@ getJourney id = JQ.findById id >>= fromMaybeM (JourneyNotFound id.getId)
 getJourneyLegs :: Id Journey -> m [JourneyLeg]
 getJourneyLegs journeyId = QJourneyLeg.findAllByJourneyId journeyId
 
+getLeg :: JourneyLeg leg m => Id JourneyLeg -> [leg] -> m (Maybe leg)
+getLeg legId = find (\leg -> legId == leg.id)
+
 -- Return complete data with search and bookings
 getAllLegsInfo :: Id Journey -> m [LegInfo]
 getAllLegsInfo journeyId = do

@@ -97,3 +97,99 @@ getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
   newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
   pure Kernel.Types.APISuccess.Success
+
+postMultimodalLegSwitchTo ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Text -> Text -> API.Types.UI.MultimodalConfirm.SwitchModeReq
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalLegSwitchTo _ journeyId legId newMode req = do
+  journeyLegs <- JM.getAllLegs journeyId
+  let mbJourneyLegToSwitch = JM.getLeg legId journeyLegs
+  case mbJourneyLegToSwitch of
+    Just journeyLegToSwitch -> do
+      currentLeg <- getCurrentLeg journeyId journeyLegs
+      journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
+      if currentLeg.order > journeyLegToSwitch.order then 
+        throwError "Cannot switch for already passed leg."
+      else if journeyLegToSwitch.order == currentLeg.order then 
+        switchCurrentLeg currentLeg journeyLegToSwitch journey
+      else if currentLeg.order + 1 == journeyLegToSwitch.order then
+        switchNextLeg currentLeg journeyLegToSwitch journeyLegs
+      else do
+          let legsToSwitch = getLegsToSwitch journeyLegToSwitch currentLeg journeyLegs newMode
+              newLeg = constructNewLeg journeyLegToSwitch newMode
+          JL.replaceLeg legsToSwitch newLeg
+    Nothing -> throwError "legId not present for this journey."
+  where
+     
+
+    getLegsToSwitch journeyLegToSwitch currentLeg journeyLegs newMode = do
+      let
+        initialState = LegsState
+          { legsBeforeCurrentLeg = []
+          , legsAfterCurrentLeg = Nothing
+          , lastConsecutiveLegOrder = Nothing
+          }
+
+        processLeg acc leg
+          | journeyLegToSwitch.order == leg.order = acc
+          | journeyLegToSwitch.order < leg.order && leg.mode == newMode =
+              acc { legsBeforeCurrentLeg = acc.legsBeforeCurrentLeg ++ [leg] }
+          | journeyLegToSwitch.order < leg.order && leg.mode /= newMode =
+              acc { legsBeforeCurrentLeg = [] }
+          | journeyLegToSwitch.order > leg.order && leg.mode == newMode &&
+              (isNothing acc.lastConsecutiveLegOrder || acc.lastConsecutiveLegOrder == Just (leg.order + 1)) =
+              acc { legsAfterCurrentLeg = Just (maybe [leg] (++ [leg]) (acc.legsAfterCurrentLeg))
+                  , lastConsecutiveLegOrder = Just leg.order
+                  }
+          | otherwise = acc
+
+        finalState = foldl' processLeg initialState (drop (currentLeg.order - 1) journeyLegs)
+      finalState.legsBeforeCurrentLeg ++ [journeyLegToSwitch] ++ maybe [] id finalState.legsAfterCurrentLeg
+
+    constructNewLeg journeyLegToSwitch = do
+      let startLocation = maybe journeyLegToSwitch.startLocation identity req.currentLocation
+      distRes <- 
+        Maps.getDistance merchantId merchantOpCityId $
+          Maps.GetDistanceReq
+            { origin = startLocation,
+              destination = journeyLegToSwitch.endLocation,
+              travelMode = Just $ if newMode == Walk then Maps.FOOT else Maps.CAR,
+              sourceDestinationMapping = Nothing,
+              distanceUnit = METER -- need to make config from merchant table
+            }
+      
+      journeyLegToSwitch {
+        startLocation = startLocation,
+        mode = newMode,
+        duration = distRes.duration, 
+        distance = distRes.distance,
+        fromStopDetails = Nothing,
+        toStopDetails = Nothing,
+        routeDetails = Nothing,
+        fromArrivalTime = Nothing,
+        fromDepartureTime = Nothing,
+        toArrivalTime = Nothing,
+        toDepartureTime = Nothing,
+        agency = Nothing
+      }
+    
+    switchCurrentLeg currentLeg journeyLegToSwitch journey = do
+      case currentLeg.mode of 
+        Unspecified -> throwError "Cannot switch current leg for this mode."
+        _ -> do
+          let newLeg = constructNewLeg journeyLegToSwitch req.currentLocation
+          JL.replaceLeg journey [journeyLegToSwitch] newLeg
+        
+    switchNextLeg currentLeg journeyLegToSwitch journeyLegs = do
+      case currentLeg.mode of
+        Unspecified -> do 
+          let mbLastLegToSwitch = foldl' (\acc x -> if isNothing acc || x.mode == Unspecified then Just x else Nothing) Nothing (drop (journeyLegToSwitch.order - 1) journeyLegs) 
+              lastLegToSwitch = maybe journeyLegToSwitch identity mbLastLegToSwitch
+          let req = TaxiLegRequest $ TaxiLegRequestUpdate EditLocationReq {toLocation : lastLegToSwitch.toLocation}
+          JL.update req
+          -- mapM JM.deleteLeg (filter (\leg -> leg.order <= lastLegToSwitch.order) (drop (journeyLegToSwitch.order - 1) journeyLegs))
+        _ -> throwError "Switching not allowed for this mode."
