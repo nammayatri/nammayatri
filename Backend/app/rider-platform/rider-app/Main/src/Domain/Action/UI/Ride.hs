@@ -15,7 +15,7 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    EditLocation (..),
+    SRide.EditLocation (..),
     EditLocationReq (..),
     EditLocationResp (..),
     getDriverLoc,
@@ -100,20 +100,14 @@ data GetRideStatusResp = GetRideStatusResp
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data EditLocationReq = EditLocationReq
-  { origin :: Maybe EditLocation,
-    destination :: Maybe EditLocation
+  { origin :: Maybe SRide.EditLocation,
+    destination :: Maybe SRide.EditLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data EditLocationResp = EditLocationResp
   { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest),
     result :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data EditLocation = EditLocation
-  { gps :: Maps.LatLong,
-    address :: DLA.LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -364,7 +358,7 @@ buildLocation ::
   MonadFlow m =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  EditLocation ->
+  SRide.EditLocation ->
   m DL.Location
 buildLocation merchantId merchantOperatingCityId location = do
   guid <- generateGUID

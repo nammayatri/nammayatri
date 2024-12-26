@@ -23,10 +23,15 @@ data WalkLegMultimodal = WalkLegMultimodal
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     startTime :: Kernel.Prelude.UTCTime,
+    status :: Domain.Types.WalkLegMultimodal.WalkLegStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+data WalkLegStatus = InPlan | Ongoing | Completed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WalkLegStatus)

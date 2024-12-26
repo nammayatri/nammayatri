@@ -71,6 +71,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
+import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
@@ -206,7 +207,7 @@ data GetQuotesRes = GetQuotesRes
 data JourneyData = JourneyData
   { totalMinFare :: HighPrecMoney,
     totalMaxFare :: HighPrecMoney,
-    duration :: Just Seconds,
+    duration :: Maybe Seconds,
     modes :: [DTrip.TravelMode],
     journeyLegs :: [JourneyLeg]
   }
@@ -215,7 +216,7 @@ data JourneyData = JourneyData
 data JourneyLeg = JourneyLeg
   { journeyLegOrder :: Int,
     journeyMode :: DTrip.TravelMode,
-    duartion :: Seconds
+    duration :: Seconds
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -351,7 +352,7 @@ getJourneys searchRequest = do
     then do
       allJourneys <- QJourney.findBySearchId searchRequest.id
       forM allJourneys \journey -> do
-        journeyLegsFromOtp <- getJourneyLegs journey.id
+        journeyLegsFromOtp <- JM.getJourneyLegs journey.id
         journeyLegs <- do
           forM journeyLegs \journeyLeg -> do
             return $
@@ -363,7 +364,7 @@ getJourneys searchRequest = do
         return $
           JourneyData
             { totalMinFare = journey.estimatedMinFare,
-              totalMaxFare = joureny.estimatedMaxFare,
+              totalMaxFare = journey.estimatedMaxFare,
               modes = journey.modes,
               journeyLegs,
               duration = journey.estimatedDuration

@@ -25,6 +25,9 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal -> m (Maybe Domain.Types.WalkLegMultimodal.WalkLegMultimodal))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.WalkLegMultimodal.WalkLegStatus -> Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal -> m ())
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal -> m (Maybe Domain.Types.WalkLegMultimodal.WalkLegMultimodal))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -44,8 +47,9 @@ updateByPrimaryKey (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
       Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.startTime startTime,
+      Se.Set Beam.status status,
       Se.Set Beam.toLocationId (Kernel.Types.Id.getId <$> (toLocation <&> (.id))),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
