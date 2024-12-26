@@ -3271,7 +3271,8 @@ type HotspotScreenData = {
   dataExpiryAt :: String,
   currentDriverLat :: Number,
   currentDriverLon :: Number,
-  config :: AppConfig
+  config :: AppConfig,
+  logField :: Object Foreign
 }
 
 type HotspotScreenProps = {
