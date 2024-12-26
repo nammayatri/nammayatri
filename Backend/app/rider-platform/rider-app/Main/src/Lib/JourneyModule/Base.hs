@@ -1,20 +1,20 @@
 module Lib.JourneyModule.Base where
 
-import qualified Storage.Queries.Journey as QJourney
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as ExternalInterface
-import qualified Storage.Journey.Queries as JQ
-import qualified Domain.Types.Journey as DJ
-import qualified Storage.Queries.FRFSSearch as QFRFSSearch
-import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Kernel.Types.Common
 import Lib.JourneyModule.Types
 import Lib.JourneyModule.Utils
-import qualified Domain.Types.Trip as DTrip
 import SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified Kernel.Types.Common
+import qualified Storage.Journey.Queries as JQ
 import qualified Storage.Merchant.Queries as QMerchant
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 
 init :: JourneyInitData -> m Journey
 init journeyReq = do
@@ -23,10 +23,9 @@ init journeyReq = do
   totalFares <-
     mapWithIndex
       ( \idx leg -> do
-          journeyLegId <- generateGUID
           getFareReq <- mkGetFareReq journeyReq.merchantId journeyReq.merchantOperatingCityId leg
           totalLegFare <- JourneyLegTypes.getFare getFareReq
-          let journeyLeg <- mkJourneyLeg leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
+          journeyLeg <- mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
           QJourneyLeg.create journeyLeg
           return totalLegFare
       )
@@ -47,12 +46,13 @@ getJourneyLegs journeyId = QJourneyLeg.findAllByJourneyId journeyId
 getAllLegsInfo :: Id Journey -> m [LegInfo]
 getAllLegsInfo journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
-  allLegsInfo <- allLegsRawData `forM` \leg -> do
-    case leg.mode of
-      Trip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData { searchId = cast leg.legId }
-      Trip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData { walkLegId = leg.legId }
-      Trip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData { searchId = cast leg.legId }
-      _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+  allLegsInfo <-
+    allLegsRawData `forM` \leg -> do
+      case leg.mode of
+        Trip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast leg.legId}
+        Trip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = leg.legId}
+        Trip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast leg.legId}
+        _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
   return $ sortBy (.order) allLegsInfo
 
 startJourney :: Id Journey -> ConfirmReq -> m () -- confirm request
@@ -103,9 +103,9 @@ getRemainingLegs journeyId = do
 
 -- skipJourney :: Journey -> [leg] -> m ()
 -- skipJourney journey
-    -- getRemainingLegs
-    -- map update [leg]
-    -- @@ call cancel for current leg
+-- getRemainingLegs
+-- map update [leg]
+-- @@ call cancel for current leg
 
 -- endJourney :: Journey -> m ()
 -- endJourney
@@ -120,4 +120,3 @@ getRemainingLegs journeyId = do
 -- extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
 -- extendLeg journey oldLegs newLeg =
 --   forM_ (deleteLeg journey) oldLegs >> updateLeg journey newLeg
-

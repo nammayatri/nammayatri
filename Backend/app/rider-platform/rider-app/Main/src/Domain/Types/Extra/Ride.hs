@@ -4,10 +4,13 @@
 module Domain.Types.Extra.Ride where
 
 import Data.Aeson
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Ride
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
+import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
@@ -15,6 +18,12 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 
 -- Extra code goes here --
+data EditLocation = EditLocation
+  { gps :: Maps.LatLong,
+    address :: DLA.LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data RideAPIEntity = RideAPIEntity
   { allowedEditLocationAttempts :: Kernel.Prelude.Int,
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Int,

@@ -74,7 +74,7 @@ getStopLocationId = \case
   DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
-getToLocationId bookingDetails = do 
+getToLocationId bookingDetails = do
   toLocation <- getToLocation bookingDetails
   return $ toLocation.id.getId
 

@@ -1,0 +1,33 @@
+module Lib.JourneyLeg.Types.Metro where
+
+import qualified Domain.Types.FRFSSearch as FRFSSearch
+import Kernel.External.Maps.Google.MapsClient.Types
+import Kernel.Types.Id
+
+data MetroLegRequestSearchData = MetroLegRequestSearchData
+
+data MetroLegRequestUpdateData = MetroLegRequestUpdateData
+
+data MetroLegRequestConfirmData = MetroLegRequestConfirmData
+
+data MetroLegRequestCancelData = MetroLegRequestCancelData
+
+data MetroLegRequestGetStateData = MetroLegRequestGetStateData
+
+newtype MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
+
+data MetroLegRequest
+  = MetroLegRequestSearch MetroLegRequestSearchData
+  | MetroLegRequestConfirm MetroLegRequestConfirmData
+  | MetroLegRequestUpdate MetroLegRequestUpdateData
+  | MetroLegRequestCancel MetroLegRequestCancelData
+  | MetroLegRequestGetFare MetroLegRequestGetFareData
+  | MetroLegRequestGetState MetroLegRequestGetStateData
+  | MetroLegRequestGetInfo MetroLegRequestGetInfoData
+
+data MetroLegRequestGetFareData = MetroLegRequestGetFareData
+  { startLocation :: LatLngV2,
+    endLocation :: LatLngV2
+  }

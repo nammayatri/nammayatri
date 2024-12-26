@@ -1,59 +1,45 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Lib.JourneyLeg.Metro where
 
-import qualified Domain.Types.FRFSSearch as FRFSSearch
+import Kernel.Prelude
+import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
+import qualified Domain.Types.TicketBookingService as TBS
+import Kernel.Types.Error
+import Kernel.Utils.Common
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 
-mapServiceStatusToJourneyLegStatus :: ServiceStatus -> JourneyLegStatus
+mapServiceStatusToJourneyLegStatus :: TBS.ServiceStatus -> JT.JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
-  Pending -> InPlan -- Indicates the service is yet to start planning.
-  Failed -> FailedStatus -- Indicates a failure in the service.
-  Confirmed -> Booked -- Indicates the service has been confirmed/booked.
-  Verified -> Assigning -- Indicates the service is verified and assigning resources.
-  Cancelled -> Cancelled -- Indicates the service has been cancelled.
+  TBS.Pending -> JT.InPlan -- Indicates the service is yet to start planning.
+  TBS.Failed -> JT.Cancelled -- Indicates a failure in the service.
+  TBS.Confirmed -> JT.Booked -- Indicates the service has been confirmed/booked.
+  TBS.Verified -> JT.Assigning -- Indicates the service is verified and assigning resources.
+  TBS.Cancelled -> JT.Cancelled -- Indicates the service has been cancelled.
 
-data MetroLegRequestSearchData
-
-data MetroLegRequestUpdateData
-
-data MetroLegRequestConfirmData
-
-data MetroLegRequestCancelData
-
-data MetroLegRequestGetStateData
-
-newtype MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
-  { searchId :: Id FRFSSearch.FRFSSearch
-  }
-
-data MetroLegRequest
-  = MetroLegRequestSearch MetroLegRequestSearchData
-  | MetroLegRequestConfirm MetroLegRequestConfirmData
-  | MetroLegRequestUpdate MetroLegRequestUpdateData
-  | MetroLegRequestCancel MetroLegRequestCancelData
-  | MetroLegRequestGetFare MetroLegRequestGetFareData
-  | MetroLegRequestGetState MetroLegRequestGetStateData
-  | MetroLegRequestGetInfo MetroLegRequestGetInfoData
-
-data MetroLegRequestGetFareData = MetroLegRequestGetFareData
-  { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
-  }
-
-instance JourneyLeg MetroLeg m where
+instance JT.JourneyLeg MetroLegRequest m where
   search (MetroLegRequestSearch _) = return () -- TODO: Implement this
+  search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm _) = return ()
+  confirm _ = throwError (InternalError "Not supported")
 
   update (MetroLegRequestUpdate _) = return ()
+  update _ = throwError (InternalError "Not supported")
 
   cancel (MetroLegRequestCancel _) = return ()
+  cancel _ = throwError (InternalError "Not supported")
 
-  getState (MetroLegRequestGetState _) = return ()
+  getState (MetroLegRequestGetState _) = return $ JT.JourneyLegState { status = JT.InPlan, currentPosition = Nothing } 
+  getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = do
     -- TODO: No booking for metro, we can handle for bookings once booking is there
     searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-    return $ mkLegInfoFromFrfsSearchRequest searchReq
-
+    JT.mkLegInfoFromFrfsSearchRequest searchReq
+  getInfo _ = throwError (InternalError "Not supported")
+  
   getFare (MetroLegRequestGetFare _) = do
     return JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}}
+  getFare _ = throwError (InternalError "Not supported")

@@ -28,7 +28,6 @@ data JourneyLeg = JourneyLeg
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Domain.Types.Common.TravelMode,
-    -- polylinePoints :: Kernel.External.Maps.Google.MapsClient.Types.PolylinePoints,
     routeDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails,
     sequenceNumber :: Kernel.Prelude.Int,
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
