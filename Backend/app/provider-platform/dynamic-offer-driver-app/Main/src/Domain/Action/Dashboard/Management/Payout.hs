@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.Management.Payout
   ( getPayoutPayoutReferralHistory,
@@ -14,11 +13,9 @@ module Domain.Action.Dashboard.Management.Payout
 where
 
 import qualified API.Types.ProviderPlatform.Management.Payout as DTP
-import qualified Control.Monad.Extra as Control
 import qualified Dashboard.Common
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (LocalTime, addUTCTime, minutesToTimeZone, utcToLocalTime, utctDay)
+import Data.Time (minutesToTimeZone, utcToLocalTime, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Types.DailyStats as DDS
@@ -33,26 +30,22 @@ import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
 import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, whenJust)
 import Kernel.Beam.Functions (runInReplica)
-import Kernel.External.Encryption (decrypt, decryptItem, encrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as TPayout
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PO
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
-import Servant hiding (throwError)
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -65,7 +58,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Auth
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payout as TP

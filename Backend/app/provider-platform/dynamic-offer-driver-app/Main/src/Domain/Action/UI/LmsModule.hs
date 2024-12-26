@@ -1,23 +1,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.LmsModule where
 
 import API.Types.UI.LmsModule
-import qualified API.Types.UI.LmsModule
-import Control.Monad.Extra (unit)
-import Data.Bool (Bool (False, True))
-import Data.List (length)
-import Data.Maybe (Maybe (Nothing), listToMaybe)
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DriverModuleCompletion as DTDMC
-import qualified Domain.Types.LmsEnumTypes as DTQI
 import Domain.Types.LmsModule (LmsModule (LmsModule))
 import Domain.Types.LmsModule as LmsModule
-import qualified Domain.Types.LmsModule
-import qualified Domain.Types.LmsModule as LmsModule
 import Domain.Types.LmsModuleVideoInformation as LmsModuleVideoInformation
-import qualified Domain.Types.LmsVideoTranslation as DTLVT
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ModuleCompletionInformation as DTMCI
@@ -30,12 +19,10 @@ import qualified Environment
 import EulerHS.Prelude hiding (id, length)
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (..))
-import qualified Kernel.External.Types
 import Kernel.Prelude hiding (all, elem, find, foldl', map, notElem, null, whenJust)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
@@ -43,7 +30,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth
 import Tools.Error
 
 getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes

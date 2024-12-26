@@ -58,6 +58,7 @@ library
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -150,6 +151,7 @@ executable dynamic-offer-driver-drainer-exe
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts

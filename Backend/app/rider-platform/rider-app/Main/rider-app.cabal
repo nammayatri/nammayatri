@@ -918,6 +918,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -1051,6 +1052,7 @@ executable rider-app-exe
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts

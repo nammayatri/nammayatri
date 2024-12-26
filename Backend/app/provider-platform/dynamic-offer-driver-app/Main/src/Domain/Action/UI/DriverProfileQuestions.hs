@@ -1,13 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
 import ChatCompletion.Interface.Types as CIT
-import Data.Maybe (fromJust)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Calendar (diffDays)
 import Data.Time.Clock (utctDay)
@@ -18,17 +15,12 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as SP
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
-import Kernel.Beam.Functions as B
-import Kernel.External.Encryption
-import Kernel.Prelude (head)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common as KUC
-import Servant
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
@@ -36,7 +28,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
 import Tools.ChatCompletion as TC
 import Tools.Error
 

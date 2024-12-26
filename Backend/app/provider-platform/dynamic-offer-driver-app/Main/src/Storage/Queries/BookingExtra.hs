@@ -1,17 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.BookingExtra where
 
 import Data.List.Extra (notNull)
-import qualified Data.Text as T
 import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Booking
-import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.DriverQuote as DDQ
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -19,23 +15,16 @@ import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude hiding (forM_)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
-import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import Storage.Queries.OrphanInstances.Booking
-import Tools.Error
+import Storage.Queries.OrphanInstances.Booking ()
 
 createBooking' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking' = createWithKV

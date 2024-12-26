@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Domain.Types.VehicleCategory where
 
 import Data.Aeson

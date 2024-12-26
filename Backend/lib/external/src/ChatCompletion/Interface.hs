@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module ChatCompletion.Interface where

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Beckn.OnDemand.Transformer.OnSearch where
 
@@ -7,20 +6,13 @@ import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.OnSearch
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
-import qualified Data.Maybe
-import qualified Data.Text
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
-import qualified Domain.Types.SearchRequest
-import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (logInfo, type (:::))
 import Kernel.Utils.Error
 import Tools.Error
 

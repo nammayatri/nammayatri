@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.DriverInformationExtra where
 
@@ -16,12 +15,10 @@ import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
-import Kernel.Beam.Functions as BF
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -30,8 +27,7 @@ import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
-import Storage.Queries.OrphanInstances.DriverInformation
-import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
 import Tools.Error
 

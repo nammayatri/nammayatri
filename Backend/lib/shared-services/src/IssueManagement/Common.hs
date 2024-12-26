@@ -7,9 +7,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where

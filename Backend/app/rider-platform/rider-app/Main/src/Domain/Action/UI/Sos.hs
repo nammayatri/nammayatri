@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.UI.Sos where

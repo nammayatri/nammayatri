@@ -1,7 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.Ride where
 
@@ -10,13 +8,11 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
-import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
-import Kernel.Utils.TH
 
 -- Extra code goes here --
 data RideAPIEntity = RideAPIEntity

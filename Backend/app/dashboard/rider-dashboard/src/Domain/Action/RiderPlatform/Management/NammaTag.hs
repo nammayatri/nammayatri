@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.RiderPlatform.Management.NammaTag
   ( postNammaTagTagCreate,
@@ -22,8 +21,6 @@ module Domain.Action.RiderPlatform.Management.NammaTag
 where
 
 import qualified API.Client.RiderPlatform.Management
-import qualified API.Types.RiderPlatform.Management
-import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
@@ -33,7 +30,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()

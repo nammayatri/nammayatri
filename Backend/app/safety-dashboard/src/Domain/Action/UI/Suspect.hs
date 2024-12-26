@@ -1,32 +1,25 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Suspect where
 
 import API.Types.UI.Suspect
-import qualified API.Types.UI.Suspect
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import qualified Data.List as DL
-import Data.OpenApi (ToSchema)
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
 import qualified "lib-dashboard" Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Notification as Domain.Types.Notification
+import qualified Domain.Types.Notification
 import qualified "lib-dashboard" Domain.Types.Person
-import Domain.Types.Suspect as Domain.Types.Suspect
-import Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.SuspectStatusChangeRequest as Domain.Types.SuspectStatusChangeRequest
-import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
+import Domain.Types.Suspect
+import Domain.Types.SuspectFlagRequest
+import qualified Domain.Types.SuspectStatusChangeRequest
+import qualified Domain.Types.SuspectStatusHistory
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (concatMap, elem, filter, groupBy, id, length, map, mapM_, maximumBy, null, readMaybe, whenJust)
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant

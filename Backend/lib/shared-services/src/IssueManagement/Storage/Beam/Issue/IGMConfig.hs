@@ -1,13 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module IssueManagement.Storage.Beam.Issue.IGMConfig where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified IssueManagement.Domain.Types.Issue.IssueCategory as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 
 data IGMConfigT f = IGMConfigT

@@ -1,10 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.CustomerReferral where
 
 import API.Types.UI.CustomerReferral
-import Data.OpenApi (ToSchema)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -17,8 +15,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
-import qualified Kernel.External.Payout.Interface as Juspay
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -30,14 +26,12 @@ import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
-import Servant hiding (throwError)
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as PStats
-import Tools.Auth
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout

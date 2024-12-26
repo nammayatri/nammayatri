@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.ProviderPlatform.Management.Payout
   ( getPayoutPayoutReferralHistory,
@@ -14,7 +13,6 @@ module Domain.Action.ProviderPlatform.Management.Payout
 where
 
 import qualified API.Client.ProviderPlatform.Management
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Payout
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant

@@ -12,7 +12,6 @@
   General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module BecknV2.FRFS.Enums where
 

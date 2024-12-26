@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Domain.Types.StationType where
 
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)

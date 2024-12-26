@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.FareProductExtra where
 
@@ -10,18 +9,15 @@ import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as Domain
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as Beam
-import Storage.Queries.OrphanInstances.FareProduct
+import Storage.Queries.OrphanInstances.FareProduct ()
 
 -- Extra code goes here --
 

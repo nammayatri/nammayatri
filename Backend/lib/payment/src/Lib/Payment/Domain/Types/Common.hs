@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Lib.Payment.Domain.Types.Common where
 
 import Kernel.Beam.Lib.UtilsTH

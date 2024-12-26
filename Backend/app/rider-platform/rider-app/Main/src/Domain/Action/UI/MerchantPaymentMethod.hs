@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Action.UI.MerchantPaymentMethod where
 

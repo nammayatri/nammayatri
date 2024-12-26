@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module ChatCompletion.Gemini.Config where
 
 import Kernel.External.Encryption

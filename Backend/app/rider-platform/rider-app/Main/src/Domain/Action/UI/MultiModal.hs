@@ -1,10 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.MultiModal where
 
 import qualified API.Types.UI.MultiModal
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -12,8 +10,6 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import Servant
-import Tools.Auth
 
 postMultiModalRouteDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

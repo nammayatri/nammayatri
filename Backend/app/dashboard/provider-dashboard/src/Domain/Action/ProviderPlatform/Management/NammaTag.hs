@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.ProviderPlatform.Management.NammaTag
   ( postNammaTagTagCreate,
@@ -22,8 +21,6 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
 where
 
 import qualified API.Client.ProviderPlatform.Management
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.NammaTag
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -32,9 +29,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

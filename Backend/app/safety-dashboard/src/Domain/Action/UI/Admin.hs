@@ -1,25 +1,19 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Admin where
 
 import API.Types.UI.Admin
-import qualified API.Types.UI.Admin
 import qualified API.Types.UI.Suspect
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import Data.OpenApi (ToSchema)
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
 import qualified Domain.Action.UI.Suspect as DS
 import qualified Domain.Action.UI.SuspectFlagRequest as SAF
 import Domain.Action.UI.Webhook as Webhook
-import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Notification as Domain.Types.Notification
-import qualified "lib-dashboard" Domain.Types.Person
-import qualified Domain.Types.Suspect as Domain.Types.Suspect
-import Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
+import qualified Domain.Types.Notification
+import qualified Domain.Types.Suspect
+import Domain.Types.SuspectFlagRequest
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (concatMap, elem, filter, id, length, map, mapM_, null, readMaybe, whenJust)
@@ -27,22 +21,16 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
-import qualified Storage.Queries.Notification as SQN
 import "lib-dashboard" Storage.Queries.Person as QP
-import qualified Storage.Queries.PortalConfigs as PC
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QReg
 import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import qualified Storage.Queries.Suspect as SQ
-import Storage.Queries.SuspectExtra
 import qualified Storage.Queries.SuspectExtra as SE
-import qualified Storage.Queries.SuspectFlagRequest as SQF
 import Storage.Queries.SuspectFlagRequestExtra
-import qualified Storage.Queries.SuspectStatusHistory as SQSH
 import "lib-dashboard" Tools.Auth
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
 import Tools.Error

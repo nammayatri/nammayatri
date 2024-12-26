@@ -1,8 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.MerchantServiceConfig where
 
@@ -10,8 +7,6 @@ import ChatCompletion.Interface.Types
 import ChatCompletion.Types
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
@@ -31,8 +26,6 @@ import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 

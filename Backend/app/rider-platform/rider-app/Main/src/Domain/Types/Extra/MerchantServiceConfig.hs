@@ -1,14 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.MerchantServiceConfig where
 
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
@@ -27,8 +22,6 @@ import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
 

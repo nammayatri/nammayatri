@@ -1,11 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
-import Data.Either (fromRight)
 import qualified Database.Beam as B
-import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Image
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.VehicleRegistrationCertificate
@@ -16,14 +13,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverRCAssociation as BeamDRA
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
-import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
+import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()

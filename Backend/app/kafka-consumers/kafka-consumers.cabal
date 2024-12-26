@@ -52,6 +52,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -72,6 +73,7 @@ library
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -134,6 +136,7 @@ executable kafka-consumers-exe
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -154,6 +157,7 @@ executable kafka-consumers-exe
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.Fleet.Driver
   ( postDriverFleetAddVehicle,
@@ -30,16 +29,12 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import Data.Time
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet
-import qualified Domain.Action.UI.Ride as DARide
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person as DP
-import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
 -- TODO Domain.Action.Dashboard.Fleet.Operations

@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module ChatCompletion.AzureOpenAI.Config where
 
 import Kernel.External.Encryption

@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Common.Dashboard.Issue
   ( module IssueManagement.Common.Dashboard.Issue,

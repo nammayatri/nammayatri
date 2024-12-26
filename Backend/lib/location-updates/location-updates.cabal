@@ -39,6 +39,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -112,6 +113,7 @@ test-suite location-updates-tests
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts

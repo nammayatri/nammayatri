@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.ProviderPlatform.Management.Media (getMediaMediaImage) where
 
@@ -11,7 +10,6 @@ import EulerHS.Prelude
 import qualified "shared-services" IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant

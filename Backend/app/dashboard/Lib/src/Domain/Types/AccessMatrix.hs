@@ -1,6 +1,6 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -14,7 +14,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.AccessMatrix where
 

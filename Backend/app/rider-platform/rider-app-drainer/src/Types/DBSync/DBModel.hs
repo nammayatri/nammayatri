@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Types.DBSync.DBModel where
 
 import DBQuery.Types

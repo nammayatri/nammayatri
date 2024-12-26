@@ -564,7 +564,6 @@ library
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
-      Storage.Queries.RiderDriverCorrelationExtra
       Storage.Queries.RouteExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra

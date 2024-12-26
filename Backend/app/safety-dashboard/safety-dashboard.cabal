@@ -121,6 +121,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -203,6 +204,7 @@ executable safety-dashboard-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies

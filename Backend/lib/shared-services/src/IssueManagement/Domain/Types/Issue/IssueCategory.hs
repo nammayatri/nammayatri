@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module IssueManagement.Domain.Types.Issue.IssueCategory where
 
 import Data.OpenApi

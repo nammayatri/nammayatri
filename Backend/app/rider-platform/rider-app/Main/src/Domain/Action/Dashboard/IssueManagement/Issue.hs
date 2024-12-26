@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.IssueManagement.Issue
   ( dashboardIssueHandle,
@@ -22,7 +21,6 @@ where
 import qualified API.Types.RiderPlatform.IssueManagement.Issue
 import qualified API.UI.Issue as AUI
 import qualified Data.Aeson
-import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -39,8 +37,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Servant
-import Tools.Auth
 
 dashboardIssueHandle :: DIssue.ServiceHandle Environment.Flow
 dashboardIssueHandle =

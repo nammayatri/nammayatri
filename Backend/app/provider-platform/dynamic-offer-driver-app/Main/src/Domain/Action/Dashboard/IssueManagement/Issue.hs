@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.IssueManagement.Issue
   ( getIssueCategoryList,
@@ -18,10 +17,8 @@ module Domain.Action.Dashboard.IssueManagement.Issue
   )
 where
 
-import qualified API.Types.ProviderPlatform.IssueManagement.Issue as Common
 import qualified API.UI.Issue as AUI
 import qualified Data.Aeson
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -36,8 +33,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Servant
-import Tools.Auth
 
 dashboardIssueHandle :: DIssue.ServiceHandle Environment.Flow
 dashboardIssueHandle =
