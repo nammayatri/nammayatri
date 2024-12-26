@@ -65,6 +65,7 @@ import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -598,16 +599,16 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       if inv.maxMandateAmount == Just maxMandateAmount && isReusableInvoice
         then do
           let invoiceReuseForOrderCreation = Just (inv.id, inv.invoiceShortId)
-          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity invoiceReuseForOrderCreation paymentServiceName
+          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity invoiceReuseForOrderCreation paymentServiceName subscriptionConfig
         else do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
-          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
     (Just registerFee, Nothing) -> do
-      createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+      createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
     (Nothing, _) -> do
       driverFee <- mkDriverFee currentDues currency
       QDF.create driverFee
-      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
   where
     mandateOrder currentDues now mandateValidity =
       SPayment.MandateOrder
@@ -647,10 +648,12 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
               return (Nothing, Nothing)
             _ -> return (registerFee', mbInvoiceToReuse)
         Nothing -> return (Nothing, Nothing)
-    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity mbInvoiceIdTuple paymentServiceName = do
+    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity mbInvoiceIdTuple paymentServiceName subscriptionConfig = do
       let mbMandateOrder = Just $ mandateOrder currentDues now mandateValidity
       if not (null driverManualDuesFees)
-        then SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData
+        then do
+          vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . DF.id) driverManualDuesFees else pure []
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple vendorFees mbDeepLinkData
         else do
           SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData
     mkDriverFee currentDues currency = do
