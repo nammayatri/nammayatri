@@ -295,6 +295,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
+        InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
