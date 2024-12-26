@@ -118,8 +118,8 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
   case invoice' of
     Just invoice -> do
       vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
-      let splitSettlementDetails = if null vendorFees then Nothing else mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst))
-      let executionRequest =
+      let splitSettlementDetails = mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst))
+          executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
                 amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
@@ -127,7 +127,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
                 notificationId = notification.shortId,
                 mandateId = mandateId.getId,
                 executionDate,
-                splitSettlementDetails
+                splitSettlementDetails = Just splitSettlementDetails
               }
       return $
         Just
