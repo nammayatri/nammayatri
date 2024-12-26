@@ -8,6 +8,7 @@ imports:
   TravelMode : Domain.Types.Trip
   Location : Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
+  LatLong: Kernel.External.Maps.Types
 
 module: MultimodalConfirm
 
@@ -49,6 +50,8 @@ types:
     routeNumber: Text
     frequency: Maybe Seconds
     startTime: Maybe TimeOfDay
+  SwitchModeReq:
+    currentLocation: Maybe LatLong
 
 apis:
   - POST:
@@ -56,7 +59,7 @@ apis:
       params:
         journeyId: Id Journey
       request:
-        type: JourneyInfoReq
+        type: JourneyInfoReq 
       response:
         type: JourneyInfoResp
   - POST:
@@ -81,8 +84,14 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
-      endpoint: /multimodal/{legId}/switchToAuto
+      endpoint: /multimodal/{journeyId}/leg/{legId}/switchTo/{mode}
       params:
         legId: Text
+        journeyId: Id Journey
+        mode: Text
+      request:
+        type: SwitchModeReq 
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  

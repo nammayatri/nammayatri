@@ -67,7 +67,7 @@ data JourneyInitData = JourneyInitData
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     estimatedDistance :: HighPrecDistance,
-    estimatedDuration :: Seconds
+    estimatedDuration :: Seconds,
     maximumWalkDistance :: Meters
   }
 

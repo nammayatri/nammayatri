@@ -10,6 +10,7 @@ import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps.Google.MapsClient.Types
+import Kernel.External.Maps.Google.PolyLinePoints (PolyLinePoints)
 import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
