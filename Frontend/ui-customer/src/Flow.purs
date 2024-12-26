@@ -2375,11 +2375,11 @@ homeScreenFlow = do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
-            void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
+            void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_api_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))}]
             modifyScreenState $ HomeScreenStateType( \homeScreen -> updateAddress state address lat lon homeScreen)
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       else do
-        void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_cpu_onDrag"
+        void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_cache_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))}]
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -2401,9 +2401,9 @@ homeScreenFlow = do
           homeScreen
             { props
               { sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat
-              , sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong
-              , destinationLat = if state.props.isSource == Just true then state.props.destinationLat else lat
-              , destinationLong = if state.props.isSource == Just true then state.props.destinationLong else lon
+              , sourceLong = if state.props.isSource == Just true then  lon else state.props.sourceLong
+              , destinationLat = if state.props.isSource == Just false && state.data.fareProductType == FPT.DELIVERY then lat else state.props.destinationLat
+              , destinationLong = if state.props.isSource == Just false && state.data.fareProductType == FPT.DELIVERY then lon else state.props.destinationLong
               , editedPickUpLocation {gps = LatLong {lat : lat
                                               , lon : lon
                                               }
@@ -2873,6 +2873,8 @@ findEstimates updatedState = do
   let
     state = globalState.homeScreen
   liftFlowBT $ logEventWithTwoParams logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
+  liftFlowBT $ logEventWithTwoParams logField_ "ny_user_sourceLat_sourceLong" "ny_user_source_lat" (show state.props.sourceLat) "ny_ic_source_long" (show state.props.sourceLong)
+  liftFlowBT $ logEventWithTwoParams logField_ "ny_user_destinationLat_destinationLong" "ny_user_destination_lat" (show state.props.destinationLat) "ny_ic_destination_long" (show state.props.destinationLong)
   (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
   if (not sourceServiceabilityResp.serviceable) then do
     updateLocalStage SearchLocationModel
