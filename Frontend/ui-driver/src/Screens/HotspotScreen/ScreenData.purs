@@ -17,6 +17,7 @@ module Screens.HotspotScreen.ScreenData where
 
 import ConfigProvider
 import Engineering.Helpers.Commons as EHC
+import Foreign.Object (empty)
 import Services.API (LatLong(..))
 import Screens.Types (HotspotScreenState(..))
 
@@ -28,6 +29,7 @@ initData =
       , currentDriverLat : 0.0
       , currentDriverLon : 0.0
       , config : getAppConfig appConfig
+      , logField : empty
       }
   , props:
       { lastUpdatedTime : ""
