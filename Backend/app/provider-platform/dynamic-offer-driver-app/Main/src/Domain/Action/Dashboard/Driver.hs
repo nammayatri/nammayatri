@@ -454,7 +454,7 @@ enableDriver merchantShortId opCity reqDriverId = do
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
   mbDriverLicense <- QDL.findByDriverId driverId
 
-  when (isNothing mVehicle && null linkedRCs && isNothing mbDriverLicense) $
+  when ((isNothing mVehicle && null linkedRCs) || isNothing mbDriverLicense) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs or no DL are linked to them")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
