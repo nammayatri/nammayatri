@@ -164,8 +164,20 @@ view push state =
           , background Color.greySmoke
           , visibility $ boolToVisibility (not state.props.showShimmer)
           ][]
-        , infoSelectioView state push city cityMetroConfig metroConfig
-        , offerSelectionView push state
+        , scrollView[
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.white900
+          ][
+            linearLayout[
+              height WRAP_CONTENT
+            , width MATCH_PARENT
+            ][
+              infoSelectioView state push city cityMetroConfig metroConfig
+            , offerSelectionView push state
+            ]
+          ]
         ]
         , updateButtonView state push
     ] <> if state.props.showMetroBookingTimeError && not state.props.showShimmer then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
@@ -244,8 +256,8 @@ infoSelectioView state push city cityMetroConfig metroConfig =
     isBusTicketService = state.props.ticketServiceType == BUS
     showRouteList = DA.null state.data.routeList
   in
-    scrollView
-      [ height MATCH_PARENT
+    linearLayout
+      [ height WRAP_CONTENT
       , width MATCH_PARENT    
       , padding $ PaddingBottom 75
       , scrollBarY false
@@ -872,8 +884,8 @@ offersInfoView push state =
 
 offerSelectionView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 offerSelectionView push state =
-  scrollView
-  [ height MATCH_PARENT
+  linearLayout
+  [ height WRAP_CONTENT
   , width MATCH_PARENT    
   , padding $ PaddingBottom 75
   , scrollBarY false

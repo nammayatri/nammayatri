@@ -24,6 +24,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Debug
 
 getTicketStatus :: MetroTicketCardData -> TicketStatus
 getTicketStatus ticketData = 
@@ -49,6 +50,8 @@ getTicketStatus ticketData =
         TicketStatus { status : FRFS_PENDING, statusColor : Color.yellow900, statusIcon : fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock", textColor: Color.white900}  
       else 
         TicketStatus { status : FRFS_EXPIRED, statusColor : Color.grey900, statusIcon : fetchImage FF_ASSET "ny_ic_info", textColor: Color.black900}
+    else if bookingStatus == "CANCELLED" then 
+      TicketStatus { status : FRFS_CANCELLED, statusColor : Color.red900, statusIcon : fetchImage GLOBAL_COMMON_ASSET "ny_ic_red_triangle_warning", textColor: Color.black900}
     else
       TicketStatus { status : FRFS_PENDING, statusColor : Color.yellow900, statusIcon : fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock", textColor: Color.white900}
 

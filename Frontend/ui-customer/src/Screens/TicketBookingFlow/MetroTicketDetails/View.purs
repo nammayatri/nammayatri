@@ -633,18 +633,20 @@ qrCodeView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_grey"
         , onClick push $ const PrevTicketClick
-        , visibility $ boolToInvisibility $ state.data.noOfTickets > 1 
+        , visibility $ boolToVisibility $ state.data.noOfTickets > 1 
         ]
       , linearLayout [
           height WRAP_CONTENT
         , weight 1.0
+        , visibility $  boolToVisibility $ state.data.noOfTickets > 1 
         ][]
       , PrestoAnim.animationSet [ Anim.fadeInWithDelay 50 true ] $ imageView [
-          width $ V 218
-        , height $ V 218
+          width $ V 200
+        , height $ V 200
         , id $ getNewIDWithTag "metro_ticket_qr_code"
         , cornerRadius 24.0
         , visibility $ boolToVisibility $ not $ isTicketExpired
+        , gravity CENTER_HORIZONTAL
         , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
         ]
       , PrestoAnim.animationSet [ Anim.fadeInWithDelay 50 true ] $ imageView [
@@ -658,11 +660,12 @@ qrCodeView push state =
       , linearLayout [
           height WRAP_CONTENT
         , weight 1.0
+        , visibility $  boolToVisibility $ state.data.noOfTickets > 1 
         ][]
       , imageView [
           width $ V 32
         , height $ V 32
-        , visibility $  boolToInvisibility $ state.data.noOfTickets > 1 
+        , visibility $  boolToVisibility $ state.data.noOfTickets > 1 
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
         , onClick push $ const NextTicketClick
         ]
