@@ -825,7 +825,7 @@ public class LocationUpdateService extends Service {
                                     }
                                 }
                             } catch (JSONException e) {
-                                throw new RuntimeException(e);
+                                Log.d(LOG_TAG, "exception in decoding errorPayload " + e.getMessage());
                             }
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
                             Exception exception = new Exception("API Error in callDriverCurrentLocationAPI for ID : " + driverId + " $ Resp Code : " + respCode + " $ Error : " + apiResponse.getResponseBody());

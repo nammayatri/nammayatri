@@ -80,7 +80,7 @@ import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo, HomeScreenState)
-import Data.Int (fromString, even, fromNumber)
+import Data.Int (fromString, even, fromNumber, ceil, toNumber)
 import Data.Int as Int
 import Data.Function.Uncurried (Fn1)
 import Storage (getValueToLocalStore)
@@ -971,6 +971,7 @@ getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
   SA.HATCHBACK_TIER -> "ic_hatchback_ac"
   SA.TAXI -> "ic_taxi"
   SA.TAXI_PLUS -> "ny_ic_sedan_ac"
+  SA.SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
   _ -> "ny_ic_sedan"
 
 getLatestAndroidVersion :: Merchant -> Int
@@ -1002,6 +1003,11 @@ getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
 
+getDefaultPixelSize :: Int -> Int
+getDefaultPixelSize size =
+  let pixels = runFn1 getPixels ""
+      androidDensity = (runFn1 getDeviceDefaultDensity "") / defaultDensity
+  in ceil $ (toNumber size / pixels) * androidDensity
     
 sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType 
 sortIssueCategories language (GetCategoriesRes response) =
@@ -1051,6 +1057,7 @@ driverVehicleToVechicleServiceTier vehicle =
         "AC Mini" -> SA.ECO
         "AUTO_RICKSHAW"  ->  SA.AUTO_RICKSHAW
         "XL Cab" -> SA.SUV_TIER
+        "XL Plus" -> SA.SUV_PLUS_TIER
         _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
@@ -1079,6 +1086,7 @@ vehicleVariantImage vehicle =
                   "AUTO"  ->  "ny_ic_auto_left_view"
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
+                  "SUV_PLUS" -> "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"
 
 getVehicleVariantName :: VehicleCategory -> String

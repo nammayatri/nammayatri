@@ -265,6 +265,7 @@ foreign import getLocationPermissionStatus :: Fn1 Unit String
 foreign import pauseYoutubeVideo :: Unit -> Unit 
 foreign import releaseYoutubeView :: Unit -> Unit 
 foreign import storeCallBackLocateOnMap :: EffectFn2 (String -> String -> String -> Effect Unit) ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit) Unit
+foreign import storeCallbackHotspotMap :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> String -> action) Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
 foreign import downloadMLTranslationModel :: EffectFn1 String Unit
@@ -280,6 +281,7 @@ foreign import askRequestedPermissionsWithCallback :: forall action. Array Strin
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import drawCircleOnMap :: EffectFn1 CircleConfig Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
@@ -293,6 +295,7 @@ foreign import triggerCallBackQueue :: EffectFn1 String  Unit
 foreign import updateQueue :: EffectFn4 String String String (String -> String -> String -> Effect Unit) Unit
 foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
 foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+foreign import getCircleCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> action) Unit
 
 foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
@@ -739,7 +742,12 @@ type CircleConfig = {
   fillColor :: String,
   strokeWidth :: Int,
   secondaryStrokeColor :: String,
-  circleId :: String
+  circleId :: String,
+  centerLat :: Number,
+  centerLon :: Number,
+  showPrimaryStrokeColor :: Boolean,
+  strokePattern :: String,
+  isCircleClickable :: Boolean
 }
 
 defaultCircleConfig :: CircleConfig
@@ -749,8 +757,17 @@ defaultCircleConfig = {
   fillColor : "#00FFFFFF",
   strokeWidth : 0,
   secondaryStrokeColor : "#00FFFFFF",
-  circleId : ""
+  circleId : "",
+  centerLat : 0.0,
+  centerLon : 0.0,
+  showPrimaryStrokeColor : true,
+  strokePattern : "NORMAL",
+  isCircleClickable : false
 }
+
+data StrokePattern = NORMAL | DASHED | DOTTED
+derive instance genericStrokePattern :: Generic StrokePattern _
+instance showStrokePattern :: Show StrokePattern where show = genericShow
 
 type AnimationConfig = {
   animationType :: String,
@@ -1085,6 +1102,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     when isActive $ do push key lat lon
     pure isActive
 
-
 foreign import triggerReloadApp :: String ->Effect Unit
+
 foreign import rsEncryption :: String -> String

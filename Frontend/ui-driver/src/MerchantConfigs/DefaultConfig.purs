@@ -36,6 +36,17 @@ config =
     rcLimit : 3
   , acExplanation : true
   , showMonthlyLeaderBoard : false
+  , hotspotConfig : {
+      veryHighHotspotColor : "#E55454",
+      highHotspotColor : "#FFB800",
+      moderateHotspotColor : "#AEC708",
+      veryHighRange : 67.0,
+      highRange : 33.0,
+      circleRadius : 1000.0,
+      centerDeviation : 0.0,
+      showColorWithRelativeWeight : false,
+      minCirclesNeededForSortedWeights : 10
+    }
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,

@@ -1027,7 +1027,6 @@ waitTimeInfoCardConfig state =
       tripScheduledAt = fromMaybe "" state.data.activeRide.tripScheduledAt
       currentTime = EHC.getCurrentUTC ""
       time_diff = runFn2 JB.differenceBetweenTwoUTC currentTime tripScheduledAt
-      infoText = if time_diff >=0 then getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes) else getString $ THE_CUSTOMER_WILL_PAY_POST_SCHEDULED_RIDE_START_TIME "₹2"
 
   in
     RequestInfoCard.config {
@@ -1040,7 +1039,7 @@ waitTimeInfoCardConfig state =
         padding = Padding 16 16 0 0
       }
     , secondaryText {
-        text = infoText,
+        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes),
         visibility = if rideInProgress then GONE else VISIBLE,
         padding = PaddingLeft 16
       }

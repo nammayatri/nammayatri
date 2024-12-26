@@ -267,6 +267,8 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY :
                         cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY);
                         break;
+                    case NotificationTypes.DRIVER_STOP_DETECTED :
+                        stopDetectedOverlay(context);
                     case NotificationTypes.TRIGGER_SERVICE:
                         if (merchantType.equals("DRIVER")) {
                             if (title != null && title.equals("You were inactive"))
@@ -555,6 +557,13 @@ public  class MyFirebaseMessagingService {
             Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
         }
     }
+    public static  void stopDetectedOverlay(Context context) {
+        Intent intent = new Intent(context, MessageOverlayService.class);
+        String date = String.valueOf(new Date());
+        intent.putExtra("timestamp", date);
+        intent.putExtra("isStopDetected", true);
+        context.startService(intent);
+    }
     public static void  cancellationNudgeOverlay(Context context, RemoteMessage remoteMessage, String overlayKey) {
         try {
             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
@@ -840,5 +849,6 @@ public  class MyFirebaseMessagingService {
         public static final String SAFETY_ALERT = "SAFETY_ALERT";
         public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
+        public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
     }
 }

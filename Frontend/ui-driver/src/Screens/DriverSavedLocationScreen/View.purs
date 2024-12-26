@@ -426,10 +426,10 @@ locationAndMap state push visibility' =
         [ linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            , id (EHC.getNewIDWithTag "DriverSavedLoc")
+            , id (EHC.getNewIDWithTag "DriverSavedLocationScreen")
             , afterRender
                 ( \action -> do
-                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
+                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLocationScreen") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
                     pure unit
                 )
                 (const AfterRender)
