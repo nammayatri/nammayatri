@@ -26,6 +26,7 @@ module Domain.Action.Beckn.Cancel
 where
 
 import Data.Maybe (listToMaybe)
+import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
@@ -106,6 +107,7 @@ cancel req merchant booking mbActiveSearchTry = do
     mbRide <- QRide.findActiveByRBId req.bookingId
     transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     whenJust mbRide $ \ride -> do
+      unless (isRideCancellable ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
@@ -167,6 +169,8 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
+    isRideCancellable ride = ride.status `elem` [SRide.NEW, SRide.UPCOMING]
+
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
         DBCR.BookingCancellationReason
