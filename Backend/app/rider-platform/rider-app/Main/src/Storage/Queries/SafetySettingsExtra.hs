@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.SafetySettingsExtra where
 
@@ -7,7 +6,6 @@ import Control.Applicative ((<|>))
 import Domain.Types.Person
 import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
@@ -15,7 +13,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SafetySettings as BeamP
-import Storage.Queries.OrphanInstances.SafetySettings
+import Storage.Queries.OrphanInstances.SafetySettings ()
 import qualified Storage.Queries.Person as QPerson
 
 data UpdateEmergencyInfo = UpdateEmergencyInfo

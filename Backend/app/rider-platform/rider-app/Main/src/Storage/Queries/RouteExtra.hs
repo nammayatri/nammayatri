@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.RouteExtra where
 
@@ -11,14 +10,12 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Route
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Route as BeamR
-import Storage.Queries.OrphanInstances.Route
+import Storage.Queries.OrphanInstances.Route ()
 
 findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Route]
 findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do

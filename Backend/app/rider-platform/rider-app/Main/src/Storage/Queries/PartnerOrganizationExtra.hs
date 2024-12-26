@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.PartnerOrganizationExtra where
 
@@ -7,11 +6,10 @@ import Domain.Types.PartnerOrganization
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
-import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PartnerOrganization as Beam
-import Storage.Queries.OrphanInstances.PartnerOrganization
+import Storage.Queries.OrphanInstances.PartnerOrganization ()
 
 -- Extra code goes here --
 

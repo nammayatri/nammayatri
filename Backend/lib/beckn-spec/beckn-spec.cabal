@@ -234,6 +234,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -252,6 +253,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies

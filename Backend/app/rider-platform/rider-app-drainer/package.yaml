@@ -33,6 +33,7 @@ default-extensions:
   - DefaultSignatures
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts

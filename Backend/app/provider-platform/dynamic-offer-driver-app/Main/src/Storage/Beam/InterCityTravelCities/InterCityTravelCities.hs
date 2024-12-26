@@ -1,14 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.InterCityTravelCities.InterCityTravelCities where
 
 import qualified Database.Beam as B
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 

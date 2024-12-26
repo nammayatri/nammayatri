@@ -1,10 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.ProviderPlatform.Management.System (postSystemRunQuery) where
 
 import qualified API.Client.ProviderPlatform.Management
-import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
@@ -14,7 +12,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

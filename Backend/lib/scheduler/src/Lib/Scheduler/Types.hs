@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Scheduler.Types (module Reexport, module Lib.Scheduler.Types) where
 

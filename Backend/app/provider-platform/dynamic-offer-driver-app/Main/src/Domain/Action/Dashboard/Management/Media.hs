@@ -1,13 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.Dashboard.Management.Media (getMediaMediaImage) where
 
 import qualified API.Types.ProviderPlatform.Management.Media
 import AWS.S3 (FileType (..))
 import qualified AWS.S3 as S3
-import qualified Dashboard.Common
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -17,9 +14,7 @@ import qualified "shared-services" IssueManagement.Storage.Queries.MediaFile as 
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
-import Servant hiding (throwError)
 import Storage.Beam.IssueManagement ()
-import Tools.Auth
 import Tools.Error
 
 getMediaMediaImage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id DMF.MediaFile -> Environment.Flow API.Types.ProviderPlatform.Management.Media.GetImageResponse)

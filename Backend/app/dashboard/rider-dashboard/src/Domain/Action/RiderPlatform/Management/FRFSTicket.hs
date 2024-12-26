@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.RiderPlatform.Management.FRFSTicket
   ( getFRFSTicketFrfsRoutes,
@@ -14,10 +13,8 @@ module Domain.Action.RiderPlatform.Management.FRFSTicket
 where
 
 import qualified API.Client.RiderPlatform.Management
-import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
-import qualified Dashboard.Common
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -28,7 +25,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

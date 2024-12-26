@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Storage.Queries.PayoutOrderExtra where
 
@@ -9,14 +8,12 @@ import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (City)
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
-import Lib.Payment.Domain.Types.PaymentOrder (PaymentOrder)
 import Lib.Payment.Domain.Types.PayoutOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as Beam
-import Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
+import Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder ()
 import qualified Sequelize as Se
 
 findAllByEntityNameAndEntityIds ::

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Beckn.OnDemand.Transformer.Search where
 
@@ -12,24 +11,12 @@ import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
 import BecknV2.OnDemand.Utils.Payment
 import Data.Text as T
-import qualified Data.Text
-import qualified Data.Time
-import qualified Data.UUID
 import Domain.Types
 import Domain.Types.BecknConfig
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.SearchRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
-import qualified Kernel.Types.Time
-import Kernel.Utils.Common
 import SharedLogic.Search as SLS
-import qualified Tools.Maps
-import qualified Tools.Maps as Maps
 
 buildBecknSearchReqV2 :: SLS.SearchRes -> BecknConfig -> Kernel.Prelude.BaseUrl -> Text -> Either Text BecknV2.OnDemand.Types.SearchReq
 buildBecknSearchReqV2 res@SLS.SearchRes {..} bapConfig bapUri messageId = do

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.SpecialLocationWarrior
   ( getSpecialLocationListCategory,
@@ -10,7 +9,6 @@ where
 
 import API.Types.UI.SpecialLocationWarrior
 import Data.List.Extra (notNull)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
@@ -25,11 +23,9 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
-import Servant hiding (throwError)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
-import Tools.Auth
 import Tools.Error
 
 getSpecialLocationListCategory ::

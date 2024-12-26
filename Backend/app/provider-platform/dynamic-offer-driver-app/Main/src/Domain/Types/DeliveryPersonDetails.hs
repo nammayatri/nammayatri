@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 {-
  Copyright 2022-23, Juspay India Pvt Ltd

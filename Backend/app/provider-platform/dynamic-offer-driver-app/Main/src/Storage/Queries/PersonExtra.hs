@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.PersonExtra
   ( module Storage.Queries.PersonExtra,
@@ -9,11 +8,8 @@ where
 
 -- Extra code goes here --
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (or)
-import Data.Maybe (catMaybes)
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -31,8 +27,6 @@ import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id

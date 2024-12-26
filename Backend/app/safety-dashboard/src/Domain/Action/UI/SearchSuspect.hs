@@ -1,39 +1,28 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.SearchSuspect where
 
 import qualified API.Types.UI.Notification as Notification
 import API.Types.UI.SearchSuspect
-import qualified API.Types.UI.SearchSuspect
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
-import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified "lib-dashboard" Domain.Types.Person
-import Domain.Types.Suspect as Domain.Types.Suspect
-import qualified Domain.Types.Suspect as Domain.Types.Suspect
-import qualified Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
+import Domain.Types.Suspect
+import qualified Domain.Types.SuspectFlagRequest
+import qualified Domain.Types.SuspectStatusHistory
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id, length, map, mapM_, readMaybe)
 import Kernel.Prelude
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Time
-import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.PortalConfigs as PC
 import qualified Storage.Queries.Suspect as SQ
 import qualified Storage.Queries.SuspectExtra as SQE
-import qualified Storage.Queries.SuspectFlagRequest as SQF
 import Storage.Queries.SuspectFlagRequestExtra as SQF
 import qualified Storage.Queries.SuspectStatusHistoryExtra as SQSH
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Webhook
 import Tools.Error
-import "lib-dashboard" Tools.Error
 
 postSearchSuspectList :: TokenInfo -> API.Types.UI.SearchSuspect.SearchSuspectReqList -> Environment.Flow API.Types.UI.SearchSuspect.SuspectsList
 postSearchSuspectList _ req = do

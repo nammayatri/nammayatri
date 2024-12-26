@@ -1,30 +1,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.MessageExtra where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Message as APIT
-import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Message
-import qualified Domain.Types.Message
 import Domain.Types.MessageTranslation as DomainMT
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, MonadTime (getCurrentTime), fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message as BeamM
 import qualified Storage.Beam.MessageTranslation as BeamMT
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.MessageTranslation as MT
-import Storage.Queries.OrphanInstances.Message
-import Tools.Error
+import Storage.Queries.OrphanInstances.Message ()
 
 -- Extra code goes here --
 createMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()

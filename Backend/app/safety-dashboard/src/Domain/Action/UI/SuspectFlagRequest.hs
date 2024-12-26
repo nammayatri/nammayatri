@@ -1,27 +1,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.SuspectFlagRequest where
 
 import qualified API.Types.UI.Notification as Notification
 import API.Types.UI.SuspectFlagRequest
-import qualified API.Types.UI.SuspectFlagRequest
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.CaseInsensitive as CI
-import Data.OpenApi (ToSchema)
-import qualified Data.Text as T hiding (concat, length, map)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.UI.Suspect as DS
 import Domain.Action.UI.Webhook as Webhook
 import qualified "lib-dashboard" Domain.Types.Merchant as Merchant
-import Domain.Types.MerchantConfigs as MC
-import qualified Domain.Types.Notification as Domain.Types.Notification
-import qualified "lib-dashboard" Domain.Types.Person
-import qualified Domain.Types.Suspect as Domain.Types.Suspect
-import qualified Domain.Types.SuspectFlagRequest as Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.SuspectStatusHistory as Domain.Types.SuspectStatusHistory
+import qualified Domain.Types.Notification
+import qualified Domain.Types.Suspect
+import qualified Domain.Types.SuspectFlagRequest
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (forM_, id, length, map, mapM_, readMaybe)
@@ -29,25 +20,17 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Network.HTTP.Client
-import Network.HTTP.Client.TLS (getGlobalManager, tlsManagerSettings)
-import Network.HTTP.Types (HeaderName)
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
-import qualified Storage.Queries.Notification as SQN
 import "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import qualified Storage.Queries.Suspect as SQ
 import Storage.Queries.SuspectExtra
 import qualified Storage.Queries.SuspectFlagRequest as SQF
 import Storage.Queries.SuspectFlagRequestExtra as SQFE
-import qualified Storage.Queries.SuspectStatusHistory as SQSH
 import "lib-dashboard" Tools.Auth
 import Tools.Error
-import "lib-dashboard" Tools.Error
 
 buildTransaction ::
   ( MonadFlow m

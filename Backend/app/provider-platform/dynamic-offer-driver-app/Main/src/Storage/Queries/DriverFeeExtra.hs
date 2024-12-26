@@ -1,12 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.DriverFeeExtra where
 
-import Data.List (maximumBy)
-import Data.Ord (comparing)
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
-import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
@@ -19,15 +15,13 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (Currency (INR), EsqDBFlow, HighPrecMoney (..), MonadFlow, mkAmountWithDefault)
+import Kernel.Types.Common (EsqDBFlow, HighPrecMoney (..), MonadFlow)
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
+import Kernel.Utils.Common (fork, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
-import Storage.Queries.OrphanInstances.DriverFee
-import qualified Storage.Queries.Person as QP
-import Tools.Error
+import Storage.Queries.OrphanInstances.DriverFee ()
 
 -- Extra code goes here --
 

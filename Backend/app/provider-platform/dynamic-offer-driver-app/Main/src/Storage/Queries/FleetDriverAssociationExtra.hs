@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.FleetDriverAssociationExtra where
 
@@ -10,18 +9,15 @@ import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
-import Storage.Queries.OrphanInstances.FleetDriverAssociation
+import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
 

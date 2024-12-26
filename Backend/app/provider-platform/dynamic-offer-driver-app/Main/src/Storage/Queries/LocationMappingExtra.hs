@@ -1,21 +1,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.LocationMappingExtra where
 
 import qualified Data.Text as T
 import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as BeamLM
-import Storage.Queries.OrphanInstances.LocationMapping
+import Storage.Queries.OrphanInstances.LocationMapping ()
 
 latestTag :: Text
 latestTag = "LATEST"

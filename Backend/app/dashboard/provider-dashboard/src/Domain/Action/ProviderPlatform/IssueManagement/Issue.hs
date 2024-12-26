@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.ProviderPlatform.IssueManagement.Issue
   ( getIssueCategoryList,
@@ -39,7 +38,6 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (PersonError (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Error (fromMaybeM)
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP

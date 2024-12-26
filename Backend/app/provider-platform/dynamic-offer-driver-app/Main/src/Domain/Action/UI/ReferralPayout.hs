@@ -1,10 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
-import Data.OpenApi (ToSchema)
 import Data.Text hiding (elem, filter, map)
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
@@ -27,25 +25,20 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
-import qualified Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Price (Currency (..))
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
-import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Auth
 import Tools.Error
 import qualified Tools.Payout as TP
 

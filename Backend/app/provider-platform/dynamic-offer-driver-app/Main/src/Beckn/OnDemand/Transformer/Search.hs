@@ -12,29 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
-import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.OnDemand.Utils.Search
-import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
-import qualified Data.List as L
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
-import qualified Domain.Types.Merchant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps
-import qualified Kernel.Prelude
 import qualified Kernel.Types.App
-import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (fromMaybeM, type (:::))
 import Tools.Error

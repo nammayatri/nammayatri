@@ -1,19 +1,15 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.SuspectExtra where
 
 import qualified Domain.Types.Suspect
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Suspect as Beam
-import Storage.Queries.OrphanInstances.Suspect
+import Storage.Queries.OrphanInstances.Suspect ()
 import Storage.Queries.Transformers.Suspect
 
 -- Extra code goes here --

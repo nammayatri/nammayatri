@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.RideExtra where
 
@@ -37,22 +35,18 @@ import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse
 import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Maps.Types (LatLong (..), lat, lon)
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (foldl', map)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM

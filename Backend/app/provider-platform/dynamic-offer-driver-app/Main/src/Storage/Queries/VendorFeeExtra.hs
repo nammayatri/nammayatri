@@ -1,20 +1,17 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.VendorFeeExtra where
 
 import Domain.Types.DriverFee
 import Domain.Types.VendorFee
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Price
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VendorFee as Beam
-import Storage.Queries.OrphanInstances.VendorFee
+import Storage.Queries.OrphanInstances.VendorFee ()
 
 -- Extra code goes here --
 

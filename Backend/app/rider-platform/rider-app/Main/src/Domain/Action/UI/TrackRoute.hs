@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.TrackRoute (getTrackVehicles) where
 
@@ -8,33 +7,20 @@ import Data.Function
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
-import Data.OpenApi (ToSchema)
-import qualified Data.Time
-import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Route
-import qualified Domain.Types.RouteStopMapping as DRSM
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.RouteTripMapping as DRTM
 import qualified Environment
-import qualified EulerHS.Language
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.APISuccess
-import qualified Kernel.Types.APISuccess
 import Kernel.Types.Distance
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Kernel.Utils.Common (fromMaybeM)
-import Servant
-import Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as RTM
-import Storage.Queries.Station as QStation
-import Tools.Auth
 import Tools.Error
 import Tools.Maps as Maps
 

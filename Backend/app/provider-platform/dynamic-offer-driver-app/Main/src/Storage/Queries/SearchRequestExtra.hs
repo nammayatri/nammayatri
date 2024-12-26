@@ -1,29 +1,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.SearchRequestExtra where
 
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SearchRequest as Domain
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import Storage.Queries.OrphanInstances.SearchRequest
-import Tools.Error
+import Storage.Queries.OrphanInstances.SearchRequest ()
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 createDSReq' = createWithKV
