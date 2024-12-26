@@ -25,7 +25,9 @@ import Data.Number (fromString, pi, cos, sin)
 import Data.Ord (comparing)
 import Effect (Effect)
 import Effect.Uncurried(runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (getColorWithOpacity)
 import Helpers.Utils (toRad)
 import JBridge as JB
@@ -38,7 +40,6 @@ import Screens.Types as ST
 import Services.API (LatLong(..), DemandHotspotsResp(..), HotspotsDetails(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -123,6 +124,7 @@ eval UpdateRefreshAnimation state =
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let (LatLong latLong) = state.props.selectedCircleLatLng
+      _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_navigate_to_hotspots_evnt"
   void $ pure $ JB.openNavigation latLong.lat latLong.lon "DRIVE"
   continue state 
 
