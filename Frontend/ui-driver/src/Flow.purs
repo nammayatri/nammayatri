@@ -3256,6 +3256,8 @@ paymentHistoryFlow = do
 
 hotspotScreenFlow :: FlowBT String Unit 
 hotspotScreenFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  liftFlowBT $ logEvent logField_ "ny_driver_open_hotspots_screen_event"
   action <- UI.hotspotScreen
   case action of
     REFRESH_HOTSPOTS -> hotspotScreenFlow
