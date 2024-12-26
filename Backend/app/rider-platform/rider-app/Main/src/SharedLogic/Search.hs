@@ -12,6 +12,7 @@ import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Beam.SystemConfigs ()
+import Domain.Types.Location as Location
 import qualified Tools.Maps as Maps
 
 data SearchRes = SearchRes
@@ -42,3 +43,25 @@ data SearchReqLocation = SearchReqLocation
     address :: LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+
+buildSearchReqLoc ::
+  MonadFlow m =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  SearchReqLocation ->
+  m Location.Location
+buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
+  now <- getCurrentTime
+  locId <- generateGUID
+  return
+    Location.Location
+      { id = locId,
+        lat = gps.lat,
+        lon = gps.lon,
+        address = address,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }

@@ -1,36 +1,15 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Lib.JourneyLeg.Walk where
 
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
+import Lib.JourneyLeg.Types.Walk
+import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
+import SharedLogic.Search
 
-data WalkLegRequestSearchData = WalkLegRequestSearchData
-  { parentSearchReq :: DSR.SearchRequest,
-    journeyLegData :: DJourenyLeg.JourneyLeg,
-    origin :: SearchReqLocation,
-    destination :: SearchReqLocation
-  }
-
-newtype WalkLegRequestGetStateData = WalkLegRequestGetStateData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
-  }
-
-newtype WalkLegRequestGetInfoData = WalkLegRequestGetInfoData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
-  }
-
-data WalkLegRequestGetFareData
-
-data WalkLegRequest
-  = WalkLegRequestSearch WalkLegRequestSearchData
-  | WalkLegRequestConfirm WalkLegRequestConfirmData
-  | WalkLegRequestUpdate WalkLegRequestUpdateData
-  | WalkLegRequestCancel WalkLegRequestCancelData
-  | WalkLegRequestGetInfo WalkLegRequestGetInfoData
-  | WalkLegRequestGetState WalkLegRequestGetStateData
-  | WalkLegRequestGetFare WalkLegRequestGetFareData
-
-instance JourneyLeg WalkLeg m where
+instance JT.JourneyLeg WalkLegRequest m where
   search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do
     fromLocation <- buildSearchReqLoc merchantId merchantOperatingCityId origin
     toLocation <- buildSearchReqLoc merchantId merchantOperatingCityId destination
@@ -55,7 +34,7 @@ instance JourneyLeg WalkLeg m where
               journeyLegInfo = Just journeySearchData,
               riderId = parentSearchReq.riderId,
               startTime = fromMaybe now journeyLegData.fromArrivalTime,
-              merchantId = Just parentSearchReq.merchantId,
+              merchantId = parentSearchReq.merchantId,
               status = InPlan,
               merchantOperatingCityId = Just parentSearchReq.merchantOperatingCityId,
               createdAt = now,

@@ -146,6 +146,7 @@ WalkLegMultimodal:
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     status: WalkLegStatus
+    merchantId: Id Merchant
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
 
@@ -240,11 +241,11 @@ JourneyLeg:
       agencyGtfsId: Maybe Text
       agencyName: Maybe Text
     startLocation:
-      startLocationLat: Maybe Double
-      startLocationLon: Maybe Double
+      startLocationLat: Double
+      startLocationLon: Double
     endLocation:
-      endLocationLat: Maybe Double
-      endLocationLon: Maybe Double
+      endLocationLat: Double
+      endLocationLon: Double
 
   queries:
     findAllByJourneyId:
@@ -253,12 +254,12 @@ JourneyLeg:
 
   fromTType:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
-    fromStopDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> fromStopCode <*> fromStopGtfsId <*> gtfsId)|E
-    toStopDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails <$> toStopCode <*> toStopName <*> toStopGtfsId)|E
-    routeDetails: (Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails <$> routeGtfsId <*> routeLongName <*> routeShortName)|E
-    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency <$> agencyGtfsId <*> agencyName)|E)
-    startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> startLocationLat <*> startLocationLon|E
-    endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 <$> endLocationLat <*> endLocationLon|E
+    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId)|E
+    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
+    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName)|E
+    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
+    startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
+    endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
 
   toTType:
     distance: ((.value))|I
@@ -273,11 +274,11 @@ JourneyLeg:
     routeLongName: (routeDetails >>= (.longName))|E
     routeShortName: (routeDetails >>= (.shortName))|E
     agencyGtfsId: (routeDetails >>= (.gtfsId))|E
-    agencyName: (routeDetails >>= (.name))|E
-    startLocationLat: (startLocation <&> (.latitude))|E
-    startLocationLon: (startLocation <&> (.longitude))|E
-    endLocationLat: (endLocation <&> (.latitude))|E
-    endLocationLon: (endLocation <&> (.longitude))|E
+    agencyName: (routeDetails >>= (.longName))|E
+    startLocationLat: (startLocation & (.latitude))|E
+    startLocationLon: (startLocation & (.longitude))|E
+    endLocationLat: (endLocation & (.latitude))|E
+    endLocationLon: (endLocation & (.longitude))|E
 
   constraints:
     id: PrimaryKey

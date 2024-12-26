@@ -280,9 +280,14 @@ library
       ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
       Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Interface
       Lib.JourneyLeg.Metro
       Lib.JourneyLeg.Taxi
       Lib.JourneyLeg.Types
+      Lib.JourneyLeg.Types.Bus
+      Lib.JourneyLeg.Types.Metro
+      Lib.JourneyLeg.Types.Taxi
+      Lib.JourneyLeg.Types.Walk
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
       Lib.JourneyModule.Types
