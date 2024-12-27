@@ -220,7 +220,8 @@ data InterCityQuoteDetails = InterCityQuoteDetails
     perDayMaxHourAllowance :: Hours,
     perDayMaxAllowanceInMins :: Maybe Minutes,
     deadKmFare :: Price,
-    nightShiftInfo :: Maybe NightShiftInfo
+    nightShiftInfo :: Maybe NightShiftInfo,
+    stateEntryPermitCharges :: Price
   }
 
 data RentalQuoteDetails = RentalQuoteDetails

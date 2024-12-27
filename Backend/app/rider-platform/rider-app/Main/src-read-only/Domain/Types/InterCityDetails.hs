@@ -27,7 +27,8 @@ data InterCityDetails = InterCityDetails
     plannedPerKmRateOneWay :: Kernel.Types.Common.Price,
     plannedPerKmRateRoundTrip :: Kernel.Types.Common.Price,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    stateEntryPermitCharges :: Kernel.Types.Common.Price,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
