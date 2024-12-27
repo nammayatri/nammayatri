@@ -153,6 +153,7 @@ import qualified Domain.Types.SearchTry as DST
 import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
+import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
@@ -344,7 +345,8 @@ data DriverInformationRes = DriverInformationRes
     blockedReasonFlag :: Maybe BlockReasonFlag,
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
-    softBlockReasonFlag :: Maybe Text
+    softBlockReasonFlag :: Maybe Text,
+    onboardingVehicleCategory :: Maybe VehicleCategory
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -402,7 +404,8 @@ data DriverEntityRes = DriverEntityRes
     isSpecialLocWarrior :: Bool,
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
-    softBlockReasonFlag :: Maybe Text
+    softBlockReasonFlag :: Maybe Text,
+    onboardingVehicleCategory :: Maybe VehicleCategory
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -946,6 +949,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         softBlockStiers = driverInfo.softBlockStiers,
         softBlockExpiryTime = driverInfo.softBlockExpiryTime,
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
+        onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
         ..
       }
 

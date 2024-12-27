@@ -139,4 +139,5 @@ in  { esqDBCfg
     , cacheConfig
     , cacConfig
     , kvConfigUpdateFrequency = +60
+    , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     }

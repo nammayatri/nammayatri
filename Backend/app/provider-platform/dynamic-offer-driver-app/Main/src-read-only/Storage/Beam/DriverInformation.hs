@@ -11,6 +11,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -62,6 +63,7 @@ data DriverInformationT f = DriverInformationT
     numOfLocks :: B.C f Kernel.Prelude.Int,
     onRide :: B.C f Kernel.Prelude.Bool,
     onRideTripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
+    onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPending :: B.C f Kernel.Prelude.Bool,
     payoutRegAmountRefunded :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

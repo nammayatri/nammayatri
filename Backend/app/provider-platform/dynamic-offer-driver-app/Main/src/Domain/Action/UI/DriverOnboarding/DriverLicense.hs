@@ -151,13 +151,13 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
         then do
           when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
           verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
-        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue
+        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
       if documentVerificationConfig.doStrictVerifcation
         then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
-        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue
+        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -251,16 +251,16 @@ onVerifyDL verificationReq output = do
           pure Ack
         else do
           documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
-          onVerifyDLHandler person output.id_number (output.t_validity_to <|> output.nt_validity_to) output.cov_details output.name output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing
+          onVerifyDLHandler person output.id_number (output.t_validity_to <|> output.nt_validity_to) output.cov_details output.name output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
-onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Flow ()
-onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnCard dateOfIssue = do
+onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
+onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
   mEncryptedDL <- encrypt `mapM` dlNumber
   let mLicenseExpiry = convertTextToUTC dlExpiry
-  let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue now <$> mEncryptedDL <*> mLicenseExpiry
+  let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
   case mDriverLicense of
     Just driverLicense -> do
@@ -287,11 +287,12 @@ createDL ::
   Maybe (Id Image.Image) ->
   Maybe Text ->
   Maybe UTCTime ->
+  Maybe VehicleCategory ->
   UTCTime ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.DriverLicense
-createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue now edl expiry = do
+createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory now edl expiry = do
   let classOfVehicles = maybe [] (map (.cov)) covDetails
   let verificationStatus =
         if configs.doStrictVerifcation
@@ -314,6 +315,7 @@ createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 na
       failedRules = [],
       dateOfIssue,
       rejectReason = Nothing,
+      vehicleCategory,
       consent = True,
       createdAt = now,
       updatedAt = now,

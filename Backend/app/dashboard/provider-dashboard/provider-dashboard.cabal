@@ -32,6 +32,7 @@ library
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
+      API.ProviderPlatform.DynamicOfferDriver.InternalAuth
       API.SpecialZone
       App
       Domain.Action.ProviderPlatform.AppManagement.Driver

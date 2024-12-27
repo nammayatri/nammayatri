@@ -250,6 +250,8 @@ let superPositionConfig =
       , enableSuperPosition = False
       }
 
+let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
@@ -356,4 +358,5 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , ltsCfg = LocationTrackingeServiceConfig
     }

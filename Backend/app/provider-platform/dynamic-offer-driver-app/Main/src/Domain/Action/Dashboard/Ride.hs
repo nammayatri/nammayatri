@@ -59,7 +59,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import SharedLogic.External.LocationTrackingService.Types
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -252,7 +252,7 @@ rideInfo ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     CH.HasClickhouseEnv CH.ATLAS_KAFKA m
   ) =>
   Id DM.Merchant ->

@@ -52,6 +52,7 @@ library
       API.Internal.DriverCoordinates
       API.Internal.DriverInactiveFCM
       API.Internal.DriverMode
+      API.Internal.DriverReachedDestination
       API.Internal.DriverReferee
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
@@ -171,6 +172,7 @@ library
       Domain.Action.Internal.DriverCoordinates
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverMode
+      Domain.Action.Internal.DriverReachedDestination
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm

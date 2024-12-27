@@ -64,6 +64,7 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
@@ -150,7 +151,8 @@ data AppCfg = AppCfg
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
-    nyGatewayUrl :: BaseUrl
+    nyGatewayUrl :: BaseUrl,
+    ltsCfg :: LocationTrackingeServiceConfig
   }
   deriving (Generic, FromDhall)
 
@@ -243,7 +245,8 @@ data AppEnv = AppEnv
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
-    nyGatewayUrl :: BaseUrl
+    nyGatewayUrl :: BaseUrl,
+    ltsCfg :: LocationTrackingeServiceConfig
   }
   deriving (Generic)
 
