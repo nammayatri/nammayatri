@@ -5,6 +5,13 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Types.Id
 
 data MetroLegRequestSearchData = MetroLegRequestSearchData
+  {
+    fromStationCode :: Text,
+    toStationCode :: Text,
+    routeCode :: Maybe Text,
+    quantity :: Int,
+    
+  }
 
 data MetroLegRequestUpdateData = MetroLegRequestUpdateData
 
