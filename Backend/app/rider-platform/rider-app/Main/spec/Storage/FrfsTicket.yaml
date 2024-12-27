@@ -46,6 +46,9 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    lineColor : Maybe Text
+    lineColorCode : Maybe Text
+    frequency : Maybe Int
 
   beamFields:
     journeyLegInfo:
