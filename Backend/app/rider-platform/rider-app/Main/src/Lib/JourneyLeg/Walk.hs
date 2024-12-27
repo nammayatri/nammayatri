@@ -3,11 +3,11 @@
 module Lib.JourneyLeg.Walk where
 
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
-import Lib.JourneyLeg.Types.Walk
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types.Walk
 import qualified Lib.JourneyModule.Types as JT
-import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import SharedLogic.Search
+import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 
 instance JT.JourneyLeg WalkLegRequest m where
   search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do

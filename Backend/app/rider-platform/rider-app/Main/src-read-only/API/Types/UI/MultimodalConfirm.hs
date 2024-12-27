@@ -6,26 +6,23 @@ import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
-import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyModule.Types
 import Servant
 import Tools.Auth
-
-data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data JourneyConfirmReqElement = JourneyConfirmReqElement {journeyLegOrder :: Kernel.Prelude.Int, skipBooking :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoReq = JourneyInfoReq {legsReq :: [JourneyLegsReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyInfoResp = JourneyInfoResp {estimatedDistance :: Kernel.Types.Common.Distance, estimatedDuration :: Kernel.Types.Common.Seconds, estimatedFare :: Kernel.Types.Common.PriceAPIEntity, legs :: [JourneyLegResp]}
+data JourneyInfoResp = JourneyInfoResp
+  { estimatedDistance :: Kernel.Types.Common.Distance,
+    estimatedDuration :: Kernel.Types.Common.Seconds,
+    estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
+    legs :: [Lib.JourneyModule.Types.LegInfo]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -52,19 +49,8 @@ data JourneyLegMetroInfo = JourneyLegMetroInfo
   { destinationStop :: API.Types.UI.FRFSTicketService.FRFSStationAPI,
     frequency :: Kernel.Types.Common.Seconds,
     lineColor :: Kernel.Prelude.Text,
+    lineColorCode :: Kernel.Prelude.Text,
     originStop :: API.Types.UI.FRFSTicketService.FRFSStationAPI
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data JourneyLegResp = JourneyLegResp
-  { estimatedDistance :: Kernel.Types.Common.Distance,
-    estimatedDuration :: Kernel.Types.Common.Seconds,
-    estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
-    journeyLegInfo :: JourneyLegInfo,
-    legId :: Kernel.Prelude.Text,
-    legNumber :: Kernel.Prelude.Int,
-    travelMode :: Domain.Types.Trip.TravelMode
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -82,6 +68,6 @@ data JourneyLegWalkInfo = JourneyLegWalkInfo {destination :: Domain.Types.Locati
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyLegsReq = JourneyLegsReq {legNumber :: Kernel.Prelude.Int, originAddress :: Domain.Types.LocationAddress.LocationAddress, stopsAddress :: [Domain.Types.LocationAddress.LocationAddress]}
+data JourneyLegsReq = JourneyLegsReq {destinationAddress :: Domain.Types.LocationAddress.LocationAddress, legNumber :: Kernel.Prelude.Int, originAddress :: Domain.Types.LocationAddress.LocationAddress}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

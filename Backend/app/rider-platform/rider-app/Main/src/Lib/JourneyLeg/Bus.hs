@@ -2,8 +2,8 @@
 
 module Lib.JourneyLeg.Bus where
 
-import Lib.JourneyLeg.Types.Bus
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where

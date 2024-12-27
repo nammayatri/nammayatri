@@ -40,6 +40,7 @@ types:
     originStop: FRFSStationAPI
     destinationStop: FRFSStationAPI
     lineColor: Text
+    lineColorCode : Text
     frequency: Seconds
 
   JourneyLegBusInfo:

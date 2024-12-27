@@ -2,14 +2,17 @@
 
 module Lib.JourneyLeg.Metro where
 
-import Kernel.Prelude
-import Lib.JourneyLeg.Types.Metro
-import qualified Lib.JourneyModule.Types as JT
 import qualified Domain.Types.TicketBookingService as TBS
+import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types.Metro
+import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
-
+import qualified Domain.Types.FRFSSearch as FRFSSearch
+import qualified Domain.Types.FRFSSearch as DFRFSSearch
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified API.Types.UI.FRFSTicketService as API
 mapServiceStatusToJourneyLegStatus :: TBS.ServiceStatus -> JT.JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
   TBS.Pending -> JT.InPlan -- Indicates the service is yet to start planning.
@@ -19,8 +22,14 @@ mapServiceStatusToJourneyLegStatus status = case status of
   TBS.Cancelled -> JT.Cancelled -- Indicates the service has been cancelled.
 
 instance JT.JourneyLeg MetroLegRequest m where
-  search (MetroLegRequestSearch _) = return () -- TODO: Implement this
-  search _ = throwError (InternalError "Not supported")
+  search (MetroLegRequestSearch req) = do
+    let frfsSearchReq = buildFRFSSearchReq fbuildFRFSSearchReq req.fromStationCode req.toStationCode  req.routeCode 1 Nothing
+    journeyLegInfo <- QJourneyLeg.findByPrimaryKey journeyLegId >>= fromMaybeM (JourneyLegIdNotFound journeyLegId)
+    res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) Spec.METRO frfsSearchReq Nothing Nothing journeyLeg.routeDetails.routeColorName  journeyLeg.routeDetails.routeColorCode journeyLeg.routeDetails.frequency  --(Just partnerOrg.orgId)
+    return $ API.FRFSSearchAPIRes res
+    where 
+      buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
+      buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
 
   confirm (MetroLegRequestConfirm _) = return ()
   confirm _ = throwError (InternalError "Not supported")
@@ -31,7 +40,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   cancel (MetroLegRequestCancel _) = return ()
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (MetroLegRequestGetState _) = return $ JT.JourneyLegState { status = JT.InPlan, currentPosition = Nothing } 
+  getState (MetroLegRequestGetState _) = return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing}
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = do
@@ -39,7 +48,7 @@ instance JT.JourneyLeg MetroLegRequest m where
     searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
     JT.mkLegInfoFromFrfsSearchRequest searchReq
   getInfo _ = throwError (InternalError "Not supported")
-  
+
   getFare (MetroLegRequestGetFare _) = do
     return JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}}
   getFare _ = throwError (InternalError "Not supported")
