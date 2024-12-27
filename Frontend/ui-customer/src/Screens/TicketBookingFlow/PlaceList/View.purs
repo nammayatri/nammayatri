@@ -249,8 +249,8 @@ ticketingItem push (API.TicketPlaceResp item) index length =
           , gravity RIGHT
           ]
           [ imageView
-              [ width $ V 32
-              , height $ V 32
+              [ width $ V $ if EHC.os == "IOS" then 16 else 32
+              , height $ V $ if EHC.os == "IOS" then 16 else 32
               , cornerRadius 16.0
               , margin $ MarginTop 8
               , padding $ Padding 8 8 8 8

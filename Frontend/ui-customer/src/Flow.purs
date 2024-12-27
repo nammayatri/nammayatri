@@ -4760,18 +4760,18 @@ placeDetailsFlow = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
   case action of
-    PlaceDetailsC.GoToHomeScreen updatedState -> do
+    PlaceDetailsC.GoToHomeScreen state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
-      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> goToHomeScreenWithHybridCheck state)
     PlaceDetailsC.GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> ticketPaymentFlow state.data)
     PlaceDetailsC.GoToOpenGoogleMaps state lat2 long2 -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> openGoogleMaps lat2 long2)
-    PlaceDetailsC.BookTickets updatedState -> do
+    PlaceDetailsC.BookTickets state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
-      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> goToHomeScreenWithHybridCheck state)
     PlaceDetailsC.GoToTicketBook updatedState selectedDateString-> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> placeDetailsFlow)
@@ -4786,6 +4786,13 @@ placeDetailsFlow = do
     void $ pure $ openNavigation lat long "DRIVE"
     placeDetailsFlow
 
+  goToHomeScreenWithHybridCheck state =
+    if state.props.navigateToHome 
+      then do
+        when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
+        homeScreenFlow
+      else placeListFlow
+
 ticketStatusFlow :: FlowBT String Unit
 ticketStatusFlow = do
   (GlobalState currentState) <- getState
@@ -4797,7 +4804,7 @@ ticketStatusFlow = do
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { focussedBottomIcon = MOBILITY } })
-      if state.props.navigateToHome then homeScreenFlow else placeListFlow
+      goToHomeScreenWithHybridCheck state
     REFRESH_PAYMENT_STATUS state -> do
       (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
       updatePaymentStatusData ticketStatus state.props.selectedBookingId
@@ -4824,6 +4831,13 @@ ticketStatusFlow = do
         modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen -> ticketInfoScreen { data { selectedBookingInfo = ticketBookingDetails }, props { activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2) } })
         zooTicketInfoFlow
     _ -> ticketStatusFlow
+  where
+    goToHomeScreenWithHybridCheck state =
+      if state.props.navigateToHome 
+        then do
+          when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
+          homeScreenFlow
+        else placeListFlow
 
 metroTicketBookingFlow :: FlowBT String Unit
 metroTicketBookingFlow = do
@@ -5043,7 +5057,11 @@ ticketListFlow = do
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { focussedBottomIcon = MOBILITY } })
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
-      if state.props.navigateToHome then homeScreenFlow else placeListFlow
+      if state.props.navigateToHome 
+        then do
+          when (HU.isParentView FunctionCall) $ pure $ HU.emitTerminateApp Nothing true
+          homeScreenFlow
+        else placeListFlow
     RESET_SCREEN_STATE -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
       ticketListFlow
