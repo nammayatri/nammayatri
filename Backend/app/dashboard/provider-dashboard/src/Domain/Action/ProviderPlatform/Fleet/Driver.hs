@@ -24,6 +24,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetPossibleRoutes,
     postDriverFleetTripPlanner,
     getDriverFleetTripTransactions,
+    postDriverFleetAddDriverBusRouteMapping,
   )
 where
 
@@ -209,3 +210,9 @@ getDriverFleetTripTransactions :: ShortId DM.Merchant -> City.City -> ApiTokenIn
 getDriverFleetTripTransactions merchantShortId opCity apiTokenInfo driverId vehicleNo mbDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetTripTransactions) apiTokenInfo.personId.getId driverId vehicleNo mbDate
+
+postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateDriverBusRouteMappingReq -> Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddDriverBusRouteMapping) apiTokenInfo.personId.getId req

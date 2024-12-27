@@ -440,8 +440,6 @@ apis:
         fleetOwnerId: Text
         driverId: Text
         otp: Text
-      # request:
-        # type: FleetConsentReq
       response:
         type: APISuccess
       migrate:
@@ -558,6 +556,27 @@ apis:
               type: CreateDriversReq
             response:
               type: APISuccess
+
+  - POST: # Add Driver Bus Route Bulk Mapping
+      endpoint: /fleet/addDriverBusRouteMapping
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriverBusRouteMappingReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDriverBusRouteMapping/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: CreateDriverBusRouteMappingReq
+            response:
+              type: APISuccess
+
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
       auth: ApiAuthV2
@@ -725,7 +744,6 @@ types:
     - derive: "'HideSecrets"
   TripPlannerReq:
     - trips: [TripDetail]
-    - summary: Summary
     - derive: "'HideSecrets"
   TripDetail:
     - routeCode: Text
@@ -737,6 +755,7 @@ types:
   TripTransactionResp:
     - trips: [TripTransactionDetail]
     - totalTrips: Int
+    - summary: Summary
   TripStatus:
     - enum: "Upcoming, TripAssigned, TripStarted, TripCompleted"
     - derive: "HttpInstance"
@@ -747,6 +766,10 @@ types:
     - tripEndTime: Maybe UTCTime
     - tripStatus: TripStatus
     - derive: "'HideSecrets'"
+  CreateDriverBusRouteMappingReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -29,7 +29,7 @@ deleteByRouteCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
 
 findAllByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m ([Domain.Types.Route.Route]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Route.Route])
 findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
   findAllWithOptionsKV
     [ Se.And
@@ -44,7 +44,7 @@ findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityI
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
 findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m ([Domain.Types.Route.Route]))
+findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
 findByRouteCodes code = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code]]
 
 findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m (Maybe Domain.Types.Route.Route))
@@ -65,6 +65,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.polyline polyline,
+      Se.Set Beam.roundRouteCode roundRouteCode,
       Se.Set Beam.shortName shortName,
       Se.Set Beam.startLat ((.lat) startPoint),
       Se.Set Beam.startLon ((.lon) startPoint),

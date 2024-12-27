@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetPossibleRoutes,
     postDriverFleetTripPlanner,
     getDriverFleetTripTransactions,
+    postDriverFleetAddDriverBusRouteMapping,
   )
 where
 
@@ -296,3 +297,11 @@ getDriverFleetTripTransactions ::
   Maybe Day ->
   Flow Common.TripTransactionResp
 getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
+
+postDriverFleetAddDriverBusRouteMapping ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.CreateDriverBusRouteMappingReq ->
+  Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping = DDriver.addDriverBusRouteMapping
