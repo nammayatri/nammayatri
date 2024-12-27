@@ -20,3 +20,9 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN merchant_operatin
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN sequence_number integer default 0;

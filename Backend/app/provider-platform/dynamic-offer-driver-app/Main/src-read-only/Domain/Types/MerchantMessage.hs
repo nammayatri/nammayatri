@@ -66,6 +66,8 @@ data MessageKey
   | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
   | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
   | WHATSAPP_MANUAL_PAYMENT_LINK
+  | FLEET_AUTH_MESSAGE_FOR_DRIVERS
+  | FLEET_DEEPLINK_AUTH_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

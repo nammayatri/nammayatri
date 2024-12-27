@@ -22,6 +22,12 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
     postDriverFleetAddDrivers,
+    postDriverFleetConsent,
+    getDriverFleetRoutes,
+    getDriverFleetPossibleRoutes,
+    postDriverFleetTripPlanner,
+    getDriverFleetTripTransactions,
+    postDriverFleetAddDriverBusRouteMapping,
   )
 where
 
@@ -35,6 +41,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
@@ -244,3 +251,57 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver = DDriver.linkRCWithDriverForFleet
+
+postDriverFleetConsent ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  Text ->
+  Flow APISuccess
+postDriverFleetConsent = DDriver.postDriverFleetConsent
+
+getDriverFleetRoutes ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe LatLong ->
+  Maybe Text ->
+  Flow Common.RouteAPIResp
+getDriverFleetRoutes = DDriver.getDriverFleetRoutes
+
+getDriverFleetPossibleRoutes ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  LatLong ->
+  Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes = DDriver.getDriverFleetPossibleRoutes
+
+postDriverFleetTripPlanner ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Text ->
+  Common.TripPlannerReq ->
+  Flow APISuccess
+postDriverFleetTripPlanner = DDriver.postDriverFleetTripPlanner
+
+getDriverFleetTripTransactions ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Text ->
+  Maybe Day ->
+  Flow Common.TripTransactionResp
+getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
+
+postDriverFleetAddDriverBusRouteMapping ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.CreateDriverBusRouteMappingReq ->
+  Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping = DDriver.addDriverBusRouteMapping

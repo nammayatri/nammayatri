@@ -48,6 +48,7 @@ TripTransaction:
     startedNearStopCode: Text
     endStopCode: Text
     allowEndingMidRoute: Bool
+    sequenceNumber: Int
 
   constraints:
     id: PrimaryKey

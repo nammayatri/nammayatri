@@ -35,6 +35,10 @@ module SharedLogic.MessageBuilder
     buildFleetJoiningMessage,
     BuildDownloadAppMessageReq (..),
     buildFleetJoinAndDownloadAppMessage,
+    BuildFleetAuthForDriverMessage (..),
+    buildFleetAuthForDriverMessage,
+    BuildFleetDeepLinkAuthMessage (..),
+    buildFleetDeepLinkAuthMessage,
   )
 where
 
@@ -248,4 +252,36 @@ buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
         merchantMessage.message
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
 
+  pure (merchantMessage.senderHeader, msg)
+
+data BuildFleetAuthForDriverMessage = BuildFleetAuthForDriverMessage
+  { fleetOwnerName :: Text,
+    fleetAuthUrl :: Text
+  }
+
+buildFleetAuthForDriverMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetAuthForDriverMessage -> m (Maybe Text, Text)
+buildFleetAuthForDriverMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.FLEET_AUTH_MESSAGE_FOR_DRIVERS Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_AUTH_MESSAGE_FOR_DRIVERS))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+          & T.replace (templateText "fleetAuthUrl") req.fleetAuthUrl
+  pure (merchantMessage.senderHeader, msg)
+
+data BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
+  { fleetOwnerName :: Text,
+    deepLinkUrl :: Text
+  }
+
+buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text)
+buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.FLEET_DEEPLINK_AUTH_MESSAGE Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FLEET_DEEPLINK_AUTH_MESSAGE))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+          & T.replace (templateText "deepLinkUrl") req.deepLinkUrl
   pure (merchantMessage.senderHeader, msg)
