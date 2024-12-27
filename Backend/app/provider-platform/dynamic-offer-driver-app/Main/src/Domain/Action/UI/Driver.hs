@@ -173,6 +173,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToIntegral)
@@ -2559,7 +2560,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       (_, mbPayoutOrder) <- do
         if createPayoutOrderReq.amount > 0.0
-          then DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          then DPayment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
           else pure (Nothing, Nothing)
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation
