@@ -684,7 +684,7 @@ config = {
       gravity : CENTER,
       padding : (Padding 0 0 0 0),
       margin : (Margin 0 0 0 0),
-      visibility : VISIBLE,
+      visibility : GONE,
       textStyle : Heading2,
       accessibilityHint : "", 
       suffixImage : {
@@ -711,7 +711,7 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       isClickable : false,
-      visibility : VISIBLE,
+      visibility : GONE,
       textStyle : Tags,
       accessibilityHint : "", 
       suffixImage : {

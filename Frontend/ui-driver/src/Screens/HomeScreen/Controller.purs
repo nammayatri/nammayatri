@@ -1471,9 +1471,9 @@ eval (SwitchDriverStatus status) state = do
           lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
           showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
           popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
-          checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
+          checkIfLastWasSilentOrSpecialVariant = state.props.driverStatusSet == ST.Silent || HU.specialVariantsForTracking Common.FunctionCall
       case status of
-        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilentOrSpecialVariant, silentPopUpView = not checkIfLastWasSilentOrSpecialVariant }}
         _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
 
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
@@ -1824,8 +1824,8 @@ eval (UpdateState newState) _ = continue newState
 eval (ChooseBusRoute action) state = 
   case action of
     PopUpModal.SelectRouteButton _ -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
-    PopUpModal.OnButton1Click -> do
-      continue state
+    PopUpModal.OnButton1Click -> continue state
+    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = if state.props.whereIsMyBusConfig.selectRouteStage then true else false}}}
     _ -> update state
 
 eval _ state = update state 

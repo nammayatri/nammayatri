@@ -35,18 +35,20 @@ import Resource.Localizable.TypesV2 as LT2
 import Common.Types.App as CT
 import Resource.Localizable.StringsV2 as StringsV2
 import Screens.EducationScreen.Controller (Action(..), ScreenOutput, primaryButtonConfig, genericHeaderConfig, eval)
+import Debug (spy)
 
 educationScreen :: ST.EducationScreenState -> Screen Action ST.EducationScreenState ScreenOutput
 educationScreen initialState = 
-    {
-        initialState
-    ,   view
-    ,   name: "educationScreen"
-    ,   globalEvents: []
-    ,   eval:
-          \action state -> do
-            eval action state 
-    }
+  { initialState
+  , view
+  , name: "educationScreen"
+  , globalEvents: []
+  , eval:
+    \action state -> do
+      let _ = spy "EducationScreen action " action
+      let _ = spy "EducationScreen state " state
+      eval action state 
+}
 
 view :: forall w. (Action -> Effect Unit) -> ST.EducationScreenState -> PrestoDOM (Effect Unit) w
 view push state =

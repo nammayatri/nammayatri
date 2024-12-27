@@ -4725,3 +4725,10 @@ updateWarriorSettings newSpecialLocationWarriorValue = do
           codeMessage = HU.decodeErrorCode errResp.errorMessage
       void $ pure $ toast $ if err.code == 500 then getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else codeMessage
       pure unit
+
+educationScreenFlow :: FlowBT String Unit
+educationScreenFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.educationScreen currentState.educationScreen
+  case action of
+    _ -> pure unit

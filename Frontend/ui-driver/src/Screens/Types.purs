@@ -1426,7 +1426,7 @@ type HomeScreenProps =  {
   showParcelIntroductionPopup :: Boolean,
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
-  bus_input_data :: String
+  bus_input_data :: String,
   whereIsMyBusConfig :: WhereIsMyBusConfig
  }
 

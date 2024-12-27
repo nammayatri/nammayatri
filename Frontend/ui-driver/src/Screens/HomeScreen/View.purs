@@ -626,66 +626,70 @@ driverMapsHeaderView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  ][ linearLayout
+  ]
+  [ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , weight 1.0
+    , orientation VERTICAL
+    , background Color.white900
+    , cornerRadius 50.0
+    ]
+    [ linearLayout
       [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , weight 1.0
-      , orientation VERTICAL
-      , background Color.white900
-      ,cornerRadius 50.0
-      ][ linearLayout
+      , height $ V 2
+      , background Color.greyTextColor
+      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+      , alpha 0.1
+      ][]
+    , frameLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ]$[  googleMap state
+        , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
+        , linearLayout
           [ width MATCH_PARENT
-          , height $ V 2
-          , background Color.greyTextColor
-          , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-          , alpha 0.1
-          ][]
-        , frameLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          ]$[  googleMap state
-            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
-            , linearLayout
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          ]$ [ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ]$ [ linearLayout
+              , background $ Color.white900
+              , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
+              , PP.cornerRadii $ PTD.Corners 40.0 false false true true
+              ][  driverDetail push state
+                , relativeLayout 
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
-                  , orientation VERTICAL
-                  , background $ Color.white900
-                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
-                  ][  driverDetail push state
-                    , relativeLayout 
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                      , padding $ PaddingBottom 12
-                      ][ statsModel push state
-                       , expandedStatsModel push state
-                      ]
+                  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                  , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                  , padding $ PaddingBottom 12
+                  ][ statsModel push state
+                    , expandedStatsModel push state
                   ]
-                , offlineNavigationLinks push state
-              ] <> [gotoRecenterAndSupport state push,
-                    scheduledRideBannerView state push,
-                    onRideScreenBannerView state push 
-                   ]
-                <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            , linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , orientation VERTICAL
-              , background Color.transparent
-              , gravity BOTTOM
-              ] $ [addAadhaarOrOTPView state push]
-                <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
-                <> [specialPickupZone push state]
-                <> (if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true) --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
-            ]
+              ]
+            , offlineNavigationLinks push state
+          ] <> [gotoRecenterAndSupport state push,
+                scheduledRideBannerView state push,
+                onRideScreenBannerView state push 
+                ]
+            <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+        , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.transparent
+          , gravity BOTTOM
+          ] $ [addAadhaarOrOTPView state push]
+            <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
+            <> [specialPickupZone push state]
+            <> (if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline || (HU.specialVariantsForTracking FunctionCall)) true) --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+            <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] && (not $ HU.specialVariantsForTracking FunctionCall) then [bookingPreferenceNavView push state] else []
+            <> [qrScannerView push state]
         ]
-        , bottomNavBar push state
+      ]
+  , if (not $ HU.specialVariantsForTracking FunctionCall) then bottomNavBar push state else textView [text "", visibility GONE]
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
@@ -846,7 +850,7 @@ gotoRecenterAndSupport state push =
     , margin $ Margin 12 4 12 0
     , padding $ PaddingRight 30
     , gravity if centerView then CENTER_HORIZONTAL else RIGHT
-    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+    , visibility $ boolToVisibility $ (not $ (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)) && (not $ HU.specialVariantsForTracking FunctionCall)
     ][ linearLayout
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
@@ -930,7 +934,7 @@ otpButtonView state push =
     , stroke $ "1," <> Color.blue900
     , cornerRadius 32.0
     , background Color.white900
-    , visibility if state.props.statusOnline then VISIBLE else GONE
+    , visibility if (state.props.statusOnline && (not $ HU.specialVariantsForTracking FunctionCall)) then VISIBLE else GONE
     , padding $ Padding 16 14 16 14
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
@@ -1143,6 +1147,7 @@ offlineView push state =
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               , margin $ MarginBottom if isBookingPreferenceVisible then 0 else 10
+              , padding $ PaddingBottom $ if (HU.specialVariantsForTracking FunctionCall) then 24 else 0
               ] <> FontStyle.paragraphText TypoGraphy
               , if isBookingPreferenceVisible then bookingPreferenceNavView push state else dummyTextView
             ]
@@ -1170,8 +1175,8 @@ offlineView push state =
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , gravity CENTER
-                    , text $ getString GO_ONLINE
-                    , textSize FontSize.a_32
+                    , text $ if (HU.specialVariantsForTracking FunctionCall) then "Start \n Duty" else getString GO_ONLINE
+                    , textSize $ if (HU.specialVariantsForTracking FunctionCall) then FontSize.a_22 else FontSize.a_32
                     , fontStyle $ FontStyle.bold LanguageStyle
                     , color Color.white900
                     ]
@@ -1204,17 +1209,20 @@ driverDetail push state =
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
+  , PP.cornerRadii $ PTD.Corners 40.0 false false true true
   ] 
   [ driverProfile push state
   , tripStageTopBar push state
   , accessibilityHeaderView push state (getAccessibilityHeaderText state)
   , defaultTopBar
-    ]
+  , merchantLogoView
+  ]
 
   where
     defaultTopBar = 
       linearLayout[ 
-        width MATCH_PARENT
+        width WRAP_CONTENT
+      , weight 1.0
       , height MATCH_PARENT
       , orientation HORIZONTAL
       , gravity CENTER_HORIZONTAL
@@ -1228,8 +1236,21 @@ driverDetail push state =
       , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag && rideAccStage && state.data.cityConfig.enableAdvancedBooking || state.data.activeRide.bookingFromOtherPlatform
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
-        ) driverStatusIndicators
+        ) $ if (HU.specialVariantsForTracking FunctionCall) then busDriverStatusIndicators else driverStatusIndicators
       ) 
+
+    merchantLogoView =
+      linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , padding $ Padding 4 20 12 16
+      ]
+      [ imageView
+        [ width $ V 42
+        , height $ V 42
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_logo_without_text"
+        ]
+      ]
     
     rideAccStage =  DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]
     rideStartedStage = DA.any (_ == state.props.currentStage) [RideStarted, ChatWithCustomer]
@@ -1407,6 +1428,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
 driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =
   let isStatusBtnClickable = not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
+      isSepcialTrackingVariants = HU.specialVariantsForTracking FunctionCall
   in
   linearLayout
   [ weight 1.0
@@ -1446,8 +1468,8 @@ driverStatusPill pillConfig push state index =
           , height WRAP_CONTENT
           , padding (Padding 0 0 4 0)
           , text $ case pillConfig.status of
-              Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
-              Offline -> (getString OFFLINE)
+              Online -> if isSepcialTrackingVariants then "On Duty" else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
+              Offline -> if isSepcialTrackingVariants then "End Duty" else (getString OFFLINE)
               Silent -> (getString SILENT)
           , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.textColor
@@ -1466,7 +1488,7 @@ statsModel push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility showStatsModel
+    , visibility $ boolToVisibility $ showStatsModel && (not $ HU.specialVariantsForTracking FunctionCall)
     , gravity CENTER
     , padding $ Padding 16 2 16 6
     ][  linearLayout
@@ -2268,7 +2290,7 @@ offlineNavigationLinks push state =
   , width MATCH_PARENT
   , scrollBarX false
   , margin $ MarginHorizontal 16 16
-  , visibility if state.props.driverStatusSet == ST.Offline then VISIBLE else GONE
+  , visibility if state.props.driverStatusSet == ST.Offline && (not HU.specialVariantsForTracking FunctionCall) then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -2431,6 +2453,7 @@ endRidePopView push state =
     [ width MATCH_PARENT,
       height MATCH_PARENT
     ][ PopUpModal.view (push <<< PopUpModalAction) (endRidePopUp state )]
+    -- ][ PopUpModal.view (push <<<PopUpModalAction) (waitingForDepoRespPopUp state )]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
@@ -3386,3 +3409,78 @@ chooseBusRouteModal push state =
   ][
     PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
   ]
+
+qrScannerView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+qrScannerView push state =
+  let showGoInYellow =  (state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked) || 
+                        (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
+                        (not state.data.isVehicleSupported) ||
+                        state.data.plansState.cityOrVehicleChanged
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , gravity BOTTOM
+    , visibility $ boolToVisibility $ state.props.driverStatusSet == ST.Online && (HU.specialVariantsForTracking FunctionCall)
+    ]
+    [ frameLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]
+        [ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , gravity BOTTOM
+          ][ linearLayout
+              [ height $ V 160
+              , width MATCH_PARENT
+              , gravity BOTTOM
+              , orientation VERTICAL
+              , background Color.white900
+              , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+              ][
+                textView $
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER_HORIZONTAL
+                , text "Scan the QR pasted in the \n bus to start a new ride"
+                , margin $ Margin 16 0 16 0
+                , padding $ PaddingBottom 42
+                ] <> FontStyle.body2 TypoGraphy
+              ]
+          ]
+      , linearLayout
+          [ height $ V 245
+          , width MATCH_PARENT
+          , gravity CENTER_HORIZONTAL
+          -- , visibility $ boolToVisibility false
+          , onClick push $ const NoAction
+          ][ linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              ][ frameLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , margin $ MarginTop 24
+                  ][ linearLayout
+                      [ height $ V 132
+                      , width $ V 132
+                      , cornerRadius 75.0
+                      , background Color.black900
+                      , onClick push $ const $ NoAction
+                      , rippleColor Color.rippleShade
+                      ][]
+                    , imageView
+                      [ gravity CENTER
+                      , layoutGravity "center"
+                      , height $ V 84
+                      , width $ V 84
+                      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_qr_scan_yellow_transparent"
+                      ]
+                ]
+            ]
+        ]
+      ]
+    ]
+    where
+      metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)

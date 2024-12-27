@@ -194,10 +194,75 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text = (getString GO_BACK), enableRipple = true},
-    option2 {text = (getString END_RIDE), enableRipple = true}
+    optionButtonOrientation = "VERTICAL",
+    option1 {text = "Send Request", enableRipple = true, width = MATCH_PARENT, margin = MarginHorizontal 16 16},
+    option2 {text = "Cancel", enableRipple = true, width = MATCH_PARENT,  margin = MarginHorizontal 16 16}
   }
 in popUpConfig'
+
+---------------------------------------- endTripPopUp -----------------------------------------
+endTripPopUp :: ST.HomeScreenState -> PopUpModal.Config
+endTripPopUp state =
+  let config' = PopUpModal.config
+      endTripPopUp' = 
+        config' {
+            primaryText {text = (getString END_RIDE)},
+            secondaryText {text = "Send end ride request to your depot" <> "\n" <> "manager to be approved"},
+            optionButtonOrientation = "VERTICAL",
+            option1 {
+              text = "Send Request", 
+              enableRipple = true, 
+              width = MATCH_PARENT, 
+              margin = Margin 16 0 16 4,
+              background = Color.red,
+              color = Color.white900,
+              strokeColor = Color.red
+            },
+            option2 {
+              text = "Cancel", 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = Color.white900
+            }
+          }
+  in endTripPopUp'
+
+---------------------------------------- waitingForDepoRespPopUp -----------------------------------------
+waitingForDepoRespPopUp :: ST.HomeScreenState -> PopUpModal.Config
+waitingForDepoRespPopUp state =
+  let config' = PopUpModal.config
+      waitingForDepoRespPopUp' = 
+        config' {
+            primaryText {text = "Waiting for depot response!"},
+            secondaryText {text = "Waiting for the depot manager's response to end your ride"},
+            optionButtonOrientation = "VERTICAL",
+            option1 {
+              text = "Cancel Request", 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = Color.white900
+            },
+            option2 {visibility = true},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clock_unfilled_blue" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 24 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in waitingForDepoRespPopUp'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config
@@ -952,6 +1017,23 @@ driverStatusIndicators = [
         textColor : Color.white900
     }
 ]
+
+busDriverStatusIndicators :: Array ST.PillButtonState
+busDriverStatusIndicators = [
+    {
+      status : ST.Offline,
+      background : Color.red,
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
+      textColor : Color.white900
+    },
+    {
+      status : ST.Online,
+      background : Color.darkMint,
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
+      textColor : Color.white900
+    }
+]
+
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP

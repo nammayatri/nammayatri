@@ -1274,3 +1274,11 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+  
+-- Don't Worry this is done for special variants like BUS drivers, only for tracking
+specialVariantsForTracking :: LazyCheck -> Boolean
+specialVariantsForTracking _ = do
+  case (getValueToLocalStore VEHICLE_CATEGORY) of
+    "BikeCategory" -> true
+    "BusCategory" -> true
+    _ -> false

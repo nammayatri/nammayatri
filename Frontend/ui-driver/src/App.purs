@@ -60,6 +60,7 @@ import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
 import Screens.QrCodeScanner.ScreenData as QrCodeScannerScreenData
+import Screens.EducationScreen.ScreenData as EducationScreenData
 import Screens.Types
 import Toast.ScreenData as ToastScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
@@ -150,6 +151,7 @@ newtype GlobalState = GlobalState {
   , uploadParcelImageScreen :: UploadParcelImageScreenState
   , metroWarriorsScreen :: MetroWarriorsScreenState
   , qrCodeScanner :: QrCodeScannerState
+  , educationScreen :: EducationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -214,6 +216,7 @@ defaultGlobalState = GlobalState {
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
 , metroWarriorsScreen : MetroWarriorsScreenData.initData
 , qrCodeScanner : QrCodeScannerScreenData.initData
+, educationScreen : EducationScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps

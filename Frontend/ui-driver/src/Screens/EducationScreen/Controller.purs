@@ -18,6 +18,14 @@ import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Screens.Types (EducationScreenState(..))
+import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit)
+
+instance showAction :: Show Action where
+    show _ = ""
+
+instance loggableAction :: Loggable Action where
+    performLog action appId = case action of
+        _ -> pure unit
 
 data Action = 
     GoBack
