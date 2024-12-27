@@ -13,6 +13,7 @@ imports:
   IssueBreachCooldownTime: SharedLogic.BehaviourManagement.IssueBreach
   ServiceTierType: Domain.Types.ServiceTierType
   Value: Data.Aeson
+  VehicleCategory: Domain.Types.VehicleCategory
 
 DriverInformation:
   tableName: driver_information
@@ -107,6 +108,7 @@ DriverInformation:
     softBlockExpiryTime: Maybe UTCTime
     softBlockReasonFlag: Maybe Text
     isBlockedForReferralPayout: Maybe Bool
+    onboardingVehicleCategory: Maybe VehicleCategory
 
   default:
     active: "false"
@@ -321,5 +323,9 @@ DriverInformation:
     updateSoftBlock:
       kvFunction: updateOneWithKV
       params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
+      where: driverId
+    updateOnboardingVehicleCategory:
+      kvFunction: updateOneWithKV
+      params: [onboardingVehicleCategory]
       where: driverId
 

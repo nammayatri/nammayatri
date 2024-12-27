@@ -25,6 +25,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Control.Monad.Extra as Extra
+import Data.List (intersect)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
@@ -266,14 +267,19 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   vehicleDocuments <-
-    vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
-      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-      when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
-      mbVehicle <- Vehicle.findById personId -- check everytime
-      when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
-        void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
-      if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+    case mDL >>= (.vehicleCategory) of
+      Just vehicleCategory -> do
+        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+        let vehicleDocumentVerificationConfigs = vehicleDocumentTypes `intersect` ((.documentType) <$> documentVerificationConfigs)
+        if null vehicleDocumentVerificationConfigs
+          then do
+            allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+            when allDriverDocsVerified $ do
+              enableDriver merchantOpCityId personId mDL
+              DIQuery.updateOnboardingVehicleCategory (Just vehicleCategory) personId
+            return []
+          else getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
+      _ -> getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -303,6 +309,16 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
         vehicleRegistrationCertificateDetails = rcDetails
       }
   where
+    getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL = do
+      vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
+        allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+        allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+        when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
+        mbVehicle <- Vehicle.findById personId -- check everytime
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
+          void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
+        if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+
     convertDLToDLDetails merchantOperatingCity dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $

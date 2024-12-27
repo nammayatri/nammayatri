@@ -131,6 +131,7 @@ DriverLicense:
     classOfVehicles: '[Text]'
     failedRules: '[Text]'
     verificationStatus: VerificationStatus
+    vehicleCategory: Maybe VehicleCategory
     consent: Bool
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime

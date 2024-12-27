@@ -1453,3 +1453,21 @@ instance IsHTTPError LlmPromptError where
     LlmPromptNotFound {} -> E500
 
 instance IsAPIError LlmPromptError
+
+-------- FRFS Trip Errors ------------
+data FRFSTripErrors = TripInvalidStatus Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSTripErrors
+
+instance IsBaseError FRFSTripErrors where
+  toMessage = \case
+    TripInvalidStatus msg -> Just $ "Attempted to do some action in wrong trip status. " <> msg
+
+instance IsHTTPError FRFSTripErrors where
+  toErrorCode = \case
+    TripInvalidStatus _ -> "TRIP_INVALID_STATUS"
+  toHttpCode = \case
+    TripInvalidStatus _ -> E400
+
+instance IsAPIError FRFSTripErrors

@@ -14,6 +14,7 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
+import Data.Aeson
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -30,9 +31,10 @@ data StartRideReq = StartRideReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Id DM.Merchant,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 data EndRideReq = EndRideReq
   { lat :: Double,
@@ -78,9 +80,10 @@ data RideDetailsReq = RideDetailsReq
     driverId :: Id DP.Person,
     isFutureRide :: Maybe Bool,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show)
 
 newtype DriversLocationReq = DriversLocationReq
   { driverIds :: [Id DP.Person]
@@ -106,3 +109,21 @@ data DriverBlockTillReq = DriverBlockTillReq
     blockTill :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data RideInfo = Bus
+  { routeCode :: Text,
+    busNumber :: Text,
+    destination :: LatLong
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance ToJSON RideInfo where
+  toJSON (Bus routeCode busNumber destination) =
+    object
+      [ "bus"
+          .= object
+            [ "routeCode" .= routeCode,
+              "busNumber" .= busNumber,
+              "destination" .= destination
+            ]
+      ]

@@ -15,7 +15,7 @@
 module API.ProviderPlatform.DynamicOfferDriver
   ( API,
     APIV2,
-    CacAPI,
+    InternalAPI,
     handler,
     handlerV2,
     handlerV3,
@@ -28,6 +28,7 @@ import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementD
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
+import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAuth as InternalAuth
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import qualified Kernel.Types.Beckn.City as City
@@ -46,9 +47,11 @@ type APIV2 =
     :> Capture "city" City.City
     :> API'
 
-type CacAPI =
+type InternalAPI =
   "driver-offer"
-    :> CacAuth.API
+    :> ( CacAuth.API
+           :<|> InternalAuth.API
+       )
 
 type API' =
   FleetDSL.API
@@ -81,5 +84,7 @@ handlerV2 merchantId city =
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
 
-handlerV3 :: FlowServer CacAPI
-handlerV3 = CacAuth.handler
+handlerV3 :: FlowServer InternalAPI
+handlerV3 =
+  CacAuth.handler
+    :<|> InternalAuth.handler

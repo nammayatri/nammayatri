@@ -38,6 +38,7 @@ import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Notification.Interface.GRPC as GRPC
 import Kernel.External.Types (Language (..), ServiceFlow)
 import Kernel.Prelude hiding (unwords)
 import Kernel.Types.Error
@@ -52,6 +53,7 @@ import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
 
@@ -1143,6 +1145,51 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
         EulerHS.Prelude.unwords
           [ entityData.message
           ]
+
+{- Run this to trigger realtime GRPC notifications -}
+notifyWithGRPCProvider ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Person ->
+  a ->
+  m ()
+notifyWithGRPCProvider merchantOpCityId category title body driver entityData = do
+  merchantNotificationServiceConfig <-
+    QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
+  case merchantNotificationServiceConfig.serviceConfig of
+    DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
+      notificationId <- generateGUID
+      clientId <-
+        QFDA.findByDriverId driver.id True
+          >>= \case
+            Just fleetDriverAssociation -> pure fleetDriverAssociation.fleetOwnerId
+            Nothing -> pure driver.id.getId
+      GRPC.notifyPerson cfg (notificationData clientId) notificationId
+    _ -> throwError $ InternalError "Unknow Service Config"
+  where
+    notificationData clientId =
+      Notification.NotificationReq
+        { category = category,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Just Notification.HIGH,
+          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId entityData,
+          dynamicParams = EmptyDynamicParam,
+          body = body,
+          title = title,
+          auth = Notification.Auth clientId Nothing Nothing,
+          ttl = Nothing,
+          sound = Nothing
+        }
 
 {- Run with service Providers can be used to trigger Critical Notifications over multiple channels FCM & GRPC -}
 runWithServiceConfigForProviders ::

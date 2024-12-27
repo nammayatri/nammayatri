@@ -44,7 +44,8 @@ rideStart rideId lat lon merchantId driverId = do
           { lat,
             lon,
             merchantId,
-            driverId
+            driverId,
+            rideInfo = Nothing
           }
   rideStartRes <-
     callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI
@@ -101,7 +102,8 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide = do
             driverId,
             lat,
             lon,
-            isFutureRide
+            isFutureRide,
+            rideInfo = Nothing
           }
   rideDetailsRes <-
     callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI

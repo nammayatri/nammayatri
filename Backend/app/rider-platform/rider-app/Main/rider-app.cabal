@@ -287,6 +287,9 @@ library
       SharedLogic.CallIGMBPP
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
+      SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
+      SharedLogic.External.LocationTrackingService.Flow
+      SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler

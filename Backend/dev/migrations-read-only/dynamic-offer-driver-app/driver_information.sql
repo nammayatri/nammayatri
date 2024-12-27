@@ -181,3 +181,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN special_loc_war
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_referral_payout boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_vehicle_category text ;

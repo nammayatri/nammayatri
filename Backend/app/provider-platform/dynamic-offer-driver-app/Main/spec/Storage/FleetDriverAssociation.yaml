@@ -29,6 +29,11 @@ FleetDriverAssociation:
       where:
         and: [driverId, fleetOwnerId, isActive]
 
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isActive]
+
     findAllDriverByFleetOwnerId:
       kvFunction: findAllWithKV
       where: fleetOwnerId

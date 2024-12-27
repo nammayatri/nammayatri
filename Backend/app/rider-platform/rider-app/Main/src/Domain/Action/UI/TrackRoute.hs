@@ -7,6 +7,8 @@ import Data.Function
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
@@ -19,6 +21,8 @@ import Kernel.Types.Distance
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as RTM
 import Tools.Error
@@ -34,20 +38,22 @@ getTrackVehicles ::
 getTrackVehicles (mbPersonId, merchantId) routeCode = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
 
-  initialRouteInfo :: [(Text, TrackRoute.VehicleInfoForRoute)] <-
-    Redis.withCrossAppRedis $ Redis.hGetAll (makeRouteKey routeCode)
+  routeInfoByRouteCode :: [(Text, TrackRoute.VehicleInfoForRoute)] <- do
+    vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
+    pure $ mkVehicleInfoForRoute vehicleTrackingResp
 
-  routeInfoFromRedis <-
-    if null initialRouteInfo
+  routeInfo' <-
+    if null routeInfoByRouteCode
       then do
         tripIds <- map DRTM.tripCode <$> RTM.findAllTripIdByRouteCode routeCode
-        concat <$> forM tripIds (\tripId -> Redis.withCrossAppRedis $ Redis.hGetAll (makeTripKey tripId))
-      else pure initialRouteInfo
+        vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByTrips tripIds)
+        pure $ mkVehicleInfoForRoute vehicleTrackingResp
+      else pure routeInfoByRouteCode
 
   let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] =
-        mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
-  logDebug $ "got route from redis " <> show routeInfoFromRedis
-  logDebug $ "got route from redis with lat/long " <> show routeInfoWithLatLong
+        mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfo'
+  logDebug $ "got route from lts " <> show routeInfo'
+  logDebug $ "got route from lts with lat/long " <> show routeInfoWithLatLong
   reqStops <- QRSM.findByRouteCode routeCode
   let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) reqStops
       stopPairs = map (\(x, y) -> (x, y)) (pairWithNext sortedStops)
@@ -88,6 +94,35 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
       pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, nextStopTravelTime = Just $ Seconds 300, vehicleId = vehicleId_, vehicleInfo = vi} -- TODO :: `nextStopTravelTime` should be calculated as (Avg Speed / Distance), where Average speed should be stored by Bus Tracking in VehicleInfo ?
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
+  where
+    mkVehicleInfoForRoute :: [LT.VehicleTrackingOnRouteResp] -> [(Text, TrackRoute.VehicleInfoForRoute)]
+    mkVehicleInfoForRoute vehiclesInfo =
+      vehiclesInfo
+        <&> ( \vehicleInfo ->
+                ( vehicleInfo.vehicleNumber,
+                  TrackRoute.VehicleInfoForRoute
+                    { latitude = Just vehicleInfo.vehicleInfo.latitude,
+                      longitude = Just vehicleInfo.vehicleInfo.longitude,
+                      scheduleRelationship = vehicleInfo.vehicleInfo.scheduleRelationship,
+                      speed = vehicleInfo.vehicleInfo.speed,
+                      startDate =
+                        ( \startTime ->
+                            T.pack $
+                              Time.formatTime
+                                Time.defaultTimeLocale
+                                "%d-%m-%Y"
+                                ( addUTCTime
+                                    (secondsToNominalDiffTime 19800)
+                                    startTime
+                                )
+                        )
+                          <$> vehicleInfo.vehicleInfo.startTime,
+                      startTime = vehicleInfo.vehicleInfo.startTime,
+                      timestamp = Just vehicleInfo.vehicleInfo.timestamp,
+                      tripId = vehicleInfo.vehicleInfo.tripId
+                    }
+                )
+            )
 
 mkLatLong :: Double -> Double -> Maps.LatLong
 mkLatLong lat_ lon_ =
@@ -98,12 +133,6 @@ mkLatLong lat_ lon_ =
 
 pairWithNext :: [a] -> [(a, a)]
 pairWithNext xs = zip xs (List.tail xs)
-
-makeRouteKey :: Text -> Text
-makeRouteKey routeId = "route:" <> routeId
-
-makeTripKey :: Text -> Text
-makeTripKey tripId = "trip:" <> tripId
 
 stopPairRoutePointsKey :: Text -> Text
 stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
