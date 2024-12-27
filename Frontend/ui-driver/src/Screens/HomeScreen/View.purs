@@ -638,6 +638,7 @@ driverMapsHeaderView push state =
                     onRideScreenBannerView state push 
                    ]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                <> [ recentBusRideView push state ]
             , linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT
@@ -3138,4 +3139,119 @@ chooseBusRouteModal push state =
   , height MATCH_PARENT
   ][
     PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
+  ]
+
+recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+recentBusRideView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ Margin 16 16 16 16
+  , background Color.white900
+  , cornerRadius 16.0
+  , padding $ Padding 6 6 6 16
+  , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
+  ][
+    textView $
+    [ text "Recent Ride"
+    , width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.grey700
+    , color Color.black700
+    , gravity CENTER
+    , margin $ MarginBottom 20
+    , padding $ Padding 0 6 0 6
+    , cornerRadius 14.0
+    ] <> FontStyle.subHeading3 TypoGraphy,
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin $ Margin 10 0 10 24
+    ][
+      linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , weight 1.0
+      ][
+        textView $ 
+        [ text "Bus Number"
+        , color Color.black800
+        , margin $ MarginBottom 8
+        ] <> FontStyle.body3 TypoGraphy,
+        textView $ 
+        [ text "WB076786"
+        , color Color.black800
+        ] <> FontStyle.subHeading3 TypoGraphy
+      ],
+      linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ Margin 0 0 64 0
+      ][
+        textView $
+        [ text "Bus Type"
+        , color Color.black800
+        , margin $ MarginBottom 8
+        ] <> FontStyle.body3 TypoGraphy,
+        textView $
+        [ text "AC"
+        , color Color.black800
+        ] <> FontStyle.subHeading3 TypoGraphy
+      ]
+    ],
+    textView $
+    [ text "Route Number"
+    , color Color.black800
+    , margin $ Margin 10 0 10 8
+    ] <> FontStyle.body3 TypoGraphy,
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , padding $ Padding 16 16 16 16
+    , cornerRadius 12.0
+    , margin $ Margin 10 0 10 24
+    , stroke $ "1," <> Color.grey900
+    , gravity CENTER_VERTICAL
+    ][
+      textView
+      [ text "S-102"
+      , textSize FontSize.a_20
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , margin $ MarginRight 8
+      ],
+      textView
+      [ text "•"
+      , textSize FontSize.a_20
+      , color Color.black600
+      , margin $ MarginHorizontal 8 8
+      ],
+      textView
+      [ text "Howrah Station → Airport"
+      , textSize FontSize.a_16
+      , color Color.black700
+      , weight 1.0
+      ],
+      imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_chevron_down"
+      , width $ V 20
+      , height $ V 20
+      ]
+    ],
+    PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
+    -- primaryButton
+    -- [ text "Start Ride"
+    -- , width MATCH_PARENT
+    -- , height $ V 56
+    -- , cornerRadius 28.0
+    -- , background Color.green500
+    -- , color Color.white900
+    -- , textSize FontSize.a_18
+    -- , fontStyle $ FontStyle.bold LanguageStyle
+    -- , onClick push $ const StartRide
+    -- ]
   ]

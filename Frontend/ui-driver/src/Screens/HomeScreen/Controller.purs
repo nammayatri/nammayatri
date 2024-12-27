@@ -325,6 +325,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | GoToScanBusQR ST.HomeScreenState
+                    | LinkBusTrip ST.HomeScreenState
+                    | StartBusRide ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -483,6 +485,7 @@ data Action = NoAction
             | MetroWarriorPopupAC PopUpModal.Action
             | MetroWarriorSwitchAction SwitchButtonView.Action
             | ChooseBusRoute PopUpModal.Action
+            | StartBusTrip PrimaryButtonController.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1775,9 +1778,15 @@ eval (MetroWarriorPopupAC PopUpModal.OnButton2Click) state = continue state { pr
 
 eval (ChooseBusRoute action) state = 
   case action of
-    PopUpModal.SelectRouteButton _ -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.SelectRoute index busRouteNumber ->
+      let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
+          newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
+      in updateAndExit newState $ LinkBusTrip newState
+    PopUpModal.SelectRouteButton PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
     PopUpModal.OnButton1Click -> do
-      continue state
+      exit $ StartBusRide state
+    PopUpModal.OnButton2Click -> do
+      continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
     _ -> update state
 
 eval _ state = update state 

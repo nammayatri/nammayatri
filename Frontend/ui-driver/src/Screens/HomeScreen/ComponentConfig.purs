@@ -3015,7 +3015,7 @@ chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
 chooseBusRouteModalPopup state = 
   let 
     config' = PopUpModal.config {
-      padding = Padding 16 16 16 24,
+      padding = Padding 16 16 16 0,
       primaryText
       {
         visibility = GONE
@@ -3029,6 +3029,9 @@ chooseBusRouteModalPopup state =
       { 
         text = "Route/Bus Number",
         color = Color.black800,
+        padding = Padding 0 0 0 0,
+        margin = Margin 0 0 0 12,
+        gravity = LEFT,
         textStyle = FontStyle.Body1,
         visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
       }
@@ -3037,15 +3040,16 @@ chooseBusRouteModalPopup state =
         selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
         busNumber = primaryTextConfig "V1" "BUS NUMBER",
         busType = primaryTextConfig "AC" "BUS Type",
-        selectRouteButton = primaryButtonConfig
+        selectRouteButton = routeButtonConfig state,
+        availableRouteList = transformAvailableRouteList state
     }
     , option1 {
       background = Color.green900
       , strokeColor = Color.white900
       , color = Color.white900
       , text = getString START_RIDE
-      , isClickable = false
-      , enableRipple = true
+      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoute 
       , width = MATCH_PARENT
       , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
     }
@@ -3054,9 +3058,11 @@ chooseBusRouteModalPopup state =
       , strokeColor = Color.white900
       , color = Color.black700
       , text = getString CLOSE
-      , isClickable = false
+      , isClickable = true
       , enableRipple = true
       , width = MATCH_PARENT
+      , margin = Margin 0 0 0 0
+      , padding = Padding 0 0 0 0
       , visibility = state.props.whereIsMyBusConfig.selectRouteStage
     }
     , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
@@ -3087,11 +3093,11 @@ chooseBusRouteModalPopup state =
           margin = Margin 0 0 0 24,
           id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
       }
-    primaryButtonConfig = 
+    routeButtonConfig state = 
       PrimaryButton.config {
         textConfig {
-          textFromHtml = Just "<b>Select Route Number</b>",
-          color = Color.grey900,
+          textFromHtml = if isJust state.props.whereIsMyBusConfig.selectedRoute then Just $ "<span style='color:#000000;'><strong>S-102</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>Howrah Station → Airport</span>" else  Just "<b>Select Route Number</b>",
+          color = Color.black700,
           textStyle = SubHeading3,
           gravity = LEFT,
           width = V $ (EHC.screenWidth unit) - 100
@@ -3109,3 +3115,35 @@ chooseBusRouteModalPopup state =
         viewbackground = Color.black900, 
         stroke = "1," <> Color.grey900
       }
+    transformAvailableRouteList state = 
+      case state.data.whereIsMyBusData.availableRoutes of
+        Just (API.AvailableRoutesList availableRoutesList) ->
+          map (\(API.AvailableRoutes route) -> 
+                let (API.StopInfo destination) = route.destination
+                    (API.StopInfo source) = route.source
+                    (API.RouteInfo routeInfo) = route.routeInfo
+                in ({
+                    busRouteNumber : routeInfo.code,
+                    sourceText : source.name,
+                    destination : destination.name
+                  }::PopUpModal.RouteInfo )
+              ) availableRoutesList
+        Nothing -> []
+
+startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+startBusTripButtonConfig state = PrimaryButton.config
+  { textConfig
+    { text = getString START_RIDE
+    , height = WRAP_CONTENT
+    , textStyle = SubHeading3
+    , weight = Just 1.0
+    , color = Color.white900
+    }
+  , height = WRAP_CONTENT
+  , gravity = CENTER
+  , cornerRadius = 8.0
+  , stroke = "1," <> Color.white900
+  , background = Color.green900
+  , margin = Margin 10 0 10 16
+  , padding = Padding 16 14 16 14
+  }

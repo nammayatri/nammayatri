@@ -415,17 +415,19 @@ specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
 
 busAvailableRoutes :: String -> String 
-busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes/" <> vehicleNo
+busAvailableRoutes vehicleNo = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/availableRoutes/" <> vehicleNo
 
 busTripLink :: String -> String
-busTripLink _ = getBaseUrl("") <> "/wmb/trip/link"
+busTripLink _ = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/trip/link"
 
 busActiveTrip :: String -> String
-busActiveTrip _ = getBaseUrl("") <> "/wmb/trip/active"
+busActiveTrip _ = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/trip/active"
 
 busTripStart :: String -> String
-busTripStart tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/start"
+busTripStart tripTransactionId = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/start"
 
 busTripEnd :: String -> String
-busTripEnd tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/end"
+busTripEnd tripTransactionId = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/end"
 
+getBusRideHistory :: String -> String -> String -> String
+getBusRideHistory limit offset status = "https://6f18-2409-40e5-91-8f3-5c8d-ce25-e0ae-267c.ngrok-free.app/ui/wmb/ride/list?limit="<>limit<>"&offset="<>offset<>"&status="<>status

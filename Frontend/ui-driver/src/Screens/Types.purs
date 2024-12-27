@@ -1097,7 +1097,11 @@ type HomeScreenData =  {
 , blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
 , isSpecialLocWarrior :: Boolean
-, availableRoutes :: Maybe API.AvailableRoutesList
+, whereIsMyBusData :: WhereIsMyBusData
+}
+
+type WhereIsMyBusData = {
+  availableRoutes :: Maybe API.AvailableRoutesList
 }
 
 type PlansState = {
@@ -1420,7 +1424,10 @@ type HomeScreenProps =  {
 
 type WhereIsMyBusConfig = {
   showSelectAvailableBusRoutes :: Boolean,
-  selectRouteStage :: Boolean
+  selectRouteStage :: Boolean,
+  selectedRoute :: Maybe API.AvailableRoutes,
+  tripTransactionId :: Maybe String,
+  selectedIndex :: Int
 }
 
 type RideRequestPill = {

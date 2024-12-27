@@ -1870,34 +1870,44 @@ getAvailableRoutes vehicleNumber = do
 getAvailableRoutesBT :: String -> FlowBT String AvailableRoutesList
 getAvailableRoutesBT vehicleNumber = do
   headers <- getHeaders' "" false
-  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes "")
+  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes vehicleNumber)
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
 -- Link Trip
-linkTrip :: TripLinkReq -> Flow GlobalState (Either ErrorResponse TripLinkResp)
-linkTrip req = do
+linkTrip :: String -> String -> Flow GlobalState (Either ErrorResponse TripTransactionDetails)
+linkTrip number code = do
   headers <- getHeaders "" false
-  withAPIResult (EP.busTripLink "") unwrapResponse $ callAPI headers req
+  let payload = mkTripLinkReq number code
+  withAPIResult (EP.busTripLink "") unwrapResponse $ callAPI headers payload
   where
     unwrapResponse (x) = x
 
-linkTripBT :: TripLinkReq -> FlowBT String TripLinkResp
-linkTripBT req = do
+linkTripBT :: String -> String -> FlowBT String TripTransactionDetails
+linkTripBT number code = do
   headers <- getHeaders' "" false
-  withAPIResultBT (EP.busTripLink "") identity errorHandler (lift $ lift $ callAPI headers req)
+  let payload = mkTripLinkReq number code
+  withAPIResultBT (EP.busTripLink "") identity errorHandler (lift $ lift $ callAPI headers payload)
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
+mkTripLinkReq :: String -> String -> TripLinkReq
+mkTripLinkReq number code = TripLinkReq
+    {
+      vehicleNumber : number
+    , routeCode : code
+    }
+
+
 -- Fetch Active Trip
-getActiveTrip :: Flow GlobalState (Either ErrorResponse TripLinkResp)
+getActiveTrip :: Flow GlobalState (Either ErrorResponse ActiveTripTransaction)
 getActiveTrip = do
   headers <- getHeaders "" false
   withAPIResult (EP.busActiveTrip "") unwrapResponse $ callAPI headers $ GetActiveBusTrip ""
   where
     unwrapResponse (x) = x
 
-getActiveTripBT :: FlowBT String TripLinkResp
+getActiveTripBT :: FlowBT String ActiveTripTransaction
 getActiveTripBT = do
   headers <- getHeaders' "" false
   withAPIResultBT (EP.busActiveTrip "") identity errorHandler (lift $ lift $ callAPI headers $ GetActiveBusTrip "")
@@ -1905,23 +1915,25 @@ getActiveTripBT = do
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
 -- Start Trip
-startTrip :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
-startTrip tripTransactionId latlong = do
+startTrip :: String -> Number -> Number -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+startTrip tripTransactionId lat lon = do
   headers <- getHeaders "" false
-  withAPIResult (EP.busTripStart tripTransactionId) unwrapResponse $ callAPI headers (mkStartTripReq tripTransactionId latlong)
+  withAPIResult (EP.busTripStart tripTransactionId) unwrapResponse $ callAPI headers (mkStartTripReq tripTransactionId lat lon)
   where
     unwrapResponse (x) = x
 
-startTripBT :: String -> LatLong -> FlowBT String ApiSuccessResult
-startTripBT tripTransactionId latlong = do
+startTripBT :: String -> Number -> Number -> FlowBT String ApiSuccessResult
+startTripBT tripTransactionId lat lon = do
   headers <- getHeaders' "" false
-  withAPIResultBT (EP.busTripStart tripTransactionId) identity errorHandler (lift $ lift $ callAPI headers (mkStartTripReq tripTransactionId latlong))
+  withAPIResultBT (EP.busTripStart tripTransactionId) identity errorHandler (lift $ lift $ callAPI headers (mkStartTripReq tripTransactionId lat lon))
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
 
-mkStartTripReq :: String -> LatLong -> TripStartReq
-mkStartTripReq tripTransactionId latlong = TripStartReq tripTransactionId (BusLocation {location : latlong})
+mkStartTripReq :: String -> Number -> Number -> TripStartReq
+mkStartTripReq tripTransactionId lat lon = 
+    let latlong = LatLong { lat : lat, lon : lon }
+    in TripStartReq tripTransactionId (BusLocation {location : latlong})
 
 -- End Trip
 endTrip :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -1940,3 +1952,19 @@ endTripBT tripTransactionId latlong = do
 
 mkEndTripReq :: String -> LatLong -> TripEndReq
 mkEndTripReq tripTransactionId latlong = TripEndReq tripTransactionId (BusLocation {location : latlong})
+
+-- Get Bus Ride History
+
+getBusRideHistory :: String -> String -> BusTripStatus -> Flow GlobalState (Either ErrorResponse BusRideHistoryResp)
+getBusRideHistory limit offset status = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getBusRideHistory limit offset (show status)) unwrapResponse $ callAPI headers (BusRideHistoryReq limit offset status)
+  where
+    unwrapResponse (x) = x
+
+getBusRideHistoryBT :: String -> String -> BusTripStatus -> FlowBT String BusRideHistoryResp
+getBusRideHistoryBT limit offset status = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.getBusRideHistory limit offset (show status)) identity errorHandler (lift $ lift $ callAPI headers (BusRideHistoryReq limit offset status))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack

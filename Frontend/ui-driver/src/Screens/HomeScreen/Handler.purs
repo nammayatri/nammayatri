@@ -223,3 +223,9 @@ homeScreen = do
     GoToScanBusQR updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_SCAN_BUS_QR updatedState)
+    LinkBusTrip updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ LINK_BUS_TRIP updatedState)
+    StartBusRide updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_START_BUS_RIDE updatedState)

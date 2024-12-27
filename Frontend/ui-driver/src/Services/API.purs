@@ -5441,13 +5441,13 @@ newtype TripLinkReq = TripLinkReq
   }
 
 derive instance genericTripLinkReq :: Generic TripLinkReq _
-instance standardEncodeTripLinkReq :: StandardEncode TripLinkReq where standardEncode _ = standardEncode {}
+instance standardEncodeTripLinkReq :: StandardEncode TripLinkReq where standardEncode (TripLinkReq req) = standardEncode req
 instance showTripLinkReq :: Show TripLinkReq where show = genericShow
 instance decodeTripLinkReq :: Decode TripLinkReq where decode = defaultDecode
 instance encodeTripLinkReq :: Encode TripLinkReq where encode = defaultEncode
 
 instance makeTripLinkReq :: RestEndpoint TripLinkReq where
-  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.busTripLink "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.busTripLink "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
                               ----------------------------------------------------
@@ -5466,7 +5466,7 @@ instance showStopInfo :: Show StopInfo where show = genericShow
 instance decodeStopInfo :: Decode StopInfo where decode = defaultDecode
 instance encodeStopInfo :: Encode StopInfo where encode = defaultEncode
 
-newtype TripLinkResp = TripLinkResp
+newtype TripTransactionDetails = TripTransactionDetails
   { tripTransactionId :: String
   , vehicleNum :: String
   , vehicleType :: String
@@ -5474,12 +5474,24 @@ newtype TripLinkResp = TripLinkResp
   , destination :: StopInfo
   }
 
-derive instance genericTripLinkResp :: Generic TripLinkResp _
-derive instance newtypeTripLinkResp :: Newtype TripLinkResp _
-instance standardEncodeTripLinkResp :: StandardEncode TripLinkResp where standardEncode _ = standardEncode {}
-instance showTripLinkResp :: Show TripLinkResp where show = genericShow
-instance decodeTripLinkResp :: Decode TripLinkResp where decode = defaultDecode
-instance encodeTripLinkResp :: Encode TripLinkResp where encode = defaultEncode
+derive instance genericTripLinkResp :: Generic TripTransactionDetails _
+derive instance newtypeTripLinkResp :: Newtype TripTransactionDetails _
+instance standardEncodeTripLinkResp :: StandardEncode TripTransactionDetails where standardEncode _ = standardEncode {}
+instance showTripLinkResp :: Show TripTransactionDetails where show = genericShow
+instance decodeTripLinkResp :: Decode TripTransactionDetails where decode = defaultDecode
+instance encodeTripLinkResp :: Encode TripTransactionDetails where encode = defaultEncode
+
+newtype ActiveTripTransaction = ActiveTripTransaction
+  {
+    tripTransactionDetails :: Maybe TripTransactionDetails
+  }
+
+derive instance genericActiveTripTransaction :: Generic ActiveTripTransaction _
+derive instance newtypeActiveTripTransaction :: Newtype ActiveTripTransaction _
+instance standardEncodeActiveTripTransaction :: StandardEncode ActiveTripTransaction where standardEncode (ActiveTripTransaction res) = standardEncode res
+instance showActiveTripTransaction :: Show ActiveTripTransaction where show = genericShow
+instance decodeActiveTripTransaction :: Decode ActiveTripTransaction where decode = defaultDecode
+instance encodeActiveTripTransaction :: Encode ActiveTripTransaction where encode = defaultEncode
 
 ----------------------------------------------------------------------------------------------------------------
 
@@ -5507,7 +5519,7 @@ instance decodeGetAvailableRoutes :: Decode GetAvailableRoutes where decode = de
 instance encodeGetAvailableRoutes :: Encode GetAvailableRoutes where encode = defaultEncode
 
 instance makeGetAvailableRoutes :: RestEndpoint GetAvailableRoutes where
-  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.busAvailableRoutes "") headers reqBody Nothing
+  makeRequest reqBody@(GetAvailableRoutes busNumber) headers = defaultMakeRequestWithoutLogs GET (EP.busAvailableRoutes busNumber) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -5525,10 +5537,7 @@ newtype BusVehicleDetails = BusVehicleDetails
   }
 
 
-newtype AvailableRoutesList = AvailableRoutesList
-  {
-    list :: AvailableRoutes
-  }
+newtype AvailableRoutesList = AvailableRoutesList (Array AvailableRoutes)
 
 newtype AvailableRoutes = AvailableRoutes
   { routeInfo :: RouteInfo
@@ -5571,7 +5580,7 @@ instance encodeAvailableRoutesList :: Encode AvailableRoutesList where encode = 
 data TripStartReq = TripStartReq String BusLocation
     
 derive instance genericTripStartReq :: Generic TripStartReq _
-instance standardEncodeTripStartReq :: StandardEncode TripStartReq where standardEncode _ = standardEncode {}
+instance standardEncodeTripStartReq :: StandardEncode TripStartReq where standardEncode (TripStartReq rideId (BusLocation rqBody)) = standardEncode rqBody
 instance showTripStartReq :: Show TripStartReq where show = genericShow
 instance decodeTripStartReq :: Decode TripStartReq where decode = defaultDecode
 instance encodeTripStartReq :: Encode TripStartReq where encode = defaultEncode
@@ -5604,3 +5613,40 @@ instance standardEncodeBusLocation :: StandardEncode BusLocation where standardE
 instance showBusLocation :: Show BusLocation where show = genericShow
 instance decodeBusLocation :: Decode BusLocation where decode = defaultDecode
 instance encodeBusLocation :: Encode BusLocation where encode = defaultEncode
+
+------------------------------------ Bus Ride History ------------------------------------------
+
+data BusTripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | TRIP_COMPLETED
+
+
+derive instance genericBusTripStatus :: Generic BusTripStatus _
+instance showBusTripStatus :: Show BusTripStatus where show = genericShow
+instance decodeBusTripStatus :: Decode BusTripStatus where decode = defaultEnumDecode
+instance encodeBusTripStatus :: Encode BusTripStatus where encode = defaultEnumEncode
+instance eqBusTripStatus :: Eq BusTripStatus where eq = genericEq
+instance standardEncodeBusTripStatus :: StandardEncode BusTripStatus
+  where
+  standardEncode TRIP_COMPLETED = standardEncode "COMPLETED"
+  standardEncode a = standardEncode $ show a
+
+data BusRideHistoryReq = BusRideHistoryReq String String BusTripStatus
+
+derive instance genericBusRideHistoryReq :: Generic BusRideHistoryReq _
+instance showBusRideHistoryReq :: Show BusRideHistoryReq where show = genericShow
+instance standardEncodeBusRideHistoryReq :: StandardEncode BusRideHistoryReq where standardEncode _ = standardEncode {}
+instance decodeBusRideHistoryReq :: Decode BusRideHistoryReq where decode = defaultDecode
+instance encodeBusRideHistoryReq :: Encode BusRideHistoryReq where encode = defaultEncode
+
+instance makeBusRideHistoryReq :: RestEndpoint BusRideHistoryReq where
+    makeRequest reqBody@(BusRideHistoryReq limit offset status) headers = defaultMakeRequestWithoutLogs GET (EP.getBusRideHistory limit offset (show status)) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+newtype BusRideHistoryResp = BusRideHistoryResp (Array TripTransactionDetails)
+
+derive instance genericBusRideHistoryResp :: Generic BusRideHistoryResp _
+derive instance newtypeBusRideHistoryResp :: Newtype BusRideHistoryResp _
+instance standardEncodeBusRideHistoryResp :: StandardEncode BusRideHistoryResp where standardEncode (BusRideHistoryResp res) = standardEncode res
+instance showBusRideHistoryResp :: Show BusRideHistoryResp where show = genericShow
+instance decodeBusRideHistoryResp :: Decode BusRideHistoryResp where decode = defaultDecode
+instance encodeBusRideHistoryResp :: Encode BusRideHistoryResp where encode = defaultEncode
+

@@ -178,7 +178,7 @@ initData =
       , scheduleRideCount : Nothing
       , blockExpiryTime : ""
       , isSpecialLocWarrior : false
-      , availableRoutes : Nothing
+      , whereIsMyBusData : { availableRoutes : Nothing }
     }
   , props:
       { isFreeRide: false
@@ -279,8 +279,11 @@ initData =
       , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
       , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : true -- FOR_TEST_REVERT
+          showSelectAvailableBusRoutes : false -- FOR_TEST_REVERT
         , selectRouteStage : false
+        , selectedRoute : Nothing
+        , tripTransactionId : Nothing
+        , selectedIndex : -1
       }
       }
   }
