@@ -62,24 +62,12 @@ eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBoo
 
 eval BackPressed state = do
   case state.props.currentStage of 
-    DescriptionStage -> if isParentView FunctionCall
-                        then do
-                            void $ pure $ emitTerminateApp Nothing true
-                            continue state
-                        else exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
+    DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
     ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
-    ViewTicketStage -> if isParentView FunctionCall
-                        then do
-                            void $ pure $ emitTerminateApp Nothing true
-                            continue state
-                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
-                                else if isParentView FunctionCall
-                                  then do
-                                      void $ pure $ emitTerminateApp Nothing true
-                                      continue state
-                                  else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                                else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
