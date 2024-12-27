@@ -146,7 +146,7 @@ WalkLegMultimodal:
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     status: WalkLegStatus
-    merchantId: Id Merchant
+    merchantId: Maybe (Id Merchant)
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
 
@@ -237,6 +237,9 @@ JourneyLeg:
       routeGtfsId: Maybe Text
       routeLongName: Maybe Text
       routeShortName: Maybe Text
+      routeColorName : Maybe Text
+      routeColorCode : Maybe Text
+      frequency : Maybe Int
     agency:
       agencyGtfsId: Maybe Text
       agencyName: Maybe Text
@@ -256,7 +259,7 @@ JourneyLeg:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
-    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName)|E
+    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorName routeColorCode frequency)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
@@ -273,6 +276,9 @@ JourneyLeg:
     routeGtfsId: (routeDetails >>= (.gtfsId))|E
     routeLongName: (routeDetails >>= (.longName))|E
     routeShortName: (routeDetails >>= (.shortName))|E
+    routeColorName: (routeDetails >>= (.routeColorName))|E
+    routeColorCode: (routeDetails >>= (.routeColorCode))|E
+    frequency : (routeColor >>= (.frequency))|E
     agencyGtfsId: (routeDetails >>= (.gtfsId))|E
     agencyName: (routeDetails >>= (.longName))|E
     startLocationLat: (startLocation & (.latitude))|E

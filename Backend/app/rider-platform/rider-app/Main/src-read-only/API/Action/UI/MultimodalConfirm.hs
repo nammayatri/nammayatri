@@ -28,21 +28,28 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "multimodal" :> Capture "journeyId" (Kernel.Types.Id.Id Domain.Types.Journey.Journey) :> "info"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyInfoReq
-      :> Post ('[JSON]) API.Types.UI.MultimodalConfirm.JourneyInfoResp
+      :> Post '[JSON] API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "confirm"
-      :> ReqBody
-           ('[JSON])
-           API.Types.UI.MultimodalConfirm.JourneyConfirmReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "booking"
+      :> "info"
+      :> Get
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -53,7 +60,7 @@ type API =
            "estimateId"
            (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate)
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -62,12 +69,12 @@ type API =
            Kernel.Prelude.Text
       :> "switchToAuto"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInfo :<|> postMultimodalConfirm :<|> postMultimodalSwitch :<|> postMultimodalSwitchToAuto
+handler = postMultimodalInfo :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> postMultimodalSwitch :<|> postMultimodalSwitchToAuto
 
 postMultimodalInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -84,10 +91,18 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getMultimodalBookingInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+getMultimodalBookingInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalSwitch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

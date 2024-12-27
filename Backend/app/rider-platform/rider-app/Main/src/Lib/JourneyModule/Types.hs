@@ -14,20 +14,20 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
+import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
-import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
+import Lib.JourneyModule.Utils
 import SharedLogic.Search
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
-import Lib.JourneyModule.Utils
 
 type SearchJourneyLeg leg m = leg -> m ()
 
@@ -48,7 +48,7 @@ class JourneyLeg leg m where
   confirm :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m
-  getState ::(CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) =>  GetJourneyLegState leg m
+  getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLegState leg m
   getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLeg leg m
   getFare :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetFareJourneyLeg leg m
 
@@ -243,7 +243,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
       }
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> m LegInfo
-mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
+mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} journeyLeg = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   now <- getCurrentTime
   mbEstimatedFare <-
@@ -261,9 +261,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
         travelMode = DTrip.Metro,
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
-        estimatedDuration = Nothing, -- Fix this @kavya
+        estimatedDuration = Nothing, -- check with hemant if we can store estimatedDuration in frfsSearch table  --journeyLeg.duration,
         estimatedFare = mbEstimatedFare,
-        estimatedDistance = Nothing, -- Fix this @kavya
+        estimatedDistance = Nothing, -- check with hemant if we can store estimatedDistance in frfsSearch table --journeyLeg.distance,
         merchantId = merchantId,
         personId = riderId,
         status = InPlan,
@@ -272,8 +272,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
             MetroLegExtraInfo
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
-                lineColor = "Green", -- fix this @kavya
-                frequency = 300 -- fix this @kavya
+                lineColor = lineColor,
+                lineColorCode = lineColorCode,
+                frequency = frequency
               }
       }
   where
@@ -316,7 +317,7 @@ mkJourney estimatedDistance estiamtedDuration journeyId parentSearchId merchantI
         updatedAt = now,
         estimatedMinFare = Just $ sumHighPrecMoney $ totalFares <&> (.estimatedMinFare),
         estimatedMaxFare = Just $ sumHighPrecMoney $ totalFares <&> (.estimatedMaxFare)
-    }
+      }
 
 mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> m DJL.JourneyLeg
 mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance = do
