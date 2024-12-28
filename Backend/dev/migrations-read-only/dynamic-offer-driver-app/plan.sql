@@ -55,3 +55,8 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN vehicle_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN listing_priority integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN allow_strike_off boolean ;
