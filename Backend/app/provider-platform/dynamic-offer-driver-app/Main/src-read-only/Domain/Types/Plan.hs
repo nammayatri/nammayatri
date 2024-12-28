@@ -20,7 +20,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Plan = Plan
-  { basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
+  { allowStrikeOff :: Kernel.Prelude.Bool,
+    basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
     cgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     description :: Kernel.Prelude.Text,
     eligibleForCoinDiscount :: Kernel.Prelude.Bool,

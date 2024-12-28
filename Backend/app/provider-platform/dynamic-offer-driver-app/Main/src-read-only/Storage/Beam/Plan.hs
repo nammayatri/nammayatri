@@ -18,7 +18,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PlanT f = PlanT
-  { basedOnEntity :: B.C f Domain.Types.Plan.BasedOnEntity,
+  { allowStrikeOff :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    basedOnEntity :: B.C f Domain.Types.Plan.BasedOnEntity,
     cgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     description :: B.C f Kernel.Prelude.Text,
     eligibleForCoinDiscount :: B.C f Kernel.Prelude.Bool,
