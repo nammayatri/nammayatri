@@ -803,7 +803,9 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
               then (0.0, baseAmount)
               else do
                 let bestOffer = DL.minimumBy (comparing (.finalOrderAmount)) offers
-                (bestOffer.discountAmount, bestOffer.finalOrderAmount)
+                if plan.allowStrikeOff
+                  then (bestOffer.discountAmount, bestOffer.finalOrderAmount)
+                  else (0.0, baseAmount)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
         PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount, amountWithCurrency = PriceAPIEntity plan.registrationAmount currency},
         PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount, amountWithCurrency = PriceAPIEntity plan.maxAmount currency},
