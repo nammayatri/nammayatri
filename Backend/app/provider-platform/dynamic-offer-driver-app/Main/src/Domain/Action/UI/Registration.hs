@@ -74,6 +74,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
+import Tools.MarketingEvents as TM
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -401,6 +402,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
+  TM.notifyMarketingEvents (TM.PersonEntity person) TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
   pure person
 
 verify ::
