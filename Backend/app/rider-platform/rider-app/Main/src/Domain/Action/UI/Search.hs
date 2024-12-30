@@ -75,6 +75,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Lib.JourneyLeg.Types as JPT
+import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Types as JMTypes
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
@@ -549,8 +550,23 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
             transitPreferences = Nothing,
             transportModes = Nothing
           }
+
+  --   // normal search api call
+  -- multimodalOptions <- otp
+  -- journeys <-
+  --   multimodalOptions `forM` \multimodalOption -> do
+  --     journeyLegs = traverse mkJourneyLeg multimodalOption.legs
+  --     initReq =
+  --       JourneyInitData
+  --         { parentSearchId
+  --         , merchantId
+  --         , merchantOperatingCityId
+  --         , legs = journeyLegs
+  --         }
+  --     JM.init initReq
+
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
-  allRoutes <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  let allRoutes = MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   journeys <-
     forM allRoutes \route -> do
       let initReq =
@@ -558,16 +574,18 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
               { parentSearchId = searchRequest.id,
                 merchantId,
                 merchantOperatingCityId,
-                legs = journeyLegs,
+                legs = route.legs,
                 estimatedDistance = route.distance,
                 estimatedDuration = route.duration,
                 maximumWalkDistance
               }
+      -- JM.init initReq
+      QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
       JM.init initReq
-      QSearchRequest.updateHasMultimodalSearch True searchRequest.id
   return ()
-  -- call search
-  -------------------------- to depricate ----------------------------------------------------------------------------------------------------------------------
+
+-- call search
+-------------------------- to depricate ----------------------------------------------------------------------------------------------------------------------
 --   void $
 --     mapWithIndex -- to see: only take topmost route
 --       ( \idx route -> do

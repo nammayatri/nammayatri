@@ -1,16 +1,21 @@
 module Lib.JourneyLeg.Types.Walk where
 
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.JourneyLeg as DJourenyLeg
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Kernel.Types.Id
+import Kernel.Prelude
 import SharedLogic.Search
 
 data WalkLegRequestSearchData = WalkLegRequestSearchData
   { parentSearchReq :: DSR.SearchRequest,
     journeyLegData :: DJourenyLeg.JourneyLeg,
     origin :: SearchReqLocation,
-    destination :: SearchReqLocation
+    destination :: SearchReqLocation,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId ::  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   }
 
 newtype WalkLegRequestGetStateData = WalkLegRequestGetStateData
