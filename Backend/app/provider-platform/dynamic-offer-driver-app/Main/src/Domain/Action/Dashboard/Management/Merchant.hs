@@ -88,6 +88,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -148,6 +149,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQPlan
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
@@ -158,6 +160,7 @@ import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.SubscriptionConfig as QSC
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -1851,6 +1854,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             return $ Just newBecknConfig
           _ -> return Nothing
       Nothing -> return Nothing
+
+  -- subscription config
+  subscriptionConfigs <-
+    mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast newMerchantOperatingCityId)) [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL] >>= \cfgs -> do
+      subscriptionCfgs <- mapM (CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (cast baseOperatingCityId)) $
+        case cfgs of
+          [Nothing, Nothing] -> [Plan.YATRI_SUBSCRIPTION, Plan.YATRI_RENTAL]
+          [Nothing, _] -> [Plan.YATRI_SUBSCRIPTION]
+          [_, Nothing] -> [Plan.YATRI_RENTAL]
+          _ -> []
+      return $ map (buildSubscriptionConfig newMerchantId newMerchantOperatingCityId now <$>) subscriptionCfgs
+
   finally
     ( do
         whenJust mbGeometry $ \geometry -> QGEO.create geometry
@@ -1872,6 +1887,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbPayoutConfigs $ \newPayoutConfigs -> mapM_ CPC.create newPayoutConfigs
         whenJust mbTransporterConfig $ \newTransporterConfig -> CQTC.create newTransporterConfig
         whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
+        mapM_ (`whenJust` QSC.create) subscriptionConfigs
 
         whenJust mbExophone $ \exophones ->
           whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
@@ -2159,6 +2175,14 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             updatedAt = currentTime,
             ..
           }
+    buildSubscriptionConfig newMerchantId newCityId currentTime DSC.SubscriptionConfig {..} =
+      DSC.SubscriptionConfig
+        { merchantId = Just newMerchantId,
+          merchantOperatingCityId = Just newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
 mapToBool :: Text -> Bool
 mapToBool = \case
