@@ -15,7 +15,7 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    SRide.EditLocation (..),
+    EditLocation,
     EditLocationReq (..),
     EditLocationResp (..),
     getDriverLoc,
@@ -39,16 +39,17 @@ import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (buildRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.Extra.Ride (RideAPIEntity (..))
+import Domain.Types.Extra.Ride (EditLocation, RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.LocationAddress as DLA
+--import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+--import qualified Domain.Types.Extra.Ride
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -100,8 +101,8 @@ data GetRideStatusResp = GetRideStatusResp
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data EditLocationReq = EditLocationReq
-  { origin :: Maybe SRide.EditLocation,
-    destination :: Maybe SRide.EditLocation
+  { origin :: Maybe EditLocation,
+    destination :: Maybe EditLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -358,7 +359,7 @@ buildLocation ::
   MonadFlow m =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  SRide.EditLocation ->
+  EditLocation ->
   m DL.Location
 buildLocation merchantId merchantOperatingCityId location = do
   guid <- generateGUID

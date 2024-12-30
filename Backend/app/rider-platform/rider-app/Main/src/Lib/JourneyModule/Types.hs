@@ -84,7 +84,7 @@ data JourneyInitData = JourneyInitData
     parentSearchId :: Id DSR.SearchRequest,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    estimatedDistance :: HighPrecDistance,
+    estimatedDistance :: Distance,
     estimatedDuration :: Seconds,
     maximumWalkDistance :: Meters
   }
