@@ -281,6 +281,31 @@ public  class MyFirebaseMessagingService {
                         }
                         break;
 
+                    case NotificationTypes.MARKETING_EVENTS:
+                            if (title != null){
+                                try {
+                                   String destinationPayload = remoteMessage.getData().get("entity_data");
+                                   if (destinationPayload != null){
+                                    JSONArray array =  new JSONArray(destinationPayload);
+                                    for(int i=0; i<array.length(); i++){
+                                        Object item = array.get(i);
+                                        if (item instanceof String) {
+                                            String destination = (String) item;
+                                            System.out.println("Event is :" + title + " , to be logged in : " + destination);
+                                            if (destination.equalsIgnoreCase("FIREBASE")){
+                                                FirebaseAnalytics.getInstance(context).logEvent(title, new Bundle());
+                                            } else if (destination.equalsIgnoreCase("CLEVERTAP")){
+                                                CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
+                                                if (cleverTapAPI != null) {
+                                                    cleverTapAPI.pushEvent(title);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }catch(Exception e){Log.e(LOG_TAG, e.getMessage());}}
+                        break;
+
                     case NotificationTypes.NEW_RIDE_AVAILABLE:
                         RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", context);
                         if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
@@ -814,6 +839,7 @@ public  class MyFirebaseMessagingService {
         public static final String NEW_STOP_ADDED = "ADD_STOP";
         public static final String EDIT_STOP = "EDIT_STOP";
         public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
+        public static final String MARKETING_EVENTS = "MARKETING_EVENTS";
         public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
         public static final String TRIGGER_FCM = "TRIGGER_FCM";
         public static final String CLEARED_FARE = "CLEARED_FARE";
