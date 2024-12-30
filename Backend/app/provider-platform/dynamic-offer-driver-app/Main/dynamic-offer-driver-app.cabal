@@ -619,6 +619,7 @@ library
       Tools.Error
       Tools.Event
       Tools.Maps
+      Tools.MarketingEvents
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
       Tools.Metrics.ARDUBPPMetrics.Types
