@@ -347,7 +347,7 @@ window.getMerchantConfig = function () {
       , "enableEditPickupLocation" : true
       , "enableRepeatTripBackfilling" : true
       , "enableEditDestination" : true
-      , "disableBike" : true
+      , "disableBike" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
