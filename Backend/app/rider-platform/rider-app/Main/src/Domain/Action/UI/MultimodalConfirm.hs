@@ -3,7 +3,7 @@
 
 module Domain.Action.UI.MultimodalConfirm (postMultimodalConfirm, getMultimodalSwitchTaxi) where
 
-import qualified API.Types.UI.MultimodalConfirm
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import Data.OpenApi (ToSchema)
 import Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.Select as Select
@@ -22,7 +22,9 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
+import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.Types as JMTypes
 import Servant
 import Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSQuote as QFRFSQuote
@@ -37,19 +39,58 @@ postMultimodalInfo ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    API.Types.UI.MultimodalConfirm.JourneyInfoReq ->
-    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+    ApiTypes.JourneyInfoReq ->
+    Environment.Flow ApiTypes.JourneyInfoResp
   )
 postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
   journey <- JM.getJourney journeyId
-  legs <- JN.getAllLegsInfo journeyId
+  legs <- JM.getAllLegsInfo journeyId
+  legsResp <-
+    forM legs $ \leg -> do
+      let legIdText = leg.legId & fromMaybeM (InternalError "Id of Nothing type")
+      let journeyLegInfo' =
+            case leg.legExtraInfo of
+              JMTypes.Walk walkInfo ->
+                ApiTypes.Walk $
+                  ApiTypes.JourneyLegWalkInfo
+                    { destination = walkInfo.destination,
+                      origin = walkInfo.origin
+                    }
+              JMTypes.Taxi taxiInfo ->
+                ApiTypes.Taxi $
+                  ApiTypes.JourneyLegTaxiInfo
+                    { origin = taxiInfo.origin,
+                      stops = [taxiInfo.destination],
+                      providerLogo = Nothing,
+                      providerName = ""
+                    }
+              JMTypes.Metro metroInfo ->
+                ApiTypes.Metro $
+                  ApiTypes.JourneyLegMetroInfo
+                    { destinationStop = metroInfo.destinationStop,
+                      frequency = metroInfo.frequency,
+                      lineColor = metroInfo.lineColor,
+                      originStop = metroInfo.originStop
+                    }
+      return $
+        ApiTypes.JourneyLegResp
+          { estimatedDistance = leg.estimatedDistance,
+            estimatedDuration = leg.estimatedDuration,
+            estimatedFare = mkPriceAPIEntity leg.estimatedFare,
+            journeyLegInfo = journeyLegInfo',
+            legId = legIdText,
+            legNumber = leg.order,
+            travelMode = leg.travelMode
+          }
+  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "duration of Nothing type")
+  estFare <- journey.estimatedFare & fromMaybeM (InternalError "Fare of Nothing type")
   return $
-    JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration,
-        estimatedFare = journey.estimatedFare,
+    ApiTypes.JourneyInfoResp
+      { estimatedDuration = estDuration,
+        estimatedFare = mkPriceAPIEntity estFare,
         estimatedDistance = journey.estimatedDistance,
-        legs
+        legs = legsResp
       }
 
 postMultimodalConfirm ::
@@ -61,7 +102,7 @@ postMultimodalConfirm ::
   )
 postMultimodalConfirm (_, _) journeyId = do
   journey <- JM.getJourney journeyId
-  JM.startJourney journey.id
+  void $ JM.startJourney journey.id
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalBookingInfo ::
@@ -74,6 +115,7 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (personId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   allLegs <- JM.getAllLegsInfo journeyId
+  pure Kernel.Types.APISuccess.Success
 
 getMultimodalSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

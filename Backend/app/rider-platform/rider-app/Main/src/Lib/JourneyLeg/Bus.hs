@@ -4,6 +4,8 @@ module Lib.JourneyLeg.Bus where
 
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types.Bus
+import Kernel.Types.Error
+import Kernel.Prelude
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where
@@ -22,7 +24,7 @@ instance JT.JourneyLeg BusLegRequest m where
     --     QFRFSSearch.updateIsSkipped True
     --   False ->
     --     void $ FRFSTicketService.postFrfsQuoteConfirm (personId, merchantId) (Id quoteId)
-    return ()
+    throwError (InternalError "Not supported")
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do
@@ -31,16 +33,16 @@ instance JT.JourneyLeg BusLegRequest m where
     -- let threshold = 50
     -- mark status with respect to bus -  Ontime, Departed, Delayed, Arriving, Finishing, Completed
     -- mark status with respect to user -  AtRiskOfMissing, Missed
-    return ()
+    throwError (InternalError "Not supported")
   update _ = throwError (InternalError "Not supported")
 
   cancel (BusLegRequestCancel _) = return ()
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (BusLegRequestGetState _) = return ()
+  getState (BusLegRequestGetState _) = throwError (InternalError "Not supported")
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (BusLegRequestGetInfo _) = return ()
+  getInfo (BusLegRequestGetInfo _) = throwError (InternalError "Not supported")
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (BusLegRequestGetFare _) = do

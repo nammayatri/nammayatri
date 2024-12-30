@@ -17,7 +17,7 @@ types:
   JourneyLegsReq:
     legNumber: Int
     originAddress: LocationAddress
-    destinationAddress: LocationAddress
+    destinationAddress: LocationAddress  #regenerate the files to get proper 'destinationAddress' field
   JourneyInfoResp:
     estimatedDuration: Seconds
     estimatedFare: PriceAPIEntity
