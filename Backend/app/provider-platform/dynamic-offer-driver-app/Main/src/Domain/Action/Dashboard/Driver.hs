@@ -151,6 +151,7 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
+import EulerHS.KVConnector.Helper.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -224,7 +225,6 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
-import EulerHS.KVConnector.Helper.Utils
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
