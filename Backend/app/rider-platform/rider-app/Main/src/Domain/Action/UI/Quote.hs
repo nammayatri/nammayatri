@@ -27,10 +27,10 @@ module Domain.Action.UI.Quote
   )
 where
 
-import API.Types.UI.FRFSTicketService
-import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+-- import API.Types.UI.FRFSTicketService
+-- import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Beckn.ACL.Cancel as CancelACL
-import BecknV2.FRFS.Enums as BecknSpec
+-- import BecknV2.FRFS.Enums as BecknSpec
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -48,6 +48,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Location as DL
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
@@ -79,8 +80,8 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import Storage.Queries.FRFSSearch as QFRFSSearch
+-- import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+-- import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -205,8 +206,8 @@ data GetQuotesRes = GetQuotesRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data JourneyData = JourneyData
-  { totalMinFare :: HighPrecMoney,
-    totalMaxFare :: HighPrecMoney,
+  { totalMinFare :: Maybe HighPrecMoney,
+    totalMaxFare :: Maybe HighPrecMoney,
     duration :: Maybe Seconds,
     modes :: [DTrip.TravelMode],
     journeyLegs :: [JourneyLeg]
@@ -348,25 +349,30 @@ sortByEstimatedFare resultList = do
 
 getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
 getJourneys searchRequest = do
-  if searchRequest.hasMultimodalSearch
-    then do
-      allJourneys <- QJourney.findBySearchId searchRequest.id
-      forM allJourneys \journey -> do
-        journeyLegsFromOtp <- JM.getJourneyLegs journey.id
-        journeyLegs <- do
-          forM journeyLegs \journeyLeg -> do
-            return $
-              JourneyLeg
-                { journeyLegOrder = journeyLeg.sequenceNumber,
-                  journeyMode = journeyLeg.mode,
-                  duration = journeyLeg.duration
-                }
-        return $
-          JourneyData
-            { totalMinFare = journey.estimatedMinFare,
-              totalMaxFare = journey.estimatedMaxFare,
-              modes = journey.modes,
-              journeyLegs,
-              duration = journey.estimatedDuration
-            }
-    else return Nothing
+  case searchRequest.hasMultimodalSearch of
+    Just hasMultimodalSearch -> do
+      if hasMultimodalSearch
+        then do
+          allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
+          journeyData <-
+            forM allJourneys \journey -> do
+              journeyLegsFromOtp <- JM.getJourneyLegs journey.id
+              journeyLegs <- do
+                forM journeyLegsFromOtp \journeyLeg -> do
+                  return $
+                    JourneyLeg
+                      { journeyLegOrder = journeyLeg.sequenceNumber,
+                        journeyMode = journeyLeg.mode,
+                        duration = journeyLeg.duration
+                      }
+              return $
+                JourneyData
+                  { totalMinFare = journey.estimatedMinFare,
+                    totalMaxFare = journey.estimatedMaxFare,
+                    modes = journey.modes,
+                    journeyLegs,
+                    duration = journey.estimatedDuration
+                  }
+          return $ Just journeyData
+        else return Nothing
+    Nothing -> return Nothing
