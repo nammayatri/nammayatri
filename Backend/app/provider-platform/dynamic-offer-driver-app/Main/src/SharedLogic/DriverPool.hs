@@ -519,12 +519,9 @@ calculateGoHomeDriverPool ::
 calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   now <- getCurrentTime
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  uuidForLatencyId <- generateGUID
-  L.setOptionLocal LocalLatencyId (Just (uuidForLatencyId <> "_pool"))
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      measureFunctionLatencyAndReturn
-        ( QP.getNearestGoHomeDrivers $
+         QP.getNearestGoHomeDrivers $
             QP.NearestGoHomeDriversReq
               { cityServiceTiers,
                 serviceTiers,
@@ -539,10 +536,6 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
                 now,
                 isValueAddNP
               }
-        )
-        "GetNearestDrivers"
-        "pooling"
-  L.setOptionLocal LocalLatencyId Nothing
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -716,7 +709,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
   }
 
 calculateDriverPool ::
-  ( EncFlow m r,
+  ( MonadIO m,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -730,8 +724,12 @@ calculateDriverPool ::
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
+  uuidForLatencyId <- generateGUIDText
+  L.setOptionLocal LocalLatencyId (Just (uuidForLatencyId <> "_pool"))
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
+      measureFunctionLatencyAndReturn
+        (
       QPG.getNearestDrivers $
         QPG.NearestDriversReq
           { fromLocLatLong = coord,
@@ -739,6 +737,10 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
             ..
           }
+      )
+      "GetNearestDrivers"
+      "pooling"
+  L.setOptionLocal LocalLatencyId Nothing
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
