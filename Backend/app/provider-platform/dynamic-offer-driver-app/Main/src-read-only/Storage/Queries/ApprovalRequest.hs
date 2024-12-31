@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.ApprovalRequest where
+module Storage.Queries.ApprovalRequest (module Storage.Queries.ApprovalRequest, module ReExport) where
 
+import qualified Data.Text
 import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -14,6 +16,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ApprovalRequest as Beam
+import Storage.Queries.ApprovalRequestExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ApprovalRequest.ApprovalRequest -> m ())
 create = createWithKV
@@ -23,7 +26,7 @@ createMany = traverse_ create
 
 findByTripReqAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> Domain.Types.DriverRequest.RequestType -> Kernel.Prelude.Maybe Domain.Types.DriverRequest.RequestStatus -> m (Maybe Domain.Types.DriverRequest.DriverRequest))
+  (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> Domain.Types.ApprovalRequest.RequestType -> Domain.Types.ApprovalRequest.RequestStatus -> m (Maybe Domain.Types.ApprovalRequest.ApprovalRequest))
 findByTripReqAndStatus tripTransactionId requestType status = do
   findOneWithKV
     [ Se.And
@@ -35,7 +38,7 @@ findByTripReqAndStatus tripTransactionId requestType status = do
 
 updateStatusWithReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.DriverRequest.RequestStatus -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.DriverRequest.DriverRequest -> m ())
+  (Domain.Types.ApprovalRequest.RequestStatus -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest -> m ())
 updateStatusWithReason status reason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reason reason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -49,46 +52,17 @@ updateByPrimaryKey (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
   updateWithKV
     [ Se.Set Beam.body body,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
       Se.Set Beam.reason reason,
       Se.Set Beam.requestType requestType,
       Se.Set Beam.requesteeId (Kernel.Types.Id.getId requesteeId),
       Se.Set Beam.requestorId (Kernel.Types.Id.getId requestorId),
       Se.Set Beam.status status,
       Se.Set Beam.title title,
+      Se.Set Beam.tripTransactionId (Kernel.Types.Id.getId tripTransactionId),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
-  fromTType' (Beam.ApprovalRequestT {..}) = do
-    pure $
-      Just
-        Domain.Types.ApprovalRequest.ApprovalRequest
-          { body = body,
-            createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            reason = reason,
-            requestType = requestType,
-            status = status,
-            title = title,
-            updatedAt = updatedAt,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
-          }
-
-instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
-  toTType' (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
-    Beam.ApprovalRequestT
-      { Beam.body = body,
-        Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.reason = reason,
-        Beam.requestType = requestType,
-        Beam.status = status,
-        Beam.title = title,
-        Beam.updatedAt = updatedAt,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
-      }

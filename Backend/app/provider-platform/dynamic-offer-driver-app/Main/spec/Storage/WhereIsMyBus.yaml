@@ -41,8 +41,8 @@ TripTransaction:
 
   types:
     TripStatus:
-      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+      - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
   fields:
     id: Id TripTransaction
@@ -80,8 +80,7 @@ TripTransaction:
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
+
   queries:
     findByTransactionId:
       kvFunction: findOneWithKV
@@ -101,30 +100,32 @@ TripTransaction:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <TripStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TripStatus>
+
 ApprovalRequest:
   tableName: approval_request
 
   types:
     RequestStatus:
-      enum: "ACCEPTED, REJECTED, PENDING"
+      - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
+      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
-    ApprovalRequestData:
-      enum: "WmbEndTrip WmbEndTripData"
-
-    WmbEndTripData:
-      lat: Double
-      lon: Double
-      reason: Maybe Text
-      tripTransactionId: Id TripTransaction
-      derive: "Eq,Ord,Read"
+    RequestType:
+      - enum: "END_RIDE, CHANGE_ROUTE"
+      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
   fields:
     id: Id ApprovalRequest
+    tripTransactionId: Id TripTransaction
     requestorId: Id Person
     requesteeId: Id Person
-    requestType: ApprovalRequestData
-    title: RequestType
+    requestType: RequestType
+    title: Text
     body: Text
+    lat: Maybe Double
+    lon: Maybe Double
     status: RequestStatus
     reason: Maybe Text
     createdAt: UTCTime

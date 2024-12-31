@@ -13,6 +13,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data TripTransaction = TripTransaction
@@ -38,6 +39,8 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''TripStatus)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TripStatus)

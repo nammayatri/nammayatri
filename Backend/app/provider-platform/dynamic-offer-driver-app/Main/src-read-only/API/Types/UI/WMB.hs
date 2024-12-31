@@ -4,9 +4,9 @@ module API.Types.UI.WMB where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.ApprovalRequest
 import qualified Domain.Types.Common
 import qualified Domain.Types.TripTransaction
-import qualified Domain.Types.DriverRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -21,13 +21,17 @@ data AvailableRoute = AvailableRoute {destination :: StopInfo, routeInfo :: Rout
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverReqResp = DriverReqResp {requestId :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data EndTripStatus
   = SUCCESS
   | WAITING_FOR_ADMIN_APPROVAL
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RequestDetails = RequestDetails {description :: Kernel.Prelude.Maybe Data.Text.Text, requestType :: Domain.Types.DriverRequest.RequestType}
+data RequestDetails = RequestDetails {body :: Data.Text.Text, lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, requestType :: Domain.Types.ApprovalRequest.RequestType, title :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

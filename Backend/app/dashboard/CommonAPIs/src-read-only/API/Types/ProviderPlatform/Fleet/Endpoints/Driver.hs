@@ -80,8 +80,8 @@ data DriverMode
 
 data DriverRequestDetails = DriverRequestDetails
   { requestType :: RequestType,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    body :: Kernel.Prelude.Text,
     raisedAt :: Kernel.Prelude.UTCTime,
     status :: Kernel.Prelude.Maybe RequestStatus,
     tripCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -193,7 +193,7 @@ data RCStatusReq = RCStatusReq
 instance Kernel.Types.HideSecrets.HideSecrets RCStatusReq where
   hideSecrets = Kernel.Prelude.identity
 
-data RequestRespondReq = RequestRespondReq {status :: RequestStatus, driverRequestId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Text}
+data RequestRespondReq = RequestRespondReq {status :: RequestStatus, approvalRequestId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -201,8 +201,9 @@ instance Kernel.Types.HideSecrets.HideSecrets RequestRespondReq where
   hideSecrets = Kernel.Prelude.identity
 
 data RequestStatus
-  = APPROVED
+  = ACCEPTED
   | REJECTED
+  | AWAITING_APPROVAL
   | REVOKED
   deriving stock (Show, Eq, Ord, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
@@ -244,8 +245,8 @@ data TripStatus
   | PAUSED
   | COMPLETED
   | CANCELLED
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data TripTransactionDetail = TripTransactionDetail
   { routeCode :: Kernel.Prelude.Text,

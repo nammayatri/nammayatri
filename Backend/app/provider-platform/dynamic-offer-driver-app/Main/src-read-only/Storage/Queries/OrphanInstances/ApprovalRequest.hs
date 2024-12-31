@@ -1,49 +1,55 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.DriverRequest where
+module Storage.Queries.OrphanInstances.ApprovalRequest where
 
-import qualified Domain.Types.DriverRequest
+import qualified Domain.Types.ApprovalRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.DriverRequest as Beam
+import qualified Storage.Beam.ApprovalRequest as Beam
 
-instance FromTType' Beam.DriverRequest Domain.Types.DriverRequest.DriverRequest where
-  fromTType' (Beam.DriverRequestT {..}) = do
+instance FromTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
+  fromTType' (Beam.ApprovalRequestT {..}) = do
     pure $
       Just
-        Domain.Types.DriverRequest.DriverRequest
-          { description = description,
+        Domain.Types.ApprovalRequest.ApprovalRequest
+          { body = body,
+            createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
+            lat = lat,
+            lon = lon,
             reason = reason,
             requestType = requestType,
             requesteeId = Kernel.Types.Id.Id requesteeId,
             requestorId = Kernel.Types.Id.Id requestorId,
             status = status,
+            title = title,
             tripTransactionId = Kernel.Types.Id.Id tripTransactionId,
+            updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
-instance ToTType' Beam.DriverRequest Domain.Types.DriverRequest.DriverRequest where
-  toTType' (Domain.Types.DriverRequest.DriverRequest {..}) = do
-    Beam.DriverRequestT
-      { Beam.description = description,
+instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
+  toTType' (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
+    Beam.ApprovalRequestT
+      { Beam.body = body,
+        Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.lat = lat,
+        Beam.lon = lon,
         Beam.reason = reason,
         Beam.requestType = requestType,
         Beam.requesteeId = Kernel.Types.Id.getId requesteeId,
         Beam.requestorId = Kernel.Types.Id.getId requestorId,
         Beam.status = status,
+        Beam.title = title,
         Beam.tripTransactionId = Kernel.Types.Id.getId tripTransactionId,
+        Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

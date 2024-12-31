@@ -19,10 +19,10 @@ import Data.Default.Class
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Action.UI.SearchRequestForDriver
+import Domain.Types.ApprovalRequest as DTR
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.DriverRequest as DTR
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -1302,7 +1302,7 @@ requestRejectionNotification ::
   Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
-  DTR.DriverRequest ->
+  DTR.ApprovalRequest ->
   m ()
 requestRejectionNotification merchantOpCityId notificationTitle message driver mbToken entityData = do
   let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version

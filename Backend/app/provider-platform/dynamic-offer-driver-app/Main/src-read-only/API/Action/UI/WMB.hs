@@ -36,7 +36,6 @@ type API =
       :> "trip"
       :> "link"
       :> ReqBody '[JSON] API.Types.UI.WMB.TripLinkReq
-      :> ReqBody '[JSON] API.Types.UI.WMB.TripLinkReq
       :> Post
            '[JSON]
            API.Types.UI.WMB.TripTransactionDetails
