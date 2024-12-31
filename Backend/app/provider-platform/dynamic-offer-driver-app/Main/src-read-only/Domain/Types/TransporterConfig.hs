@@ -12,6 +12,7 @@ import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified Kernel.External.Notification.FCM.Types
@@ -31,6 +32,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
+    allowedGendersToSkipDlCheck :: [Domain.Types.Person.Gender],
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
