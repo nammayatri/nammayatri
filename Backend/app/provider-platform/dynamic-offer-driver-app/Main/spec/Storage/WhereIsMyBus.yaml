@@ -4,34 +4,44 @@ imports:
   ServiceTierType: Domain.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
-
-
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
 
   fields:
     fleetOwnerId: Id Person
-    vehicleNumber: Text
+    vehicleNumber: EncryptedHashedField e Text
     routeCode: Text
     vehicleColor: Text
     vehicleModel: Text
     vehicleClass: Text
     vehicleServiceTierType: ServiceTierType
     blocked: Bool
-    allowEndingMidRoute: Bool
 
   constraints:
     vehicleNumber: PrimaryKey
     routeCode: PrimaryKey
+
+  # queries:
+  #   findAllRouteMappings:
+  #     kvFunction: findAllWithKV
+  #     where: vehicleNumberHash
+  #   # findOneMapping:
+  #   #   kvFunction: findOneWithKV
+  #   #   where:
+  #   #     and: [vehicleNumberHash, routeCode]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 TripTransaction:
   tableName: trip_transaction
 
   types:
     TripStatus:
-      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
+      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
@@ -40,14 +50,16 @@ TripTransaction:
     vehicleNumber: Text
     tripCode: Maybe Text
     driverId: Id Person
+    routeCode: Text
     status: TripStatus
     isCurrentlyDeviated: Bool
     deviationCount: Int
     startLocation: Maybe LatLong
     endLocation: Maybe LatLong
-    startedNearStopCode: Text
+    startedNearStopCode: Maybe Text
     endStopCode: Text
     allowEndingMidRoute: Bool
+    sequenceNumber: Int
 
   constraints:
     id: PrimaryKey
@@ -70,25 +82,73 @@ TripTransaction:
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
-DriverRequest:
-  tableName: driver_request
+  queries:
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: id
+    updateOnStart:
+      kvFunction: updateOneWithKV
+      params: [routeCode, startLocation, status]
+      where: id
+    findAllTripTransactionByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, endLocation]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+ApprovalRequest:
+  tableName: approval_request
 
   types:
     RequestStatus:
-      enum: "ACCEPTED, REJECTED"
+      enum: "ACCEPTED, REJECTED, PENDING"
+
+    ApprovalRequestData:
+      enum: "WmbEndTrip WmbEndTripData"
+
+    WmbEndTripData:
+      lat: Double
+      lon: Double
+      reason: Maybe Text
+      tripTransactionId: Id TripTransaction
+      derive: "Eq,Ord,Read"
 
   fields:
-    id: Id DriverRequest
-    requestType: Text
-    description: Maybe Text
-    tripTransactionId : Id TripTransaction
-    status: Maybe RequestStatus
+    id: Id ApprovalRequest
+    requestType: ApprovalRequestData
+    title: Text
+    body: Text
+    status: RequestStatus
     reason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
 
+FleetConfig:
+  tableName: fleet_config
 
+  fields:
+    rideEndApproval: Bool
+    allowEndingMidRoute: Bool
+    fleetOwnerId: Id Person
+    endRideDistanceThreshold: HighPrecMeters
+  beamType:
+    endRideDistanceThreshold: Maybe HighPrecMeters
+  toTType:
+    endRideDistanceThreshold: Just endRideDistanceThreshold|E
+  fromTType:
+    endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
+  sqlType:
+    endRideDistanceThreshold: double precision
+  default:
+    endRideDistanceThreshold: "100"
 
-
-
+  constraints:
+    fleetOwnerId: PrimaryKey

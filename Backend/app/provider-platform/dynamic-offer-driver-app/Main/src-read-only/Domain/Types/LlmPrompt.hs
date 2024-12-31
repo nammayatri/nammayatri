@@ -25,7 +25,7 @@ data LlmPromptD (s :: UsageSafety) = LlmPrompt
   }
   deriving (Generic, Show)
 
-data PromptKey = DriverProfileGen_1 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PromptKey = AzureOpenAI_DriverProfileGen_1 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UseCase = DriverProfileGen | DriverSupport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

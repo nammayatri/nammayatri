@@ -48,10 +48,10 @@ Vehicle:
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
-    selectedServiceTiers: '[ServiceTierType]'
+    selectedServiceTiers: "[ServiceTierType]"
 
   fromTType:
-    category : Domain.Types.VehicleVariant.getVehicleCategory category variant |E
+    category: Domain.Types.VehicleVariant.getVehicleCategory category variant |E
   default:
     selectedServiceTiers: "'{}'"
 
@@ -94,7 +94,7 @@ Vehicle:
       where: driverId
     updateAirConditioned:
       kvFunction: updateWithKV
-      params: [airConditioned,downgradeReason]
+      params: [airConditioned, downgradeReason]
       where: driverId
     updateOxygen:
       kvFunction: updateWithKV
@@ -107,4 +107,7 @@ Vehicle:
     updateManufacturing:
       kvFunction: updateWithKV
       params: [mYManufacturing]
+      where: driverId
+    deleteByDriverid:
+      kvFunction: deleteWithKV
       where: driverId

@@ -9,9 +9,11 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_stop_code tex
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN fleet_owner_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN is_currently_deviated boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN route_code text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN sequence_number integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN start_location_lat double precision ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN start_location_lon double precision ;
-ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN started_near_stop_code text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN started_near_stop_code text ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_code text ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_number text NOT NULL;

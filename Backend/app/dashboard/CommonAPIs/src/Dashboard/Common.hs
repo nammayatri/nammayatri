@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.Common
@@ -33,6 +36,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Servant (FromHttpApiData, ToHttpApiData)
 
 data Customer
 
@@ -63,6 +67,8 @@ data DriverHomeLocation
 data DriverGoHomeRequest
 
 data Document
+
+data TripTransaction
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
@@ -175,3 +181,11 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ServiceNames)
+
+newtype TransactionLogId = TransactionLogId Text
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving newtype (FromHttpApiData, ToHttpApiData)
+
+instance Kernel.Types.HideSecrets.HideSecrets TransactionLogId where
+  hideSecrets = Kernel.Prelude.identity

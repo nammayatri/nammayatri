@@ -111,7 +111,7 @@ Merchant:
     registryUrl: "'http://localhost:8020'"
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
-    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
+    gatewayAndRegistryPriorityList: '''{"NY"}'''
 
   excludedFields:
     - merchantId
@@ -156,7 +156,6 @@ Merchant:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
 
 MerchantMessage:
   derives: Generic,Show,'UsageSafety
@@ -218,7 +217,7 @@ MerchantMessage:
         and: [merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
-   - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
@@ -462,7 +461,8 @@ Overlay:
     findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
+        and:
+          [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -593,8 +593,8 @@ MerchantServiceUsageConfig:
     getTripRoutes: "'Google'"
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
-    snapToRoadProvidersList: "'{\"OSRM\", \"Google\"}'"
-    verificationProvidersPriorityList: "'{\"Idfy\"}'"
+    snapToRoadProvidersList: '''{"OSRM", "Google"}'''
+    verificationProvidersPriorityList: '''{"Idfy"}'''
     rectifyDistantPointsFailure: "'OSRM'"
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
@@ -731,8 +731,7 @@ DriverIntelligentPoolConfig:
     actualPickupDistanceWeightage: "0"
     numRidesWeightage: "2"
     maxNumRides: "336"
-    cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
-
+    cancellationAndRideFrequencyRatioWindowOption: '''{"period":7, "periodType":"Days"}'''
 
 TransporterConfig:
   derives: Generic,Show,'UsageSafety
@@ -771,9 +770,9 @@ TransporterConfig:
       black: Kilometers
       blackxl: Kilometers
       suvplus: Kilometers
-      deliveryLightGoodsVehicle : Kilometers
-      busAc : Kilometers
-      busNonAc : Kilometers
+      deliveryLightGoodsVehicle: Kilometers
+      busAc: Kilometers
+      busNonAc: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
@@ -795,9 +794,9 @@ TransporterConfig:
       black: Maybe Seconds
       blackxl: Maybe Seconds
       suvplus: Maybe Seconds
-      deliveryLightGoodsVehicle : Maybe Seconds
-      busNonAc : Maybe Seconds
-      busAc : Maybe Seconds
+      deliveryLightGoodsVehicle: Maybe Seconds
+      busNonAc: Maybe Seconds
+      busAc: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters
@@ -825,8 +824,8 @@ TransporterConfig:
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
     referralLinkPassword: Text
-    dpWhiteListedGeohash : Maybe [Text]
-    dpBlackListedGeohash : Maybe [Text]
+    dpWhiteListedGeohash: Maybe [Text]
+    dpBlackListedGeohash: Maybe [Text]
     dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     onboardingTryLimit: Int
@@ -915,7 +914,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
-    exotelStatusCheckSchedulerDelay : Int
+    exotelStatusCheckSchedulerDelay: Int
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -931,7 +930,7 @@ TransporterConfig:
     specialLocationTags: "[Text]"
     createdAt: UTCTime
     updatedAt: UTCTime
-    notificationRetryEligibleErrorCodes: '[Text]'
+    notificationRetryEligibleErrorCodes: "[Text]"
     notificationRetryCountThreshold: Int
     notificationRetryTimeGap: NominalDiffTime
     driverAutoPayExecutionTimeFallBack: NominalDiffTime
@@ -948,9 +947,9 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: NominalDiffTime
     minmRentalAndScheduledBookingLeadTimeHours: Hours
     scheduledRideFilterExclusionThresholdHours: Hours
-    fakeOtpMobileNumbers: '[Text]'
-    fakeOtpEmails: '[Text]'
-    variantsToEnableForSubscription: '[Domain.Types.VehicleVariant.VehicleVariant]'
+    fakeOtpMobileNumbers: "[Text]"
+    fakeOtpEmails: "[Text]"
+    variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
     considerDriversForSearch: Bool
     dlNumberVerification: Maybe Bool
     pastDaysRideCounter: Int
@@ -967,7 +966,7 @@ TransporterConfig:
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
     createDocumentRequired: Maybe Bool
-    schedulePayoutForDay : Maybe Integer
+    schedulePayoutForDay: Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
@@ -1227,8 +1226,8 @@ TransporterConfig:
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
-    dpWhiteListedGeohash : "ARRAY[]::TEXT[]"
-    dpBlackListedGeohash : "ARRAY[]::TEXT[]"
+    dpWhiteListedGeohash: "ARRAY[]::TEXT[]"
+    dpBlackListedGeohash: "ARRAY[]::TEXT[]"
     minLocationAccuracy: "50"
     driverPaymentCycleDuration: "86400"
     driverPaymentCycleStartTime: "36000"
@@ -1346,7 +1345,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
-    recomputeDistanceThresholds: "'[{\"estimatedDistanceUpper\": 5000,\"minThresholdPercentage\": 40,\"minThresholdDistance\": 1000},{\"estimatedDistanceUpper\": 10000,\"minThresholdPercentage\": 30,\"minThresholdDistance\": 1000},{\"estimatedDistanceUpper\": 15000,\"minThresholdPercentage\": 20,\"minThresholdDistance\": 1000},{\"estimatedDistanceUpper\": 9999999,\"minThresholdPercentage\": 10,\"minThresholdDistance\": 1000}]' :: json"
+    recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
 
     minThreshildForPassThroughDestination: "1000"
   excludedDefaultQueries:
@@ -1471,7 +1470,7 @@ MerchantPushNotification:
         and: [merchantOperatingCityId, key, tripCategory]
 
 RideRelatedNotificationConfig:
-  tableName : ride_related_notification_config
+  tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     NotificationType:
@@ -1482,7 +1481,7 @@ RideRelatedNotificationConfig:
       enum: "PreEvent,PostEvent,OnEvent"
   fields:
     id: Id RideRelatedNotificationConfig
-    timeDiff : NominalDiffTime
+    timeDiff: NominalDiffTime
     timeDiffEvent: TimeDiffEvent
     notificationType: NotificationType
     notificationKey: Text
@@ -1511,7 +1510,7 @@ RideRelatedNotificationConfig:
         and: [merchantOperatingCityId, timeDiffEvent]
 
 PayoutConfig:
-  tableName : payout_config
+  tableName: payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -1559,6 +1558,3 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
-
-
-

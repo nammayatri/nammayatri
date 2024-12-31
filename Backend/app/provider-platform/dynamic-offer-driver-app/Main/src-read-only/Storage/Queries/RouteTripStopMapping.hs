@@ -23,6 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteTripStopMapping.RouteTripStopMapping] -> m ())
 createMany = traverse_ create
 
+findByLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Maps.Types.LatLong -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping))
+findByLocation stopPoint = do findOneWithKV [Se.Is Beam.stopLat $ Se.Eq ((.lat) stopPoint), Se.Is Beam.stopLon $ Se.Eq ((.lon) stopPoint)]
+
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Data.Time.DayOfWeek -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> m (Maybe Domain.Types.RouteTripStopMapping.RouteTripStopMapping))

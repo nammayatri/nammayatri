@@ -5,6 +5,7 @@ imports:
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
+  TripTransaction: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
   RegisterRCReq: Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -362,7 +363,7 @@ apis:
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       name: PostDriverFleetVehicleDriverRcStatus
-      auth:  ApiAuthV2
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -372,7 +373,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/{fleetOwnerId}/fleet/vehicleDriverRCstatus
-            auth:  ApiAuthV2
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               fleetOwnerId: Text
@@ -467,7 +468,44 @@ apis:
               type: LinkRCWithDriverForFleetReq
             response:
               type: APISuccess
+  - PUT:
+      endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/delete
+      auth: ApiAuthV2
+      params:
+        tripTransactionId: Id TripTransaction
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/{fleetOwnerId}/delete
+            auth: ApiAuthV2
+            params:
+              tripTransactionId: Id TripTransaction
+              fleetOwnerId: Text
+            response:
+              type: APISuccess
 types:
+  TripStatus:
+    - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+  RoundTripDetail:
+    - frequency: Int
+  TripDetails:
+    - routeCode: Text
+    - roundTrip: Maybe RoundTripDetail
+  TripPlannerReq:
+    - driverId: Id Driver
+    - vehicleNumber: Text
+    - trips: [TripDetails]
+    - derive: "'HideSecrets"
+  TripTransactionDetail:
+    - routeCode: Text
+    - tripSequence: Int
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
+    - tripStatus: TripStatus
+  TripTransactionResp:
+    - trips: [TripTransactionDetail]
+    - totalTrips: Int
   AddVehicleReq:
     - registrationNo: Text
     - vehicleClass: Text
