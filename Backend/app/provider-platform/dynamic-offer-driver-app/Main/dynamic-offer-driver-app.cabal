@@ -485,6 +485,7 @@ library
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
       Storage.Queries.AadhaarCardExtra
+      Storage.Queries.ApprovalRequestExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
@@ -512,7 +513,6 @@ library
       Storage.Queries.DriverQuoteExtra
       Storage.Queries.DriverRCAssociationExtra
       Storage.Queries.DriverReferralExtra
-      Storage.Queries.DriverRequestExtra
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
       Storage.Queries.ExophoneExtra
@@ -1056,6 +1056,7 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
       Storage.Queries.OrphanInstances.AadhaarCard
+      Storage.Queries.OrphanInstances.ApprovalRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
@@ -1077,7 +1078,6 @@ library
       Storage.Queries.OrphanInstances.DriverQuote
       Storage.Queries.OrphanInstances.DriverRCAssociation
       Storage.Queries.OrphanInstances.DriverReferral
-      Storage.Queries.OrphanInstances.DriverRequest
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.DriverStats
       Storage.Queries.OrphanInstances.Exophone

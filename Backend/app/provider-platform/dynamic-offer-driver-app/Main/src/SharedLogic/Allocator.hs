@@ -18,9 +18,9 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
-import qualified Domain.Types.DriverRequest as DTR
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -156,7 +156,7 @@ type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
-    entityId :: Id DTR.DriverRequest,
+    entityId :: Id DTR.ApprovalRequest,
     appletId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

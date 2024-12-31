@@ -124,6 +124,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
+import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
@@ -134,7 +135,6 @@ import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
-import qualified Domain.Types.DriverRequest as DTR
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -197,6 +197,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
@@ -209,7 +210,6 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
-import qualified Storage.Queries.DriverRequest as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -1046,16 +1046,16 @@ addVehicle merchantShortId opCity reqDriverId req = do
 ------------------------------------------------------------------------------------------------------------------------------------------
 respondDriverRequest :: ShortId DM.Merchant -> Context.City -> Text -> Common.RequestRespondReq -> Flow APISuccess
 respondDriverRequest merchantShortId opCity _ req = do
-  Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.driverRequestId) 60 $ do
+  Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.driverRequestId) >>= fromMaybeM (InvalidRequest "DriverRequest not found")
+    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (InvalidRequest "DriverRequest not found")
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
-      Nothing -> QDR.updateStatusWithReason (castReqStatus (Just req.status)) (Just req.reason) (Id req.driverRequestId)
+      DTR.AWAITING_APPROVAL -> QDR.updateStatusWithReason (castReqStatus req.status) (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ InvalidRequest "Request already processed"
     void $ case req.status of
-      DC.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = Just DTR.REJECTED, reason = Just req.reason}
+      DC.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
       _ -> pure () -- success notification to be handled in particular use case if required
   pure Success
   where
@@ -1073,11 +1073,14 @@ getDriverRequests :: ShortId DM.Merchant -> Context.City -> Text -> Maybe UTCTim
 getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbReqType mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo (castReqStatus mbStatus) (castReqType mbReqType) mbLimit mbOffset
+  let status_ = case mbStatus of
+        Nothing -> Nothing
+        Just status -> Just $ castReqStatus status
+  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ (castReqType mbReqType) mbLimit mbOffset
   driverRequestList <- mapM buildDriverRequestListItem driverRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem dtr@DTR.DriverRequest {..} = do
+    buildDriverRequestListItem dtr@DTR.ApprovalRequest {..} = do
       tripTransaction <- B.runInReplica $ QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (InvalidRequest "Trip Transaction not found")
       driver <- B.runInReplica $ QPerson.findById dtr.requestorId >>= fromMaybeM (PersonDoesNotExist dtr.requestorId.getId)
       driverMobileNumber <- case driver.mobileNumber of
@@ -1092,7 +1095,7 @@ getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbReq
             driverName = Just $ driver.firstName <> " " <> (fromMaybe "" driver.lastName),
             vehicleRegistrationNumber = tripTransaction.vehicleNumber,
             requestType = castReqTypeToCommon requestType,
-            status = castStatusToCommon status,
+            status = castStatusToCommon (Just status),
             ..
           }
 
@@ -1102,12 +1105,12 @@ castReqType = \case
   Just Common.CHANGE_ROUTE -> Just DTR.CHANGE_ROUTE
   _ -> Nothing
 
-castReqStatus :: Maybe Common.RequestStatus -> Maybe DTR.RequestStatus
+castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
 castReqStatus = \case
-  Just Common.APPROVED -> Just DTR.APPROVED
-  Just Common.REJECTED -> Just DTR.REJECTED
-  Just Common.REVOKED -> Just DTR.REVOKED
-  _ -> Nothing
+  Common.AWAITING_APPROVAL -> DTR.AWAITING_APPROVAL
+  Common.ACCEPTED -> DTR.ACCEPTED
+  Common.REJECTED -> DTR.REJECTED
+  Common.REVOKED -> DTR.REVOKED
 
 castReqTypeToCommon :: DTR.RequestType -> Common.RequestType
 castReqTypeToCommon = \case
@@ -1116,7 +1119,8 @@ castReqTypeToCommon = \case
 
 castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
 castStatusToCommon = \case
-  Just DTR.APPROVED -> Just Common.APPROVED
+  Just DTR.AWAITING_APPROVAL -> Just Common.AWAITING_APPROVAL
+  Just DTR.ACCEPTED -> Just Common.ACCEPTED
   Just DTR.REJECTED -> Just Common.REJECTED
   Just DTR.REVOKED -> Just Common.REVOKED
   _ -> Nothing

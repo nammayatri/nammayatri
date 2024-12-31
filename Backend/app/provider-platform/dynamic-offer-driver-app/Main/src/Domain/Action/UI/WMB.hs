@@ -14,17 +14,15 @@ module Domain.Action.UI.WMB
 where
 
 import API.Types.UI.WMB
+import qualified Data.HashMap.Strict as HM
 import Data.List (maximum)
 import Data.Maybe
-import API.Types.UI.WMB
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Domain.Action.UI.Call as Call
-import qualified Domain.Types.CallStatus as SCS
-import Domain.Types.DriverRequest
-import Domain.Types.Extra.TransporterConfig
 import Domain.Types.ApprovalRequest
+import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
+import Domain.Types.Extra.TransporterConfig
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -35,22 +33,28 @@ import Domain.Types.VehicleVariant
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, maximum)
-import Kernel.External.Encryption
-import Kernel.External.Maps.Types hiding (fromList)
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Maps.Types hiding (fromList)
 import qualified Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as KU
+import Kernel.Utils.Common
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDA
+import qualified Storage.Queries.FleetDriverAssociation as FDV
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRM
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
@@ -60,6 +64,7 @@ import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Storage.Queries.VehicleRouteMappingExtra as VRME
+import qualified Tools.Call as Call
 import qualified Tools.Notifications as TN
 
 checkFleetDriverAssociation :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.Flow Bool
@@ -138,16 +143,6 @@ availableRoutes (routeCode, vehicleServiceTierType) vhclNo = do
             vehicleDetails = vhclDetails
           }
   pure availableRoutesList
-import Kernel.Utils.Common
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import SharedLogic.Allocator
-import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.DriverRequest as QDR
-import qualified Storage.Queries.FleetDriverAssociation as FDV
-import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.TripTransaction as QTT
-import qualified Tools.Call as Call
 
 getUiWmbAvailableRoutes ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -430,21 +425,19 @@ postUiWmbTripEnd (person, _, merch_city_id) tripTransactionId obj = do
 
       createDriverRequest = do
         requestId <- generateGUID
-        let info =
-              WmbEndTripData
-                { lat = obj.location.lat,
-                  lon = obj.location.lon,
-                  reason = Nothing,
-                  tripTransactionId = Kernel.Types.Id.Id tripTransactionId
-                }
         let driver_req =
               ApprovalRequest
                 { id = requestId,
-                  requestType = WmbEndTrip info,
+                  requestorId = driverId,
+                  requesteeId = Kernel.Types.Id.Id fleetDriverAssociation.fleetOwnerId,
+                  lat = Just obj.location.lat,
+                  lon = Just obj.location.lon,
+                  reason = Nothing,
+                  tripTransactionId = Kernel.Types.Id.Id tripTransactionId,
+                  requestType = END_RIDE,
                   title = "Your ride has ended",
                   body = "You reached your end stop of this route",
-                  status = PENDING,
-                  reason = Nothing,
+                  status = AWAITING_APPROVAL,
                   createdAt = now,
                   updatedAt = now,
                   merchantId = Nothing,
@@ -501,8 +494,8 @@ postUiWmbRequestsCancel (mbPersonId, _, _) driverRequestId = do
     case mbPersonId of
       Just personId -> unless (driverRequest.requestorId == personId) $ throwError NotAnExecutor
       _ -> pure ()
-    unless (isNothing driverRequest.status) $ throwError (InvalidRequest "Request already processed")
-    QDR.updateStatusWithReason (Just REVOKED) (Just "Cancelled by driver") (Kernel.Types.Id.Id driverRequestId)
+    unless (driverRequest.status == AWAITING_APPROVAL) $ throwError (InvalidRequest "Request already processed")
+    QDR.updateStatusWithReason REVOKED (Just "Cancelled by driver") (Kernel.Types.Id.Id driverRequestId)
   pure Success
 
 postUiWmbTripRequest ::
@@ -516,27 +509,30 @@ postUiWmbTripRequest ::
   )
 postUiWmbTripRequest (mbPersonId, merchantId, merchantOperatingCityId) tripTransactionId req = do
   tripTransaction <- QTT.findByPrimaryKey (Kernel.Types.Id.Id tripTransactionId) >>= fromMaybeM (InvalidRequest "Invalid trip transaction id")
-  existingReq <- QDR.findByTripReqAndStatus tripTransaction.id req.requestType Nothing
+  existingReq <- QDR.findByTripReqAndStatus tripTransaction.id req.requestType AWAITING_APPROVAL
   when (isJust existingReq) $ throwError (InvalidRequest "Duplicate request")
   driverId <- case mbPersonId of
     Nothing -> pure tripTransaction.driverId
     Just pid -> pure pid
   id <- L.generateGUID
   now <- getCurrentTime
-  fleetDriverAssoc <- FDV.findByDriverIdAndActive driverId True
+  fleetDriverAssoc <- FDV.findByDriverId driverId True
   fleetOwnerId <- case fleetDriverAssoc of
     Nothing -> throwError (InvalidRequest "Driver is not part of this fleet")
     Just assoc -> pure $ Kernel.Types.Id.Id assoc.fleetOwnerId
   let driverRequest =
-        DriverRequest
+        ApprovalRequest
           { id = Kernel.Types.Id.Id id,
             tripTransactionId = Kernel.Types.Id.Id tripTransactionId,
-            description = req.description,
+            title = req.title,
+            body = req.body,
+            lat = Just req.lat,
+            lon = Just req.lon,
             reason = Nothing,
             requestType = req.requestType,
             requesteeId = fleetOwnerId,
             requestorId = driverId,
-            status = Nothing,
+            status = AWAITING_APPROVAL,
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,

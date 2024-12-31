@@ -535,6 +535,7 @@ apis:
 types:
   TripStatus:
     - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
   TripDetails:
@@ -685,15 +686,15 @@ types:
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
   RequestStatus:
-    - enum: "APPROVED, REJECTED, REVOKED"
+    - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
   RequestType:
     - enum: "END_RIDE, CHANGE_ROUTE"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
   DriverRequestDetails:
     - requestType: RequestType
-    - description: Maybe Text
-    - reason: Maybe Text
+    - title: Text
+    - body: Text
     - raisedAt: UTCTime
     - status: Maybe RequestStatus
     - tripCode: Maybe Text
@@ -702,7 +703,7 @@ types:
     - vehicleRegistrationNumber: Text
   RequestRespondReq:
     - status: RequestStatus
-    - driverRequestId: Text
+    - approvalRequestId: Text
     - reason: Text
     - derive: "'HideSecrets"
   DriverRequestResp:

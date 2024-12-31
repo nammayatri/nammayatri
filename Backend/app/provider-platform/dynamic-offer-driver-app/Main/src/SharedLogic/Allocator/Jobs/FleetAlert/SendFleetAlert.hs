@@ -18,6 +18,7 @@ module SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
 where
 
 import Domain.Action.UI.Call
+import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.CallStatus as SCS
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -27,8 +28,8 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.DriverRequest as QDR
 import qualified Storage.Queries.Person as QPerson
 import Tools.Call as TCall
 import Tools.Error
@@ -49,7 +50,7 @@ sendFleetAlert Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       entityId = jobData.entityId
       appletId = jobData.appletId
   driverRequest <- B.runInReplica $ QDR.findByPrimaryKey entityId >>= fromMaybeM (InvalidRequest "DriverRequest not found")
-  unless (isJust driverRequest.status) $ do
+  unless (driverRequest.status == DTR.AWAITING_APPROVAL) $ do
     callStatusId <- generateGUID
     fleetOwner <- B.runInReplica $ QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
     mobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")

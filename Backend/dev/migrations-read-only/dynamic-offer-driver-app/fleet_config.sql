@@ -9,8 +9,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN created_at timestamp 
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD PRIMARY KEY ( fleet_owner_id);
 
-
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN end_ride_distance_threshold double precision  default 100;
+
+

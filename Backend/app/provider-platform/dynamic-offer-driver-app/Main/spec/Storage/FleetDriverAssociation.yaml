@@ -22,10 +22,6 @@ FleetDriverAssociation:
     fleetOwnerId: SecondaryKey
 
   queries:
-    findByDriverIdAndActive:
-      kvFunction: findOneWithKV
-      where:
-        and: [driverId, isActive]
 
     findByDriverIdAndFleetOwnerId:
       kvFunction: findOneWithKV

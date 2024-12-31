@@ -4,7 +4,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   ServiceTierType: Domain.Types.Common
   ToParamSchema: Kernel.Prelude
-  RequestType: Domain.Types.DriverRequest
+  RequestType: Domain.Types.ApprovalRequest
   TripStatus: Domain.Types.TripTransaction
 
 module: WMB
@@ -71,7 +71,10 @@ types:
 
   RequestDetails:
     requestType: RequestType
-    description: Maybe Text
+    title: Text
+    body: Text
+    lat: Double
+    lon: Double
 
   DriverReqResp:
     requestId: Text
