@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/microphonePermissionOverlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/dialogCardView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="30dp"
+        android:background="@color/white"
+        android:clickable="false"
+        android:paddingVertical="10dp"
+        app:cardCornerRadius="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <!-- <ProgressBar
+                android:id="@+id/dialog_progress_bar"
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="37dp"
+                android:layout_height="50dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="15dp"
+                android:indeterminate="true"
+                android:indeterminateDrawable="@drawable/loader_overlay"
+                android:progress="0" /> -->
+
+            <TextView
+                android:id="@+id/dialog_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="@font/plus_jakartasans_medium"
+                android:gravity="center"
+                android:text="The customer tried to call you. Please enable microphone permissions from the app settings to proceed."
+                android:textColor="#000000"
+                android:textSize="12sp" />
+
+            <!-- <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="10dp">
+
+                <Button
+                    android:id="@+id/button_go_to_settings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:text="Go to Settings"
+                    android:backgroundTint="#6200EE" />
+
+                <Button
+                    android:id="@+id/button_cancel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel"
+                    android:backgroundTint="#03DAC6" />
+
+            </LinearLayout> -->
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

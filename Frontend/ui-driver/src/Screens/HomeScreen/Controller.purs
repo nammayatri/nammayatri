@@ -1009,7 +1009,7 @@ eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
   let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
   if state.data.voipDialerSwitch then do
-      let customerCuid = if state.data.activeRide.id /= "" then "customer" <> state.data.activeRide.id else ""
+      let customerCuid = if state.data.activeRide.id /= "" then state.data.activeRide.id else ""
       continueWithCmd state [ do
         when (customerCuid /= "") do
           void $ pure $ JB.voipDialer customerCuid true exophoneNumber
@@ -1103,7 +1103,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = continue st
 eval(ChatViewActionController (ChatView.Call)) state = do
   let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
   if state.data.voipDialerSwitch then do
-      let customerCuid = if state.data.activeRide.id /= "" then "customer" <> state.data.activeRide.id else ""
+      let customerCuid = if state.data.activeRide.id /= "" then state.data.activeRide.id else ""
       continueWithCmd state [ do
         when (customerCuid /= "") do
           void $ pure $ JB.voipDialer customerCuid true exophoneNumber

@@ -73,4 +73,6 @@
     <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
     <string name="parking_charges">%1$.0f₹ പാർക്കിംഗ്</string>
     <string name="includes">ഉൾപ്പെടുന്നു</string>
+    <string name="namma_yatri_customer">നമ്മ യാത്രി ഉപഭോക്താവ്\t</string>
+    <string name="namma_yatri_driver">"നമ്മ യാത്രി ഡ്രൈവർ "</string>
 </resources>

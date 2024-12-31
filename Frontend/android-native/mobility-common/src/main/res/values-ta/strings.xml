@@ -19,4 +19,6 @@
     <string name="please_allow_permission_to_capture_the_image">படத்தைப் பிடிக்க அனுமதிகளை அனுமதிக்கவும்</string>
     <string name="unable_to_upload_media">மீடியாவை பதிவேற்ற முடியவில்லை</string>
     <string name="location_is_too_far">இடம் வெகு தொலைவில் உள்ளது!</string>
+    <string name="namma_yatri_customer">நம்மா பயணி வாடிக்கையாளர்</string>
+    <string name="namma_yatri_driver">நம்மா பயணி டிரைவர்</string>
 </resources>

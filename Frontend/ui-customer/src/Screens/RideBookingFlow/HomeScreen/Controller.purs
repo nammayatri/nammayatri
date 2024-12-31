@@ -642,7 +642,7 @@ eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
   void $ pure $ hideKeyboardOnNavigation true
   if state.data.config.voipDialerSwitch then do
-          let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then "driver" <> state.data.driverInfoCardState.bppRideId else ""
+          let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then state.data.driverInfoCardState.bppRideId else ""
           if (driverCuid /= "") then do
               void $ pure $ voipDialer driverCuid false (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
               continue state
@@ -1505,7 +1505,7 @@ eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {pro
 
 eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
   if state.data.config.voipDialerSwitch then do
-      let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then "driver" <> state.data.driverInfoCardState.bppRideId else ""
+      let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then state.data.driverInfoCardState.bppRideId else ""
       if (driverCuid /= "") then do
           void $ pure $ voipDialer driverCuid false (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
           continue state

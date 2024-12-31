@@ -72,4 +72,6 @@
     <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
     <string name="parking_charges">%1$.0f₹ পার্কিং</string>
     <string name="includes">অন্তর্ভুক্ত</string>
+    <string name="namma_yatri_customer">নাম্মা যাত্রী গ্রাহক</string>
+    <string name="namma_yatri_driver">"নাম্মা যাত্রী ড্রাইভার "</string>
 </resources>

@@ -29,4 +29,8 @@
     <string name="ny_crop_image_activity_no_permissions" translatable="false">Cancelling, required permissions are not granted</string>
     <string name="unable_to_upload_media">Unable to Upload media</string>
     <string name="location_is_too_far">Location is too far!</string>
+    <string name="voip_background" translatable="false">#14171F</string>
+    <string name="voip_logo" translatable="false">https://i.postimg.cc/0yrT3TSx/NY-MY-Yatri.png</string>
+    <string name="namma_yatri_customer">Namma Yatri Customer</string>
+    <string name="namma_yatri_driver">Namma Yatri Driver</string>
 </resources>

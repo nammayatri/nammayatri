@@ -87,4 +87,8 @@
     <string name="third_party_booking">"Third Party Booking"</string>
     <string name="parking_charges">%1$.0f₹ Parking</string>
     <string name="includes">Includes</string>
+    <string name="voip_background" translatable="false">#14171F</string>
+    <string name="voip_logo" translatable="false">https://i.postimg.cc/0yrT3TSx/NY-MY-Yatri.png</string>
+    <string name="namma_yatri_customer">Namma Yatri Customer</string>
+    <string name="namma_yatri_driver">Namma Yatri Driver</string>
 </resources>

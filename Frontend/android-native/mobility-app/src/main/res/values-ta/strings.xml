@@ -78,4 +78,6 @@
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
     <string name="parking_charges">%1$.0f₹ பார்க்கிங்</string>
     <string name="includes">அடங்கும்</string>
+    <string name="namma_yatri_customer">நம்ம யாத்ரி வாடிக்கையாளர்\t</string>
+    <string name="namma_yatri_driver">"நம்ம யாத்ரி ஓட்டுனர்      "</string>
 </resources>

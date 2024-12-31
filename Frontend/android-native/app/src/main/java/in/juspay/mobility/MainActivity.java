@@ -60,12 +60,9 @@ import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
-import com.clevertap.android.signedcall.exception.InitException;
 import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
 import com.clevertap.android.signedcall.init.SignedCallAPI;
-//import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
-import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
-import com.clevertap.android.signedcall.interfaces.SignedCallInitResponse;
+import com.clevertap.android.signedcall.interfaces.SCNetworkQualityHandler;
 import com.facebook.soloader.SoLoader;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
@@ -107,6 +104,7 @@ import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
+import in.juspay.mobility.app.CleverTapSignedCall;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
@@ -158,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
     long onCreateTimeStamp = 0;
     private ActivityResultLauncher<Intent> startForResult;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    private CleverTapSignedCall cleverTapSignedCall;
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
 
@@ -437,8 +436,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         initApp();
+        cleverTapSignedCall = new CleverTapSignedCall(context, activity, true);
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
-        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler());
+        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
+        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
+            @Override
+            public boolean onNetworkQualityResponse(final int score) {
+                Log.d(LOG_TAG, "Signed Call Network quality score: " + score);
+                return score >= 75;
+            }
+        });        
+        cleverTapSignedCall.signedCallListener();
         handleSplashScreen();
 
         WebView.setWebContentsDebuggingEnabled(true);
@@ -483,6 +491,169 @@ public class MainActivity extends AppCompatActivity {
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
 
     }
+
+    // private void signedCallListener(){
+    //     SignedCallAPI.getInstance().registerVoIPCallStatusListener(new SCVoIPCallStatusListener() {
+    //         @Override
+    //         public void callStatus(final SCCallStatusDetails callStatusDetails) {
+    //             //App is notified on the main thread to notify the changes in the call-state
+    //             Log.d(LOG_TAG, "callStatus is invoked with: " + callStatusDetails.toString());
+        
+    //             SCCallStatusDetails.CallDirection direction = callStatusDetails.getDirection();
+    //             VoIPCallStatus callStatus = callStatusDetails.getCallStatus();
+    //             CallDetails callDetails = callStatusDetails.getCallDetails();
+    //             SignallingChannel channel = callDetails.channel;
+              
+    //             if (direction.equals(SCCallStatusDetails.CallDirection.OUTGOING)) {
+    //                 //Handle events for initiator of the call
+        
+    //                 if (callStatus == VoIPCallStatus.CALL_IS_PLACED) {
+    //                     // When the call is successfully placed
+    //                 }  else if (callStatus == VoIPCallStatus.CALL_RINGING) {
+    //                     // When the call starts ringing on the receiver's device
+    //                 } else if (callStatus == VoIPCallStatus.CALL_CANCELLED) {
+    //                     // When the call is cancelled from the initiator's end
+    //                     if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                         showAlertForMicrophonePermission();
+    //                     }
+    //                 } else if (callStatus == VoIPCallStatus.CALL_CANCELLED_DUE_TO_RING_TIMEOUT) {
+    //                     // When the call is call is cancelled due to a ring timeout. 
+    //                     // This event is reported when the SDK fails to establish communication with the receiver, often due to an offline device or a device with low bandwidth.
+    //                 } else if (callStatus == VoIPCallStatus.CALL_DECLINED) {
+    //                     // When the call is declined from the receiver's end
+    //                 } else if (callStatus == VoIPCallStatus.CALL_MISSED) {
+    //                     // When the call is missed at the receiver's end
+    //                     if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                         showAlertForMicrophonePermission();
+    //                     }
+    //                 } else if (callStatus == VoIPCallStatus.CALL_ANSWERED) {
+    //                     // When the call is picked up by the receiver
+    //                 } else if (callStatus == VoIPCallStatus.CALL_IN_PROGRESS) {
+    //                     // When the connection to the receiver is established
+    //                 } else if (callStatus == VoIPCallStatus.CALL_OVER) {
+    //                     // When the call has been disconnected
+    //                 } else if (callStatus == VoIPCallStatus.CALLEE_BUSY_ON_ANOTHER_CALL) {
+    //                     // When the receiver is busy on another call(includes both VoIP or PSTN)
+    //                 }  else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_BUSY_ON_VOIP) {
+    //                     // When the receiver is busy in a VoIP call
+    //                 } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_BUSY_ON_PSTN) {
+    //                     // When the receiver is busy in a PSTN call
+    //                 } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_LOGGED_OUT_CUID) {
+    //                     // When the receiver's cuid is logged out and logged in with different cuid  
+    //                 } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED) {
+    //                     // When the receiver's Notifications Settings are disabled from application settings
+    //                 } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
+    //                     if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                         showAlertForMicrophonePermission();
+    //                     }
+    //                     // When the Microphone permission is denied or blocked while receiver answers the call
+    //                 } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
+    //                     if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                         showAlertForMicrophonePermission();
+    //                     }
+    //                     // When the microphone permission is blocked at the receiver's end.
+    //                 } else if (callStatus == VoIPCallStatus.CALL_FAILED_DUE_TO_INTERNAL_ERROR) {
+    //                     if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                         showAlertForMicrophonePermission();
+    //                     }
+    //                     // When the call fails after signalling. Possible reasons could include low internet connectivity, low RAM available on device, SDK fails to set up the voice channel within the time limit
+    //                 }
+    //             } else if (direction.equals(SCCallStatusDetails.CallDirection.INCOMING)) {
+    //                     //Handle events for receiver of the call
+                        
+    //                     if (callStatus == VoIPCallStatus.CALL_MISSED) {
+    //                         // When the call is missed at the receiver's end
+    //                         System.out.println("statuscheckerzeta 6");
+
+    //                         if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                             showAlertForMicrophonePermission();
+    //                         }
+    //                     } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
+    //                         // When the Microphone permission is denied or blocked while receiver answers the call
+    //                         System.out.println("statuscheckerzeta 15");
+
+    //                         if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                             showAlertForMicrophonePermission();
+    //                         }
+    //                     } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
+    //                         // When the microphone permission is blocked at the receiver's end.
+    //                         System.out.println("statuscheckerzeta 16");
+
+    //                         if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    //                             showAlertForMicrophonePermission();
+    //                         }
+    //                     } 
+    //             }
+    //          }
+    //     });
+    // }
+
+    // public void showAlertForUpdate() {
+    //     System.out.println("inside showAlertForUpdate");
+    //     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+    //     builder.setCancelable(false);
+    //     ConstraintLayout constraintLayout = (ConstraintLayout) getLayoutInflater().inflate(in.juspay.mobility.app.R.layout.dynamic_update_loader, null);
+    //     CardView cardView = constraintLayout.findViewById(in.juspay.mobility.app.R.id.apiLoaderOverlayCard);
+    //     cardView.setCardElevation(0);
+    //     cardView.setRadius(0);
+
+    //     ViewGroup.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
+    //     constraintLayout.setLayoutParams(layoutParams);
+    //     builder.setView(constraintLayout);
+    //     builder.setPositiveButton(in.juspay.mobility.app.R.string.okay_got_it, (dialog, which) -> {
+    //         dialog.cancel();
+    //         mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
+    //         hyperServices.terminate();
+    //         hyperServices = null;
+    //         initApp();
+    //     });
+    //     runOnUiThread(() -> {
+    //         AlertDialog alertDialog = builder.create();
+    //         alertDialog.show();
+    //     });
+    // }
+
+    public void showAlertForMicrophonePermission() {
+        System.out.println("inside showAlertForMicrophonePermission");
+    
+        // Create an AlertDialog Builder
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setCancelable(false); // Prevent dismissing the dialog by touching outside
+        // Inflate the custom layout
+        ConstraintLayout constraintLayout = (ConstraintLayout) getLayoutInflater().inflate(
+            in.juspay.mobility.app.R.layout.microphone_permission_dialog, null
+        );
+        // Customize the layout's views (optional)
+        CardView cardView = constraintLayout.findViewById(in.juspay.mobility.app.R.id.dialogCardView);
+        cardView.setCardElevation(8); // Example customization
+        cardView.setRadius(16);
+        // Set layout params if needed
+        ViewGroup.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(
+            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            ConstraintLayout.LayoutParams.WRAP_CONTENT
+        );
+        constraintLayout.setLayoutParams(layoutParams);
+        // Set the inflated layout as the dialog view
+        builder.setView(constraintLayout);
+        // Handle positive button click
+        builder.setPositiveButton("Go to Settings", (dialog, which) -> {
+            // Redirect user to app settings
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            Uri uri = Uri.fromParts("package", getPackageName(), null);
+            intent.setData(uri);
+            startActivity(intent);
+        });
+        // Handle negative button click
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.cancel();
+        });
+        // Run the dialog creation on the UI thread
+        runOnUiThread(() -> {
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        });
+    }
+    
 
     private void initiateRSIntegration() {
         String algo = BuildConfig.RS_ALGO;

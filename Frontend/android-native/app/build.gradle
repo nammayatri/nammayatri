@@ -376,7 +376,7 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     compileOnly 'com.facebook.soloader:soloader:0.10.5'
     implementation files('libs/android-jsc-r250231.aar')
-    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.3"
+    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.5"
     implementation('io.socket:socket.io-client:2.1.0') {
         exclude group: 'org.json', module: 'json'
     }

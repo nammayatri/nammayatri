@@ -78,4 +78,6 @@
     <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
     <string name="parking_charges">%1$.0f₹ पार्किंग</string>
     <string name="includes">शामिल</string>
+    <string name="namma_yatri_customer">नम्मा यात्री ग्राहक\t</string>
+    <string name="namma_yatri_driver">"नम्मा यात्री ड्राइवर "</string>
 </resources>
