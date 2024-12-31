@@ -780,6 +780,7 @@ data TicketConfigCSVRow = TicketConfigCSVRow
     peopleCategoryDescription :: Text,
     priceAmount :: Text,
     priceCurrency :: Text,
+    pricingType :: Text,
     peakTimings :: Text,
     peakDays :: Text,
     cancellationType :: Text,
@@ -830,6 +831,7 @@ instance FromNamedRecord TicketConfigCSVRow where
       <*> r .: "people_category_description"
       <*> r .: "price_amount"
       <*> r .: "price_currency"
+      <*> r .: "pricing_type"
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
       <*> r .: "cancellation_type"
@@ -1088,6 +1090,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
       peopleCategoryDescription <- cleanCSVField idx row.peopleCategoryDescription "People Category Description"
       peopleCategoryName <- cleanCSVField idx row.peopleCategoryName "People Category Name"
       priceAmount :: HighPrecMoney <- readCSVField idx row.priceAmount "Price Amount"
+      pricingType :: PricingType <- readCSVField idx row.pricingType "Pricing Type"
       priceCurrency :: Currency <- readCSVField idx row.priceCurrency "Price Currency"
       let pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
           mbPeakTimings = cleanField row.peakTimings
