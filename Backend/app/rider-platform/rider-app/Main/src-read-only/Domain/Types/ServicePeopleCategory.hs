@@ -19,6 +19,7 @@ data ServicePeopleCategory = ServicePeopleCategory
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.Price,
+    pricingType :: Domain.Types.ServicePeopleCategory.PricingType,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
@@ -32,6 +33,10 @@ data CancelCharge = FlatFee Kernel.Types.Common.HighPrecMoney | Percentage Kerne
 data CancellationCharge = CancellationCharge {cancelCharge :: Domain.Types.ServicePeopleCategory.CancelCharge, time :: Kernel.Types.Common.Seconds}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
+data PricingType = SameDay | AllDays deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancelCharge)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationCharge)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PricingType)
