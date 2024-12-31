@@ -137,9 +137,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
               { lat = fromMaybe 0.0 nearbyReq.lat,
                 lon = fromMaybe 0.0 nearbyReq.lon
               },
-          driverMinExtraFee = roundToIntegral <$> nearbyReq.driverMinExtraFee,
+          driverMinExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMinExtraFee,
           driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
-          driverMaxExtraFee = roundToIntegral <$> nearbyReq.driverMaxExtraFee,
+          driverMaxExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMaxExtraFee,
           driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
           driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
           driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
