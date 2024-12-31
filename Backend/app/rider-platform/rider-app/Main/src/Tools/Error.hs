@@ -283,6 +283,51 @@ instance IsHTTPError TicketBookingError where
 
 instance IsAPIError TicketBookingError
 
+data PassBookingError
+  = PurchasedPassNotFound Text
+  | PassCategoryNotFound Text
+  | PassTypeNotFound Text
+  | PassNotFound Text
+  | AadhaarVerificationFailed Text
+  | MerchantMismatch Text
+  | PassEligibilityCheckFailed Text
+  | PassPurchaseFailed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PassBookingError
+
+instance IsBaseError PassBookingError where
+  toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
+  toMessage (PassCategoryNotFound categoryId) = Just $ "Pass category not found: " <> show categoryId
+  toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
+  toMessage (PassNotFound passId) = Just $ "Pass not found: " <> show passId
+  toMessage (AadhaarVerificationFailed personId) = Just $ "Aadhaar verification failed for person: " <> show personId
+  toMessage (MerchantMismatch merchantId) = Just $ "Merchant mismatch for merchant: " <> show merchantId
+  toMessage (PassEligibilityCheckFailed passId) = Just $ "Eligibility check failed for pass: " <> show passId
+  toMessage (PassPurchaseFailed passId) = Just $ "Pass purchase failed for pass: " <> show passId
+
+instance IsHTTPError PassBookingError where
+  toErrorCode = \case
+    PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
+    PassCategoryNotFound _ -> "PASS_CATEGORY_NOT_FOUND"
+    PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
+    PassNotFound _ -> "PASS_NOT_FOUND"
+    AadhaarVerificationFailed _ -> "AADHAAR_VERIFICATION_FAILED"
+    MerchantMismatch _ -> "MERCHANT_MISMATCH"
+    PassEligibilityCheckFailed _ -> "PASS_ELIGIBILITY_CHECK_FAILED"
+    PassPurchaseFailed _ -> "PASS_PURCHASE_FAILED"
+  toHttpCode = \case
+    PurchasedPassNotFound _ -> E500
+    PassCategoryNotFound _ -> E500
+    PassTypeNotFound _ -> E400
+    PassNotFound _ -> E400
+    AadhaarVerificationFailed _ -> E400
+    MerchantMismatch _ -> E400
+    PassEligibilityCheckFailed _ -> E400
+    PassPurchaseFailed _ -> E500
+
+instance IsAPIError PassBookingError
+
 data RiderError
   = RiderConfigNotFound Text
   | RiderConfigDoesNotExist Text

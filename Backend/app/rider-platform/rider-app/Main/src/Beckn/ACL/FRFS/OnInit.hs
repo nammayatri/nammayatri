@@ -18,7 +18,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import qualified Domain.Action.Beckn.FRFS.OnInit as Domain
+import Domain.Action.Beckn.FRFS.Common as Common
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -27,7 +27,7 @@ import Kernel.Utils.Common
 buildOnInitReq ::
   (MonadFlow m) =>
   Spec.OnInitReq ->
-  m Domain.DOnInit
+  m Common.DOnInit
 buildOnInitReq onInitReq = do
   Utils.validateContext Spec.ON_INIT onInitReq.onInitReqContext
   transactionId <- onInitReq.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
@@ -57,7 +57,7 @@ buildOnInitReq onInitReq = do
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
   pure $
-    Domain.DOnInit
+    Common.DOnInit
       { providerId = providerId,
         totalPrice,
         fareBreakUp = fareBreakUp,

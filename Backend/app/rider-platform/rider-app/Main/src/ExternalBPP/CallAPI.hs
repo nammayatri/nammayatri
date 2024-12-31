@@ -9,8 +9,9 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import BecknV2.OnDemand.Enums
 import Domain.Action.Beckn.FRFS.Common
+-- import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
-import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
@@ -58,8 +59,8 @@ search merchant merchantOperatingCity bapConfig searchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
 
-init :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+init :: (DOnInit -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
+init onInitHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
     (METRO, Nothing) -> do
@@ -70,15 +71,11 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
     (METRO, Just config) -> do
       onInitReq <- MetroFlow.init merchant merchantOperatingCity config bapConfig (mRiderName, mRiderNumber) booking
-      processOnInit onInitReq
+      onInitHandler onInitReq
     (BUS, Just _config) -> do
       onInitReq <- BusFlow.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
-      processOnInit onInitReq
+      onInitHandler onInitReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
-  where
-    processOnInit onInitReq = do
-      (merchant', booking') <- DOnInit.validateRequest onInitReq
-      DOnInit.onInit onInitReq merchant' booking'
 
 cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do

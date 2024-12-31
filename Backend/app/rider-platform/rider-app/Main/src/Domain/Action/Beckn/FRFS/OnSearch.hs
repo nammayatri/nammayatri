@@ -20,6 +20,8 @@ import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
+import Domain.Types.Pass
+import Domain.Types.PurchasedPass
 import qualified Domain.Types.StationType as Station
 import Environment
 import Kernel.Beam.Functions
@@ -64,7 +66,21 @@ data DQuote = DQuote
     routeStations :: [DRouteStation],
     stations :: [DStation],
     discounts :: [DDiscount],
+    passes :: [DPass],
     _type :: Quote.FRFSQuoteType
+  }
+
+data DPass = DPass
+  { code :: Text,
+    amount :: HighPrecMoney,
+    savings :: Maybe HighPrecMoney,
+    benefit :: Maybe Benefit,
+    validTripsLeft :: Maybe Int,
+    status :: StatusType,
+    expiryDate :: Maybe UTCTime,
+    categoryName :: Maybe Text,
+    passTypeName :: Maybe Text,
+    title :: Text
   }
 
 data DDiscount = DDiscount
@@ -150,6 +166,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
+  let passesJSON = passes & map castPassToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
@@ -180,6 +197,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.stationsJson = stationsJSON,
         Quote.routeStationsJson = Just routeStationsJSON,
         Quote.discountsJson = Just discountsJSON,
+        Quote.passesJson = Just passesJSON,
         Quote.toStationId = endStation.id,
         Quote.validTill,
         Quote.vehicleType,
@@ -249,4 +267,18 @@ castDiscountToAPI DDiscount {..} =
       API.description = description,
       API.tnc = tnc,
       API.eligibility = eligibility
+    }
+
+castPassToAPI :: DPass -> API.FRFSPassRes
+castPassToAPI DPass {..} =
+  API.FRFSPassRes
+    { API.code = code,
+      API.amount = amount,
+      API.savings = savings,
+      API.benefit = benefit,
+      API.validTripsLeft = validTripsLeft,
+      API.status = status,
+      API.expiryDate = expiryDate,
+      API.categoryName = categoryName,
+      API.title = title
     }

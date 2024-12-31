@@ -10,6 +10,8 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.Pass
+import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -32,7 +34,7 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
     status :: FRFSBookingPaymentStatusAPI,
     transactionId :: Data.Maybe.Maybe Data.Text.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentStatusAPI
@@ -90,11 +92,30 @@ data FRFSDiscountRes = FRFSDiscountRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPassReq = FRFSPassReq {code :: Data.Text.Text, quantity :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSPassRes = FRFSPassRes
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    benefit :: Data.Maybe.Maybe Domain.Types.Pass.Benefit,
+    categoryName :: Data.Maybe.Maybe Data.Text.Text,
+    code :: Data.Text.Text,
+    expiryDate :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    status :: Domain.Types.PurchasedPass.StatusType,
+    title :: Data.Text.Text,
+    validTripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    passes :: Data.Maybe.Maybe [FRFSPassRes],
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
@@ -107,7 +128,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {discounts :: [FRFSDiscountReq]}
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {discounts :: [FRFSDiscountReq], passes :: Data.Maybe.Maybe [FRFSPassReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -200,7 +221,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}

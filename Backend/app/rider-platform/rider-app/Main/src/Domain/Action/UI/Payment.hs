@@ -23,6 +23,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Action.UI.PassService as PassService
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
@@ -60,7 +61,6 @@ import Tools.Metrics
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
-
 createOrder ::
   (Id DP.Person, Id DM.Merchant) ->
   Id DRide.Ride ->
@@ -181,6 +181,9 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     case mbServiceType of
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
       Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.Passes -> case osr of
+        Payment.OrderStatusResp {transactionStatus} -> void $ PassService.webhookHandlerPasses (ShortId orderShortId) transactionStatus
+        _ -> throwError $ InternalError "Order data not found in response."
       _ -> pure ()
   pure Ack
   where
@@ -188,6 +191,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
       Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      Just Payment.Passes -> DMSC.PaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)

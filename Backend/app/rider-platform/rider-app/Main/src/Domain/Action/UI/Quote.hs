@@ -374,6 +374,7 @@ getJourneyData searchRequestId = do
             (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
             let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
                 discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
+                passes :: Maybe [FRFSPassRes] = decodeFromText =<< quote.passesJson
             let quoteRes =
                   FRFSTicketService.FRFSQuoteAPIRes
                     { quoteId = quote.id,

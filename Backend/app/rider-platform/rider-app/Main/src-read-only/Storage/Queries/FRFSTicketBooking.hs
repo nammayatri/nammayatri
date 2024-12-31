@@ -151,6 +151,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
+      Se.Set Beam.passesJson passesJson,
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentTxnId paymentTxnId,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),

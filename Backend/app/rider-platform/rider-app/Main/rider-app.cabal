@@ -207,6 +207,7 @@ library
       Domain.Action.UI.MultiModal
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
+      Domain.Action.UI.PassService
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
@@ -267,6 +268,7 @@ library
       ExternalBPP.Bus.ExternalAPI.EBIX.Status
       ExternalBPP.Bus.ExternalAPI.Types
       ExternalBPP.Bus.Flow
+      ExternalBPP.Bus.Utils
       ExternalBPP.CallAPI
       ExternalBPP.Metro.ExternalAPI.CallAPI
       ExternalBPP.Metro.ExternalAPI.CMRL.Auth
@@ -502,6 +504,7 @@ library
       API.Action.UI.Invoice
       API.Action.UI.MultiModal
       API.Action.UI.MultimodalConfirm
+      API.Action.UI.PassService
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -544,6 +547,7 @@ library
       API.Types.UI.Invoice
       API.Types.UI.MultiModal
       API.Types.UI.MultimodalConfirm
+      API.Types.UI.PassService
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
@@ -611,7 +615,10 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
+      Domain.Types.Pass
+      Domain.Types.PassCategory
       Domain.Types.PassengerDetails
+      Domain.Types.PassType
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
@@ -620,6 +627,7 @@ library
       Domain.Types.PersonStats
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
+      Domain.Types.PurchasedPass
       Domain.Types.Quote
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
@@ -717,7 +725,10 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
+      Storage.Beam.Pass
+      Storage.Beam.PassCategory
       Storage.Beam.PassengerDetails
+      Storage.Beam.PassType
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
@@ -725,6 +736,7 @@ library
       Storage.Beam.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
+      Storage.Beam.PurchasedPass
       Storage.Beam.Quote
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
@@ -868,7 +880,10 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
+      Storage.Queries.Pass
+      Storage.Queries.PassCategory
       Storage.Queries.PassengerDetails
+      Storage.Queries.PassType
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
@@ -876,6 +891,7 @@ library
       Storage.Queries.PersonStats
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
+      Storage.Queries.PurchasedPass
       Storage.Queries.Quote
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating
@@ -1023,6 +1039,7 @@ library
     , special-zone
     , special-zone-a
     , split
+    , string-conversions
     , template-haskell
     , text
     , text-conversions
@@ -1150,6 +1167,7 @@ executable rider-app-exe
     , singletons
     , singletons-th
     , split
+    , string-conversions
     , template-haskell
     , text
     , text-conversions

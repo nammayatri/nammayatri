@@ -1,0 +1,101 @@
+imports:
+  ServiceTierType: BecknV2.FRFS.Enums
+  Text: Data.Text
+  Maybe: Data.Maybe
+  HighPrecMoney: Kernel.Types.Common
+  Person: Domain.Types.Person
+  PassCategory: Domain.Types.PassCategory
+  PassType: Domain.Types.PassType
+  Pass: Domain.Types.Pass
+  PurchasedPass: Domain.Types.PurchasedPass
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  DOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Benefit: Domain.Types.Pass
+  StatusType: Domain.Types.PurchasedPass
+  City: Kernel.Types.Beckn.Context
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+
+module: PassService
+types:
+  PassCategoryAPIEntity:
+    id: Id PassCategory
+    name: Text
+    description: Text
+
+  PassTypeAPIEntity:
+    id: Id PassType
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+
+  PassInfoAPIEntity:
+    id: Id Pass
+    amount: HighPrecMoney
+    savings: Maybe HighPrecMoney
+    benefit: Maybe Benefit
+    vehicleServiceTierType: ServiceTierType
+    trips: Maybe Int
+    days: Maybe Int
+
+  PassAPIEntity:
+    entityType: PassTypeAPIEntity
+    category: PassCategoryAPIEntity
+    info: [PassInfoAPIEntity]
+
+  PurchasedPassAPIEntity:
+    id: Id PurchasedPass
+    passEntity: PassAPIEntity
+    tripsLeft: Maybe Int
+    status: StatusType
+    purchaseDate: UTCTime
+    expiryDate: Maybe UTCTime
+
+  PassSelectionAPIEntity:
+    purchasedPassId: Id PurchasedPass
+    paymentOrder: Maybe CreateOrderResp
+
+apis:
+  # GET Passes List
+  - GET:
+      endpoint: /passes
+      auth: TokenAuth
+      response:
+        type: "[PassCategoryAPIEntity]"
+
+  # GET Pass Details for a Plan Category
+  - GET:
+      endpoint: /{categoryId}/details
+      auth: TokenAuth
+      params:
+        categoryId: Id PassCategory
+      response:
+        type: "[PassAPIEntity]"
+
+  # Passes Select
+  - POST:
+      endpoint: /{passId}/select
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      response:
+        type: PassSelectionAPIEntity
+
+# Purchased Passes Status
+  - GET:
+      endpoint: /purchased/{purchasedPassId}/detail
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      response:
+        type: PurchasedPassAPIEntity
+
+ # GET Purchased Passes List
+  - GET:
+      endpoint: /purchased/list
+      auth: TokenAuth
+      mandatoryQuery:
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassAPIEntity]"

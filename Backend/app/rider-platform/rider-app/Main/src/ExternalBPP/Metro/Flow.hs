@@ -4,7 +4,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Text as T
 import qualified Data.UUID as UU
 import Domain.Action.Beckn.FRFS.Common
-import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types
 import Domain.Types.BecknConfig
@@ -83,6 +82,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
           { bppItemId = "Metro",
             _type = DFRFSQuote.SingleJourney,
             discounts = [],
+            passes = [],
             ..
           }
 

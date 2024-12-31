@@ -8,6 +8,7 @@ import qualified Domain.Types.FRFSFarePolicy
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -32,6 +33,7 @@ updateByPrimaryKey (Domain.Types.FRFSFarePolicy.FRFSFarePolicy {..}) = do
   updateWithKV
     [ Se.Set Beam._type _type,
       Se.Set Beam.applicableDiscountIds (Kernel.Types.Id.getId <$> applicableDiscountIds),
+      Se.Set Beam.applicablePassIds (Kernel.Prelude.Just $ Kernel.Types.Id.getId <$> applicablePassIds),
       Se.Set Beam.description description,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -47,6 +49,7 @@ instance FromTType' Beam.FRFSFarePolicy Domain.Types.FRFSFarePolicy.FRFSFarePoli
         Domain.Types.FRFSFarePolicy.FRFSFarePolicy
           { _type = _type,
             applicableDiscountIds = Kernel.Types.Id.Id <$> applicableDiscountIds,
+            applicablePassIds = Kernel.Prelude.maybe [] (Kernel.Types.Id.Id <$>) applicablePassIds,
             description = description,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -60,6 +63,7 @@ instance ToTType' Beam.FRFSFarePolicy Domain.Types.FRFSFarePolicy.FRFSFarePolicy
     Beam.FRFSFarePolicyT
       { Beam._type = _type,
         Beam.applicableDiscountIds = Kernel.Types.Id.getId <$> applicableDiscountIds,
+        Beam.applicablePassIds = Kernel.Prelude.Just $ Kernel.Types.Id.getId <$> applicablePassIds,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

@@ -362,7 +362,6 @@ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIn
     else pure False -- if already charged or cancelled or auto refunded no need to charge again
 
 -- create order -----------------------------------------------------
-
 createOrderService ::
   ( EncFlow m r,
     BeamFlow m r

@@ -3,7 +3,6 @@ module ExternalBPP.Bus.Flow where
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortOn)
 import Domain.Action.Beckn.FRFS.Common
-import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types
 import Domain.Types.BecknConfig
@@ -16,18 +15,19 @@ import qualified Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import Domain.Types.PurchasedPass
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import ExternalBPP.Bus.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.Bus.ExternalAPI.Types
+import ExternalBPP.Bus.Utils
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
-import SharedLogic.FRFSUtils
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
@@ -141,6 +141,8 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                         currency = stageFare.currency
                       }
             discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchant.id merchantOperatingCity.id vehicleType searchReq.riderId farePolicy.applicableDiscountIds
+            passesWithEligibility <- getEligibleRedeemPasses merchant.id merchantOperatingCity.id vehicleType searchReq.riderId farePolicy.applicablePassIds routeInfo.startStopCode routeInfo.endStopCode searchReq.quantity
+            let passes = map (mkPass currentTime) passesWithEligibility
             let routeServiceTier =
                   DVehicleServiceTier
                     { serviceTierType = vehicleServiceTier._type,
@@ -170,6 +172,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                   _type = DFRFSQuote.SingleJourney,
                   routeStations = routeStations,
                   discounts = map (mkDiscount price) discountsWithEligibility,
+                  passes = passes,
                   ..
                 }
         )
@@ -269,6 +272,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
               _type = DFRFSQuote.SingleJourney,
               routeStations = routeStations,
               discounts = [], -- TODO :: Discounts not handled
+              passes = [],
               price =
                 Price
                   { amount = totalPrice,
@@ -303,6 +307,30 @@ search merchant merchantOperatingCity bapConfig searchReq = do
               tnc = discount.tnc,
               price = discountPrice,
               ..
+            }
+
+    mkPass _ (eligibilityData, isEligible) =
+      let pass = eligibilityData.passData
+          passType = eligibilityData.passTypeData
+          passCategory = eligibilityData.passCategoryData
+          purchasedPassData = eligibilityData.purchasedPassData
+          expiryDate = case purchasedPassData of
+            Just purchasedPass -> purchasedPass.expiryDate
+            Nothing -> Nothing
+          validTripsLeft = case purchasedPassData of
+            Just purchasedPass -> purchasedPass.validTripsLeft
+            Nothing -> Just 0
+       in DPass
+            { code = pass.code,
+              amount = pass.amount,
+              savings = pass.savings,
+              benefit = pass.benefit,
+              validTripsLeft = validTripsLeft,
+              status = if isEligible then Domain.Types.PurchasedPass.Active else Domain.Types.PurchasedPass.Expired,
+              expiryDate = expiryDate,
+              categoryName = Just passCategory.name,
+              passTypeName = passType.name,
+              title = passType.title
             }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
