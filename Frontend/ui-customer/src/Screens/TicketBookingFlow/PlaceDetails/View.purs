@@ -153,11 +153,11 @@ view push state =
             Nothing -> (Tuple Nothing Nothing)
           Nothing -> (Tuple Nothing Nothing)
     in
-    if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
-    else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
-    else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
+    if (state.props.currentStage == ST.ChooseTicketStage) && (not $ isVisitDateWithinOperationalDate state) then (headerBannerView push state ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)))
     else if (state.props.currentStage == ST.ChooseTicketStage) && (checkIfSameDayBookingNotAllowedForToday state) then (headerBannerView push state ("Same-day booking is not allowed. Please select a future date for ticket booking."))
-    else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ isVisitDateWithinOperationalDate state) then (headerBannerView push state ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
+    -- else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (false || placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
     else linearLayout [height $ V 0][]
 
   shouldHurry mbPlaceInfo =
@@ -1368,8 +1368,8 @@ isServiceCatValid state expiry mbValidOpDay mbOperationalDate = maybe false (\op
                                   _ -> endTime
                              else ""
             in
-            if not DS.null startTime && not DS.null newEndTime then now > startTime && now < newEndTime
-            else if not DS.null startTime then now > startTime
+            if not DS.null startTime && not DS.null newEndTime then (true || now > startTime) && now < newEndTime
+            else if not DS.null startTime then (true || now > startTime)
             else if not DS.null newEndTime then now < newEndTime
             else false
       else maybe true (\oplDate -> state.data.dateOfVisit <= oplDate.endDate && state.data.dateOfVisit >= oplDate.startDate) mbOperationalDate
