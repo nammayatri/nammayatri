@@ -104,7 +104,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     genAboutMeWithAI person driverStats now req' = do
       orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       prompt <-
-        SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.DriverProfileGen_1))
+        SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.AzureOpenAI_DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.AzureOpenAI_DriverProfileGen_1))
           >>= buildPrompt person driverStats now req' . (.promptTemplate)
       gccresp <- TC.getChatCompletion merchantId merchantOpCityId (buildChatCompletionReq prompt)
       logDebug $ "generated - " <> gccresp.genMessage.genContent

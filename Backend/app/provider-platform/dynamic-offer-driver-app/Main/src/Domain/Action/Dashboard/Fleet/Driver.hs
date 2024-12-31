@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
     postDriverFleetAddVehicles,
+    putDriverDashboardFleetWmbTripDelete,
   )
 where
 
@@ -30,12 +31,14 @@ import Data.Time
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.TripTransaction
 import Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.TripTransaction as QTT
 
 -- TODO Domain.Action.Dashboard.Fleet.Operations
 
@@ -239,3 +242,14 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver = DDriver.linkRCWithDriverForFleet
+
+putDriverDashboardFleetWmbTripDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.TripTransaction ->
+  Text ->
+  Flow APISuccess
+putDriverDashboardFleetWmbTripDelete _ _ tripTransactionId _ = do
+  QTT.updateStatus CANCELLED Nothing (cast @Common.TripTransaction @TripTransaction tripTransactionId)
+  -- TODO : add notification to driver
+  pure Success

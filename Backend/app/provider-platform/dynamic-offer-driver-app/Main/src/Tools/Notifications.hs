@@ -34,6 +34,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType
 import Domain.Types.Trip as Trip
+import Domain.Types.TripTransaction
 import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
@@ -348,7 +349,8 @@ notifyDriverWithProviders ::
   ( ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
@@ -356,8 +358,9 @@ notifyDriverWithProviders ::
   Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
+  a ->
   m ()
-notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken = runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
+notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken dataSend = runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
       Notification.NotificationReq
@@ -365,7 +368,7 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Just Notification.HIGH,
-          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId EmptyDynamicParam,
+          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend,
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
@@ -1089,7 +1092,37 @@ notifyOnRideStarted ride = do
   let dynamicParams = [("offerAdjective", offerAdjective)]
   let title = buildTemplate dynamicParams mbMerchantPN.title
       body = buildTemplate dynamicParams mbMerchantPN.body
-  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken
+  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
+
+data WMBTripAssignedData = WMBTripAssignedData
+  { tripTransactionId :: Id TripTransaction,
+    routeCode :: Text,
+    routeShortname :: Text,
+    vehicleNumber :: Text,
+    vehicleServiceTierType :: ServiceTierType,
+    roundRouteCode :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+notifyWmbOnRide ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Id Person ->
+  Id DMOC.MerchantOperatingCity ->
+  TripStatus ->
+  Text ->
+  Text ->
+  Maybe WMBTripAssignedData ->
+  m ()
+notifyWmbOnRide driverId merchantOperatingCityId status title body dataSend = do
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  case status of
+    TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken dataSend
+    Domain.Types.TripTransaction.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken EmptyDynamicParam
+    IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
+    _ -> pure ()
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
 

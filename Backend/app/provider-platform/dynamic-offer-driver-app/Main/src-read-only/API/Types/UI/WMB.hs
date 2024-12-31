@@ -5,13 +5,18 @@ module API.Types.UI.WMB where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Common
+import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data AvailableRoutesList = AvailableRoutesList {destination :: StopInfo, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
+data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Kernel.Prelude.Maybe TripTransactionDetailsExtra}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AvailableRoute = AvailableRoute {destination :: StopInfo, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -33,19 +38,31 @@ data TripEndReq = TripEndReq {location :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripEndResp = TripEndResp {result :: EndTripStatus}
+data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text, result :: EndTripStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripLinkReq = TripLinkReq {routeCode :: Data.Text.Text, vehicleNumber :: Data.Text.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data TripLinkResp = TripLinkResp {destination :: StopInfo, source :: StopInfo, tripTransactionId :: Data.Text.Text, vehicleNum :: Data.Text.Text, vehicleType :: Domain.Types.Common.ServiceTierType}
+data TripLinkReq = TripLinkReq {routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TripTransactionDetails = TripTransactionDetails {destination :: StopInfo, source :: StopInfo, tripTransactionId :: Data.Text.Text, vehicleNum :: Data.Text.Text, vehicleType :: Domain.Types.Common.ServiceTierType}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TripTransactionDetailsExtra = TripTransactionDetailsExtra
+  { destination :: StopInfo,
+    routeInfo :: RouteInfo,
+    source :: StopInfo,
+    status :: Domain.Types.TripTransaction.TripStatus,
+    tripTransactionId :: Data.Text.Text,
+    vehicleNum :: Data.Text.Text,
+    vehicleType :: Domain.Types.Common.ServiceTierType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

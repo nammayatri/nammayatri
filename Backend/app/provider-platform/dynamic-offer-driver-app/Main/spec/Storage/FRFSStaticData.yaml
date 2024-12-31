@@ -22,7 +22,6 @@ imports:
   DayOfWeek: Data.Time
   TimeOfDay: Data.Time
 
-
 Station:
   tableName: station
 
@@ -93,6 +92,7 @@ Route:
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    roundRouteCode: Maybe Text
   default:
     timeBounds: "'Unbounded'"
   sqlType:
@@ -174,3 +174,10 @@ RouteTripStopMapping:
     stopCode: PrimaryKey
     tripSequenceNum: PrimaryKey
     scheduledDay: PrimaryKey
+  queries:
+    findByLocation:
+      kvFunction: findOneWithKV
+      where: stopPoint
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where: routeCode

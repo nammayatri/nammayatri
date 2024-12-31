@@ -19,11 +19,13 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
     postDriverFleetAddVehicles,
+    putDriverDashboardFleetWmbTripDelete,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -200,3 +202,10 @@ postDriverFleetAddVehicles merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicles) apiTokenInfo.personId.getId req
+
+putDriverDashboardFleetWmbTripDelete :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.TripTransaction -> Flow APISuccess)
+putDriverDashboardFleetWmbTripDelete merchantShortId opCity apiTokenInfo tripTransactionId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just $ DCommon.TransactionLogId tripTransactionId.getId)
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.putDriverDashboardFleetWmbTripDelete) tripTransactionId fleetOwnerId
