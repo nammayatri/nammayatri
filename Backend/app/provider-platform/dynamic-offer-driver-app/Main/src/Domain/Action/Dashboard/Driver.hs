@@ -451,12 +451,12 @@ enableDriver merchantShortId opCity reqDriverId = do
 
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
   mbDriverLicense <- QDL.findByDriverId driverId
 
-  when ((isNothing mVehicle && null linkedRCs) || isNothing mbDriverLicense) $
+  when ((isNothing mVehicle && null linkedRCs) || (driver.gender `notElem` transporterConfig.allowedGendersToSkipDlCheck && isNothing mbDriverLicense)) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs or no DL are linked to them")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False

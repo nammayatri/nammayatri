@@ -383,3 +383,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN end_ride_distan
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_genders_to_skip_dl_check text[]  default '{}';
