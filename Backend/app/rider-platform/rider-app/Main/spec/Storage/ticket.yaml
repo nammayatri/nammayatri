@@ -206,10 +206,12 @@ ServicePeopleCategory:
     pricePerUnit: Price
     cancellationCharges: "Maybe [CancellationCharge]"
     timeBounds: TimeBound|NoRelation
+    pricingType: PricingType
 
   beamType:
     cancellationCharges: Maybe Value
     timeBounds: Maybe TimeBound
+    pricingType: Maybe PricingType
 
   sqlType:
     cancellationCharges: json
@@ -223,15 +225,18 @@ ServicePeopleCategory:
     pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
     cancellationCharges: getCancellationChargesFromTable
     timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
+    pricingType: (Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays)|I
 
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     cancellationCharges: convertCancellationChargesToTable
     timeBounds: Kernel.Prelude.Just|I
+    pricingType: Kernel.Prelude.Just|I
 
   default:
     timeBounds: "'Unbounded'"
+    pricingType: "'AllDays'"
 
   types:
     CancellationCharge:
@@ -240,6 +245,8 @@ ServicePeopleCategory:
       derive: "'ListInstance, Eq, Ord, Read"
     CancelCharge:
       enum: "FlatFee HighPrecMoney,Percentage Int"
+    PricingType:
+      enum: "SameDay,AllDays"
 
   queries:
     findAllServicePeopleCategory:
