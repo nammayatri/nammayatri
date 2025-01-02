@@ -6,6 +6,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as CR
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
@@ -17,6 +18,7 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     bookingId :: C f (Id DB.Booking),
     date :: C f (Maybe UTCTime),
     merchantId :: C f (Maybe (Id DM.Merchant)),
+    riderId :: C f (Maybe (Id DP.Person)),
     reasonCode :: C f (Maybe CR.CancellationReasonCode),
     reasonStage :: C f (Maybe CR.CancellationStage),
     rideId :: C f (Maybe (Id DR.Ride)),
@@ -32,6 +34,7 @@ bookingCancellationReasonTTable =
     { additionalInfo = "additional_info",
       bookingId = "booking_id",
       date = "date",
+      riderId = "rider_id",
       merchantId = "merchant_id",
       reasonCode = "reason_code",
       reasonStage = "reason_stage",
@@ -52,27 +55,28 @@ instance CH.ClickhouseValue DBCR.CancellationSource where
 
 $(TH.mkClickhouseInstances ''BookingCancellationReasonT 'NO_SELECT_MODIFIER)
 
-countCancelledBookingsByBookingIdsByUserAndDriver ::
+countCancelledBookingsByRiderIdGroupByByUserAndDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  [Id DB.Booking] ->
+  Id DP.Person ->
   UTCTime ->
   m (Int, Int)
-countCancelledBookingsByBookingIdsByUserAndDriver bookingIds createdAt = do
+countCancelledBookingsByRiderIdGroupByByUserAndDriver riderId createdAt = do
   res <-
     CH.findAll $
       CH.select_
         ( \bookingCancellationReason -> do
             let userCount = CH.count_ (CH.distinct bookingCancellationReason.bookingId)
             let driverCount = CH.count_ (CH.distinct bookingCancellationReason.bookingId)
-            CH.groupBy (bookingCancellationReason.source) $ \(source) -> do
+            CH.groupBy (bookingCancellationReason.source) $ \source -> do
               (source, userCount, driverCount)
         )
-        $ CH.filter_
-          ( \bookingCancellationReason _ ->
-              bookingCancellationReason.date >=. (Just createdAt)
-                CH.&&. bookingCancellationReason.bookingId `in_` bookingIds
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingCancellationReasonTTable)
+        $ CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+          CH.filter_
+            ( \bookingCancellationReason _ ->
+                bookingCancellationReason.date >=. Just createdAt
+                  CH.&&. bookingCancellationReason.riderId CH.==. Just riderId
+            )
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingCancellationReasonTTable)
   let userCount = fromMaybe 0 $ listToMaybe $ map (\(_, a, _) -> a) $ filter (\(a, _, _) -> a == DBCR.ByUser) res
   let driverCount = fromMaybe 0 $ listToMaybe $ map (\(_, _, a) -> a) $ filter (\(a, _, _) -> a == DBCR.ByDriver) res
   pure (userCount, driverCount)
