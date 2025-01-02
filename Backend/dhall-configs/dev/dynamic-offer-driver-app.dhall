@@ -224,6 +224,7 @@ let AllocatorJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
+      | FleetAlert
       >
 
 let jobInfoMapx =
@@ -264,6 +265,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.MonthlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
