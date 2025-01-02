@@ -78,7 +78,7 @@ in  { esqDBCfg
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
-    , registryUrl = common.registryUrl
+    , registryUrl = common.nammayatriRegistryConfig.url
     , kafkaProducerCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
