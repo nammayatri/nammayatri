@@ -1,6 +1,7 @@
 module SharedLogic.Search where
 
 import qualified BecknV2.OnDemand.Tags as Beckn
+import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -12,7 +13,6 @@ import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Beam.SystemConfigs ()
-import Domain.Types.Location as Location
 import qualified Tools.Maps as Maps
 
 data SearchRes = SearchRes
@@ -43,7 +43,6 @@ data SearchReqLocation = SearchReqLocation
     address :: LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
 
 buildSearchReqLoc ::
   MonadFlow m =>

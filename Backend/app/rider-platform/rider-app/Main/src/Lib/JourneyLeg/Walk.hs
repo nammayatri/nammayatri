@@ -3,14 +3,14 @@
 module Lib.JourneyLeg.Walk where
 
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
-import Kernel.Utils.Common
-import Lib.JourneyLeg.Types.Walk
 import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLT
+import Lib.JourneyLeg.Types.Walk
 import qualified Lib.JourneyModule.Types as JT
 import SharedLogic.Search
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
-import Kernel.Types.Error
 
 instance JT.JourneyLeg WalkLegRequest m where
   search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do
@@ -44,23 +44,23 @@ instance JT.JourneyLeg WalkLegRequest m where
               updatedAt = now
             }
     QWalkLeg.create walkLeg
-  search _ = throwError (InternalError "Not supported")  
+  search _ = throwError (InternalError "Not supported")
 
   confirm (WalkLegRequestConfirm _) = return () -- return nothing
-  confirm _ = throwError (InternalError "Not supported")  
+  confirm _ = throwError (InternalError "Not supported")
 
   update (WalkLegRequestUpdate _) = return ()
-  update _ = throwError (InternalError "Not supported")  
+  update _ = throwError (InternalError "Not supported")
 
   cancel (WalkLegRequestCancel _) = return ()
-  cancel _ = throwError (InternalError "Not supported")  
+  cancel _ = throwError (InternalError "Not supported")
 
   getState (WalkLegRequestGetState req) = do
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
     return $ JT.JourneyLegState {status = status, currentPosition = Nothing}
-  getState _ = throwError (InternalError "Not supported")  
+  getState _ = throwError (InternalError "Not supported")
 
   getInfo (WalkLegRequestGetInfo req) = do
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")

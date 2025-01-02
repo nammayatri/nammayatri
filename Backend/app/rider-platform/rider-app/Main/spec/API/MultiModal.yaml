@@ -8,6 +8,9 @@ imports:
   TravelMode : Domain.Types.Trip
   Location : Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
+  JourneyLeg: Domain.Types.JourneyLeg
+  LatLong: Kernel.External.Maps.Types
+  Price: Kernel.Types.Common
 
 module: MultimodalConfirm
 
@@ -51,6 +54,33 @@ types:
     frequency: Maybe Seconds
     startTime: Maybe TimeOfDay
 
+  LegStatus:
+    legOrder: Int
+    legId: Id JourneyLeg
+    status: Text
+
+  JourneyDetails:
+    legDetails: [LegDetails]
+    totalFare: Price
+
+  LegDetails:
+    legOrder: Int
+    legFare: Price
+
+  ExtendLegReq:
+    legId: Id JourneyLeg
+    endLeg: Id JourneyLeg
+    endLocation: Maybe LatLong                          # if some other dest outside of journey
+
+  RiderLocationReq:
+    latLong: LatLong
+    currTime: UTCTime
+
+  SwitchLegReq:
+    newMode: TravelMode
+    currLocation: LatLong
+
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/info
@@ -74,7 +104,7 @@ apis:
         type: JourneyInfoResp
 
   - POST:
-      endpoint: /multimodal/{searchRequestId}/switch/{estimateId}
+      endpoint: /multimodal/{searchRequestId}/switch/{estimateId}     # switch variant
       params:
         searchRequestId: Id SearchRequest
         estimateId: Id Estimate
@@ -82,8 +112,58 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
-      endpoint: /multimodal/{legId}/switchToAuto
+      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
       params:
         legId: Text
+      request:
+        type: SwitchLegReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess                    # send new leg
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/leg/{legId}/skip
+      params:
+        journeyId: Id Journey
+        legId: Id JourneyLeg
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/extend/{journeyId}/leg                    # only applicable for current leg
+      request:
+        type: ExtendLegReq
+      params:
+        legId: Text
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/journey/{journeyId}/status
+      params:
+        journeyId: Id Journey
+      response:
+        type: "[LegStatus]"
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/cancel
+      params:
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/details
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyDetails
+
+  - POST:
+      endpoint: multimodal/{journeyId}/rider/location
+      params:
+        journeyId: Id Journey
+      request:
+        type: RiderLocationReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
