@@ -22,6 +22,7 @@ module Environment
     BAPs (..),
     buildAppEnv,
     releaseAppEnv,
+    cacheRegistryKey,
   )
 where
 
@@ -64,6 +65,7 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
@@ -152,7 +154,8 @@ data AppCfg = AppCfg
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
-    ltsCfg :: LocationTrackingeServiceConfig
+    ltsCfg :: LocationTrackingeServiceConfig,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic, FromDhall)
 
@@ -246,7 +249,8 @@ data AppEnv = AppEnv
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
-    ltsCfg :: LocationTrackingeServiceConfig
+    ltsCfg :: LocationTrackingeServiceConfig,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic)
 
@@ -354,11 +358,14 @@ instance Registry Flow where
       reorderList [] = []
       reorderList (x : xs) = xs ++ [x]
 
+cacheRegistryKey :: Text
+cacheRegistryKey = "taxi-bap:registry:"
+
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Redis.get . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  setKey = Redis.set . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  delKey = Redis.del . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  getKey = Redis.get . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  setKey = Redis.set . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  delKey = Redis.del . (cacheRegistryKey <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . (cacheRegistryKey <>) . lookupRequestToRedisKey

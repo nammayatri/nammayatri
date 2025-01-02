@@ -359,4 +359,5 @@ in  { esqDBCfg
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
     , ltsCfg = LocationTrackingeServiceConfig
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     }

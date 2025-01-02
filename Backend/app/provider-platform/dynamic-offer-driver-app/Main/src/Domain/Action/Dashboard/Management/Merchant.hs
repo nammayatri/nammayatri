@@ -109,9 +109,12 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.Registry (SimpleLookupRequest (..), lookupRequestToRedisKey)
+import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.GateInfoGeom as QGIG
@@ -120,6 +123,8 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Registry.Beckn.Interface as RegistryIF
+import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
@@ -1866,6 +1871,20 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           _ -> []
       return $ map (buildSubscriptionConfig newMerchantId newMerchantOperatingCityId now <$>) subscriptionCfgs
 
+  nyRegistryUrl <- asks (.nyRegistryUrl)
+  let uniqueKeyId = baseMerchant.uniqueKeyId
+      subscriberId = baseMerchant.subscriberId.getShortId
+      subType = BecknSub.BPP
+      domain = Context.MOBILITY
+      lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
+  mbAddCityReq <-
+    Registry.registryLookup nyRegistryUrl lookupReq >>= \case
+      Nothing -> do
+        logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
+        return Nothing
+      Just sub | req.city `elem` sub.city -> return Nothing
+      Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
+
   finally
     ( do
         whenJust mbGeometry $ \geometry -> QGEO.create geometry
@@ -1904,6 +1923,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
             CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
             CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
+
+        whenJust mbAddCityReq $ \addCityReq ->
+          void $ RegistryIF.updateSubscriber addCityReq
     )
     ( do
         CQDIPC.clearCache newMerchantOperatingCityId
@@ -1923,6 +1945,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.DRIVER
         exoPhone <- CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
+        whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
 
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
