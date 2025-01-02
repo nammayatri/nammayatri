@@ -77,6 +77,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
         fareParams.rideExtraTimeFare <&> \tbCharge -> do
           mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
 
+      -- This is not supposed to be passed separately as it is already passed in Base Fare hence in the filter it is removed
       nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
