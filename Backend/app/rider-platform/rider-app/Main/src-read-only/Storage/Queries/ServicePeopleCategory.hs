@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
+      Se.Set Beam.pricingType (Kernel.Prelude.Just pricingType),
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
