@@ -86,7 +86,7 @@ withBecknCallback doWithCallback auth transporterId action api cbUrl internalEnd
   where
     doWithResult result = do
       fork ("sending " <> show action <> ", pushing ondc logs") do
-        void $ pushLogs action (toJSON result) transporterId
+        void $ pushLogs action (toJSON result) transporterId "MOBILITY"
       doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap $ result
 
 forkBecknCallback ::

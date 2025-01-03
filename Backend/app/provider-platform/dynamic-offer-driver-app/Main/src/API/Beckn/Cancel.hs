@@ -85,7 +85,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelRideReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelRideReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
-        void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId
+        void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId "MOBILITY"
       let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601

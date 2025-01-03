@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.Metrics as Metrics
+import TransactionLogs.PushLogs
 
 type API = Spec.OnSearchAPI
 
@@ -49,6 +50,8 @@ onSearch _ req = withFlowHandlerAPI $ do
       fork "FRFS on_search processing" $ do
         Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
           DOnSearch.onSearch onSearchReq validatedDOnSearch
+      fork "FRFS onSearch received pushing ondc logs" do
+        void $ pushLogs "on_search" (toJSON req) validatedDOnSearch.merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
 
 onSearchLockKey :: Text -> Text

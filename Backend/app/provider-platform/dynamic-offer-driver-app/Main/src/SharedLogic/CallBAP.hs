@@ -1181,5 +1181,5 @@ callBecknAPIWithSignature' ::
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
-    void $ pushLogs b (toJSON req') merchantId.getId
+    void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
