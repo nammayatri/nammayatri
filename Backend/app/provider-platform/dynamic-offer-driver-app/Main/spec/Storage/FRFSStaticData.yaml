@@ -159,15 +159,22 @@ RouteTripStopMapping:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     enabled: Bool
+
+  sqlType:
+    scheduledDay: text
+
   beamFields:
     stopPoint:
       stopLat: Double
       stopLon: Double
+
   toTType:
     stopLat: (.lat)|I
     stopLon: (.lon)|I
+
   fromTType:
     stopPoint: Kernel.External.Maps.Types.LatLong stopLat stopLon|E
+
   constraints:
     tripCode: PrimaryKey
     routeCode: PrimaryKey
@@ -178,6 +185,10 @@ RouteTripStopMapping:
     findByLocation:
       kvFunction: findOneWithKV
       where: stopPoint
+    findAllRTSMappingByRouteAndDay:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, scheduledDay]
     findByRouteCode:
       kvFunction: findAllWithKV
       where: routeCode

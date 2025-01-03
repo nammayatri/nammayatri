@@ -24,15 +24,6 @@ VehicleRouteMapping:
     vehicleNumber: PrimaryKey
     routeCode: PrimaryKey
 
-  # queries:
-  #   findAllRouteMappings:
-  #     kvFunction: findAllWithKV
-  #     where: vehicleNumberHash
-  #   # findOneMapping:
-  #   #   kvFunction: findOneWithKV
-  #   #   where:
-  #   #     and: [vehicleNumberHash, routeCode]
-
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -41,8 +32,8 @@ TripTransaction:
 
   types:
     TripStatus:
-      - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
-      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
     id: Id TripTransaction
@@ -80,6 +71,10 @@ TripTransaction:
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripStatus>
 
   queries:
     findByTransactionId:

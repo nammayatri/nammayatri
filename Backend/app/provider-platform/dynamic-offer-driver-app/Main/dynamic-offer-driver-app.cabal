@@ -1238,6 +1238,7 @@ library
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hex-text
     , hspec
     , http-client
     , http-client-tls
@@ -1372,6 +1373,7 @@ executable dynamic-offer-driver-app-exe
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hex-text
     , hspec
     , http-client
     , http-client-tls

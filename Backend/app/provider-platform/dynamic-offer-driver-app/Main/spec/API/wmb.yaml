@@ -79,16 +79,19 @@ types:
   DriverReqResp:
     requestId: Text
 
+  AvailableRouteReq:
+    vehicleNumber: Text
+
 apis:
   - GET:
-      endpoint: /ui/wmb/availableRoutes/{vehicleNumber}
+      endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
-      params:
-        vehicleNumber: Text
+      request:
+        type: AvailableRouteReq
       response:
         type: "[AvailableRoute]"
   - POST:
-      endpoint: /ui/wmb/trip/link
+      endpoint: /wmb/trip/link
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: TripLinkReq
@@ -96,13 +99,13 @@ apis:
         type: TripTransactionDetails
 
   - GET:
-      endpoint: /ui/wmb/trip/active
+      endpoint: /wmb/trip/active
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: ActiveTripTransaction
 
   - GET:
-      endpoint: /ui/wmb/trip/list
+      endpoint: /wmb/trip/list
       auth: TokenAuth PROVIDER_TYPE
       query:
         - limit: Int
@@ -112,7 +115,7 @@ apis:
         type: "[TripTransactionDetails]"
 
   - POST:
-      endpoint: /ui/wmb/trip/{tripTransactionId}/start
+      endpoint: /wmb/trip/{tripTransactionId}/start
       auth: TokenAuth PROVIDER_TYPE
       params:
         tripTransactionId: Text
@@ -122,7 +125,7 @@ apis:
         type: APISuccess
 
   - POST:
-      endpoint: /ui/wmb/trip/{tripTransactionId}/end
+      endpoint: /wmb/trip/{tripTransactionId}/end
       auth: TokenAuth PROVIDER_TYPE
       params:
         tripTransactionId: Text
@@ -132,7 +135,7 @@ apis:
         type: TripEndResp
 
   - POST:
-      endpoint: /ui/wmb/trip/{tripTransactionId}/request
+      endpoint: /wmb/trip/{tripTransactionId}/request
       auth: TokenAuth PROVIDER_TYPE
       params:
         tripTransactionId: Text
@@ -141,7 +144,7 @@ apis:
       response:
         type: DriverReqResp
   - POST:
-      endpoint: /ui/wmb/requests/{driverRequestId}/cancel
+      endpoint: /wmb/requests/{driverRequestId}/cancel
       auth: TokenAuth PROVIDER_TYPE
       params:
         driverRequestId: Text
