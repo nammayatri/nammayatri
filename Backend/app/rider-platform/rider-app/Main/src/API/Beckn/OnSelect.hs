@@ -47,7 +47,7 @@ onSelect _ reqV2 = withFlowHandlerBecknAPI do
       Redis.whenWithLockRedis (onSelectLockKey messageId) 60 $ do
         validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
         fork "on select received pushing ondc logs" do
-          void $ pushLogs "on_select" (toJSON reqV2) validatedOnSelectReq.searchRequest.merchantId.getId
+          void $ pushLogs "on_select" (toJSON reqV2) validatedOnSelectReq.searchRequest.merchantId.getId "MOBILITY"
         fork "on select processing" $ do
           Redis.whenWithLockRedis (onSelectProcessingLockKey messageId) 60 $
             DOnSelect.onSelect validatedOnSelectReq
