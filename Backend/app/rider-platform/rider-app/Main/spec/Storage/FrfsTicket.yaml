@@ -251,6 +251,7 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
+    journeyLegOrder : Maybe Int
 
   default:
     customerCancelled: "false"

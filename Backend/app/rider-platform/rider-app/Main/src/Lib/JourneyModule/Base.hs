@@ -97,6 +97,33 @@ getAllLegsInfo journeyId = do
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ sortBy (comparing (.order)) allLegsInfo
 
+getAllLegsStatus ::
+  ( EsqDBFlow m r,
+    Monad m,
+    CacheFlow m r,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m,
+    EncFlow m r
+  ) =>
+  Id DJourney.Journey ->
+  m [JL.JourneyLegState]
+getAllLegsStatus journeyId = do
+  allLegsRawData <- getJourneyLegs journeyId
+  allLegsState <-
+    allLegsRawData `forM` \leg -> do
+      case leg.legId of
+        Just legIdText -> do
+          let legId = Id legIdText
+          case leg.mode of
+            DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legId}
+            DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legId}
+            DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legId}
+            _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+        Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+  return $ sortBy (comparing (.legOrder)) allLegsState
+
 startJourney ::
   ( JL.ConfirmFlow m r c,
     JL.JourneyLeg TaxiLegRequest m,

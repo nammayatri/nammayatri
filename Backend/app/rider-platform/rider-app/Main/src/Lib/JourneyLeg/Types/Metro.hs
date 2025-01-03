@@ -32,6 +32,8 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
 data MetroLegRequestCancelData = MetroLegRequestCancelData
 
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 newtype MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch

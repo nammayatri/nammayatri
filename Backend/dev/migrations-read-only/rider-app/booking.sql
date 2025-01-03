@@ -185,3 +185,4 @@ ALTER TABLE atlas_app.booking ADD COLUMN vehicle_icon_url character varying(255)
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN disability_tag text ;
+ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_order integer ;

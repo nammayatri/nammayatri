@@ -491,6 +491,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
+                journeyLegOrder = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking

@@ -92,7 +92,7 @@ data LegDetails = LegDetails {legFare :: Kernel.Types.Common.Price, legOrder :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegStatus = LegStatus {legId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg, legOrder :: Kernel.Prelude.Int, status :: Kernel.Prelude.Text}
+data LegStatus = LegStatus {legOrder :: Kernel.Prelude.Int, status :: Lib.JourneyModule.Types.JourneyLegStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
