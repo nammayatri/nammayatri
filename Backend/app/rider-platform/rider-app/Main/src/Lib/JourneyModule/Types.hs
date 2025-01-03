@@ -119,7 +119,8 @@ newtype SearchResponse = SearchResponse
 
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
-    currentPosition :: Maybe LatLong
+    currentPosition :: Maybe LatLong,
+    legOrder :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

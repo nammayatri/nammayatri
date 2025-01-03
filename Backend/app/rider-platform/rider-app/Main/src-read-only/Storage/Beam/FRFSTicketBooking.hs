@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSTicketBooking where
@@ -37,6 +35,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

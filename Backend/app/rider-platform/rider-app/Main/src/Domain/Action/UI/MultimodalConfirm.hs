@@ -11,13 +11,14 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
 import Environment
-import EulerHS.Prelude hiding (find, forM_, id)
+import EulerHS.Prelude hiding (find, forM_, id, map)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.Types as JMTypes
 import Storage.Queries.Estimate as QEstimate
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.SearchRequest as QSearchRequest
@@ -122,13 +123,13 @@ postMultimodalSwitch ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalSwitch = do error "Logic yet to be decided"
 
-postMultimodalJourneyDetails ::
+getMultimodalJourneyDetails ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyDetails
-postMultimodalJourneyDetails = do error "Logic yet to be decided"
+getMultimodalJourneyDetails = do error "Logic yet to be decided"
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -146,14 +147,6 @@ postMultimodalJourneyCancel ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyCancel = do error "Logic yet to be decided"
-
-postMultimodalJourneyStatus ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow [ApiTypes.LegStatus]
-postMultimodalJourneyStatus = do error "Logic yet to be decided"
 
 postMultimodalExtendLeg ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -173,3 +166,20 @@ postMultimodalJourneyLegSkip ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyLegSkip = do error "Logic yet to be decided"
+
+getMultimodalJourneyStatus ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow [ApiTypes.LegStatus]
+getMultimodalJourneyStatus (_, _) journeyId = do
+  legs <- JM.getAllLegsStatus journeyId
+  return $ map transformLeg legs
+  where
+    transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
+    transformLeg legState =
+      ApiTypes.LegStatus
+        { legOrder = fromMaybe 0 legState.legOrder,
+          status = legState.status
+        }

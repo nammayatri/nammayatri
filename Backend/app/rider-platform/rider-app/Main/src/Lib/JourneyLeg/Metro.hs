@@ -6,6 +6,7 @@ import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.TicketBookingService as TBS
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -13,6 +14,7 @@ import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 
 mapServiceStatusToJourneyLegStatus :: TBS.ServiceStatus -> JT.JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
@@ -58,7 +60,15 @@ instance JT.JourneyLeg MetroLegRequest m where
   cancel (MetroLegRequestCancel _) = return ()
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (MetroLegRequestGetState _) = return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing}
+  getState (MetroLegRequestGetState req) = do
+    mbMetroBooking <- B.runInReplica $ QTBooking.findBySearchId req.searchId
+    case mbMetroBooking of
+      Just metroBooking -> do
+        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = metroBooking.journeyLegOrder}
+      Nothing -> do
+        -- search <- QFRFSSearch.findById req.searchId >>= fromMaybeM (InvalidRequest "Invalid search id")
+        -- return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = fromMaybe 0 search.journeyLegInfo.journeyLegOrder}
+        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = Nothing}
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = do

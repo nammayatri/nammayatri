@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -57,6 +56,7 @@ data Booking = Booking
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
+    journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
