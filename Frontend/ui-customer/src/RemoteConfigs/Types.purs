@@ -148,3 +148,7 @@ type BusFlowConfig = {
   liveRoutes :: Int,
   ticketValidity :: String
 }
+
+type AppInfoConfig = {
+  website :: String
+}
