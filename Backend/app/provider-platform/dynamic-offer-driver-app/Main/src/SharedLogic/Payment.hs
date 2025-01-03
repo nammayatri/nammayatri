@@ -123,7 +123,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing [] mbDeepLinkData -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData -- call same function with no existing order
 
 mkSplitSettlementDetails :: [VF.VendorFee] -> HighPrecMoney -> SplitSettlementDetails
 mkSplitSettlementDetails vendorFees totalAmount = do
