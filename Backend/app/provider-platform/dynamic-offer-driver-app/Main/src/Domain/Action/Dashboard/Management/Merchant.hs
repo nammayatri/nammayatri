@@ -43,6 +43,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyUpdate,
     postMerchantSchedulerTrigger,
     postMerchantConfigClearCacheSubscription,
+    postMerchantConfigFailover,
   )
 where
 
@@ -2229,3 +2230,52 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     castServiceName = \case
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
+
+postMerchantConfigFailover :: ShortId DM.Merchant -> Context.City -> Common.ConfigNames -> Common.ConfigFailoverReq -> Flow APISuccess
+postMerchantConfigFailover merchantShortId city configNames req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  case configNames of
+    Common.BecknNetwork -> do
+      configureBecknNetworkFailover merchant req
+    _ -> do
+      configureMessageProviderFailover merchantOperatingCity req
+  pure Success
+
+configureBecknNetworkFailover :: DM.Merchant -> Common.ConfigFailoverReq -> Flow ()
+configureBecknNetworkFailover merchant req = do
+  case req.priorityOrder of
+    Just priorityOrder -> do
+      CQM.updateGatewayAndRegistryPriorityList merchant (castNetworkEnums <$> priorityOrder.networkTypes)
+    Nothing -> do
+      let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+      CQM.updateGatewayAndRegistryPriorityList merchant networkPriorityList
+  pure ()
+
+configureMessageProviderFailover :: DMOC.MerchantOperatingCity -> Common.ConfigFailoverReq -> Flow ()
+configureMessageProviderFailover merchantOperatingCity req = do
+  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  case req.priorityOrder of
+    Just priorityOrder -> do
+      let smsProviders = fromMaybe merchantServiceUsageConfig.smsProvidersPriorityList (nonEmpty priorityOrder.smsProviders)
+          whatsappProviders = fromMaybe merchantServiceUsageConfig.whatsappProvidersPriorityList (nonEmpty priorityOrder.whatsappProviders)
+          updatedConfig = merchantServiceUsageConfig {DMSUC.smsProvidersPriorityList = smsProviders, DMSUC.whatsappProvidersPriorityList = whatsappProviders}
+      CQMSUC.updateMerchantServiceUsageConfig updatedConfig
+    Nothing -> do
+      let messageProviderPriorityList = reorderList merchantServiceUsageConfig.smsProvidersPriorityList
+          whatsappProviderPriorityList = reorderList merchantServiceUsageConfig.whatsappProvidersPriorityList
+      let updatedConfig = merchantServiceUsageConfig {DMSUC.smsProvidersPriorityList = messageProviderPriorityList, DMSUC.whatsappProvidersPriorityList = whatsappProviderPriorityList}
+      CQMSUC.updateMerchantServiceUsageConfig updatedConfig
+  pure ()
+
+nonEmpty :: [a] -> Maybe [a]
+nonEmpty [] = Nothing
+nonEmpty xs = Just xs
+
+reorderList :: [a] -> [a]
+reorderList [] = []
+reorderList (x : xs) = xs ++ [x]
+
+castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
+castNetworkEnums Common.ONDC = Domain.Types.ONDC
+castNetworkEnums Common.NY = Domain.Types.NY

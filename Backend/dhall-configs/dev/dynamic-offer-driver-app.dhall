@@ -385,4 +385,8 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
     , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
     }

@@ -227,3 +227,19 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE'
   WHERE endpoint = 'MerchantAPI DeleteMerchantSpecialLocationGatesDeleteEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantConfigFailover","migration":"endpoint","param":"MerchantAPI ToggleConfigPriorityEndpoint","schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER'
+  WHERE endpoint = 'MerchantAPI ToggleConfigPriorityEndpoint';
+
+-- {"api":"PostMerchantConfigFailover","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER'
+  WHERE endpoint = 'MerchantAPI PostMerchantConfigFailoverEndpoint';
+
+-- {"api":"PostMerchantConfigFailover","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'TOGGLE_CONFIG_PRIORITY' ) ON CONFLICT DO NOTHING;

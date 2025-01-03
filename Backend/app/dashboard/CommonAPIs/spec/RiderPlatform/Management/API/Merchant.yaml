@@ -14,7 +14,16 @@ imports:
   UpsertSpecialLocationReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
-
+  City: Kernel.Types.Beckn.Context
+  ToParamSchema: Kernel.Prelude
+  FromHttpApiData: Servant
+  ToHttpApiData: Servant
+  HideSecrets: Kernel.Types.HideSecrets
+  ConfigNames: Dashboard.Common.Merchant
+  ConfigFailoverReq: Dashboard.Common.Merchant
+  WhatsappProviderEnums: Dashboard.Common.Merchant
+  NetworkEnums: Dashboard.Common.Merchant
+  PriorityListWrapperType: Dashboard.Common.Merchant
 module: Merchant
 
 apis:
@@ -173,7 +182,18 @@ apis:
       migrate:
         endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
         endpointV2:
-
+  - POST: #ToggleConfigPriorityAPI
+      endpoint: /config/{configName}/failover
+      params:
+        configName: ConfigNames
+      request:
+        type: ConfigFailoverReq
+      response:
+        type: APISuccess
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
+      migrate:
+        endpoint: MerchantAPI ToggleConfigPriorityEndpoint
+        endpointV2:
 types:
   MerchantUpdateReq:
     - name: Maybe Text
@@ -181,6 +201,7 @@ types:
     - fcmConfig: Maybe FCMConfigUpdateReq
     - gatewayUrl: Maybe BaseUrl
     - registryUrl: Maybe BaseUrl
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
