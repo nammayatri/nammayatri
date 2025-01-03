@@ -42,6 +42,7 @@ imports:
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
+  GatewayAndRegistryService: Domain.Types
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -84,6 +85,7 @@ Merchant:
     info: Maybe Text
     registryUrl: BaseUrl
     onlinePayment: Bool
+    gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -97,8 +99,7 @@ Merchant:
     status: character varying (255)
     subscriberId: character varying (255)
     uniqueKeyId: character varying (255)
-
-
+    gatewayAndRegistryPriorityList: "text[]"
 
   default:
     city: "'Kochi'"
@@ -108,6 +109,7 @@ Merchant:
     registryUrl: "'http://localhost:8020'"
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
+    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
 
   excludedFields:
     - merchantId
@@ -118,6 +120,7 @@ Merchant:
       destinationRestriction: GeoRestriction
   beamType:
     registryUrl: Text
+    gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
 
   constraints:
     subscriberId: SecondaryKey
@@ -127,10 +130,12 @@ Merchant:
     registryUrl: Kernel.Prelude.showBaseUrl|I
     originRestriction: Kernel.Types.Geofencing.origin|I
     destinationRestriction: Kernel.Types.Geofencing.destination|I
+    gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
 
   fromTType:
     geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction destinationRestriction|E
     registryUrl: Kernel.Prelude.parseBaseUrl|IM
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
 
   queries:
     findById:
@@ -142,6 +147,10 @@ Merchant:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
+    updateGatewayAndRegistryPriorityList:
+      kvFunction: updateWithKV
+      where: id
+      params: [gatewayAndRegistryPriorityList]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -540,6 +549,18 @@ MerchantServiceUsageConfig:
         - smsProvidersPriorityList
         - snapToRoadProvidersList
       where: merchantOperatingCityId
+    updateSmsProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [smsProvidersPriorityList]
+    updateWhatsappProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [whatsappProvidersPriorityList]
+    updateSnapToRoadProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [snapToRoadProvidersList]
 
 DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety

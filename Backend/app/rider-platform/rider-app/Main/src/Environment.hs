@@ -28,7 +28,9 @@ where
 import AWS.S3
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
@@ -50,7 +52,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -66,7 +68,7 @@ import Storage.CachedQueries.Merchant as CM
 import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
-import TransactionLogs.Types
+import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
@@ -141,7 +143,11 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -227,7 +233,11 @@ data AppEnv = AppEnv
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl
   }
   deriving (Generic)
 
@@ -266,7 +276,6 @@ buildAppEnv cfg@AppCfg {..} = do
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
-  -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
@@ -299,11 +308,30 @@ instance Registry Flow where
   registryLookup = Registry.withSubscriberCache performLookup
     where
       performLookup sub = do
-        fetchFromDB sub.merchant_id >>= \registryUrl -> do
+        merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
+        performRegistryLookup merchant.gatewayAndRegistryPriorityList sub merchant 1
+      fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
+      fetchUrlFromList priorityList = do
+        case priorityList of
+          (NY : _) -> asks (.nyRegistryUrl)
+          _ -> asks (.ondcRegistryUrl)
+      retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      retryWithNextRegistry _ registryUrl sub merchant tryNumber = do
+        logError $ "registry " <> show registryUrl <> " seems down, trying with next registryUrl"
+        let maxRetries = length merchant.gatewayAndRegistryPriorityList
+        if tryNumber > maxRetries
+          then throwError $ InternalError "Max retries reached, perhaps all registries are down"
+          else do
+            let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+            performRegistryLookup networkPriorityList sub merchant tryNumber
+      performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      performRegistryLookup priorityList sub merchant tryNumber = do
+        fetchUrlFromList priorityList >>= \registryUrl -> do
           Registry.registryLookup registryUrl sub
-      fetchFromDB merchantId = do
-        merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
-        pure $ merchant.registryUrl
+            `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
+      reorderList :: [a] -> [a]
+      reorderList [] = []
+      reorderList (x : xs) = xs ++ [x]
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

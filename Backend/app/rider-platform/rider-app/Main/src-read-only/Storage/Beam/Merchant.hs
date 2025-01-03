@@ -6,6 +6,7 @@
 module Storage.Beam.Merchant where
 
 import qualified Database.Beam as B
+import qualified Domain.Types
 import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -41,6 +42,7 @@ data MerchantT f = MerchantT
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fallbackShortId :: B.C f Kernel.Prelude.Text,
+    gatewayAndRegistryPriorityList :: B.C f (Kernel.Prelude.Maybe [Domain.Types.GatewayAndRegistryService]),
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     geoHashPrecisionValue :: B.C f Kernel.Prelude.Int,
     destinationRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,
