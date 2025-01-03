@@ -32,12 +32,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:fontFamily="@font/plus_jakartasans_medium"
                 android:gravity="center"
                 android:text="Please enable microphone permissions from the app settings to make calls."
                 android:textColor="#000000"
                 android:textSize="12sp" />
-                
+
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>

@@ -436,17 +436,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         initApp();
-        cleverTapSignedCall = new CleverTapSignedCall(context, activity, true);
-        CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
-        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
-        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
-            @Override
-            public boolean onNetworkQualityResponse(final int score) {
-                Log.d(LOG_TAG, "Signed Call Network quality score: " + score);
-                return score >= 75;
-            }
-        });        
-        cleverTapSignedCall.signedCallListener();
+        // cleverTapSignedCall = new CleverTapSignedCall(context, activity, true);
+        // CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
+        // cleverTapSignedCall.signedCallListener();
+        // SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
+        // SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
+        //     @Override
+        //     public boolean onNetworkQualityResponse(final int score) {
+        //         Log.d(LOG_TAG, "Signed Call Network quality score: " + score);
+        //         return score >= 75;
+        //     }
+        // });        
         handleSplashScreen();
 
         WebView.setWebContentsDebuggingEnabled(true);

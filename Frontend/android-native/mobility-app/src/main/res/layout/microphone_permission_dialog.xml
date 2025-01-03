@@ -43,7 +43,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:fontFamily="@font/plus_jakartasans_medium"
                 android:gravity="center"
                 android:text="The customer tried to call you. Please enable microphone permissions from the app settings to proceed."
                 android:textColor="#000000"

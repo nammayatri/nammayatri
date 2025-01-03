@@ -144,23 +144,12 @@ public class CleverTapSignedCall {
                     + "\n error explanation: " + callException.getExplanation());
 
                 if(callException.getErrorCode() == CallException.CanNotProcessCallRequest.getErrorCode()){
-                    // ExecutorManager.runOnMainThread(() -> {
-                    //     System.out.println("Signed call: " + "Failed signed call, should go ahead with normal call");
-                    //     System.out.println("Signed call: " + "Failed signed call " + phoneNum);
-                    //     boolean call = !isDriver; 
-                    //     showDialer(phoneNum,call);
-                    // });
+                    // Do nothing (user trying to spam call button, sdk still processing first click)
                 } else if(callException.getErrorCode() == CallException.MicrophonePermissionNotGrantedException.getErrorCode()) {
-                    System.out.println("Signed call: if2");
                     useFallbackDialer++;
-
                     if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                         ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
                     }
-                    // if(onetry[0]){
-                    //     voipDialer(finalCuid,isDriver,phoneNum);
-                    //     onetry[0] =false;
-                    // }
                     Toast.makeText(context, "Enable Microphone Permission for Internet Calling.", Toast.LENGTH_LONG).show();
                 } else if(callException.getErrorCode() == CallException.BadNetworkException.getErrorCode() || callException.getErrorCode() == CallException.NoInternetException.getErrorCode() || callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode() || callException.getErrorCode() == CallException.CallFeatureNotAvailable.getErrorCode()){
                     System.out.println("Signed call: " + "Failed signed call, should go ahead with normal call");
@@ -168,12 +157,9 @@ public class CleverTapSignedCall {
                     Toast.makeText(context, "Bad Network going ahead with direct call.", Toast.LENGTH_LONG).show();
                     boolean call = !isDriver;
                     useFallbackDialer+=2;
-
                     showDialer(phoneNum,call);
                 } else {
-                    // popup call failed
                     useFallbackDialer+=2;
-
                     Toast.makeText(context, "Call failed. Please try again later.", Toast.LENGTH_LONG).show();
                 }
             };
@@ -205,7 +191,6 @@ public class CleverTapSignedCall {
                 System.out.println("Signed call: popup dikghana hai abi");
             } else if(audioPermissionStatus == "DENIED"){
                 System.out.println("Signed call: alert dikghana hai abi");
-                // showAlertForMicrophonePermission();
                 showAlertForMicrophonePermission();
             }
             Log.e("signed call error :", "Signed call Audio Permission not given" );
@@ -228,7 +213,6 @@ public void showAlertForMicrophonePermission() {
         Log.e("PermissionDialog", "Context or Activity is null, cannot show dialog");
         return;
     }
-
     // Create an AlertDialog Builder
     AlertDialog.Builder builder = new AlertDialog.Builder(activity);
     builder.setCancelable(false); // Prevent dismissing the dialog by touching outside

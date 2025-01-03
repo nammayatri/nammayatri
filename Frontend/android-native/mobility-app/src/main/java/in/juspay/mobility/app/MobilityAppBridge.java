@@ -143,7 +143,7 @@ public class MobilityAppBridge extends HyperBridge {
     public static String youtubeVideoStatus;
     public static float videoDuration = 0;
 
-    CleverTapSignedCall cleverTapSignedCall;
+    // CleverTapSignedCall cleverTapSignedCall;
 
     CameraUtils cameraUtils;
 
@@ -159,7 +159,7 @@ public class MobilityAppBridge extends HyperBridge {
         traceElements = new HashMap<>();
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
         remoteConfigs = new MobilityRemoteConfigs(false, false);
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity(), false);
+        // cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity(), false);
         registerCallBacks();
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
@@ -231,7 +231,7 @@ public class MobilityAppBridge extends HyperBridge {
             bridgeComponents.getContext().startActivity(intent);    // Start the launch activity
         }
     }
-    
+
     public void registerCallBacks() {
        
             callBack = new CallBack() {

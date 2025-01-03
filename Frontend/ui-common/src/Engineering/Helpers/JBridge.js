@@ -860,11 +860,11 @@ export const stopChatListenerService = function () {
 
 export const sendMessage = function (message) {
   if (JBridge.sendMessage) {
-    if (timer) clearTimeout(timer);
-    const fn = function () {
+    // if (timer) clearTimeout(timer);
+    // const fn = function () {
       return JBridge.sendMessage(message);
-    }
-    timer = setTimeout(fn, 200);
+    // }
+    // timer = setTimeout(fn, 200);
   }
 };
 
