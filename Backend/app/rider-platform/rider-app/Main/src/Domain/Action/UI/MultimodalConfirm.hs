@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Domain.Action.UI.MultimodalConfirm (postMultimodalConfirm, getMultimodalSwitchTaxi) where
+module Domain.Action.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
@@ -22,7 +22,7 @@ import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
-import Servant
+import Servant hiding (throwError)
 import Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
@@ -31,7 +31,7 @@ import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
 postMultimodalInfo ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
@@ -42,51 +42,14 @@ postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  legsResp <-
-    forM legs $ \leg -> do
-      let legIdText = leg.legId & fromMaybeM (InternalError "Id of Nothing type")
-      let journeyLegInfo' =
-            case leg.legExtraInfo of
-              JMTypes.Walk walkInfo ->
-                ApiTypes.Walk $
-                  ApiTypes.JourneyLegWalkInfo
-                    { destination = walkInfo.destination,
-                      origin = walkInfo.origin
-                    }
-              JMTypes.Taxi taxiInfo ->
-                ApiTypes.Taxi $
-                  ApiTypes.JourneyLegTaxiInfo
-                    { origin = taxiInfo.origin,
-                      stops = [taxiInfo.destination],
-                      providerLogo = Nothing,
-                      providerName = ""
-                    }
-              JMTypes.Metro metroInfo ->
-                ApiTypes.Metro $
-                  ApiTypes.JourneyLegMetroInfo
-                    { destinationStop = metroInfo.destinationStop,
-                      frequency = metroInfo.frequency,
-                      lineColor = metroInfo.lineColor,
-                      originStop = metroInfo.originStop
-                    }
-      return $
-        ApiTypes.JourneyLegResp
-          { estimatedDistance = leg.estimatedDistance,
-            estimatedDuration = leg.estimatedDuration,
-            estimatedFare = mkPriceAPIEntity leg.estimatedFare,
-            journeyLegInfo = journeyLegInfo',
-            legId = legIdText,
-            legNumber = leg.order,
-            travelMode = leg.travelMode
-          }
-  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "duration of Nothing type")
+  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "Duration of Nothing type")
   estFare <- journey.estimatedFare & fromMaybeM (InternalError "Fare of Nothing type")
   return $
     ApiTypes.JourneyInfoResp
       { estimatedDuration = estDuration,
         estimatedFare = mkPriceAPIEntity estFare,
         estimatedDistance = journey.estimatedDistance,
-        legs = legsResp
+        legs
       }
 
 postMultimodalConfirm ::
@@ -106,12 +69,20 @@ getMultimodalBookingInfo ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Environment.Flow Kernel.Types.APISuccess.APISuccess
+    Environment.Flow ApiTypes.JourneyInfoResp
   )
-getMultimodalBookingInfo (personId, merchantId) journeyId = do
+getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
-  allLegs <- JM.getAllLegsInfo journeyId
-  pure Kernel.Types.APISuccess.Success
+  legs <- JM.getAllLegsInfo journeyId
+  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "Duration of Nothing type")
+  estFare <- journey.estimatedFare & fromMaybeM (InternalError "Fare of Nothing type")
+  return $
+    ApiTypes.JourneyInfoResp
+      { estimatedDuration = estDuration,
+        estimatedFare = mkPriceAPIEntity estFare,
+        estimatedDistance = journey.estimatedDistance,
+        legs
+      }
 
 getMultimodalSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -135,3 +106,20 @@ getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
   newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
   pure Kernel.Types.APISuccess.Success
+
+postMultimodalSwitchToAuto ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Text ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalSwitchToAuto _ _ = throwError $ InternalError "Not Implemented"
+
+postMultimodalSwitch ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
+  Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalSwitch _ _ _ = throwError $ InternalError "Not Implemented"

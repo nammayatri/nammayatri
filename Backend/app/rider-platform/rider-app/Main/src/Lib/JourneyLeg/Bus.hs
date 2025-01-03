@@ -2,10 +2,10 @@
 
 module Lib.JourneyLeg.Bus where
 
+import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types.Bus
-import Kernel.Types.Error
-import Kernel.Prelude
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where
@@ -36,7 +36,7 @@ instance JT.JourneyLeg BusLegRequest m where
     throwError (InternalError "Not supported")
   update _ = throwError (InternalError "Not supported")
 
-  cancel (BusLegRequestCancel _) = return ()
+  cancel (BusLegRequestCancel _) = throwError (InternalError "Not supported")
   cancel _ = throwError (InternalError "Not supported")
 
   getState (BusLegRequestGetState _) = throwError (InternalError "Not supported")

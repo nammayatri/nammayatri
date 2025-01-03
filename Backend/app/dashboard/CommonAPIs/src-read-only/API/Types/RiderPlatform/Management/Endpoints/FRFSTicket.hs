@@ -68,7 +68,7 @@ data FRFSStationAPI = FRFSStationAPI
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSStationReq = FRFSStationReq
