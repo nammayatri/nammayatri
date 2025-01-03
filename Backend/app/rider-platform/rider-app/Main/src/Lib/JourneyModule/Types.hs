@@ -56,8 +56,12 @@ data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
     currentPosition :: Maybe LatLong
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney}
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyLegStatus
   = InPlan
@@ -77,7 +81,8 @@ data JourneyLegStatus
   | Finishing
   | Cancelled
   | Completed
-  deriving (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInitData = JourneyInitData
   { legs :: [EMInterface.MultiModalLeg],
@@ -88,6 +93,8 @@ data JourneyInitData = JourneyInitData
     estimatedDuration :: Seconds,
     maximumWalkDistance :: Meters
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegInfo = LegInfo
   { skipBooking :: Bool,
@@ -103,25 +110,35 @@ data LegInfo = LegInfo
     merchantId :: Id DM.Merchant,
     personId :: Id DP.Person
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroLegExtraInfo
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
     destination :: Location
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TaxiLegExtraInfo = TaxiLegExtraInfo
   { origin :: Location,
     destination :: Location
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroLegExtraInfo = MetroLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
-    lineColor :: Text,
-    frequency :: Seconds
+    lineColor :: Maybe Text,
+    frequency :: Maybe Int -- make it Seconds
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpdateJourneyReq = UpdateJourneyReq
   { fare :: Maybe Price,
@@ -130,6 +147,8 @@ data UpdateJourneyReq = UpdateJourneyReq
     totalLegs :: Maybe Int,
     updatedAt :: UTCTime
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapTaxiRideStatusToJourneyLegStatus :: DRide.RideStatus -> JourneyLegStatus
 mapTaxiRideStatusToJourneyLegStatus status = case status of
@@ -243,7 +262,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
       }
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> m LegInfo
-mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} journeyLeg = do
+mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   now <- getCurrentTime
   mbEstimatedFare <-
@@ -273,7 +292,6 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} journeyLeg = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = lineColor,
-                lineColorCode = lineColorCode,
                 frequency = frequency
               }
       }

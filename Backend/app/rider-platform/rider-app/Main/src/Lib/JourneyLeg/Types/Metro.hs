@@ -2,15 +2,14 @@ module Lib.JourneyLeg.Types.Metro where
 
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import Kernel.External.Maps.Google.MapsClient.Types
+import Kernel.Prelude
 import Kernel.Types.Id
 
 data MetroLegRequestSearchData = MetroLegRequestSearchData
-  {
-    fromStationCode :: Text,
+  { fromStationCode :: Text,
     toStationCode :: Text,
     routeCode :: Maybe Text,
-    quantity :: Int,
-    
+    quantity :: Int
   }
 
 data MetroLegRequestUpdateData = MetroLegRequestUpdateData
