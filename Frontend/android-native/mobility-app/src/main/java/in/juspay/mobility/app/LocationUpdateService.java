@@ -753,7 +753,7 @@ public class LocationUpdateService extends Service {
             if (canCallAPI(executorLocUpdate.isShutdown())) {
                 Log.d(LOG_TAG, "DriverUpdateLoc CanCallAPI and ExecutorShutDown Passed");
                 executorLocUpdate = Executors.newSingleThreadExecutor();
-                MobilityCallAPI callAPIHandler = new MobilityCallAPI();
+                MobilityCallAPI callAPIHandler = new MobilityCallAPI(getApplicationContext());
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);

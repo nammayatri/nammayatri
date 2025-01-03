@@ -11,6 +11,10 @@ package in.juspay.mobility.common.services;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -27,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -44,12 +49,33 @@ import in.juspay.mobility.common.R;
 public class MobilityCallAPI {
 
     private static final String DEFAULT_API_METHOD = "POST";
-    private static final Boolean USE_OKHTTP = true;
 
+    private static boolean USE_OKHTTP = false;
+
+    private static final String LOG_TAG = "MobilityAPI";
+
+    public MobilityCallAPI (){}
+    
     // OkHttpClient with Keep-Alive and Connection Pooling
-    private static final OkHttpClient client = new OkHttpClient.Builder()
-            .connectionPool(new ConnectionPool()) // default maxIdleConnections = 5 and keepAliveDuration = 5 minutes
-            .build();
+    private static OkHttpClient client;
+
+    // Constructor to initialize OkHttpClient with Keep-Alive and Connection Pooling
+    public MobilityCallAPI (Context context){
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String config = sharedPref.getString("OK_HTTP_CONFIG", "null");
+        try {
+            JSONObject parsedConfig = new JSONObject(config);
+            USE_OKHTTP = parsedConfig.optBoolean("useOkHttp", false);
+            int maxIdleConnections = parsedConfig.optInt("maxIdleConnections", 5),
+                keepAliveDuration = parsedConfig.optInt("keepAliveDuration", 5);
+            client = new OkHttpClient.Builder()
+                    .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDuration, TimeUnit.MINUTES)) // default maxIdleConnections = 5 and keepAliveDuration = 5 minutes
+                    .build();
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, e.getMessage());
+            USE_OKHTTP = false; // default to HttpURLConnection in case of any error
+        }
+    }
 
     public static MobilityAPIResponse callAPI(String endpoint) {
         return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
@@ -86,7 +112,6 @@ public class MobilityCallAPI {
             }
 
             try (Response okHttpResponse = client.newCall(requestBuilder.build()).execute()) {
-                System.out.println("Response Headers: " + okHttpResponse.headers());
                 response.setStatusCode(okHttpResponse.code());
                 response.setResponseBody(okHttpResponse.body() != null ? okHttpResponse.body().string() : "");
             }
