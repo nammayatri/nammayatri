@@ -18,13 +18,18 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 --import Kernel.Utils.Logging
-import Lib.JourneyLeg.Interface
+
 -- import Lib.JourneyLeg.Types as JT
 
+import Lib.JourneyLeg.Bus ()
+import Lib.JourneyLeg.Interface
+import Lib.JourneyLeg.Metro ()
+import Lib.JourneyLeg.Taxi ()
 import Lib.JourneyLeg.Types.Bus
 import Lib.JourneyLeg.Types.Metro
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
+import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Types
 import Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
