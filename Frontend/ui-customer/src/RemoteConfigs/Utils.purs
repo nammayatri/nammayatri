@@ -281,3 +281,9 @@ defEventsConfig = {
   pushEventChunkSize : 10,
   loggingIntervalInMs : 10000.0
 }
+
+customerAppInfoConfig :: String -> AppInfoConfig
+customerAppInfoConfig appName = do
+  let config = fetchRemoteConfigString "app_configs_customer"
+      value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig {website : ""}
+  getAppBasedConfig value appName

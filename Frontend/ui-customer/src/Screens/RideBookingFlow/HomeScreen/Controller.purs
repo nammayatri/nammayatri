@@ -1628,7 +1628,8 @@ eval ShareRide state = do
   continueWithCmd state
         [ do
             let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "u?vp=shareRide&rideId=" <>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+                appNameBasedConfig = RemoteConfig.customerAppInfoConfig appName
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (appNameBasedConfig.website <> "u?vp=shareRide&rideId=" <>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
