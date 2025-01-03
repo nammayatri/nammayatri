@@ -19,3 +19,9 @@ ALTER TABLE atlas_driver_offer_bpp.route_trip_stop_mapping ADD COLUMN vehicle_ty
 ALTER TABLE atlas_driver_offer_bpp.route_trip_stop_mapping ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.route_trip_stop_mapping ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.route_trip_stop_mapping ADD PRIMARY KEY ( route_code, scheduled_day, stop_code, trip_code, trip_sequence_num);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.route_trip_stop_mapping ALTER COLUMN scheduled_day TYPE text;

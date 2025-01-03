@@ -26,12 +26,11 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "ui" :> "wmb" :> "availableRoutes" :> Capture "vehicleNumber" Data.Text.Text
+  ( TokenAuth :> "wmb" :> "availableRoutes" :> ReqBody '[JSON] API.Types.UI.WMB.AvailableRouteReq
       :> Get
            '[JSON]
            [API.Types.UI.WMB.AvailableRoute]
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> "link"
@@ -40,7 +39,6 @@ type API =
            '[JSON]
            API.Types.UI.WMB.TripTransactionDetails
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> "active"
@@ -48,7 +46,6 @@ type API =
            '[JSON]
            API.Types.UI.WMB.ActiveTripTransaction
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> "list"
@@ -65,7 +62,6 @@ type API =
            '[JSON]
            [API.Types.UI.WMB.TripTransactionDetails]
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> Capture
@@ -79,7 +75,6 @@ type API =
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> Capture
@@ -93,7 +88,6 @@ type API =
            '[JSON]
            API.Types.UI.WMB.TripEndResp
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "trip"
       :> Capture
@@ -107,7 +101,6 @@ type API =
            '[JSON]
            API.Types.UI.WMB.DriverReqResp
       :<|> TokenAuth
-      :> "ui"
       :> "wmb"
       :> "requests"
       :> Capture
@@ -120,19 +113,19 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getUiWmbAvailableRoutes :<|> postUiWmbTripLink :<|> getUiWmbTripActive :<|> getUiWmbTripList :<|> postUiWmbTripStart :<|> postUiWmbTripEnd :<|> postUiWmbTripRequest :<|> postUiWmbRequestsCancel
+handler = getWmbAvailableRoutes :<|> postWmbTripLink :<|> getWmbTripActive :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> postWmbRequestsCancel
 
-getUiWmbAvailableRoutes ::
+getWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Data.Text.Text ->
+    API.Types.UI.WMB.AvailableRouteReq ->
     Environment.FlowHandler [API.Types.UI.WMB.AvailableRoute]
   )
-getUiWmbAvailableRoutes a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getUiWmbAvailableRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getWmbAvailableRoutes a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbAvailableRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postUiWmbTripLink ::
+postWmbTripLink ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -140,18 +133,18 @@ postUiWmbTripLink ::
     API.Types.UI.WMB.TripLinkReq ->
     Environment.FlowHandler API.Types.UI.WMB.TripTransactionDetails
   )
-postUiWmbTripLink a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWmbTripLink a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getUiWmbTripActive ::
+getWmbTripActive ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.FlowHandler API.Types.UI.WMB.ActiveTripTransaction
   )
-getUiWmbTripActive a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getUiWmbTripActive (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getWmbTripActive a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbTripActive (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
-getUiWmbTripList ::
+getWmbTripList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -161,9 +154,9 @@ getUiWmbTripList ::
     Kernel.Prelude.Maybe Domain.Types.TripTransaction.TripStatus ->
     Environment.FlowHandler [API.Types.UI.WMB.TripTransactionDetails]
   )
-getUiWmbTripList a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getUiWmbTripList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getWmbTripList a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbTripList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
-postUiWmbTripStart ::
+postWmbTripStart ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -172,9 +165,9 @@ postUiWmbTripStart ::
     API.Types.UI.WMB.TripStartReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postUiWmbTripStart a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripStart a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-postUiWmbTripEnd ::
+postWmbTripEnd ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -183,9 +176,9 @@ postUiWmbTripEnd ::
     API.Types.UI.WMB.TripEndReq ->
     Environment.FlowHandler API.Types.UI.WMB.TripEndResp
   )
-postUiWmbTripEnd a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripEnd (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripEnd a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripEnd (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-postUiWmbTripRequest ::
+postWmbTripRequest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -194,9 +187,9 @@ postUiWmbTripRequest ::
     API.Types.UI.WMB.RequestDetails ->
     Environment.FlowHandler API.Types.UI.WMB.DriverReqResp
   )
-postUiWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-postUiWmbRequestsCancel ::
+postWmbRequestsCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -204,4 +197,4 @@ postUiWmbRequestsCancel ::
     Data.Text.Text ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postUiWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postUiWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

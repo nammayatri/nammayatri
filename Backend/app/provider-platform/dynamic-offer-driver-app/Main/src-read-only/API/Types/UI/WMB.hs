@@ -21,6 +21,10 @@ data AvailableRoute = AvailableRoute {destination :: StopInfo, routeInfo :: Rout
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverReqResp = DriverReqResp {requestId :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
