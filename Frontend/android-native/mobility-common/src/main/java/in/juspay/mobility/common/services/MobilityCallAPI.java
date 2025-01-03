@@ -30,12 +30,26 @@ import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import okhttp3.ConnectionPool;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.MediaType;
+import okhttp3.Response;
+
+
 import in.juspay.mobility.common.R;
 
 
 public class MobilityCallAPI {
 
     private static final String DEFAULT_API_METHOD = "POST";
+    private static final Boolean USE_OKHTTP = true;
+
+    // OkHttpClient with Keep-Alive and Connection Pooling
+    private static final OkHttpClient client = new OkHttpClient.Builder()
+            .connectionPool(new ConnectionPool()) // default maxIdleConnections = 5 and keepAliveDuration = 5 minutes
+            .build();
 
     public static MobilityAPIResponse callAPI(String endpoint) {
         return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
@@ -53,6 +67,38 @@ public class MobilityCallAPI {
     }
 
     public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
+        return USE_OKHTTP
+                ? callAPIWithOkHttp(endpoint, headers, requestBody, apiMethod)
+                : callAPIWithHttpURLConnection(endpoint, headers, requestBody, apiMethod, doOutput);
+    }
+
+    private static MobilityAPIResponse callAPIWithOkHttp(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
+        MobilityAPIResponse response = new MobilityAPIResponse();
+        try {
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(endpoint)
+                    .method(apiMethod, requestBody != null ? RequestBody.create(requestBody, MediaType.get("application/json; charset=utf-8")) : null);
+
+            if (headers != null) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    requestBuilder.addHeader(entry.getKey(), entry.getValue());
+                }
+            }
+
+            try (Response okHttpResponse = client.newCall(requestBuilder.build()).execute()) {
+                System.out.println("Response Headers: " + okHttpResponse.headers());
+                response.setStatusCode(okHttpResponse.code());
+                response.setResponseBody(okHttpResponse.body() != null ? okHttpResponse.body().string() : "");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatusCode(-1);
+            response.setResponseBody(e.getMessage());
+        }
+        return response;
+    }
+
+    private static MobilityAPIResponse callAPIWithHttpURLConnection(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
         MobilityAPIResponse defaultResp = new MobilityAPIResponse();
         defaultResp.setResponseBody("");
         defaultResp.setStatusCode(-1);
