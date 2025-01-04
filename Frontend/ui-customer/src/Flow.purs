@@ -2080,7 +2080,7 @@ homeScreenFlow = do
           Just (PlaceName placeDetails) -> do
             let
               currentLocationItem = getCurrentLocationItem placeDetails state lat lon
-            void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
+            void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_api_lom_onDrag" [{key: "FareProductType" , value: (unsafeToForeign (show state.data.fareProductType))}]
             modifyScreenState
               $ HomeScreenStateType
                   ( \homeScreen ->
@@ -2102,7 +2102,7 @@ homeScreenFlow = do
                   )
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       else do
-        void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_lom_onDrag"
+        void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_cache_lom_onDrag" [{key: "FareProductType" , value: (unsafeToForeign (show state.data.fareProductType))}]
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -2151,11 +2151,13 @@ homeScreenFlow = do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
-            void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_api_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))}]
+            void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_api_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))},
+                                                                                                         {key: "FareProductType" , value: (unsafeToForeign (show state.data.fareProductType))}]
             modifyScreenState $ HomeScreenStateType( \homeScreen -> updateAddress state address lat lon homeScreen)
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       else do
-        void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_cache_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))}]
+        void $ liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_placename_cache_cpu_onDrag" [{key: "isSource", value: (unsafeToForeign (show state.props.isSource))},
+                                                                                                       {key: "FareProductType" , value: (unsafeToForeign (show state.data.fareProductType))}  ]
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
