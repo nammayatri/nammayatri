@@ -33,9 +33,9 @@ instance FromJSON (FPRentalDetailsDistanceBuffersD 'Safe)
 
 instance ToJSON (FPRentalDetailsDistanceBuffersD 'Safe)
 
-findFPRentalDetailsByDuration :: Int -> NonEmpty (FPRentalDetailsDistanceBuffersD s) -> FPRentalDetailsDistanceBuffersD s
-findFPRentalDetailsByDuration duration slabList = do
-  case NE.filter (\slab -> slab.rideDuration.getSeconds <= duration) $ NE.sortBy (comparing (.rideDuration)) slabList of
+findFPRentalDetailsByDuration :: Double -> NonEmpty (FPRentalDetailsDistanceBuffersD s) -> FPRentalDetailsDistanceBuffersD s
+findFPRentalDetailsByDuration duration slabList =
+  case NE.filter (\slab -> fromRational (toRational slab.rideDuration.getSeconds) <= duration) $ NE.sortBy (comparing (.rideDuration)) slabList of
     [] -> error $ "Slab for duration = " <> show duration <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
 
