@@ -16,7 +16,7 @@
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
-import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
+import Prelude (show, unit, (<>), (==), (*) , (&&), (||))
 import Services.Config (getBaseUrl)
 
 triggerOTP :: String -> String
@@ -415,17 +415,22 @@ specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
 
 busAvailableRoutes :: String -> String 
-busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes/" <> vehicleNo
+busAvailableRoutes vehicleNo = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/availableRoutes/" <> vehicleNo
 
 busTripLink :: String -> String
-busTripLink _ = getBaseUrl("") <> "/wmb/trip/link"
+busTripLink _ = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/link"
 
 busActiveTrip :: String -> String
-busActiveTrip _ = getBaseUrl("") <> "/wmb/trip/active"
+busActiveTrip _ = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/active"
 
 busTripStart :: String -> String
-busTripStart tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/start"
+busTripStart tripTransactionId = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/start"
 
 busTripEnd :: String -> String
-busTripEnd tripTransactionId = getBaseUrl("") <> "/wmb/trip/" <> tripTransactionId <> "/end"
+busTripEnd tripTransactionId = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/end"
 
+getBusRideHistory :: String -> String -> Maybe String -> String
+getBusRideHistory limit offset status' = 
+  case status' of
+    Just status -> "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/list?limit="<>limit<>"&offset="<>offset<>"&status=" <> status
+    Nothing -> "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/list?limit="<>limit<>"&offset="<>offset

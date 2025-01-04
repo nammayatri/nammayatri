@@ -16,7 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..))
+import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -202,8 +202,12 @@ initData =
         , inputTextState : inputTextState'
         }
       , isSpecialLocWarrior : false
-      , bus_number : ""
-      , availableRoutes : Nothing
+      , bus_number : "" 
+      , whereIsMyBusData : { 
+          availableRoutes : Nothing,
+          currentActiveTrip : Nothing,
+          previousCompletedTrip : Nothing
+          }
     }
   , props:
       { isFreeRide: false
@@ -305,9 +309,14 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
+      , showRecentBusTripModal : false
       , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : true -- FOR_TEST_REVERT
+          showSelectAvailableBusRoutes : false -- FOR_TEST_REVERT
         , selectRouteStage : false
+        , selectedRoute : Nothing
+        , tripTransactionId : Nothing
+        , selectedIndex : -1
+        , showStartBusTripModal : true
       }
       }
   }
@@ -433,3 +442,22 @@ initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
 }
+
+
+dummyStopInfo :: StopInfo
+dummyStopInfo = StopInfo
+  { name: "Dummy Stop"
+  , code: "DS001"
+  , lat: Just 12.9715987
+  , long: Just 77.594566
+  }
+
+dummyTripTransactionDetails :: TripTransactionDetails
+dummyTripTransactionDetails = TripTransactionDetails
+  { tripTransactionId: "TTD001"
+  , vehicleNum: "KA01AB1234"
+  , vehicleType: "Bus"
+  , source: dummyStopInfo
+  , destination: dummyStopInfo
+  , status: TRIP_COMPLETED
+  }

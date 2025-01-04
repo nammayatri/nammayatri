@@ -763,45 +763,7 @@ config = {
     busNumber : PrimaryEditTextController.config,
     busType : PrimaryEditTextController.config,
     selectRouteButton : PrimaryButton.config,
-    availableRouteList : [
-      {
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      }, {
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      }, {
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      },{
-        busRouteNumber : "v1",
-        sourceText : "howrah",
-        destination : "sealdah"
-      }
-    ]
+    availableRouteList : []
   }
 }
 

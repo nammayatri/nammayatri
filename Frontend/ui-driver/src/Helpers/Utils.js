@@ -644,8 +644,19 @@ export const startQRScanner =
         }
         else
         {
-          
+          console.log("QR Scanner not available");
         }
       }
     }
+}
+
+export const stopScanning = function () {
+  try{
+    if (typeof JBridge.stopScanning === "function") {
+      JBridge.stopScanning();
+    }
+  }
+  catch(e){
+    console.warn(e);
+  }
 }
