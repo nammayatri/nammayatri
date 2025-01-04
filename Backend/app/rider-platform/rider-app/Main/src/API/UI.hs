@@ -27,6 +27,7 @@ import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
+import qualified API.Action.UI.PassService as PassService
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
@@ -119,6 +120,7 @@ type API =
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
+           :<|> PassService.API
        )
 
 handler :: FlowServer API
@@ -171,3 +173,4 @@ handler =
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
+    :<|> PassService.handler

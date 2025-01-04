@@ -132,6 +132,7 @@ dependencies:
   - text-format
   - scientific
   - resource-pool
+  - string-conversions
 
 ghc-options:
   - -fwrite-ide-info

@@ -23,6 +23,8 @@ imports:
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyPlannerTypes
+  Benefit: Domain.Types.Pass
+  StatusType: Domain.Types.PurchasedPass
 
 module: FRFSTicketService
 types:
@@ -42,6 +44,7 @@ types:
     vehicleType: VehicleCategory
     quantity: Int
     discounts: Maybe [FRFSDiscountRes]
+    passes: Maybe [FRFSPassRes]
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
@@ -49,6 +52,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSDiscountRes:
     code: Text
@@ -57,13 +61,31 @@ types:
     description: Text
     tnc: Text
     eligibility: Bool
+    derive: "Show"
+
+  FRFSPassRes:
+    code: Text
+    amount: HighPrecMoney
+    savings: Maybe HighPrecMoney
+    benefit: Maybe Benefit
+    validTripsLeft: Maybe Int
+    status: StatusType
+    expiryDate: Maybe UTCTime
+    categoryName: Maybe Text
+    title: Text
+    derive: "Show"
 
   FRFSDiscountReq:
     code: Text
     quantity: Int
 
+  FRFSPassReq:
+    code: Text
+    quantity: Int
+
   FRFSQuoteConfirmReq:
     discounts: "[FRFSDiscountReq]"
+    passes: "Maybe [FRFSPassReq]"
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
@@ -84,6 +106,7 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType
@@ -120,6 +143,7 @@ types:
     status: FRFSBookingPaymentStatusAPI
     paymentOrder: Maybe CreateOrderResp
     transactionId: Maybe Text
+    derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
@@ -195,9 +219,6 @@ apis:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 
   # GET metro/bus stops for the merchant city
-  # - Get all stations when routeCode and startStationCode is Unknown.
-  # - Get all stations on a Route when only routeCode is Known.
-  # - Get all end stations when startStationCode is Unknown, further filter if routeCode is also Unknown.
   - GET:
       endpoint: /frfs/stations
       auth: TokenAuth

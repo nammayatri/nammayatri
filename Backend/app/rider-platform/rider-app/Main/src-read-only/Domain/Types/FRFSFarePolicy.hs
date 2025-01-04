@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.FRFSTicketDiscount
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Pass
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -15,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 data FRFSFarePolicy = FRFSFarePolicy
   { _type :: Domain.Types.FRFSFarePolicy.FRFSFarePolicyType,
     applicableDiscountIds :: [Kernel.Types.Id.Id Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount],
+    applicablePassIds :: [Kernel.Types.Id.Id Domain.Types.Pass.Pass],
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

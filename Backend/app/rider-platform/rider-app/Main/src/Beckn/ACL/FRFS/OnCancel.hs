@@ -18,7 +18,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.Aeson as A
-import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+import qualified Domain.Action.Beckn.FRFS.Common
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Tools.Error
@@ -26,14 +26,14 @@ import Tools.Error
 buildOnCancelReq ::
   (MonadFlow m) =>
   Spec.OnCancelReq ->
-  m (Maybe DOnCancel.DOnCancel)
+  m (Maybe Domain.Action.Beckn.FRFS.Common.DOnCancel)
 buildOnCancelReq onCancelReq = do
   Utils.validateContext Spec.ON_CANCEL onCancelReq.onCancelReqContext
   handleError onCancelReq $ \message -> do
     case parseData message of
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus) -> do
         let dOnCancel =
-              DOnCancel.DOnCancel
+              Domain.Action.Beckn.FRFS.Common.DOnCancel
                 { providerId,
                   totalPrice,
                   bppItemId,
@@ -74,8 +74,8 @@ buildOnCancelReq onCancelReq = do
 handleError ::
   (MonadFlow m) =>
   Spec.OnCancelReq ->
-  (Spec.ConfirmReqMessage -> m (Maybe DOnCancel.DOnCancel)) ->
-  m (Maybe DOnCancel.DOnCancel)
+  (Spec.ConfirmReqMessage -> m (Maybe Domain.Action.Beckn.FRFS.Common.DOnCancel)) ->
+  m (Maybe Domain.Action.Beckn.FRFS.Common.DOnCancel)
 handleError req action = do
   case req.onCancelReqError of
     Nothing -> req.onCancelReqMessage & maybe (pure Nothing) action

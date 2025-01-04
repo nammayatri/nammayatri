@@ -41,6 +41,31 @@ data DOrder = DOrder
     tickets :: [DTicket]
   }
 
+data DOnInit = DOnInit
+  { providerId :: Text,
+    totalPrice :: Price,
+    fareBreakUp :: [DFareBreakUp],
+    bppItemId :: Text,
+    validTill :: Maybe UTCTime,
+    transactionId :: Text,
+    messageId :: Text,
+    bankAccNum :: Text,
+    bankCode :: Text
+  }
+
+data DOnCancel = DOnCancel
+  { providerId :: Text,
+    totalPrice :: HighPrecMoney,
+    bppOrderId :: Text,
+    bppItemId :: Text,
+    transactionId :: Text,
+    messageId :: Text,
+    orderStatus :: Spec.OrderStatus,
+    refundAmount :: Maybe HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    cancellationCharges :: Maybe HighPrecMoney
+  }
+
 data DTicket = DTicket
   { qrData :: Text,
     description :: Maybe Text,

@@ -117,6 +117,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         routeStations = [],
         stations,
         discounts = [],
+        passes = [],
         _type = quoteType
       }
 

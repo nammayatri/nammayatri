@@ -30,6 +30,7 @@ data FRFSQuoteT f = FRFSQuoteT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    passesJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

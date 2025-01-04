@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnCancel where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
@@ -35,28 +36,15 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.PersonStats as QPS
 
-data DOnCancel = DOnCancel
-  { providerId :: Text,
-    totalPrice :: HighPrecMoney,
-    bppOrderId :: Text,
-    bppItemId :: Text,
-    transactionId :: Text,
-    messageId :: Text,
-    orderStatus :: Spec.OrderStatus,
-    refundAmount :: Maybe HighPrecMoney,
-    baseFare :: HighPrecMoney,
-    cancellationCharges :: Maybe HighPrecMoney
-  }
-
-validateRequest :: DOnCancel -> Flow (Merchant, FTBooking.FRFSTicketBooking)
-validateRequest DOnCancel {..} = do
+validateRequest :: Domain.Action.Beckn.FRFS.Common.DOnCancel -> Flow (Merchant, FTBooking.FRFSTicketBooking)
+validateRequest Domain.Action.Beckn.FRFS.Common.DOnCancel {..} = do
   booking <- runInReplica $ QTBooking.findBySearchId (Id transactionId) >>= fromMaybeM (BookingDoesNotExist messageId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   when (totalPrice /= baseFare + fromMaybe 0 refundAmount + fromMaybe 0 cancellationCharges) $ throwError (InternalError "Fare Mismatch in onCancel Req")
   return (merchant, booking)
 
-onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
+onCancel :: Merchant -> Booking.FRFSTicketBooking -> Domain.Action.Beckn.FRFS.Common.DOnCancel -> Flow ()
 onCancel _ booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
   case dOnCancel.orderStatus of

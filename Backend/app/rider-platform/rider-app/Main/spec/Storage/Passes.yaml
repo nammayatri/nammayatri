@@ -1,0 +1,142 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  ServiceTierType: BecknV2.FRFS.Enums
+  Person: Domain.Types.Person
+  PassCategory: Domain.Types.PassCategory
+  PassType: Domain.Types.PassCategory
+  Pass: Domain.Types.Passes
+  PersonPass: Domain.Types.PersonPass
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+
+PassCategory:
+  tableName: pass_category
+  fields:
+    id: Id PassCategory
+    name: Text
+    description: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAll:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+PassType:
+  tableName: pass_type
+  fields:
+    id: Id PassType
+    passCategoryId: Id PassCategory
+    name: Maybe Text                  # Type name (e.g., Weekly, Monthly, Unlimited)
+    catchline: Maybe Text             # Travel for as low as 3 Rs per trip!
+    title: Text                       # Plans for tickets upto 6
+    description: Maybe Text           # Description of the pass type
+    order: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    passCategoryId: SecondaryKey
+  queries:
+    findByCategoryId:
+      kvFunction: findAllWithKV
+      where: passCategoryId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+Pass:
+  tableName: pass
+  fields:
+    id: Id Pass
+    passTypeId: Id PassType
+    code: Text
+    name: Maybe Text
+    amount: HighPrecMoney
+    savings: Maybe HighPrecMoney
+    benefit: Maybe Benefit
+    vehicleServiceTierType: ServiceTierType
+    purchaseEligibilityJsonLogic: "[Data.Aeson.Value]"
+    redeemEligibilityJsonLogic: "[Data.Aeson.Value]"
+    trips: Maybe Int
+    days: Maybe Int
+    order: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  types:
+    Benefit:
+      enum: "Discount, Custom Text"
+  constraints:
+    id: PrimaryKey
+    passTypeId: SecondaryKey
+  queries:
+    findAllByTypeId:
+      kvFunction: findAllWithKV
+      where: passTypeId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+  beamType:
+    purchaseEligibilityJsonLogic: "[Text]"
+    redeemEligibilityJsonLogic: "[Text]"
+  toTType:
+    purchaseEligibilityJsonLogic: ((Data.String.Conversions.cs . Data.Aeson.encode) <$> purchaseEligibilityJsonLogic)|E
+    redeemEligibilityJsonLogic: ((Data.String.Conversions.cs . Data.Aeson.encode) <$> redeemEligibilityJsonLogic)|E
+  fromTType:
+    purchaseEligibilityJsonLogic: ((Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs) <$> purchaseEligibilityJsonLogic)|E
+    redeemEligibilityJsonLogic: ((Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs) <$> redeemEligibilityJsonLogic)|E
+
+PurchasedPass:
+  tableName: purchased_pass
+  fields:
+    id: Id PurchasedPass
+    shortId: ShortId PurchasedPass
+    personId: Id Person
+    passId: Id Pass
+    validTripsLeft: Maybe Int
+    status: StatusType
+    expiryDate: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  types:
+    StatusType:
+      enum: "Pending, Active, Failed, Expired, Refunded"
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+    findAllByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+    updatePurchasedPassIdAndStatusByPersonId:
+      kvFunction: updateWithKV
+      params: [id, status]
+      where: personId
+    updateStatusByPersonId:
+      kvFunction: updateWithKV
+      params: [status]
+      where: personId
+    updateStatusByShortId:
+      kvFunction: updateWithKV
+      params: [status]
+      where: shortId
+    updateValidTripsLeftByPersonId:
+      kvFunction: updateWithKV
+      params: [validTripsLeft]
+      where: personId
+
+
+

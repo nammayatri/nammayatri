@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 data FRFSFarePolicyT f = FRFSFarePolicyT
   { _type :: B.C f Domain.Types.FRFSFarePolicy.FRFSFarePolicyType,
     applicableDiscountIds :: B.C f [Kernel.Prelude.Text],
+    applicablePassIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
