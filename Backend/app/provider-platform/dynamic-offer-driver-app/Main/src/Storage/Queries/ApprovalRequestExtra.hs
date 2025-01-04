@@ -17,16 +17,15 @@ import qualified Storage.Beam.ApprovalRequest as BeamDR
 import Storage.Queries.OrphanInstances.ApprovalRequest
 
 -- Extra code goes here --
-findDriverRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe DTR.RequestStatus -> Maybe DTR.RequestType -> Maybe Int -> Maybe Int -> m [DTR.ApprovalRequest]
-findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbStatus mbReqType mbLimit mbOffset = do
+findDriverRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe DTR.RequestStatus -> Maybe Int -> Maybe Int -> m [DTR.ApprovalRequest]
+findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
   findAllWithOptionsKV
     [ Se.And
-        ( [Se.Is BeamDR.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)]
+        ( [Se.Is BeamDR.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
             <> [Se.Is BeamDR.requesteeId $ Se.Eq fleetOwnerId]
             <> [Se.Is BeamDR.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
             <> [Se.Is BeamDR.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
             <> [Se.Is BeamDR.status $ Se.Eq (fromJust mbStatus) | isJust mbStatus]
-            <> [Se.Is BeamDR.requestType $ Se.Eq (fromJust mbReqType) | isJust mbReqType]
         )
     ]
     (Se.Desc BeamDR.createdAt)

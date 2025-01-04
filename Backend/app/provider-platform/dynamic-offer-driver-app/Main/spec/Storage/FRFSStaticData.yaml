@@ -33,9 +33,9 @@ Station:
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
-    merchantId: Id Merchant
     timeBounds: TimeBound
     possibleTypes: Maybe [StationType]
+    merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
   default:

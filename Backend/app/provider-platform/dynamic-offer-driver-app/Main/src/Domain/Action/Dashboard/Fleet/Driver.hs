@@ -62,7 +62,6 @@ getDriverFleetGetDriverRequests ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Common.RequestStatus ->
-  Maybe Common.RequestType ->
   Maybe Int ->
   Maybe Int ->
   Flow Common.DriverRequestResp

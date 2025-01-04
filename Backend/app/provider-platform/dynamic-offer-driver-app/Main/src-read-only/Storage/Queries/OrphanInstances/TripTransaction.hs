@@ -27,6 +27,8 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             isCurrentlyDeviated = isCurrentlyDeviated,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
             sequenceNumber = sequenceNumber,
             startLocation = Storage.Queries.Transformers.Ride.mkLatLong startLocationLat startLocationLon,
@@ -34,8 +36,6 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             status = status,
             tripCode = tripCode,
             vehicleNumber = vehicleNumber,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -52,6 +52,8 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isCurrentlyDeviated = isCurrentlyDeviated,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
         Beam.sequenceNumber = sequenceNumber,
         Beam.startLocationLat = Kernel.Prelude.fmap (.lat) startLocation,
@@ -60,8 +62,6 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.vehicleNumber = vehicleNumber,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

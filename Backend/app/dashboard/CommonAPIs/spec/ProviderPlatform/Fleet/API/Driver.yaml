@@ -12,6 +12,7 @@ imports:
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
+  EmptyDynamicParam: Domain.Types.EmptyDynamicParam
 
 module: Driver
 
@@ -70,7 +71,6 @@ apis:
         - mbFrom: UTCTime
         - mbTo: UTCTime
         - mbStatus: RequestStatus
-        - mbReqType: RequestType
         - mbLimit: Int
         - mbOffset: Int
       response:
@@ -87,7 +87,6 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: RequestStatus
-              - reqType: RequestType
               - limit: Int
               - offset: Int
             response:
@@ -690,17 +689,23 @@ types:
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
   RequestType:
     - enum: "END_RIDE, CHANGE_ROUTE"
-    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
+  ApprovalRequestData:
+    - enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
+  EndRideData:
+    lat: Double
+    lon: Double
+    tripTransactionId: Id TripTransaction
+    tripCode: Maybe Text
+    driverName: Text
+    driverMobileNumber: Maybe Text
+    vehicleRegistrationNumber: Text
+    derive: "Eq,Ord,Read"
   DriverRequestDetails:
-    - requestType: RequestType
+    - requestData: ApprovalRequestData
     - title: Text
     - body: Text
     - raisedAt: UTCTime
     - status: Maybe RequestStatus
-    - tripCode: Maybe Text
-    - driverName: Maybe Text
-    - driverMobileNumber: Maybe Text
-    - vehicleRegistrationNumber: Text
   RequestRespondReq:
     - status: RequestStatus
     - approvalRequestId: Text

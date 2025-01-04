@@ -4,8 +4,10 @@ imports:
   LatLong: Kernel.External.Maps.Types
   ServiceTierType: Domain.Types.Common
   ToParamSchema: Kernel.Prelude
-  RequestType: Domain.Types.ApprovalRequest
+  ApprovalRequestData: Domain.Types.ApprovalRequest
   TripStatus: Domain.Types.TripTransaction
+  TripTransaction: Domain.Types.TripTransaction
+  ApprovalRequest: Domain.Types.ApprovalRequest
 
 module: WMB
 
@@ -26,8 +28,7 @@ types:
   StopInfo:
     name: Text
     code: Text
-    lat: Maybe Double
-    long: Maybe Double
+    point: LatLong
 
   VehicleDetails:
     number: Text
@@ -36,9 +37,10 @@ types:
   TripLinkReq:
     vehicleNumberHash: Text
     routeCode: Text
+    location: LatLong
 
-  TripTransactionDetailsExtra:
-    tripTransactionId: Text
+  TripTransactionDetails:
+    tripTransactionId: Id TripTransaction
     vehicleNum: Text
     vehicleType: ServiceTierType
     source: StopInfo
@@ -47,14 +49,7 @@ types:
     routeInfo: RouteInfo
 
   ActiveTripTransaction:
-    tripTransactionDetails: Maybe TripTransactionDetailsExtra
-
-  TripTransactionDetails:
-    tripTransactionId: Text
-    vehicleNum: Text
-    vehicleType: ServiceTierType
-    source: StopInfo
-    destination: StopInfo
+    tripTransactionDetails: Maybe TripTransactionDetails
 
   EndTripStatus:
     enum: "SUCCESS,WAITING_FOR_ADMIN_APPROVAL"
@@ -70,11 +65,9 @@ types:
     result: EndTripStatus
 
   RequestDetails:
-    requestType: RequestType
+    requestData: ApprovalRequestData
     title: Text
     body: Text
-    lat: Double
-    lon: Double
 
   DriverReqResp:
     requestId: Text
@@ -118,7 +111,7 @@ apis:
       endpoint: /wmb/trip/{tripTransactionId}/start
       auth: TokenAuth PROVIDER_TYPE
       params:
-        tripTransactionId: Text
+        tripTransactionId: Id TripTransaction
       request:
         type: TripStartReq
       response:
@@ -128,7 +121,7 @@ apis:
       endpoint: /wmb/trip/{tripTransactionId}/end
       auth: TokenAuth PROVIDER_TYPE
       params:
-        tripTransactionId: Text
+        tripTransactionId: Id TripTransaction
       request:
         type: TripEndReq
       response:
@@ -138,15 +131,15 @@ apis:
       endpoint: /wmb/trip/{tripTransactionId}/request
       auth: TokenAuth PROVIDER_TYPE
       params:
-        tripTransactionId: Text
+        tripTransactionId: Id TripTransaction
       request:
         type: RequestDetails
       response:
         type: DriverReqResp
   - POST:
-      endpoint: /wmb/requests/{driverRequestId}/cancel
+      endpoint: /wmb/requests/{approvalRequestId}/cancel
       auth: TokenAuth PROVIDER_TYPE
       params:
-        driverRequestId: Text
+        approvalRequestId: Id ApprovalRequest
       response:
         type: APISuccess

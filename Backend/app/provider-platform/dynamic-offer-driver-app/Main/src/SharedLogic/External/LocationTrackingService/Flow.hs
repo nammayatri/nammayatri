@@ -35,8 +35,8 @@ import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
 
-rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> m APISuccess
-rideStart rideId lat lon merchantId driverId = do
+rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe RideInfo -> m APISuccess
+rideStart rideId lat lon merchantId driverId rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   let req =
@@ -45,7 +45,7 @@ rideStart rideId lat lon merchantId driverId = do
             lon,
             merchantId,
             driverId,
-            rideInfo = Nothing
+            rideInfo
           }
   rideStartRes <-
     callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI
@@ -90,8 +90,8 @@ nearBy lat lon onRide vt radius merchantId = do
   logDebug $ "lts nearBy: " <> show nearByRes
   return nearByRes
 
-rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> m APISuccess
-rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide = do
+rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
+rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   let req =
@@ -103,7 +103,7 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide = do
             lat,
             lon,
             isFutureRide,
-            rideInfo = Nothing
+            rideInfo
           }
   rideDetailsRes <-
     callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI

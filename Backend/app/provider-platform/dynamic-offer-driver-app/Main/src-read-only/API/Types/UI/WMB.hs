@@ -10,10 +10,11 @@ import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Kernel.Prelude.Maybe TripTransactionDetailsExtra}
+data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Kernel.Prelude.Maybe TripTransactionDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -35,7 +36,7 @@ data EndTripStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RequestDetails = RequestDetails {body :: Data.Text.Text, lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, requestType :: Domain.Types.ApprovalRequest.RequestType, title :: Data.Text.Text}
+data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData, title :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -43,7 +44,7 @@ data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data StopInfo = StopInfo {code :: Data.Text.Text, lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double, long :: Kernel.Prelude.Maybe Kernel.Prelude.Double, name :: Data.Text.Text}
+data StopInfo = StopInfo {code :: Data.Text.Text, name :: Data.Text.Text, point :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -55,7 +56,7 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripLinkReq = TripLinkReq {routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
+data TripLinkReq = TripLinkReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -63,16 +64,12 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripTransactionDetails = TripTransactionDetails {destination :: StopInfo, source :: StopInfo, tripTransactionId :: Data.Text.Text, vehicleNum :: Data.Text.Text, vehicleType :: Domain.Types.Common.ServiceTierType}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data TripTransactionDetailsExtra = TripTransactionDetailsExtra
+data TripTransactionDetails = TripTransactionDetails
   { destination :: StopInfo,
     routeInfo :: RouteInfo,
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,
-    tripTransactionId :: Data.Text.Text,
+    tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
     vehicleNum :: Data.Text.Text,
     vehicleType :: Domain.Types.Common.ServiceTierType
   }

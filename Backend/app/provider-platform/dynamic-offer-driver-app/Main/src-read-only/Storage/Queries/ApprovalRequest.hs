@@ -6,7 +6,7 @@ module Storage.Queries.ApprovalRequest (module Storage.Queries.ApprovalRequest, 
 
 import qualified Data.Text
 import qualified Domain.Types.ApprovalRequest
-import qualified Domain.Types.TripTransaction
+import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,17 +24,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ApprovalRequest.ApprovalRequest] -> m ())
 createMany = traverse_ create
 
-findByTripReqAndStatus ::
+findByStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> Domain.Types.ApprovalRequest.RequestType -> Domain.Types.ApprovalRequest.RequestStatus -> m (Maybe Domain.Types.ApprovalRequest.ApprovalRequest))
-findByTripReqAndStatus tripTransactionId requestType status = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.tripTransactionId $ Se.Eq (Kernel.Types.Id.getId tripTransactionId),
-          Se.Is Beam.requestType $ Se.Eq requestType,
-          Se.Is Beam.status $ Se.Eq status
-        ]
-    ]
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.ApprovalRequest.RequestStatus -> m [Domain.Types.ApprovalRequest.ApprovalRequest])
+findByStatus requestorId status = do findAllWithKV [Se.And [Se.Is Beam.requestorId $ Se.Eq (Kernel.Types.Id.getId requestorId), Se.Is Beam.status $ Se.Eq status]]
 
 updateStatusWithReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -52,17 +45,14 @@ updateByPrimaryKey (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
   updateWithKV
     [ Se.Set Beam.body body,
       Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.lat lat,
-      Se.Set Beam.lon lon,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.reason reason,
-      Se.Set Beam.requestType requestType,
+      Se.Set Beam.requestData requestData,
       Se.Set Beam.requesteeId (Kernel.Types.Id.getId requesteeId),
       Se.Set Beam.requestorId (Kernel.Types.Id.getId requestorId),
       Se.Set Beam.status status,
       Se.Set Beam.title title,
-      Se.Set Beam.tripTransactionId (Kernel.Types.Id.getId tripTransactionId),
-      Se.Set Beam.updatedAt _now,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

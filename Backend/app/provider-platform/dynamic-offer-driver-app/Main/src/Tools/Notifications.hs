@@ -23,6 +23,7 @@ import Domain.Types.ApprovalRequest as DTR
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -58,11 +59,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
-
-data EmptyDynamicParam = EmptyDynamicParam
-
-instance ToJSON EmptyDynamicParam where
-  toJSON EmptyDynamicParam = object []
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
@@ -1192,10 +1188,10 @@ notifyWithGRPCProvider ::
   Notification.Category ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
   a ->
   m ()
-notifyWithGRPCProvider merchantOpCityId category title body driver entityData = do
+notifyWithGRPCProvider merchantOpCityId category title body driverId entityData = do
   merchantNotificationServiceConfig <-
     QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
@@ -1203,10 +1199,10 @@ notifyWithGRPCProvider merchantOpCityId category title body driver entityData = 
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
       notificationId <- generateGUID
       clientId <-
-        QFDA.findByDriverId driver.id True
+        QFDA.findByDriverId driverId True
           >>= \case
             Just fleetDriverAssociation -> pure fleetDriverAssociation.fleetOwnerId
-            Nothing -> pure driver.id.getId
+            Nothing -> pure driverId.getId
       GRPC.notifyPerson cfg (notificationData clientId) notificationId
     _ -> throwError $ InternalError "Unknow Service Config"
   where

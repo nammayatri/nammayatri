@@ -20,18 +20,15 @@ instance FromTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRe
           { body = body,
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
-            lat = lat,
-            lon = lon,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             reason = reason,
-            requestType = requestType,
+            requestData = requestData,
             requesteeId = Kernel.Types.Id.Id requesteeId,
             requestorId = Kernel.Types.Id.Id requestorId,
             status = status,
             title = title,
-            tripTransactionId = Kernel.Types.Id.Id tripTransactionId,
-            updatedAt = updatedAt,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
@@ -40,16 +37,13 @@ instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequ
       { Beam.body = body,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.reason = reason,
-        Beam.requestType = requestType,
+        Beam.requestData = requestData,
         Beam.requesteeId = Kernel.Types.Id.getId requesteeId,
         Beam.requestorId = Kernel.Types.Id.getId requestorId,
         Beam.status = status,
         Beam.title = title,
-        Beam.tripTransactionId = Kernel.Types.Id.getId tripTransactionId,
-        Beam.updatedAt = updatedAt,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
+        Beam.updatedAt = updatedAt
       }
