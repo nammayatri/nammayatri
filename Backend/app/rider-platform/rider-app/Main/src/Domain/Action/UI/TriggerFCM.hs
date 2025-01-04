@@ -3,6 +3,7 @@
 module Domain.Action.UI.TriggerFCM (postTriggerFCMMessage) where
 
 import qualified API.Types.UI.TriggerFCM
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

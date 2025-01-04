@@ -6,6 +6,7 @@ module Domain.Types.ApprovalRequest where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -20,29 +21,42 @@ data ApprovalRequest = ApprovalRequest
   { body :: Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest,
-    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     reason :: Kernel.Prelude.Maybe Data.Text.Text,
-    requestType :: Domain.Types.ApprovalRequest.RequestType,
+    requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData,
     requesteeId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     requestorId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     status :: Domain.Types.ApprovalRequest.RequestStatus,
     title :: Data.Text.Text,
-    tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+data ApprovalRequestData
+  = EndRide Domain.Types.ApprovalRequest.EndRideData
+  | ChangeRoute Domain.Types.EmptyDynamicParam.EmptyDynamicParam
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RequestType = END_RIDE | CHANGE_ROUTE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+data EndRideData = EndRideData
+  { driverMobileNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    driverName :: Data.Text.Text,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
+    vehicleRegistrationNumber :: Data.Text.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequestType)
+data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequestStatus)
+data RequestType = END_RIDE | CHANGE_ROUTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequestType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApprovalRequestData))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RequestType))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''RequestStatus))
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RequestStatus))

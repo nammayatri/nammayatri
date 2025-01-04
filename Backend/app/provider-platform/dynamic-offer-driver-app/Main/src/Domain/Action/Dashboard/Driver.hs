@@ -135,6 +135,7 @@ import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -150,6 +151,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.TransporterConfig
+import Domain.Types.TripTransaction
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
@@ -1055,7 +1057,18 @@ respondDriverRequest merchantShortId opCity _ req = do
       _ -> throwError $ InvalidRequest "Request already processed"
     void $ case req.status of
       DC.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
-      _ -> pure () -- success notification to be handled in particular use case if required
+      DC.ACCEPTED -> do
+        case driverRequest.requestData of
+          DTR.EndRide DTR.EndRideData {..} -> do
+            tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (InternalError "no trip transaction found")
+            advancedTripTransaction <- findNextEligibleTripTransactionByDriverIdStatus driver.id TRIP_ASSIGNED
+            void $ LF.rideEnd (cast tripTransaction.id) lat lon tripTransaction.merchantId driver.id (advancedTripTransaction <&> (cast . (.id)))
+            QDriverInfo.updateOnRide False driver.id
+            QTT.updateStatus COMPLETED (Just $ LatLong lat lon) tripTransactionId
+            QVehicle.deleteByDriverid driver.id
+            Notification.notifyWmbOnRide driver.id tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" Nothing
+          _ -> pure ()
+      _ -> pure ()
   pure Success
   where
     notificationTitle = "Request Rejected!"
@@ -1063,46 +1076,41 @@ respondDriverRequest merchantShortId opCity _ req = do
       cs $
         unwords
           [ "Sorry, your request for",
-            (show req_.requestType) <> " has been rejected",
+            (show $ getRequestType req_.requestData) <> " has been rejected",
             "Check the app for more details."
           ]
+    getRequestType = \case
+      DTR.EndRide _ -> DTR.END_RIDE
+      DTR.ChangeRoute _ -> DTR.CHANGE_ROUTE
+
+    findNextEligibleTripTransactionByDriverIdStatus driverId status =
+      QTT.findAllTripTransactionByDriverIdStatus driverId (Just 1) (Just 0) (Just status) >>= \case
+        (trip : _) -> pure (Just trip)
+        [] -> pure Nothing
 
 ------------------------------------------------------------------------------------------------------------------------------------------
-getDriverRequests :: ShortId DM.Merchant -> Context.City -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.RequestStatus -> Maybe Common.RequestType -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestResp
-getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbReqType mbLimit mbOffset = do
+getDriverRequests :: ShortId DM.Merchant -> Context.City -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.RequestStatus -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestResp
+getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let status_ = case mbStatus of
         Nothing -> Nothing
         Just status -> Just $ castReqStatus status
-  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ (castReqType mbReqType) mbLimit mbOffset
-  driverRequestList <- mapM buildDriverRequestListItem driverRequests
+  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ mbLimit mbOffset
+  let driverRequestList = map buildDriverRequestListItem driverRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem dtr@DTR.ApprovalRequest {..} = do
-      tripTransaction <- B.runInReplica $ QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (InvalidRequest "Trip Transaction not found")
-      driver <- B.runInReplica $ QPerson.findById dtr.requestorId >>= fromMaybeM (PersonDoesNotExist dtr.requestorId.getId)
-      driverMobileNumber <- case driver.mobileNumber of
-        Just phoneNumber -> do
-          decryptedPhoneNumber <- decrypt phoneNumber
-          pure $ Just decryptedPhoneNumber
-        _ -> pure Nothing
-      pure $
-        Common.DriverRequestDetails
-          { raisedAt = createdAt,
-            tripCode = tripTransaction.tripCode,
-            driverName = Just $ driver.firstName <> " " <> (fromMaybe "" driver.lastName),
-            vehicleRegistrationNumber = tripTransaction.vehicleNumber,
-            requestType = castReqTypeToCommon requestType,
-            status = castStatusToCommon (Just status),
-            ..
-          }
+    buildDriverRequestListItem DTR.ApprovalRequest {..} =
+      Common.DriverRequestDetails
+        { raisedAt = createdAt,
+          requestData = castCommonReqData requestData,
+          status = castStatusToCommon (Just status),
+          ..
+        }
 
-castReqType :: Maybe Common.RequestType -> Maybe DTR.RequestType
-castReqType = \case
-  Just Common.END_RIDE -> Just DTR.END_RIDE
-  Just Common.CHANGE_ROUTE -> Just DTR.CHANGE_ROUTE
-  _ -> Nothing
+castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
+castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = cast tripTransactionId, ..}
+castCommonReqData (DTR.ChangeRoute EmptyDynamicParam) = Common.ChangeRoute EmptyDynamicParam
 
 castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
 castReqStatus = \case
@@ -1110,11 +1118,6 @@ castReqStatus = \case
   Common.ACCEPTED -> DTR.ACCEPTED
   Common.REJECTED -> DTR.REJECTED
   Common.REVOKED -> DTR.REVOKED
-
-castReqTypeToCommon :: DTR.RequestType -> Common.RequestType
-castReqTypeToCommon = \case
-  DTR.END_RIDE -> Common.END_RIDE
-  DTR.CHANGE_ROUTE -> Common.CHANGE_ROUTE
 
 castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
 castStatusToCommon = \case
@@ -1886,7 +1889,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
-          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing Nothing
           return (cast dI.driverInfo.driverId)
       )
       driverInfosAndRideDetails

@@ -18,18 +18,15 @@ data ApprovalRequestT f = ApprovalRequestT
   { body :: B.C f Data.Text.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Data.Text.Text,
-    lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
     reason :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    requestType :: B.C f Domain.Types.ApprovalRequest.RequestType,
+    requestData :: B.C f Domain.Types.ApprovalRequest.ApprovalRequestData,
     requesteeId :: B.C f Data.Text.Text,
     requestorId :: B.C f Data.Text.Text,
     status :: B.C f Domain.Types.ApprovalRequest.RequestStatus,
     title :: B.C f Data.Text.Text,
-    tripTransactionId :: B.C f Data.Text.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

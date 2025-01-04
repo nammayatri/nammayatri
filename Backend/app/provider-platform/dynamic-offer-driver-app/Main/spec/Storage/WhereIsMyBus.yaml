@@ -6,6 +6,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
+  EmptyDynamicParam: Domain.Types.EmptyDynamicParam
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -51,6 +52,8 @@ TripTransaction:
     endStopCode: Text
     allowEndingMidRoute: Bool
     sequenceNumber: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     id: PrimaryKey
@@ -95,10 +98,6 @@ TripTransaction:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  domainInstance:
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <TripStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TripStatus>
-
 ApprovalRequest:
   tableName: approval_request
 
@@ -108,23 +107,34 @@ ApprovalRequest:
       - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
     RequestType:
-      - enum: "END_RIDE, CHANGE_ROUTE"
-      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+      enum: "END_RIDE, CHANGE_ROUTE"
+
+    ApprovalRequestData:
+      enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
+
+    EndRideData:
+      lat: Double
+      lon: Double
+      tripTransactionId: Id TripTransaction
+      tripCode: Maybe Text
+      driverName: Text
+      driverMobileNumber: Maybe Text
+      vehicleRegistrationNumber: Text
+      derive: "Eq,Ord,Read"
 
   fields:
     id: Id ApprovalRequest
-    tripTransactionId: Id TripTransaction
     requestorId: Id Person
     requesteeId: Id Person
-    requestType: RequestType
+    requestData: ApprovalRequestData
     title: Text
     body: Text
-    lat: Maybe Double
-    lon: Maybe Double
     status: RequestStatus
     reason: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     id: PrimaryKey
@@ -135,15 +145,13 @@ ApprovalRequest:
       params: [status, reason]
       where: id
 
-    findByTripReqAndStatus:
-      kvFunction: findOneWithKV
+    findByStatus:
+      kvFunction: findAllWithKV
       where:
-        and: [tripTransactionId, requestType, status]
+        and: [requestorId, status]
 
   domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestType>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestStatus>
 
   extraOperations:

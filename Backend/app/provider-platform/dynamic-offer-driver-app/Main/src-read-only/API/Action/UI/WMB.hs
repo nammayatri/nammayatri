@@ -9,8 +9,8 @@ where
 
 import qualified API.Types.UI.WMB
 import qualified Control.Lens
-import qualified Data.Text
 import qualified Domain.Action.UI.WMB as Domain.Action.UI.WMB
+import qualified Domain.Types.ApprovalRequest
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -66,7 +66,7 @@ type API =
       :> "trip"
       :> Capture
            "tripTransactionId"
-           Data.Text.Text
+           (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "start"
       :> ReqBody
            '[JSON]
@@ -79,7 +79,7 @@ type API =
       :> "trip"
       :> Capture
            "tripTransactionId"
-           Data.Text.Text
+           (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "end"
       :> ReqBody
            '[JSON]
@@ -92,7 +92,7 @@ type API =
       :> "trip"
       :> Capture
            "tripTransactionId"
-           Data.Text.Text
+           (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "request"
       :> ReqBody
            '[JSON]
@@ -104,8 +104,8 @@ type API =
       :> "wmb"
       :> "requests"
       :> Capture
-           "driverRequestId"
-           Data.Text.Text
+           "approvalRequestId"
+           (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest)
       :> "cancel"
       :> Post
            '[JSON]
@@ -161,7 +161,7 @@ postWmbTripStart ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Data.Text.Text ->
+    Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction ->
     API.Types.UI.WMB.TripStartReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
@@ -172,7 +172,7 @@ postWmbTripEnd ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Data.Text.Text ->
+    Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction ->
     API.Types.UI.WMB.TripEndReq ->
     Environment.FlowHandler API.Types.UI.WMB.TripEndResp
   )
@@ -183,7 +183,7 @@ postWmbTripRequest ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Data.Text.Text ->
+    Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction ->
     API.Types.UI.WMB.RequestDetails ->
     Environment.FlowHandler API.Types.UI.WMB.DriverReqResp
   )
@@ -194,7 +194,7 @@ postWmbRequestsCancel ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Data.Text.Text ->
+    Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

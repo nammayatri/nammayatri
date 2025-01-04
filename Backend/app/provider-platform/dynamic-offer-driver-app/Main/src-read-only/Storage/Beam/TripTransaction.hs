@@ -24,6 +24,8 @@ data TripTransactionT f = TripTransactionT
     fleetOwnerId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,
     isCurrentlyDeviated :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
     routeCode :: B.C f Data.Text.Text,
     sequenceNumber :: B.C f Kernel.Prelude.Int,
     startLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -32,8 +34,6 @@ data TripTransactionT f = TripTransactionT
     status :: B.C f Domain.Types.TripTransaction.TripStatus,
     tripCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     vehicleNumber :: B.C f Data.Text.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

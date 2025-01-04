@@ -15,7 +15,6 @@
 module Tools.Notifications where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
-import Data.Aeson (object)
 import Data.Default.Class
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -24,6 +23,7 @@ import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -78,11 +78,6 @@ templateText txt = "{#" <> txt <> "#}"
 
 createNotificationReq :: Text -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
 createNotificationReq key modifier = modifier $ def {notificationKey = key}
-
-data EmptyDynamicParam = EmptyDynamicParam
-
-instance ToJSON EmptyDynamicParam where
-  toJSON EmptyDynamicParam = object []
 
 data NotificationRequest = NotificationRequest
   { subCategory :: Maybe Notification.SubCategory,
