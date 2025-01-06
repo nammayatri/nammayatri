@@ -1781,8 +1781,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
-  when (state.data.destination == "") $ do
+  if (state.data.destination == "") then do
     pure $ setText (getNewIDWithTag "DestinationEditText") ""
+  else pure unit
   let newState = state
                   { data {source = srcValue}
                   , props { isSearchLocation = LocateOnMap
