@@ -21,7 +21,7 @@ import SharedLogic.Search as SLS
 buildBecknSearchReqV2 :: SLS.SearchRes -> BecknConfig -> Kernel.Prelude.BaseUrl -> Text -> Either Text BecknV2.OnDemand.Types.SearchReq
 buildBecknSearchReqV2 res@SLS.SearchRes {..} bapConfig bapUri messageId = do
   ttl <- maybe (Left "Invalid ttl") (Right . BecknV2.OnDemand.Utils.Common.computeTtlISO8601) bapConfig.searchTTLSec
-  let searchReqContext_ = BecknV2.OnDemand.Utils.Context.buildContextV2' now Kernel.Types.Beckn.Context.SEARCH Kernel.Types.Beckn.Context.MOBILITY messageId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country (Just ttl)
+  let searchReqContext_ = BecknV2.OnDemand.Utils.Context.buildContextV2' now Kernel.Types.Beckn.Context.SEARCH Kernel.Types.Beckn.Context.MOBILITY messageId (Just searchRequest.id.getId) merchant.bapId bapUri Nothing Nothing city merchant.country (Just ttl)
       searchReqMessage_ = buildSearchMessageV2 res bapConfig
   pure $ BecknV2.OnDemand.Types.SearchReq {searchReqContext = searchReqContext_, searchReqMessage = searchReqMessage_}
 

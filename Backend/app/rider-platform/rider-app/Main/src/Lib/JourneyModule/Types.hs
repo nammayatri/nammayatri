@@ -1,6 +1,7 @@
 module Lib.JourneyModule.Types where
 
 import API.Types.RiderPlatform.Management.FRFSTicket
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.FRFSSearch as FRFSSR
@@ -18,16 +19,43 @@ import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
+import Kernel.Storage.Esqueleto hiding (isNothing)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Search
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
+import Tools.Metrics.BAPMetrics.Types
+import TransactionLogs.Types
+
+type SearchRequestFlow m r c =
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    EventStreamFlow m r,
+    ClickhouseFlow m r,
+    HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["collectRouteData" ::: Bool],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  )
 
 type SearchJourneyLeg leg m = leg -> m ()
 
@@ -44,7 +72,7 @@ type GetJourneyLegState leg m = leg -> m JourneyLegState
 type GetJourneyLeg leg m = leg -> m LegInfo
 
 class JourneyLeg leg m where
-  search :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => SearchJourneyLeg leg m
+  search :: SearchRequestFlow m r c => SearchJourneyLeg leg m
   confirm :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m

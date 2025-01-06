@@ -3,11 +3,9 @@
 module Lib.JourneyLeg.Taxi where
 
 -- import qualified API.UI.Select as DSelect
--- import qualified Domain.Action.UI.Search as DSearch
-import Kernel.Prelude
+
 -- import qualified Domain.Types.JourneyLeg as DJourenyLeg
 -- import qualified Domain.Types.SearchRequest as DSR
-
 -- import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 -- import qualified Storage.Queries.Booking as QBooking
 -- import qualified Storage.Queries.Estimate as QEstimate
@@ -15,66 +13,75 @@ import Kernel.Prelude
 -- import qualified Storage.Queries.Ride as QRide
 -- import qualified Storage.Queries.SearchRequest as QSearchRequest
 -- import Kernel.External.Maps.Types
+
+import qualified Beckn.ACL.Search as TaxiACL
+import Data.Aeson
+import qualified Data.Text as T
+import qualified Domain.Action.UI.Search as DSearch
+import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
+import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.Search
 
 instance JT.JourneyLeg TaxiLegRequest m where
-  search (TaxiLegRequestSearch _) = return ()
+  search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
+    let journeySearchData = mkJourneySearchData
+    legSearchReq <- mkOneWaySearchReq
+    dSearchRes <-
+      DSearch.search
+        parentSearchReq.riderId
+        legSearchReq
+        parentSearchReq.clientBundleVersion
+        parentSearchReq.clientSdkVersion
+        parentSearchReq.clientConfigVersion
+        parentSearchReq.clientReactNativeVersion
+        parentSearchReq.clientId
+        parentSearchReq.device
+        False
+        (Just journeySearchData)
+    fork "search cabs" . withShortRetry $ do
+      becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+      let generatedJson = encode becknTaxiReqV2
+      logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 parentSearchReq.merchantId
+    where
+      lastAndRest :: [a] -> Maybe (a, [a])
+      lastAndRest [] = Nothing -- Handle empty list case
+      lastAndRest xs = Just (last xs, init xs)
+
+      mkOneWaySearchReq = do
+        (destination, stops') <- lastAndRest stops & fromMaybeM (InvalidRequest "Destination is required!")
+        return $
+          OneWaySearch $
+            OneWaySearchReq
+              { origin = origin,
+                isSourceManuallyMoved = Just False,
+                isDestinationManuallyMoved = Just False,
+                isSpecialLocation = Just False, -- Fix it later
+                startTime = journeyLegData.fromDepartureTime,
+                isReallocationEnabled = Just True,
+                quotesUnifiedFlow = Just True,
+                sessionToken = Nothing,
+                placeNameSource = parentSearchReq.placeNameSource,
+                driverIdentifier = Nothing,
+                stops = Just stops',
+                ..
+              }
+
+      mkJourneySearchData =
+        JourneySearchData
+          { journeyId = journeyLegData.journeyId.getId,
+            journeyLegOrder = journeyLegData.sequenceNumber,
+            agency = journeyLegData.agency <&> (.name),
+            skipBooking = False,
+            convenienceCost = 0,
+            pricingId = Nothing
+          }
   search _ = throwError (InternalError "Not Supported")
-
-  -- let journeySearchData = mkJourneySearchData
-  -- legSearchReq <- mkOneWaySearchReq
-  -- dSearchRes <-
-  --   DSearch.search
-  --     parentSearchReq.riderId
-  --     legSearchReq
-  --     parentSearchReq.bundleVersion
-  --     parentSearchReq.clientVersion
-  --     parentSearchReq.clientConfigVersion
-  --     parentSearchReq.clientRnVersion
-  --     parentSearchReq.clientId
-  --     parentSearchReq.device
-  --     False
-  --     (Just journeySearchData)
-  -- fork "search cabs" . withShortRetry $ do
-  --   becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
-  --   let generatedJson = encode becknTaxiReqV2
-  --   logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-  --   void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 parentSearchReq.merchantId
-  -- where
-  --   lastAndRest :: [a] -> Maybe (a, [a])
-  --   lastAndRest [] = Nothing -- Handle empty list case
-  --   lastAndRest xs = Just (last xs, init xs)
-
-  --   mkOneWaySearchReq = do
-  --     (destination, stops) <- lastAndRest stops & fromMaybeM (InvalidRequest "Destination is required!")
-  --     return $
-  --       OneWaySearch $
-  --         OneWaySearchReq
-  --           { origin = origin,
-  --             isSourceManuallyMoved = False,
-  --             isDestinationManuallyMoved = False,
-  --             isSpecialLocation = False, -- Fix it later
-  --             startTime = journeyLegData.fromDepartureTime,
-  --             isReallocationEnabled = parentSearchReq.isReallocationEnabled,
-  --             quotesUnifiedFlow = parentSearchReq.quotesUnifiedFlow,
-  --             sessionToken = parentSearchReq.sessionToken,
-  --             placeNameSource = parentSearchReq.placeNameSource,
-  --             driverIdentifier = Nothing,
-  --             ..
-  --           }
-
-  --   mkJourneySearchData =
-  --     JourneySearchData
-  --       { journeyId = journeyLegData.journeyId,
-  --         journeyLegOrder = journeyLegData.sequenceNumber,
-  --         agency = journeyLegData.agency,
-  --         skipBooking = False,
-  --         convenienceCost = Nothing,
-  --         pricingId = Nothing
-  --       }
 
   confirm (TaxiLegRequestConfirm _) = return ()
   confirm _ = throwError (InternalError "Not Supported")

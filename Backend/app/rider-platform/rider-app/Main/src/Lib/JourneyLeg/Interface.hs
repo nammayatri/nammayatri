@@ -156,6 +156,3 @@ mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSear
 --     DTrip.Metro -> return $ MetroLegRequestConfirm MetroLegRequestConfirmData
 --     DTrip.Bus -> return $ BusLegRequestConfirm BusLegRequestConfirmData
 --     DTrip.Walk -> return $ WalkLegRequestConfirm WalkLegRequestConfirmData
-
--- mkTaxiSearchReq :: DSR.SearchRequest -> DJL.JourneyLeg -> SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
--- mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSearch $ TaxiLegRequestSearchData {..}

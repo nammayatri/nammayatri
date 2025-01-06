@@ -1,26 +1,18 @@
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.MultimodalConfirm as MultimodalConfirm
--- import Beckn.Types.Core.Taxi.API.Confirm
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.Text (unpack)
---import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Trip as DTrip
---import qualified Kernel.External.MultiModal.Interface as ExternalInterface
-
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBEnv, EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
---import Kernel.Utils.Logging
-
--- import Lib.JourneyLeg.Types as JT
-
 import Lib.JourneyLeg.Bus ()
 import Lib.JourneyLeg.Interface
 import Lib.JourneyLeg.Metro ()
@@ -33,18 +25,11 @@ import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Types
 import Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
--- import SharedLogic.CallBPPInternal as CallBPPInternal
--- import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
--- import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import Tools.Metrics
 
---import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-
---(CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
 init ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -146,11 +131,7 @@ startJourney _ = do
   return ()
 
 addAllLegs ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv,
-    Monad m,
-    CacheFlow m r,
+  ( SearchRequestFlow m r c,
     JourneyLeg TaxiLegRequest m,
     JourneyLeg BusLegRequest m,
     JourneyLeg MetroLegRequest m,
@@ -172,19 +153,11 @@ addAllLegs journeyId legsReq = do
   return ()
 
 addTaxiLeg ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m,
-    MonadClock m,
-    MonadTime m,
-    MonadFlow m,
+  ( SearchRequestFlow m r c,
     JourneyLeg TaxiLegRequest m,
     JourneyLeg BusLegRequest m,
     JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m,
-    CoreMetrics m
+    JourneyLeg WalkLegRequest m
   ) =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
