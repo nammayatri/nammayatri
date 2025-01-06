@@ -3181,8 +3181,7 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, mapRendered = true, whereIsMyBusConfig { showSelectAvailableBusRoutes = false }}, data{ route = [], activeRide{status = INPROGRESS}}})
               void $ pure $ hideKeyboardOnNavigation true
               void $ pure $ JB.exitLocateOnMap ""
-              void $ updateStage $ HomeScreenStage RideStarted
-              void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
+              void $ updateStage $ HomeScreenStage RideTracking
               void $ lift $ lift $ toggleLoader false
               homeScreenFlow
             Left errorPayload -> do

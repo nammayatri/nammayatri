@@ -1849,6 +1849,9 @@ eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { show
 
 eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" then exit $ GoToBusEducationScreen state else exit $ GoToScanBusQR state
 
+
+eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+
 eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
