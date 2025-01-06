@@ -2589,7 +2589,6 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVe
   void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
   let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
-
   if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then do
     _ <- pure $ spy "ChooseYourRideAction 2" config.activeIndex
     continue newState
