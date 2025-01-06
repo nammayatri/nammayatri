@@ -2,19 +2,20 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.QuestionModuleMapping where
+module Domain.Types.LmsCertificate where
 
 import Data.Aeson
 import qualified Domain.Types.LmsModule
+import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Lib.DriverCoins.Types
 import qualified Tools.Beam.UtilsTH
 
-data QuestionModuleMapping = QuestionModuleMapping
-  { moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
-    questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping,
-    quizCoinFunction :: Kernel.Prelude.Maybe Lib.DriverCoins.Types.DriverCoinsFunctionType,
+data LmsCertificate = LmsCertificate
+  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    id :: Kernel.Types.Id.Id Domain.Types.LmsCertificate.LmsCertificate,
+    moduleCompletionId :: Kernel.Prelude.Text,
+    moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

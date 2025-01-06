@@ -19,6 +19,7 @@ data DriverModuleCompletion = DriverModuleCompletion
     completionId :: Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     entitiesCompleted :: [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity],
+    expiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
@@ -34,6 +35,6 @@ data ModuleCompletionEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generi
 
 data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionEntity)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionEntity))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionStatus))

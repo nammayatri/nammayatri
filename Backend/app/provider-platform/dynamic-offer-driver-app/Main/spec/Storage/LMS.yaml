@@ -1,6 +1,7 @@
 imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
+  Bool: Kernel.Prelude
   Merchant: Domain.Types.Merchant
   Language: Kernel.External.Types
   Centesimal: Kernel.Types.Common
@@ -15,6 +16,7 @@ imports:
   getBottomButtonConfigFromTable: Storage.Queries.Transformers.ReelsData
   convertBottomButtonConfigToTable: Storage.Queries.Transformers.ReelsData
   convertSideButtonConfigToTable: Storage.Queries.Transformers.ReelsData
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
 
 LmsModule:
   tableName : lms_module
@@ -32,12 +34,24 @@ LmsModule:
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"
+    moduleSection : Maybe ModuleSection
+    bonusCoinEventFunction : Maybe DriverCoinsFunctionType
+    certificationEnabled : Maybe Bool
+    moduleNameForCertificate : Maybe Text
+    moduleExpiryConfig : Maybe Int
 
   types:
     LmsCategory:
-      enum : "Safety, Financial, Training"
+      enum : "Safety, Financial, Training, DriverSafetyScore"
     ModuleCompletionCriteria:
       enum : "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
+    ModuleSection:
+      enum : "BENEFITS, DRIVER_SAFETY_SCORE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  domainInstance:
+    - Custom Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList <ModuleSection>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ModuleSection>
 
   sqlType:
     languagesAvailableForQuiz : "text[]"
@@ -47,6 +61,7 @@ LmsModule:
     category : "'Training'"
     languagesAvailableForQuiz : "'{}'"
     languagesAvailableForVideos : "'{}'"
+    moduleSection : "'BENEFITS'"
 
   queries:
     getAllModules:
@@ -55,6 +70,10 @@ LmsModule:
     findById:
       kvFunction: findOneWithKV
       where: id
+    getAllModulesWithModuleSection:
+      kvFunction: findAllWithOptionsKV
+      where:
+       and: [merchantOperatingCityId, moduleSection]
 
 LmsModuleTranslation:
   tableName : lms_module_translation
@@ -196,6 +215,7 @@ DriverModuleCompletion:
     ratingAtTheTimeOfCompletion : Maybe Centesimal
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    expiry: Maybe UTCTime
 
   sqlType:
     ratingAtTheTimeOfCompletion: "double precision"
@@ -225,9 +245,17 @@ DriverModuleCompletion:
       kvFunction: findOneWithKV
       where:
         and: [driverId, moduleId]
+    findAllByDriverIdAndModuleId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, moduleId]
     updatedCompletedAt:
       kvFunction: updateOneWithKV
       params: [completedAt, entitiesCompleted, status, ratingAtTheTimeOfCompletion]
+      where: completionId
+    updateExpiryTime:
+      kvFunction: updateOneWithKV
+      params: [expiry]
       where: completionId
     updateEntitiesCompleted:
       kvFunction: updateOneWithKV
@@ -288,6 +316,7 @@ QuestionModuleMapping:
   fields:
     moduleId : Id LmsModule
     questionId : Id QuestionModuleMapping
+    quizCoinFunction : Maybe DriverCoinsFunctionType
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -347,3 +376,27 @@ QuestionInformation:
     getAllTranslationsByQuestionId:
       kvFunction: findAllWithKV
       where: questionId
+
+LmsCertificate:
+  tableName : lms_certificate
+
+  fields:
+    id : Id LmsCertificate
+    moduleId : Id LmsModule
+    driverId : Id Person
+    moduleCompletionId : Text
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    moduleCompletionId: SecondaryKey
+
+  queries:
+    getAllCertificate:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByModuleCompletionIdAndDriverIdAndModuleId:
+      kvFunction: findOneWithKV
+      where:
+        and: [moduleCompletionId, driverId, moduleId]

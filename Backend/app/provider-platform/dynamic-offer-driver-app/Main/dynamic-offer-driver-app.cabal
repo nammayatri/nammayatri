@@ -777,6 +777,7 @@ library
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfigs
       Domain.Types.LlmPrompt
+      Domain.Types.LmsCertificate
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
@@ -904,6 +905,7 @@ library
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfigs
       Storage.Beam.LlmPrompt
+      Storage.Beam.LmsCertificate
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
@@ -1034,6 +1036,7 @@ library
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfigs
       Storage.Queries.LlmPrompt
+      Storage.Queries.LmsCertificate
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
