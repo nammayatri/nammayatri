@@ -7,6 +7,5 @@ import Screens.Types as ST
 initData :: ST.QrCodeScannerState
 initData = 
     {
-        isError : false,
-        qrData : ""
+       headerText : ""
     }

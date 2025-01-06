@@ -169,6 +169,8 @@ foreign import downloadQR  :: String -> Effect Unit
 
 foreign import startQRScanner :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> String -> Effect Unit
 
+foreign import stopScanning :: Unit -> Effect Unit
+
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
   case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
@@ -1282,3 +1284,6 @@ specialVariantsForTracking _ = do
     "BikeCategory" -> true
     "BusCategory" -> true
     _ -> false
+
+isGovtBusDriver :: Boolean
+isGovtBusDriver = false

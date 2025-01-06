@@ -4,6 +4,7 @@ import Prelude
 import Screens.Types as ST
 import Debug (spy)
 import Engineering.Helpers.Commons
+import Helpers.Utils as HU
 import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit)
 
 instance showAction :: Show Action where
@@ -24,7 +25,9 @@ data ScreenOutput
 
 eval :: Action -> ST.QrCodeScannerState -> Eval Action ScreenOutput ST.QrCodeScannerState
 
-eval GoBack state = exit $ GoToHomeScreen
+eval GoBack state = do
+    void $ pure $ HU.stopScanning unit
+    exit $ GoToHomeScreen
 
 eval (StartQRScanner isError qrData) state = do
     if isError == "False" then

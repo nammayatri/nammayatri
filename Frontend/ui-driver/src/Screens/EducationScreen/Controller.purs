@@ -8,7 +8,10 @@ import Language.Types (STR(..))
 import Data.Maybe
 import Log
 import Styles.Colors as Color
-import JBridge (deletePopUpCallBack)
+import Data.Function.Uncurried (runFn5)
+import Effect.Uncurried (runEffectFn1)
+import Engineering.Helpers.Commons (getNewIDWithTag, getVideoID, getYoutubeData)
+import JBridge (deletePopUpCallBack, releaseYoutubeView, setYoutubePlayer, removeMediaPlayer, pauseYoutubeVideo)
 import Effect.Class (liftEffect)
 import Data.String (take)
 import Helpers.Utils as HU
@@ -18,7 +21,7 @@ import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Screens.Types (EducationScreenState(..))
-import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit, updateWithCmdAndExit)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -36,9 +39,17 @@ data Action =
   | YoutubeVideoStatus String
 
 data ScreenOutput =
-    GoToHomeScreen
+    OnButtonClick
+  | GoToHomeScreen
 
 eval :: Action -> EducationScreenState -> Eval Action ScreenOutput EducationScreenState
+
+eval GoBack state = do
+    exit GoToHomeScreen
+  
+eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = exit GoToHomeScreen
+eval (PrimaryButtonActionController PrimaryButton.OnClick) state = do
+  exit OnButtonClick
 
 eval _ state = update state
 
@@ -48,7 +59,7 @@ primaryButtonConfig state =
         config = PrimaryButton.config
         primaryButtonConfig' = config
             { textConfig
-                { text = ""
+                { text = state.buttonText
                 , color = Color.yellow900
                 , height = V 40
                 }
@@ -77,7 +88,7 @@ genericHeaderConfig state = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = ""
+        text = state.headerText
       , color = Color.black800
       }
     , suffixImageConfig {

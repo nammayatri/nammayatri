@@ -4,5 +4,9 @@ import Screens.Types as ST
 
 initData :: ST.EducationScreenState
 initData = {
-  videoUrl : ""
+  videoUrl : "",
+  headerText : "",
+  instructionText : "",
+  buttonText : "",
+  infoList : []
 }

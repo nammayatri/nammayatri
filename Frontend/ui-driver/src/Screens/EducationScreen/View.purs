@@ -14,6 +14,7 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Data.Function.Uncurried (runFn5)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), parseNumber)
 import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, addMediaPlayer)
 import Language.Strings (getString)
@@ -30,7 +31,6 @@ import Styles.Colors as Color
 import Styles.Types (FontStyle)
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
-import Data.Function.Uncurried (runFn5)
 import Resource.Localizable.TypesV2 as LT2
 import Common.Types.App as CT
 import Resource.Localizable.StringsV2 as StringsV2
@@ -105,26 +105,17 @@ instructionView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , background Color.blue600
-        , margin $ MarginHorizontal 16 16
         , padding $ Padding 16 16 16 16
         , cornerRadius 16.0
         ]
         [ 
         videoView push state
-        , imageView
-          [ width $ V (EHC.screenWidth unit - 64)
-          , height $ V (EHC.screenWidth unit - 64)
-          , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_delivery_instructions"
-          , margin $ MarginBottom 20
-          , cornerRadius 8.0
-          , layoutGravity "left"
-          ]
         , textView
           $ [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ ""
+            , text $ state.instructionText
             , color Color.black800
-            , margin $ MarginBottom 20
+            , margin $ MarginVertical 20 20
             ]
           <> FontStyle.subHeading3 CT.TypoGraphy
         , linearLayout
@@ -132,7 +123,7 @@ instructionView push state =
           , width MATCH_PARENT
           , orientation VERTICAL
           ]
-          ( map (\item -> instructionItem item) instructionData)
+          ( map (\item -> instructionItem item) state.infoList)
         ]
     ]
     ]
@@ -141,7 +132,7 @@ videoView :: forall w . (Action -> Effect Unit) -> ST.EducationScreenState -> Pr
 videoView push state =
     linearLayout
     [
-    height MATCH_PARENT
+      height MATCH_PARENT
     , width MATCH_PARENT
     ][
         screenAnimationFadeInOut
@@ -150,12 +141,13 @@ videoView push state =
             , height WRAP_CONTENT
             , gravity CENTER
             , id (getNewIDWithTag "EducationalVideoView")
-            , onAnimationEnd
+            , cornerRadius 12.0
+            , afterRender
                 ( \action -> do
                     let
                         id = (getNewIDWithTag "EducationalVideoView")
                         url = state.videoUrl
-                    pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id (show "PLAY") push YoutubeVideoStatus
+                    pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id ("PLAY") push YoutubeVideoStatus
                 )
                 (const NoAction)
             ][]
@@ -188,13 +180,6 @@ instructionItem item =
     <> FontStyle.body20 TypoGraphy
   ]
 
-
-instructionData :: Array { title :: String, image :: String }
-instructionData = 
-  [ 
-  ]
-
-
 separatorView :: forall w. (Action -> Effect Unit) -> ST.EducationScreenState -> PrestoDOM (Effect Unit) w
 separatorView push state =
   linearLayout
@@ -204,7 +189,6 @@ separatorView push state =
   , background Color.grey900
   ]
   []
-
 
 footerView :: forall w. (Action -> Effect Unit) -> ST.EducationScreenState -> PrestoDOM (Effect Unit) w
 footerView push state =

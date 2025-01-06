@@ -39,6 +39,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Control.Monad.Except (runExcept)
@@ -331,6 +332,9 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | GoToScanBusQR ST.HomeScreenState
+                    | LinkBusTrip ST.HomeScreenState
+                    | StartBusRide ST.HomeScreenState
+                    | GoToBusEducationScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -497,7 +501,11 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | RideTrackingModalAction RideTrackingModal.Action
             | ChooseBusRoute PopUpModal.Action
+            | StartBusTrip PrimaryButtonController.Action
+            | SelectBusRoute
+            | ScanQrCode
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1449,7 +1457,6 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  -- exit $ GoToScanBusQR state
   if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
@@ -1823,10 +1830,24 @@ eval (UpdateState newState) _ = continue newState
 
 eval (ChooseBusRoute action) state = 
   case action of
-    PopUpModal.SelectRouteButton _ -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
-    PopUpModal.OnButton1Click -> continue state
+    PopUpModal.SelectRoute index busRouteNumber ->
+      let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
+          newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
+      in updateAndExit newState $ LinkBusTrip newState
+    PopUpModal.SelectRouteButton PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.OnButton1Click -> do
+      exit $ StartBusRide state
     PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = if state.props.whereIsMyBusConfig.selectRouteStage then true else false}}}
+    PopUpModal.OnButton2Click -> do
+      continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
     _ -> update state
+
+eval (StartBusTrip PrimaryButtonController.OnClick) state =
+      exit $ StartBusRide state
+
+eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showStartBusTripModal = false, showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
+
+eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" then exit $ GoToBusEducationScreen state else exit $ GoToScanBusQR state
 
 eval _ state = update state 
 

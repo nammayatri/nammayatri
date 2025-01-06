@@ -290,6 +290,8 @@ data ScreenType =
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
   | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
   | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
+  | BusQrScanScreenStateType (QrCodeScannerState -> QrCodeScannerState)
+  | EducationScreenStateType (EducationScreenState -> EducationScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -496,6 +498,9 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | UPDATE_METRO_WARRIOR HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
                           | GO_TO_SCAN_BUS_QR HomeScreenState
+                          | LINK_BUS_TRIP HomeScreenState
+                          | GO_START_BUS_RIDE HomeScreenState
+                          | GO_TO_EDUCATION_SCREEN HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
