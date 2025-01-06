@@ -10,6 +10,7 @@ import Domain.Action.UI.Select as Select
 import Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
@@ -119,11 +120,72 @@ postMultimodalSwitchToAuto ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalSwitchToAuto _ _ = throwError $ InternalError "Not Implemented"
 
-postMultimodalSwitch ::
+postMultimodalSwitchVariant ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
   Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch _ _ _ = throwError $ InternalError "Not Implemented"
+postMultimodalSwitchVariant = do error "Logic yet to be decided"
+
+postMultimodalSwitch ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Text ->
+  ApiTypes.SwitchLegReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalSwitch = do error "Logic yet to be decided"
+
+postMultimodalJourneyDetails ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow ApiTypes.JourneyDetails
+postMultimodalJourneyDetails = do error "Logic yet to be decided"
+
+postMultimodalRiderLocation ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  ApiTypes.RiderLocationReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalRiderLocation = do error "Logic yet to be decided"
+
+postMultimodalJourneyCancel ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalJourneyCancel = do error "Logic yet to be decided"
+
+postMultimodalJourneyStatus ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow [ApiTypes.LegStatus]
+postMultimodalJourneyStatus = do error "Logic yet to be decided"
+
+postMultimodalExtendLeg ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  ApiTypes.ExtendLegReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalExtendLeg = do error "Logic yet to be decided"
+
+postMultimodalJourneyLegSkip ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalJourneyLegSkip = do error "Logic yet to be decided"
