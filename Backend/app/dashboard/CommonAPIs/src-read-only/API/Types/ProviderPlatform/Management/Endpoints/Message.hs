@@ -1,5 +1,4 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Management.Endpoints.Message where
@@ -161,21 +160,21 @@ newtype UploadFileResponse = UploadFileResponse {fileId :: Kernel.Types.Id.Id Da
 
 type API = ("message" :> (PostMessageUploadFile :<|> PostMessageAddLink :<|> PostMessageAdd :<|> PostMessageSend :<|> PostMessageEdit :<|> GetMessageList :<|> GetMessageInfo :<|> GetMessageDeliveryInfo :<|> GetMessageReceiverList))
 
-type PostMessageUploadFile = ("uploadFile" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UploadFileRequest :> Post ('[JSON]) UploadFileResponse)
+type PostMessageUploadFile = ("uploadFile" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UploadFileRequest :> Post '[JSON] UploadFileResponse)
 
-type PostMessageAddLink = ("addLink" :> ReqBody ('[JSON]) AddLinkAsMedia :> Post ('[JSON]) UploadFileResponse)
+type PostMessageAddLink = ("addLink" :> ReqBody '[JSON] AddLinkAsMedia :> Post '[JSON] UploadFileResponse)
 
-type PostMessageAdd = ("add" :> ReqBody ('[JSON]) AddMessageRequest :> Post ('[JSON]) AddMessageResponse)
+type PostMessageAdd = ("add" :> ReqBody '[JSON] AddMessageRequest :> Post '[JSON] AddMessageResponse)
 
-type PostMessageSend = ("send" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp SendMessageRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMessageSend = ("send" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp SendMessageRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostMessageEdit = ("edit" :> ReqBody ('[JSON]) EditMessageRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMessageEdit = ("edit" :> ReqBody '[JSON] EditMessageRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetMessageList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) MessageListResponse)
+type GetMessageList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] MessageListResponse)
 
-type GetMessageInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "info" :> Get ('[JSON]) MessageInfoResponse)
+type GetMessageInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "info" :> Get '[JSON] MessageInfoResponse)
 
-type GetMessageDeliveryInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "deliveryInfo" :> Get ('[JSON]) MessageDeliveryInfoResponse)
+type GetMessageDeliveryInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "deliveryInfo" :> Get '[JSON] MessageDeliveryInfoResponse)
 
 type GetMessageReceiverList =
   ( Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "receiverList" :> QueryParam "number" Kernel.Prelude.Text
@@ -185,20 +184,20 @@ type GetMessageReceiverList =
       :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            MessageReceiverListResponse
   )
 
 data MessageAPIs = MessageAPIs
-  { postMessageUploadFile :: ((Data.ByteString.Lazy.ByteString, UploadFileRequest) -> EulerHS.Types.EulerClient UploadFileResponse),
-    postMessageAddLink :: (AddLinkAsMedia -> EulerHS.Types.EulerClient UploadFileResponse),
-    postMessageAdd :: (AddMessageRequest -> EulerHS.Types.EulerClient AddMessageResponse),
-    postMessageSend :: ((Data.ByteString.Lazy.ByteString, SendMessageRequest) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMessageEdit :: (EditMessageRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMessageList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient MessageListResponse),
-    getMessageInfo :: (Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageInfoResponse),
-    getMessageDeliveryInfo :: (Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageDeliveryInfoResponse),
-    getMessageReceiverList :: (Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (MessageDeliveryStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient MessageReceiverListResponse)
+  { postMessageUploadFile :: (Data.ByteString.Lazy.ByteString, UploadFileRequest) -> EulerHS.Types.EulerClient UploadFileResponse,
+    postMessageAddLink :: AddLinkAsMedia -> EulerHS.Types.EulerClient UploadFileResponse,
+    postMessageAdd :: AddMessageRequest -> EulerHS.Types.EulerClient AddMessageResponse,
+    postMessageSend :: (Data.ByteString.Lazy.ByteString, SendMessageRequest) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMessageEdit :: EditMessageRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMessageList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient MessageListResponse,
+    getMessageInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageInfoResponse,
+    getMessageDeliveryInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageDeliveryInfoResponse,
+    getMessageReceiverList :: Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe MessageDeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient MessageReceiverListResponse
   }
 
 mkMessageAPIs :: (Client EulerHS.Types.EulerClient API -> MessageAPIs)
@@ -219,6 +218,6 @@ data MessageUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''MessageDeliveryStatus))
+$(mkHttpInstancesForEnum ''MessageDeliveryStatus)
 
-$(Data.Singletons.TH.genSingletons [(''MessageUserActionType)])
+$(Data.Singletons.TH.genSingletons [''MessageUserActionType])

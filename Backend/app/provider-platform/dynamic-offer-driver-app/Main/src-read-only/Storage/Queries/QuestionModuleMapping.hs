@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping] -> m ())
 createMany = traverse_ create
 
-findAllWithModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping]))
+findAllWithModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
 findAllWithModuleId moduleId = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]
 
 findByPrimaryKey ::

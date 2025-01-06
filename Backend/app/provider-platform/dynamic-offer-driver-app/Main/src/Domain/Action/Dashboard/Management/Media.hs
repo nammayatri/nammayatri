@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Dashboard.Management.Media (getMediaMediaImage) where
 
 import qualified API.Types.ProviderPlatform.Management.Media

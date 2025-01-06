@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.ModuleCompletionInformation where
@@ -26,6 +25,6 @@ data EntityStatus = ENTITY_PASSED | ENTITY_FAILED | ENTITY_ONGOING deriving (Eq,
 
 data ModuleEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntityStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleEntity))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleEntity)

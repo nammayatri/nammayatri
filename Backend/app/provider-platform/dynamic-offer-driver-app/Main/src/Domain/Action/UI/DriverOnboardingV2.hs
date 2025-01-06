@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2

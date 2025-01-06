@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
@@ -24,6 +23,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.UI.Driver as DADriver
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
@@ -394,7 +394,7 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
   resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
-  let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
+  let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
   return resp
   where

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Dashboard.IssueManagement.Issue
   ( dashboardIssueHandle,
     getIssueCategoryList,

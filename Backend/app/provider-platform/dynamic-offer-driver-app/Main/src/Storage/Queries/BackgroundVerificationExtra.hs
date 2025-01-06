@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.BackgroundVerificationExtra where
 
 import Domain.Types.BackgroundVerification

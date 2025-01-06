@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.TranslationsExtra where
 
 import qualified Domain.Types.Translations

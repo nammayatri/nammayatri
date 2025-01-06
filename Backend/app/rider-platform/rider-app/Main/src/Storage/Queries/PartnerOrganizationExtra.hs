@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.PartnerOrganizationExtra where
 
 import Domain.Types.PartnerOrganization

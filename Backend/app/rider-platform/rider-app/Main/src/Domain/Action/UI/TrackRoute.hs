@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.TrackRoute (getTrackVehicles) where
 
 import qualified API.Types.UI.TrackRoute as TrackRoute

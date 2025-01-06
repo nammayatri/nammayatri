@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.QuestionModuleMapping where
@@ -14,11 +12,11 @@ import qualified Lib.DriverCoins.Types
 import Tools.Beam.UtilsTH
 
 data QuestionModuleMappingT f = QuestionModuleMappingT
-  { moduleId :: (B.C f Kernel.Prelude.Text),
-    questionId :: (B.C f Kernel.Prelude.Text),
-    quizCoinFunction :: (B.C f (Kernel.Prelude.Maybe Lib.DriverCoins.Types.DriverCoinsFunctionType)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { moduleId :: B.C f Kernel.Prelude.Text,
+    questionId :: B.C f Kernel.Prelude.Text,
+    quizCoinFunction :: B.C f (Kernel.Prelude.Maybe Lib.DriverCoins.Types.DriverCoinsFunctionType),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +26,6 @@ instance B.Table QuestionModuleMappingT where
 
 type QuestionModuleMapping = QuestionModuleMappingT Identity
 
-$(enableKVPG (''QuestionModuleMappingT) [('moduleId), ('questionId)] [])
+$(enableKVPG ''QuestionModuleMappingT ['moduleId, 'questionId] [])
 
-$(mkTableInstances (''QuestionModuleMappingT) "question_module_mapping")
+$(mkTableInstances ''QuestionModuleMappingT "question_module_mapping")

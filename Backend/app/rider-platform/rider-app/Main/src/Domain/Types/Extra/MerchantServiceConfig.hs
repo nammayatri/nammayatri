@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-
 module Domain.Types.Extra.MerchantServiceConfig where
 
 import qualified Data.List as List

@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.LmsCertificate where
@@ -13,12 +11,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LmsCertificateT f = LmsCertificateT
-  { driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    moduleCompletionId :: (B.C f Kernel.Prelude.Text),
-    moduleId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    moduleCompletionId :: B.C f Kernel.Prelude.Text,
+    moduleId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +26,6 @@ instance B.Table LmsCertificateT where
 
 type LmsCertificate = LmsCertificateT Identity
 
-$(enableKVPG (''LmsCertificateT) [('id)] [[('moduleCompletionId)]])
+$(enableKVPG ''LmsCertificateT ['id] [['moduleCompletionId]])
 
-$(mkTableInstances (''LmsCertificateT) "lms_certificate")
+$(mkTableInstances ''LmsCertificateT "lms_certificate")

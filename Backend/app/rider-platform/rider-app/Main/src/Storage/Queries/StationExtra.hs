@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.StationExtra where
 
 import BecknV2.FRFS.Enums

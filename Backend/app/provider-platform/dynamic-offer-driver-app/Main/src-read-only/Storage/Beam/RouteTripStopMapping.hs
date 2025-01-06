@@ -13,24 +13,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RouteTripStopMappingT f = RouteTripStopMappingT
-  { enabled :: (B.C f Kernel.Prelude.Bool),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    providerCode :: (B.C f Kernel.Prelude.Text),
-    routeCode :: (B.C f Kernel.Prelude.Text),
-    scheduledArrival :: (B.C f Data.Time.TimeOfDay),
-    scheduledDay :: (B.C f Data.Time.DayOfWeek),
-    scheduledDeparture :: (B.C f Data.Time.TimeOfDay),
-    stopCode :: (B.C f Kernel.Prelude.Text),
-    stopName :: (B.C f Kernel.Prelude.Text),
-    stopLat :: (B.C f Kernel.Prelude.Double),
-    stopLon :: (B.C f Kernel.Prelude.Double),
-    stopSequenceNum :: (B.C f Kernel.Prelude.Int),
-    tripCode :: (B.C f Kernel.Prelude.Text),
-    tripSequenceNum :: (B.C f Kernel.Prelude.Int),
-    vehicleType :: (B.C f Domain.Types.VehicleCategory.VehicleCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { enabled :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    providerCode :: B.C f Kernel.Prelude.Text,
+    routeCode :: B.C f Kernel.Prelude.Text,
+    scheduledArrival :: B.C f Data.Time.TimeOfDay,
+    scheduledDay :: B.C f Data.Time.DayOfWeek,
+    scheduledDeparture :: B.C f Data.Time.TimeOfDay,
+    stopCode :: B.C f Kernel.Prelude.Text,
+    stopName :: B.C f Kernel.Prelude.Text,
+    stopLat :: B.C f Kernel.Prelude.Double,
+    stopLon :: B.C f Kernel.Prelude.Double,
+    stopSequenceNum :: B.C f Kernel.Prelude.Int,
+    tripCode :: B.C f Kernel.Prelude.Text,
+    tripSequenceNum :: B.C f Kernel.Prelude.Int,
+    vehicleType :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -42,6 +42,6 @@ instance B.Table RouteTripStopMappingT where
 
 type RouteTripStopMapping = RouteTripStopMappingT Identity
 
-$(enableKVPG (''RouteTripStopMappingT) [('routeCode), ('scheduledDay), ('stopCode), ('tripCode), ('tripSequenceNum)] [])
+$(enableKVPG ''RouteTripStopMappingT ['routeCode, 'scheduledDay, 'stopCode, 'tripCode, 'tripSequenceNum] [])
 
-$(mkTableInstances (''RouteTripStopMappingT) "route_trip_stop_mapping")
+$(mkTableInstances ''RouteTripStopMappingT "route_trip_stop_mapping")

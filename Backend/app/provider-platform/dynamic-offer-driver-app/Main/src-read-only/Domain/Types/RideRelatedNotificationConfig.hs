@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.RideRelatedNotificationConfig where
@@ -35,8 +34,8 @@ data NotificationType = SMS | PN | WHATSAPP | OVERLAY | CALL deriving (Eq, Ord, 
 
 data TimeDiffEvent = RIDE_ASSIGNED | PICKUP_TIME | START_TIME | END_TIME deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EventTime))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventTime)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TimeDiffEvent))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TimeDiffEvent)

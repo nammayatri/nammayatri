@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.EditBooking where
 
 import API.Types.UI.EditBooking

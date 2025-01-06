@@ -30,7 +30,7 @@ findByIdAndLanguage questionId language = do findOneWithKV [Se.And [Se.Is Beam.q
 
 getAllTranslationsByQuestionId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ([Domain.Types.QuestionInformation.QuestionInformation]))
+  (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m [Domain.Types.QuestionInformation.QuestionInformation])
 getAllTranslationsByQuestionId questionId = do findAllWithKV [Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]
 
 findByPrimaryKey ::

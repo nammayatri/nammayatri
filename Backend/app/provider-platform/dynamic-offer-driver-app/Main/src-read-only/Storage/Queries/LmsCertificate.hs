@@ -35,7 +35,7 @@ findByModuleCompletionIdAndDriverIdAndModuleId moduleCompletionId driverId modul
         ]
     ]
 
-getAllCertificate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.LmsCertificate.LmsCertificate]))
+getAllCertificate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.LmsCertificate.LmsCertificate])
 getAllCertificate driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsCertificate.LmsCertificate -> m (Maybe Domain.Types.LmsCertificate.LmsCertificate))

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverIntelligentPoolConfig where
@@ -39,7 +38,7 @@ data DriverIntelligentPoolConfigD (s :: UsageSafety) = DriverIntelligentPoolConf
   }
   deriving (Generic, Show)
 
-data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
+data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -50,9 +49,9 @@ data IntelligentScores = IntelligentScores
     rideFrequency :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     rideRequestPopupDelayDuration :: Kernel.Types.Common.Seconds
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
-type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD ('Safe)
+type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 
 instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 

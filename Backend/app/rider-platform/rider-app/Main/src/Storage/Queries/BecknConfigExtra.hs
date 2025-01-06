@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.BecknConfigExtra where
 
 import qualified BecknV2.OnDemand.Enums

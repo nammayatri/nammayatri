@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverModuleCompletion where
@@ -35,6 +34,6 @@ data ModuleCompletionEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generi
 
 data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionEntity))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionEntity)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionStatus)

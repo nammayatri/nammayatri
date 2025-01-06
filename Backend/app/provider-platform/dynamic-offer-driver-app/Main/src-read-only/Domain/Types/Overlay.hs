@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Overlay where
@@ -54,7 +53,7 @@ data OverlayCondition
   | InactiveAutopay
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type Overlay = OverlayD ('Safe)
+type Overlay = OverlayD 'Safe
 
 instance FromJSON (OverlayD 'Unsafe)
 
@@ -64,4 +63,4 @@ instance FromJSON (OverlayD 'Safe)
 
 instance ToJSON (OverlayD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OverlayCondition))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OverlayCondition)

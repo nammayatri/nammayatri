@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MerchantServiceConfigExtra where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC

@@ -89,6 +89,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson

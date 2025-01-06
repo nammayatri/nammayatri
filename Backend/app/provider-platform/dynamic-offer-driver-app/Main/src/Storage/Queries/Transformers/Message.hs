@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.Message where
 
 import qualified Domain.Types.MerchantOperatingCity

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.Invoice where
 
 import qualified API.Types.UI.Invoice as DTInvoice
