@@ -8,6 +8,7 @@ module Storage.Beam.TripTransaction where
 import qualified Data.Text
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.TripTransaction
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,6 +35,7 @@ data TripTransactionT f = TripTransactionT
     status :: B.C f Domain.Types.TripTransaction.TripStatus,
     tripCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     vehicleNumber :: B.C f Data.Text.Text,
+    vehicleServiceTierType :: B.C f Domain.Types.Common.ServiceTierType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

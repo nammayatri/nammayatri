@@ -83,6 +83,7 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.tripCode tripCode,
       Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

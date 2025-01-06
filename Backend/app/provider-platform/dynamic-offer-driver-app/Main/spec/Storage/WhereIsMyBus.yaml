@@ -45,6 +45,7 @@ TripTransaction:
     routeCode: Text
     status: TripStatus
     isCurrentlyDeviated: Bool
+    vehicleServiceTierType: ServiceTierType
     deviationCount: Int
     startLocation: Maybe LatLong
     endLocation: Maybe LatLong

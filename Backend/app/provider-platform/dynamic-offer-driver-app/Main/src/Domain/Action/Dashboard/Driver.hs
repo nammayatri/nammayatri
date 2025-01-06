@@ -67,6 +67,12 @@ module Domain.Action.Dashboard.Driver
     getFleetDriverAssociation,
     getFleetVehicleAssociation,
     getAllDriverForFleet,
+    getDriverFleetRoutes,
+    getDriverFleetPossibleRoutes,
+    postDriverFleetTripPlanner,
+    getDriverFleetTripTransactions,
+    postDriverFleetAddDrivers,
+    postDriverFleetAddDriverBusRouteMapping,
     VolunteerTransactionStorageReq (..),
     setServiceChargeEligibleFlagInDriverPlan,
     addVehiclesInFleet,
@@ -106,7 +112,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
 import qualified Data.HashSet as HS
-import Data.List (partition, sortOn)
+import Data.List (groupBy, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
 import Data.Ord (Down (..))
@@ -152,6 +158,7 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.TransporterConfig
 import Domain.Types.TripTransaction
+import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
@@ -223,6 +230,7 @@ import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Status as QDocStatus
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -1238,6 +1246,286 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   void $ runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
+
+---------------------------------------------------------------------
+
+data CreateDriversCSVRow = CreateDriversCSVRow
+  { driverName :: Text,
+    driverMobileNumber :: Text
+  }
+
+data DriverDetails = DriverDetails
+  { driverName :: Text,
+    driverMobileNumber :: Text
+  }
+
+instance FromNamedRecord CreateDriversCSVRow where
+  parseNamedRecord r =
+    CreateDriversCSVRow
+      <$> r .: "driver_name"
+      <*> r .: "driver_mobile_number"
+
+instance FromMultipart Tmp Common.CreateDriversReq where
+  fromMultipart form = do
+    Common.CreateDriversReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp Common.CreateDriversReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+postDriverFleetAddDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateDriversReq -> Flow APISuccess
+postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  driverDetails <- readCsv req.file
+  when (length driverDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go" -- TODO: Configure the limit
+  mapM_ (processDriver merchantOpCity) driverDetails
+  pure Success
+  where
+    processDriver :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver moc req_ = do
+      let driverMobile = req_.driverMobileNumber
+          authData =
+            DReg.AuthReq
+              { mobileNumber = Just req_.driverMobileNumber,
+                mobileCountryCode = Just "+91",
+                merchantId = moc.merchantId.getId,
+                merchantOperatingCity = Just opCity,
+                email = Nothing,
+                name = Just req_.driverName,
+                identifierType = Just DP.MOBILENUMBER,
+                registrationLat = Nothing,
+                registrationLon = Nothing
+              }
+      mobileNumberHash <- getDbHash req_.driverMobileNumber
+      person <-
+        QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
+          >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
+      mbFleetDriverAssociation <- FDV.findByDriverId person.id True
+      whenJust mbFleetDriverAssociation $ \fleetDriverAssociation -> do
+        when (fleetDriverAssociation.fleetOwnerId /= fleetOwnerId) $ throwError (InvalidRequest "Driver is actively associated to another fleet.")
+      fork "Sending Fleet Consent SMS to Driver" $ do
+        fleetOwner <- B.runInReplica $ QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
+        FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
+        sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
+
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CreateDriversCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM parseDriverInfo v >>= (pure . V.toList)
+
+    parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
+    parseDriverInfo idx row = do
+      driverName <- cleanCSVField idx row.driverName "Driver name"
+      driverMobileNumber <- cleanCSVField idx row.driverMobileNumber "Mobile number"
+      pure $ DriverDetails driverName driverMobileNumber
+
+    cleanField = replaceEmpty . T.strip
+
+    replaceEmpty :: Text -> Maybe Text
+    replaceEmpty = \case
+      "" -> Nothing
+      "no constraint" -> Nothing
+      "no_constraint" -> Nothing
+      x -> Just x
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
+    sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId fleetOwner = do
+      let countryCode = fromMaybe "+91" person.mobileCountryCode
+          phoneNumber = countryCode <> mobileNumber
+      smsCfg <- asks (.smsCfg)
+      withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
+        (mbSender, message) <-
+          MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
+            MessageBuilder.BuildFleetDeepLinkAuthMessage
+              { fleetOwnerName = fleetOwner.firstName
+              }
+        let sender = fromMaybe smsCfg.sender mbSender
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+
+getDriverFleetRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Maybe LatLong -> Maybe Text -> Flow Common.RouteAPIResp
+getDriverFleetRoutes _merchantShortId _opCity _fleetOwnerId _mbCurrentLocation _mbSearchString = do error "Logic yet to be decided"
+
+getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> Context.City -> Text -> LatLong -> Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes _merchantShortId _opCity _fleetOwnerId _startLocation = do error "Logic yet to be decided"
+
+getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Maybe Day -> Flow Common.TripTransactionResp
+getDriverFleetTripTransactions _merchantShortId _opCity _fleetOwnerId _reqDriverId _vehicleNo _reqDay = do error "Logic yet to be decided"
+
+linkVehicleToDriver :: Id Common.Driver -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Flow DVeh.Vehicle
+linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  driver <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+  unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
+  now <- getCurrentTime
+  let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInformation driver merchantId vehicleNumber vehicleRC merchantOperatingCityId now
+  QVehicle.upsert vehicle
+  return vehicle
+
+postDriverFleetTripPlanner :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Common.TripPlannerReq -> Flow APISuccess
+postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId driverId vehicleNumber req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  vehicle <- linkVehicleToDriver driverId merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
+  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driverId) vehicle req.trips
+
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id DP.Person -> DVeh.Vehicle -> [Common.TripDetails] -> Flow APISuccess
+createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle trips = do
+  -- TODO: update all to cancelled status
+  -- QTT.updateAllTripStatusByDriverId driverId DTT.CANCELLED
+  (allTransactions, _) <-
+    foldM
+      ( \(accTransactions, accSeq) trip -> do
+          transactions :: [([DTT.TripTransaction], Int)] <- makeTripTransactions (accTransactions, accSeq) trip
+          return (accTransactions <> (concat $ map fst transactions), accSeq + sum (map snd transactions))
+      )
+      ([], 0)
+      trips
+  QTT.createMany allTransactions
+  pure Success
+  where
+    roundTripValidation tripDetail roundRouteCode = do
+      when (isJust tripDetail.roundTrip && isNothing roundRouteCode) $ throwError (InvalidRequest ("Round trip not allowed for this route: " <> tripDetail.routeCode))
+
+    makeTripTransactions :: ([DTT.TripTransaction], Int) -> Common.TripDetails -> Flow [([DTT.TripTransaction], Int)]
+    makeTripTransactions (accTransactions, accSeq) trip = do
+      let routeCode = trip.routeCode
+      route <- QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> routeCode))
+      case trip.roundTrip of
+        Just roundTrip -> do
+          roundTripValidation trip route.roundRouteCode
+          let freq = roundTrip.frequency
+          when (freq == 0) $ throwError (InvalidRequest "Frequency should be greater than 0")
+          mapM (mkTransactions routeCode (fromMaybe "" route.roundRouteCode) (accTransactions, accSeq)) [0 .. (2 * freq) -1]
+        Nothing -> do
+          (tripTransaction, accSeq_) <- mkTransactions routeCode "" (accTransactions, accSeq) 0
+          pure $ [(tripTransaction, accSeq_)]
+
+    mkTransactions :: Text -> Text -> ([DTT.TripTransaction], Int) -> Int -> Flow ([DTT.TripTransaction], Int)
+    mkTransactions routeCode_ roundTripRouteCode (accTransactions, accSeq) idx = do
+      let routeCode = bool roundTripRouteCode routeCode_ (idx `mod` 2 == 0)
+      vehicleServiceTierType <- listToMaybe vehicle.selectedServiceTiers & fromMaybeM (InternalError "No Vehicle Service Tier Type Associated to Vehicle.")
+      transactionId <- generateGUID
+      now <- getCurrentTime
+      let tripTransaction =
+            -- TODO: assign Values correctly
+            DTT.TripTransaction
+              { allowEndingMidRoute = False,
+                deviationCount = 0,
+                driverId = cast driverId,
+                endLocation = Nothing,
+                endStopCode = "",
+                fleetOwnerId = Id fleetOwnerId,
+                id = transactionId,
+                isCurrentlyDeviated = False,
+                startLocation = Nothing,
+                startedNearStopCode = Nothing,
+                status = DTT.TRIP_ASSIGNED,
+                sequenceNumber = accSeq,
+                routeCode = routeCode,
+                tripCode = Nothing,
+                vehicleNumber = vehicle.registrationNo,
+                vehicleServiceTierType = vehicleServiceTierType,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      return (tripTransaction : accTransactions, 1)
+
+data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
+  { driverId :: Text,
+    vehicleNumber :: Text,
+    routeCode :: Text,
+    roundTripFreq :: Text
+  }
+
+data DriverBusRouteDetails = DriverBusRouteDetails
+  { driverId :: Text,
+    vehicleNumber :: Text,
+    routeCode :: Text,
+    roundTripFreq :: Maybe Int
+  }
+
+instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
+  parseNamedRecord r =
+    CreateDriverBusRouteMappingCSVRow
+      <$> r .: "driver_id"
+      <*> r .: "vehicle_number"
+      <*> r .: "route_code"
+      <*> r .: "round_trip_freq"
+
+instance FromMultipart Tmp Common.CreateDriverBusRouteMappingReq where
+  fromMultipart form = do
+    Common.CreateDriverBusRouteMappingReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp Common.CreateDriverBusRouteMappingReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateDriverBusRouteMappingReq -> Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping merchantShortId opCity _fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  driverBusRouteDetails <- readCsv req.file
+  when (length driverBusRouteDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go" -- TODO: Configure the limit
+  let _groupedDetails = groupBy (\a b -> a.driverId == b.driverId) $ sortOn (.driverId) driverBusRouteDetails
+
+  -- forM_ groupedDetails $ \driverGroup -> do
+  --   let driverId = (.driverId) (head driverGroup)
+  --       vehicleNumbers = map (\item -> item.vehicleNumber) driverGroup
+  --   when (length (nub vehicleNumbers) > 1) $
+  --     throwError $ InvalidRequest $ "Driver " <> driverId <> " is mapped to multiple vehicles: " <> show (nub vehicleNumbers)
+  --   let vehicleNo = head vehicleNumbers
+  --   tripsReq <- mapM makeTripPlannerReq driverGroup
+  --   createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (Id driverId) vehicleNo tripsReq
+  pure Success
+  where
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CreateDriverBusRouteMappingCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM parseMappingInfo v >>= (pure . V.toList)
+
+    parseMappingInfo :: Int -> CreateDriverBusRouteMappingCSVRow -> Flow DriverBusRouteDetails
+    parseMappingInfo idx row = do
+      driverId <- cleanCSVField idx row.driverId "Driver Id"
+      vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
+      routeCode <- cleanCSVField idx row.routeCode "Route code"
+      let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
+      pure $ DriverBusRouteDetails driverId vehicleNumber routeCode roundTripFreq
+
+    cleanField = replaceEmpty . T.strip
+
+    replaceEmpty :: Text -> Maybe Text
+    replaceEmpty = \case
+      "" -> Nothing
+      "no constraint" -> Nothing
+      "no_constraint" -> Nothing
+      x -> Just x
+
+    cleanCSVField :: Int -> Text -> Text -> Flow Text
+    cleanCSVField idx fieldValue fieldName =
+      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
+
+    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+    readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
+
+-- makeTripPlannerReq driverGroup =
+--   return $
+--     Common.TripDetails
+--       { routeCode = driverGroup.routeCode,
+--         roundTrip = fmap (\freq -> Common.RoundTripDetail {frequency = freq}) driverGroup.roundTripFreq
+--       }
 
 ---------------------------------------------------------------------
 

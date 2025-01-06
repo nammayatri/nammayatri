@@ -6,6 +6,7 @@ module Domain.Types.TripTransaction where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -34,6 +35,7 @@ data TripTransaction = TripTransaction
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Data.Text.Text,
+    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -83,3 +83,18 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ALTER COLUMN trip_transactio
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

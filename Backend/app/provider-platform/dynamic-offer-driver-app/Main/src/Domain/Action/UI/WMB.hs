@@ -10,6 +10,7 @@ module Domain.Action.UI.WMB
     postWmbTripStart,
     postWmbTripEnd,
     getWmbTripList,
+    postFleetConsent,
   )
 where
 
@@ -54,11 +55,11 @@ import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetConfig as QFC
-import qualified Storage.Queries.FleetDriverAssociation as FDA
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
@@ -69,14 +70,13 @@ import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRouteMapping as VRM
-import qualified Storage.Queries.VehicleRouteMappingExtra as VRME
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as TN
 
 checkFleetDriverAssociation :: Id Person -> Flow Bool
 checkFleetDriverAssociation driverId = do
-  val <- FDA.findByDriverId driverId True
+  val <- FDV.findByDriverId driverId True
   case val of
     Nothing -> return False
     Just info -> return info.isActive
@@ -102,28 +102,6 @@ getSourceAndDestinationStopInfo route routeCode = do
           code = routeTripMapping.stopCode,
           ..
         }
-
-upsertFleetDriverAssociation :: Id Person -> Id Person -> Flow ()
-upsertFleetDriverAssociation driverId fleetOwnerId = do
-  val <- FDA.findByDriverId driverId True
-  case val of
-    Nothing -> do
-      now <- getCurrentTime
-      id <- generateGUID
-      let fleetDriverAssc =
-            FleetDriverAssociation
-              { associatedTill = Nothing,
-                driverId = driverId,
-                fleetOwnerId = fleetOwnerId.getId,
-                isActive = True,
-                associatedOn = Just now,
-                createdAt = now,
-                updatedAt = now,
-                ..
-              }
-      FDA.create fleetDriverAssc
-      return ()
-    Just _ -> return ()
 
 availableRoutes :: (Text, ServiceTierType) -> Text -> Flow AvailableRoute
 availableRoutes (routeCode, vehicleServiceTierType) vhclNo = do
@@ -162,7 +140,7 @@ getWmbAvailableRoutes (_, _, _) req = do
           vehicleNumber <- decrypt mapping.vehicleNumber
           availableRoutes (mapping.routeCode, mapping.vehicleServiceTierType) vehicleNumber
       )
-      =<< VRME.findAllRouteMappings vehicleNumberHash
+      =<< VRM.findAllRouteMappings vehicleNumberHash
   pure result
 
 postWmbTripLink ::
@@ -179,7 +157,7 @@ postWmbTripLink (mbDriverId, merchantId, merchantOperatingCityId) req = do
     case (A.fromJSON $ A.String req.vehicleNumberHash :: A.Result DbHash) of
       A.Success vehicleNumberHash -> pure vehicleNumberHash
       A.Error err -> throwError $ InternalError (T.pack err)
-  vehicleRouteMapping <- VRME.findOneMapping vehicleNumberHash req.routeCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
+  vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash req.routeCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
   route <- QR.findByRouteCode req.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
   fleetConfig <- QFC.findByPrimaryKey vehicleRouteMapping.fleetOwnerId >>= fromMaybeM (InvalidRequest "Fleet Config Info not found")
   (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route req.routeCode
@@ -188,7 +166,7 @@ postWmbTripLink (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case curVehicleDetails of
     Just x | x.driverId /= driverId -> throwError (InvalidRequest "Already Linked")
     _ -> pure ()
-  upsertFleetDriverAssociation driverId vehicleRouteMapping.fleetOwnerId
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId True
   tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus driverId
   case tripTransactions of
     [] -> pure ()
@@ -205,7 +183,7 @@ postWmbTripLink (mbDriverId, merchantId, merchantOperatingCityId) req = do
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransactionId,
-        vehicleNum = vehicleNumber,
+        vehicleNumber = vehicleNumber,
         vehicleType = vehicleRouteMapping.vehicleServiceTierType,
         source = sourceStopInfo,
         destination = destinationStopInfo,
@@ -267,6 +245,7 @@ postWmbTripLink (mbDriverId, merchantId, merchantOperatingCityId) req = do
           startLocation = Nothing,
           startedNearStopCode = Nothing,
           tripCode = Nothing,
+          vehicleServiceTierType = vehicleRouteMapping.vehicleServiceTierType,
           merchantId = merchantId,
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
@@ -279,15 +258,13 @@ getTripTransactionDetails ::
   Domain.Types.TripTransaction.TripTransaction ->
   Flow TripTransactionDetails
 getTripTransactionDetails tripTransaction = do
-  vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
-  vehicleRouteMapping <- VRME.findOneMapping vehicleNumberHash tripTransaction.routeCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
   (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route tripTransaction.routeCode
   return $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
-        vehicleNum = tripTransaction.vehicleNumber,
-        vehicleType = vehicleRouteMapping.vehicleServiceTierType,
+        vehicleNumber = tripTransaction.vehicleNumber,
+        vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
         destination = destinationStopInfo,
         status = tripTransaction.status,
@@ -325,7 +302,7 @@ postWmbTripStart ::
     ) ->
     Id TripTransaction ->
     API.Types.UI.WMB.TripStartReq ->
-    Flow Kernel.Types.APISuccess.APISuccess
+    Flow APISuccess
   )
 postWmbTripStart (_, _, _) tripTransactionId req = do
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
@@ -354,7 +331,7 @@ postWmbTripEnd ::
   )
 postWmbTripEnd (person, _, merchantOpCityId) tripTransactionId req = do
   driverId <- fromMaybeM (InternalError "Driver ID not found") person
-  fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM (InternalError "Fleet Association not found")
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (InternalError "Fleet Association not found")
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
   routeInfo <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InternalError "Route not found")
   fleetConfigInfo <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config Info not found")
@@ -455,6 +432,23 @@ postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId re
     getRequestType = \case
       EndRide _ -> END_RIDE
       ChangeRoute _ -> CHANGE_ROUTE
+
+postFleetConsent ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    Flow APISuccess
+  )
+postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
+  driverId <- fromMaybeM (InternalError "Driver id not found") mbDriverId
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InternalError "Inactive Fleet Driver Association Not Found")
+  FDV.upsert fleetDriverAssociation {isActive = True}
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language
+  whenJust mbMerchantPN $ \merchantPN -> do
+    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType merchantPN.title merchantPN.body driver driver.deviceToken
+  pure Success
 
 driverRequestLockKey :: Text -> Text
 driverRequestLockKey reqId = "Driver:Request:Id-" <> reqId

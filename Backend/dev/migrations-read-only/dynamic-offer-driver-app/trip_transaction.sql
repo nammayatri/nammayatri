@@ -19,6 +19,7 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN started_near_stop
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_code text ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_number text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_service_tier_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);

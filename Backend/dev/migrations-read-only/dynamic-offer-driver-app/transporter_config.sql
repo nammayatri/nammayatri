@@ -390,3 +390,43 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN end_ride_distan
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_threshold integer ;
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

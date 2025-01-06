@@ -36,6 +36,7 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             status = status,
             tripCode = tripCode,
             vehicleNumber = vehicleNumber,
+            vehicleServiceTierType = vehicleServiceTierType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -62,6 +63,7 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.vehicleNumber = vehicleNumber,
+        Beam.vehicleServiceTierType = vehicleServiceTierType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
