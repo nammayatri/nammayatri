@@ -61,6 +61,23 @@ view push config = do
     , height WRAP_CONTENT
     , orientation VERTICAL
     ][ 
+        linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , id $ getNewIDWithTag "rideActionHeaderLayout"
+          , padding $ PaddingBottom 16
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , gravity CENTER
+              ][ 
+              ]
+            ]
+          ],
         rideActionView (MarginTop 0) push config
     ]
 
@@ -91,13 +108,7 @@ rideActionView layoutMargin push config =
       , orientation VERTICAL
       , id $ getNewIDWithTag "rideActionLayout"
       ]([  
-          rideActionDataView push config,
-         linearLayout
-            [ width MATCH_PARENT
-            , height $ V 1
-            , background Color.lightGrey
-            , margin $ MarginTop 24
-            ][]
+          rideActionDataView push config
         ])
     , Tuple "rideActionView_Child_2" $ endRide push config
   ]]
@@ -117,6 +128,17 @@ rideActionDataView push config =
           , cornerRadius 4.0
           , background Color.black500
           ][]
+      , textView $[
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , gravity START
+        , text $ "You are on ride...."
+        , color Color.black800
+        , ellipsize true
+        , singleLine false
+        , margin $ MarginVertical 16 20
+        ] <> FontStyle.subHeading2 TypoGraphy
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -160,15 +182,50 @@ normalRideInfoView push config =
     linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation VERTICAL
+      , orientation HORIZONTAL
       ]
-      [ linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          ]
-          [  
-          ]
+      [ 
+          infoView "Bus No." config.busNumber
+        , separator true
+        , infoView "Route No." config.routeNumber
+        , separator true
+        , infoView "Bus Type" config.busType
       ] 
+
+infoView :: forall w . String -> String -> PrestoDOM (Effect Unit) w
+infoView title value = 
+  linearLayout
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity LEFT
+    , weight 1.0
+    ][
+      -- linearLayout
+      -- [ height WRAP_CONTENT
+      -- , width WRAP_CONTENT
+      -- , orientation VERTICAL
+      -- ][
+        textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text title
+          , color Color.black650
+          , ellipsize true
+          , singleLine true
+          ] <> FontStyle.body3 TypoGraphy
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text value
+          , color Color.black800
+          , ellipsize true
+          , singleLine true
+          -- , margin (MarginLeft 8)
+          ] <> FontStyle.subHeading1 TypoGraphy
+      -- ]
+    ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 sourceAndDestinationView push config =
@@ -207,7 +264,7 @@ sourceDestinationImageView  config =
 separatorConfig :: Config -> SeparatorView.Config
 separatorConfig config = {
     orientation : VERTICAL
-  , count : 6
+  , count : 3
   , height : V 4
   , width : V 2
   , layoutWidth : V 14
@@ -227,29 +284,30 @@ sourceDestinationTextView push config =
       textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text "config.sourceAddress.titleText"
+        , text config.sourceStopName
         , id (getNewIDWithTag "tripSource")
         , color Color.black800
         , ellipsize true
         , singleLine true
         , afterRender push $ const NoAction
+        , margin $ MarginBottom 15
         ] <> FontStyle.subHeading1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text "config.sourceAddress.detailText"
-        , id (getNewIDWithTag "tripSourceAddress")
-        , color Color.black650
-        , margin (MarginBottom 25)
-        , ellipsize true
-        , singleLine true
-        , afterRender push $ const NoAction
-        ] <> FontStyle.body1 TypoGraphy
+      -- , textView $
+      --   [ height WRAP_CONTENT
+      --   , width WRAP_CONTENT
+      --   , text "config.sourceAddress.detailText"
+      --   , id (getNewIDWithTag "tripSourceAddress")
+      --   , color Color.black650
+      --   , margin (MarginBottom 25)
+      --   , ellipsize true
+      --   , singleLine true
+      --   , afterRender push $ const NoAction
+      --   ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
       ] 
 
 destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destAddressTextView config push=
+destAddressTextView config push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -257,21 +315,21 @@ destAddressTextView config push=
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ ""
+        , text $ config.destinationStopName
         , id (getNewIDWithTag "tripDestination")
         , color Color.black800
         , ellipsize true
         , singleLine true
         ] <> FontStyle.subHeading1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text $ ""
-        , id (getNewIDWithTag "tripDestination")
-        , color Color.black650
-        , ellipsize true
-        , margin (MarginBottom 0)
-        ]<> FontStyle.body1 TypoGraphy
+      -- , textView $
+      --   [ height WRAP_CONTENT
+      --   , width WRAP_CONTENT
+      --   , text $ ""
+      --   , id (getNewIDWithTag "tripDestination")
+      --   , color Color.black650
+      --   , ellipsize true
+      --   , margin (MarginBottom 0)
+      --   ]<> FontStyle.body1 TypoGraphy
       ]
 
 
@@ -279,19 +337,35 @@ endRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Uni
 endRide push config =
   linearLayout
   [ width MATCH_PARENT
-  , height (V 50)
-  , background Color.red
+  , height (V 48)
+  , background Color.grey800
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push (const $ EndRide)
   , rippleColor Color.rippleShade
   , afterRender push $ const NoAction
+  , margin $ Margin 16 14 16 34
   ][ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text $ getString END_RIDE
-    , color Color.white900
-    , padding (Padding 0 0 0 4)
+    , color Color.black700
+    -- , padding (Padding 0 0 0 4)
     , afterRender push $ const NoAction
     ] <> FontStyle.subHeading1 TypoGraphy 
 ]
+
+
+separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
+separator visibility' =
+  linearLayout
+    [ weight 1.0
+    , height MATCH_PARENT
+    , margin $ MarginHorizontal 5 5
+    , visibility if visibility' then VISIBLE else GONE
+    ][ linearLayout
+      [ width $ V 1
+      , background Color.lightGrey
+      , height MATCH_PARENT
+      ][]
+    ]

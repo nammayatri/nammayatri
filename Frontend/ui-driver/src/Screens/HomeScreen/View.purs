@@ -308,6 +308,21 @@ screen initialState (GlobalState globalState) =
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
+            "RideTracking"   -> do
+                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_tracking" true-- Hardcoded: enableFrequentLocationUpdates as true
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
+                                _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
+                                _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
+
+                                if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideTrackingModalAction (RideTrackingModal.NoAction) else pure unit
+                                if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
+                                  _ <- JB.getCurrentPosition push $ ModifyRoute
+                                  pure $ JB.removeMarker "ic_vehicle_side"
+                                  pure unit
+                                  else pure unit
             _                -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
                                 when (initialState.props.currentStage == RideCompleted) $ do
@@ -697,7 +712,7 @@ driverMapsHeaderView push state =
   , if (not $ HU.specialVariantsForTracking FunctionCall) then bottomNavBar push state else textView [text "", visibility GONE]
   ]
   where
-    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
 
 bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bookingPreferenceNavView push state =
@@ -2435,7 +2450,7 @@ rideTrackingModalView :: forall w . (Action -> Effect Unit) -> HomeScreenState -
 rideTrackingModalView push state =
   linearLayout
   [ width MATCH_PARENT
-  , height MATCH_PARENT
+  , height WRAP_CONTENT
   , alignParentBottom "true,-1"
   , visibility $ boolToVisibility $ state.props.currentStage == RideTracking
   ][  coordinatorLayout
