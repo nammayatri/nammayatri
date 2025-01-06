@@ -6,9 +6,11 @@ import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.DriverModuleCompletion
+import qualified Domain.Types.LmsCertificate
 import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModuleVideoInformation
+import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation
 import qualified Domain.Types.QuestionModuleMapping
 import qualified Domain.Types.ReelsData
@@ -19,6 +21,25 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
+
+data BonusRes = BonusRes {coins :: Data.Maybe.Maybe Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CertificateInfo = CertificateInfo
+  { certificateCourseName :: Data.Text.Text,
+    certificateId :: Kernel.Types.Id.Id Domain.Types.LmsCertificate.LmsCertificate,
+    certificateOwnerName :: Data.Text.Text,
+    completedAt :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LmsCertificateRes = LmsCertificateRes {certificateInfo :: Data.Maybe.Maybe CertificateInfo}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsEntityCompletionStatus
   = ENTITY_COMPLETED
@@ -39,20 +60,26 @@ data LmsGetVideosRes = LmsGetVideosRes {completed :: [LmsVideoRes], pending :: [
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsModuleRes = LmsModuleRes
-  { category :: Domain.Types.LmsModule.LmsCategory,
+  { bonusCoins :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    bonusEarnedVal :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    category :: Domain.Types.LmsModule.LmsCategory,
+    certificationEnabled :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     completedAt :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     description :: Data.Text.Text,
     duration :: Kernel.Prelude.Int,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
     languagesAvailableForVideos :: [Kernel.External.Types.Language],
+    moduleAlreadyCompleted :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
     moduleCompletionStatus :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
+    moduleSection :: Data.Maybe.Maybe Domain.Types.LmsModule.ModuleSection,
     name :: Data.Text.Text,
     noOfVideos :: Kernel.Prelude.Int,
     noOfVideosCompleted :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     thumbnailImage :: Data.Text.Text,
+    totalQuizCoins :: Data.Maybe.Maybe Kernel.Prelude.Int,
     variant :: Data.Maybe.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving stock (Generic)
@@ -64,6 +91,7 @@ data LmsQuestionRes = LmsQuestionRes
     options :: QuizOptions,
     previousHistory :: Data.Maybe.Maybe LmsQuizHistory,
     question :: Domain.Types.LmsEnumTypes.QuizQuestion,
+    questionCoins :: Data.Maybe.Maybe Kernel.Prelude.Int,
     questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping
   }
   deriving stock (Generic)
@@ -75,7 +103,7 @@ data LmsQuestionStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: LmsQuestionStatus}
+data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, coinsEarned :: Data.Maybe.Maybe Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: LmsQuestionStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -134,7 +162,12 @@ data QuestionConfirmReq = QuestionConfirmReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data QuestionConfirmRes = QuestionConfirmRes {validation :: QuestionValidation, validationRes :: SelectedOptionValidation}
+data QuestionConfirmRes = QuestionConfirmRes
+  { bonusEarned :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    coinsEarned :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    validation :: QuestionValidation,
+    validationRes :: SelectedOptionValidation
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

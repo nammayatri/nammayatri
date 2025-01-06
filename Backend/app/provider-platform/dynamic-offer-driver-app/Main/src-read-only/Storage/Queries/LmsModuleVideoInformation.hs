@@ -28,7 +28,7 @@ findByVideoId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getI
 
 getAllVideos ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m [Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation])
+  (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation]))
 getAllVideos moduleId videoStatus = do findAllWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId), Se.Is Beam.videoStatus $ Se.In videoStatus]]
 
 findByPrimaryKey ::

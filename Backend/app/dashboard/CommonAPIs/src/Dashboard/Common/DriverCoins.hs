@@ -52,6 +52,8 @@ data DriverCoinsFunctionType
   | BulkUploadFunctionV2 CoinMessage
   | MetroRideCompleted MetroRideType
   | RidesCompleted Kernel.Prelude.Int
+  | QuizQuestionCompleted
+  | BonusQuizCoins
   deriving stock (Show, Generic, Eq, Ord)
   deriving anyclass (ToSchema, ToJSON)
 
@@ -129,6 +131,14 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "RidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (QuizQuestionCompleted, r2)
+                 | r1 <- stripPrefix "QuizQuestionCompleted" r,
+                   ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (BonusQuizCoins, r2)
+                 | r1 <- stripPrefix "BonusQuizCoins" r,
+                   ((), r2) <- pure ((), r1)
+               ]
       )
     where
       app_prec = 9
@@ -153,6 +163,8 @@ instance FromJSON DriverCoinsFunctionType where
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction
       "MetroRideCompleted" -> MetroRideCompleted <$> obj .: "contents"
+      "QuizQuestionCompleted" -> pure QuizQuestionCompleted
+      "BonusQuizCoins" -> pure BonusQuizCoins
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag

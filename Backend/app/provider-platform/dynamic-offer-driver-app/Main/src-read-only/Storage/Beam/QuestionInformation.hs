@@ -17,13 +17,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data QuestionInformationT f = QuestionInformationT
-  { language :: B.C f Kernel.External.Types.Language,
-    options :: B.C f Data.Aeson.Value,
-    question :: B.C f Domain.Types.LmsEnumTypes.QuizQuestion,
-    questionId :: B.C f Kernel.Prelude.Text,
-    questionType :: B.C f Domain.Types.QuestionInformation.QuizQuestionType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { language :: (B.C f Kernel.External.Types.Language),
+    options :: (B.C f Data.Aeson.Value),
+    question :: (B.C f Domain.Types.LmsEnumTypes.QuizQuestion),
+    questionId :: (B.C f Kernel.Prelude.Text),
+    questionType :: (B.C f Domain.Types.QuestionInformation.QuizQuestionType),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table QuestionInformationT where
 
 type QuestionInformation = QuestionInformationT Identity
 
-$(enableKVPG ''QuestionInformationT ['language, 'questionId] [])
+$(enableKVPG (''QuestionInformationT) [('language), ('questionId)] [])
 
-$(mkTableInstances ''QuestionInformationT "question_information")
+$(mkTableInstances (''QuestionInformationT) "question_information")

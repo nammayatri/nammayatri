@@ -37,6 +37,8 @@ data DriverCoinsEventType
   | LeaderBoard
   | Training
   | BulkUploadEvent
+  | LMS
+  | LMSBonus
   deriving (Generic, ToJSON, FromJSON)
 
 driverCoinsEventTypeToString :: DriverCoinsEventType -> String
@@ -49,6 +51,8 @@ driverCoinsEventTypeToString = \case
   LeaderBoard -> "LeaderBoard"
   Training -> "Training"
   BulkUploadEvent -> "BulkUploadEvent"
+  LMS -> "LMS"
+  LMSBonus -> "LMSBonus"
 
 instance Show DriverCoinsEventType where
   show = driverCoinsEventTypeToString
