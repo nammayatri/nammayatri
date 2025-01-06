@@ -3198,7 +3198,7 @@ homeScreenFlow = do
               homeScreenFlow
         Nothing -> pure unit
     GO_TO_EDUCATION_SCREEN state -> do
-      modifyScreenState $ EducationScreenStateType (\educationScreen -> educationScreen { videoUrl = state.data.config.whereIsMyBusEducationVideo, instructionText = "", buttonText = "", infoList = [], headerText = ""})
+      modifyScreenState $ EducationScreenStateType (\educationScreen -> educationScreen { videoUrl = state.data.config.whereIsMyBusEducationVideo})
       educationScreenFlow (\_ -> do
         void $ pure $ setValueToLocalStore BUS_EDUCATION_SCREEN_VISTED "true"
         modifyScreenState $ BusQrScanScreenStateType (\busQrScanScreen -> busQrScanScreen { headerText = ""})

@@ -204,7 +204,8 @@ type ButtonConfig = {
   showShimmer :: Boolean,
   gravity :: Gravity,
   enableRipple :: Boolean,
-  rippleColor :: String
+  rippleColor :: String,
+  layoutGravity :: Mb.Maybe String
 }
 
 type DismissPopupConfig =
@@ -432,6 +433,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
   } 
   , option1 : {
       background : Color.white900
@@ -460,6 +462,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , option2 : {
       background : Color.black900
@@ -488,6 +491,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , optionWithHtml : {
       background : Color.black900,

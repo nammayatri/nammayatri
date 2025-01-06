@@ -25,7 +25,7 @@ import Common.Styles.Colors as Color
 import Components.TipsView as TipsView
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
-import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (cornerRadii, layoutGravity)
 import Common.Types.App
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -38,7 +38,7 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Control.Monad.Trans.Class (lift)
 import Data.Function.Uncurried (runFn5)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -448,7 +448,8 @@ view push state =
                             pure unit
                         )
                         (const OnButton1Click)
-                    ] <> (if state.option1.enableRipple then [rippleColor state.option1.rippleColor] else []))
+                    ] <> (if state.option1.enableRipple then [rippleColor state.option1.rippleColor] else [])
+                      <> (if (isJust state.option1.layoutGravity) then [layoutGravity $ fromMaybe "center" state.option1.layoutGravity] else []))
                     [   shimmerFrameLayout
                         [ width MATCH_PARENT
                         , height MATCH_PARENT
