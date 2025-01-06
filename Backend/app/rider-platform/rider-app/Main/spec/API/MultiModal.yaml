@@ -104,7 +104,7 @@ apis:
         type: JourneyInfoResp
 
   - POST:
-      endpoint: /multimodal/{searchRequestId}/switch/{estimateId}     # switch variant
+      endpoint: /multimodal/{searchRequestId}/switchVariant/{estimateId}     # switch variant
       params:
         searchRequestId: Id SearchRequest
         estimateId: Id Estimate
