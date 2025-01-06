@@ -1307,13 +1307,11 @@ tripStageTopBar push state =
       width MATCH_PARENT,
       height WRAP_CONTENT,
       scrollBarX false,
-      background Color.white900,
       visibility $ boolToVisibility $ checkOnRideStage state && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag))
     ][
       linearLayout[
         width MATCH_PARENT,
         height WRAP_CONTENT,
-        background Color.white900,
         margin $ MarginRight 16,
         gravity CENTER_VERTICAL
       ] $ [ advanceBookingSwitch] 
@@ -1454,6 +1452,7 @@ driverStatusPill pillConfig push state index =
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
       , clickable isStatusBtnClickable
       , cornerRadius 20.0
+      , alpha $ if ((not isStatusBtnClickable) && (HU.specialVariantsForTracking FunctionCall)) then 0.5 else 1.0
       ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
       [ imageView
         [ width $ V 15
@@ -2480,7 +2479,7 @@ endRidePopView push state =
     [ width MATCH_PARENT,
       height MATCH_PARENT
     ][ PopUpModal.view (push <<< PopUpModalAction) (endRidePopUp state )]
-    -- ][ PopUpModal.view (push <<<PopUpModalAction) (waitingForDepoRespPopUp state )]
+    -- ][ PopUpModal.view (push <<<PopUpModalAction) (waitingForDepoRespPopUp state )] -- TODO@slow-codex: change as per endTrip Status
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =

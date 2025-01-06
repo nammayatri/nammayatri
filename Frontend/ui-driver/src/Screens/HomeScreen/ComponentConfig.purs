@@ -248,9 +248,10 @@ waitingForDepoRespPopUp state =
               margin = MarginHorizontal 16 16,
               background = Color.white900,
               color = Color.black650,
-              strokeColor = Color.white900
+              strokeColor = Color.white900,
+              layoutGravity = Just "center"
             },
-            option2 {visibility = true},
+            option2 {visibility = false},
             popUpHeaderConfig = config'.popUpHeaderConfig {
               visibility= VISIBLE,
               imageConfig = {

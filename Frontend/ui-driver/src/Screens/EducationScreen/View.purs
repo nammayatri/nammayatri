@@ -214,4 +214,3 @@ footerView push state =
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ]
     ]
-    
