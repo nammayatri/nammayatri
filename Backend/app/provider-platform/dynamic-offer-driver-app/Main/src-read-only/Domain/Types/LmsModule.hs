@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.LmsModule where
@@ -41,12 +40,12 @@ data LmsCategory = Safety | Financial | Training | DriverSafetyScore deriving (E
 
 data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleSection = BENEFITS | DRIVER_SAFETY_SCORE deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
+data ModuleSection = BENEFITS | DRIVER_SAFETY_SCORE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LmsCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionCriteria))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleSection))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleSection)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ModuleSection))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''ModuleSection)

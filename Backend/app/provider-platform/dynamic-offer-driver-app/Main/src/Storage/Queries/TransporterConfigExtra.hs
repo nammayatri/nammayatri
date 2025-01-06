@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.TransporterConfigExtra where
 
 import Domain.Types.MerchantOperatingCity

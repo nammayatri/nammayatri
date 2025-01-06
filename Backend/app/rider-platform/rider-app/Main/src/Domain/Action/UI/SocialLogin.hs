@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.SocialLogin where
 
 import qualified API.Types.UI.SocialLogin as SL

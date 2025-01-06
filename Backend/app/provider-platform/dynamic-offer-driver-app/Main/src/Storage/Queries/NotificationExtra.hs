@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.NotificationExtra where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)

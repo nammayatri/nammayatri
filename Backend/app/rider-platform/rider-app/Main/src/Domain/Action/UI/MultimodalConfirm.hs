@@ -1,6 +1,18 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
-module Domain.Action.UI.MultimodalConfirm where
+module Domain.Action.UI.MultimodalConfirm
+  ( postMultimodalInfo,
+    postMultimodalConfirm,
+    getMultimodalBookingInfo,
+    getMultimodalSwitchTaxi,
+    postMultimodalSwitchToAuto,
+    postMultimodalSwitchVariant,
+    postMultimodalSwitch,
+    postMultimodalRiderLocation,
+    postMultimodalJourneyCancel,
+    postMultimodalExtendLeg,
+    postMultimodalJourneyLegSkip,
+    getMultimodalJourneyStatus,
+  )
+where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes

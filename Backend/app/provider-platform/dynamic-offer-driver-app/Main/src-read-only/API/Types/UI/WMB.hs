@@ -10,7 +10,6 @@ import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Distance
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Servant
@@ -36,10 +35,6 @@ data EndTripStatus
   = SUCCESS
   | WAITING_FOR_ADMIN_APPROVAL
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FleetConfigData = FleetConfigData {allowedEndingMidRoute :: Kernel.Prelude.Bool, endRideDistanceThreshold :: Kernel.Types.Distance.HighPrecMeters, rideEndApproval :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData, title :: Data.Text.Text}

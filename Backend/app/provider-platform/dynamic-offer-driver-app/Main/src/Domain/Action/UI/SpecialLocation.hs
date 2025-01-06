@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.SpecialLocation where
 
 import qualified Domain.Types.Merchant

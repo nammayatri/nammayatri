@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findByStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.ApprovalRequest.RequestStatus -> m ([Domain.Types.ApprovalRequest.ApprovalRequest]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.ApprovalRequest.RequestStatus -> m [Domain.Types.ApprovalRequest.ApprovalRequest])
 findByStatus requestorId status = do findAllWithKV [Se.And [Se.Is Beam.requestorId $ Se.Eq (Kernel.Types.Id.getId requestorId), Se.Is Beam.status $ Se.Eq status]]
 
 updateStatusWithReason ::

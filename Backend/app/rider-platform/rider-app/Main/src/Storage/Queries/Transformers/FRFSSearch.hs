@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.FRFSSearch where
 
 import Kernel.Prelude

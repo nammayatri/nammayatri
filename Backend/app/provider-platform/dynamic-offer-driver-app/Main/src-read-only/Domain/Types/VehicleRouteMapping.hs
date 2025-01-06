@@ -25,9 +25,9 @@ data VehicleRouteMappingE e = VehicleRouteMapping
   }
   deriving (Generic)
 
-type VehicleRouteMapping = VehicleRouteMappingE ('AsEncrypted)
+type VehicleRouteMapping = VehicleRouteMappingE 'AsEncrypted
 
-type DecryptedVehicleRouteMapping = VehicleRouteMappingE ('AsUnencrypted)
+type DecryptedVehicleRouteMapping = VehicleRouteMappingE 'AsUnencrypted
 
 instance EncryptedItem VehicleRouteMapping where
   type Unencrypted VehicleRouteMapping = (DecryptedVehicleRouteMapping, HashSalt)

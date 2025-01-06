@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverHomeLocationExtra where
 
 import qualified Domain.Types.DriverHomeLocation as Domain

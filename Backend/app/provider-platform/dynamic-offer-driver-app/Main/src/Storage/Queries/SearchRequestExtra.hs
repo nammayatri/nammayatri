@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.SearchRequestExtra where
 
 import qualified Domain.Types.Location as DL

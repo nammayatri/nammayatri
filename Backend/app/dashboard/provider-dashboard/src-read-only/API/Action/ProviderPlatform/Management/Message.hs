@@ -30,73 +30,73 @@ handler merchantId city = postMessageUploadFile merchantId city :<|> postMessage
 
 type PostMessageUploadFile =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_UPLOAD_FILE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_UPLOAD_FILE)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageUploadFile
   )
 
 type PostMessageAddLink =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD_LINK))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD_LINK)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageAddLink
   )
 
 type PostMessageAdd =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageAdd
   )
 
 type PostMessageSend =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_SEND))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_SEND)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageSend
   )
 
 type PostMessageEdit =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_EDIT))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_EDIT)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageEdit
   )
 
 type GetMessageList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_LIST)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageList
   )
 
 type GetMessageInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_INFO))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_INFO)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageInfo
   )
 
 type GetMessageDeliveryInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_DELIVERY_INFO))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_DELIVERY_INFO)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageDeliveryInfo
   )
 
 type GetMessageReceiverList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MESSAGE) / ('API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_RECEIVER_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_RECEIVER_LIST)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageReceiverList
   )
 
@@ -115,7 +115,7 @@ postMessageSend merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ 
 postMessageEdit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Message.EditMessageRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMessageEdit merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Message.postMessageEdit merchantShortId opCity apiTokenInfo req
 
-getMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageListResponse)
+getMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageListResponse)
 getMessageList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Message.getMessageList merchantShortId opCity apiTokenInfo limit offset
 
 getMessageInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Message -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageInfoResponse)
@@ -124,5 +124,5 @@ getMessageInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAP
 getMessageDeliveryInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Message -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageDeliveryInfoResponse)
 getMessageDeliveryInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Message.getMessageDeliveryInfo merchantShortId opCity apiTokenInfo messageId
 
-getMessageReceiverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse)
+getMessageReceiverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse)
 getMessageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Message.getMessageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset

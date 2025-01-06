@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Dashboard.Fleet.Driver
   ( postDriverFleetAddVehicle,
     postDriverFleetAddRCWithoutDriver,

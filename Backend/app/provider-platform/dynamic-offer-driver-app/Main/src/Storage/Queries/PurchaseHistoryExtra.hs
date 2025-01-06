@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.PurchaseHistoryExtra where
 
 import qualified Domain.Types.Person as SP

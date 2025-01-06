@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.MerchantServiceUsageConfig where
@@ -61,7 +60,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   }
   deriving (Generic, Show)
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 

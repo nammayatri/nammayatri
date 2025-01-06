@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,7 +13,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
@@ -237,13 +237,17 @@ data OfferRes
   deriving (Show, Generic)
 
 instance ToJSON OfferRes where
-  toJSON = genericToJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  toJSON = genericToJSON $ objectWithSingleFieldParsing safeToLower
 
 instance FromJSON OfferRes where
-  parseJSON = genericParseJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing safeToLower
 
 instance ToSchema OfferRes where
-  declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing safeToLower
+
+safeToLower :: String -> String
+safeToLower (f : rest) = toLower f : rest
+safeToLower [] = []
 
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid

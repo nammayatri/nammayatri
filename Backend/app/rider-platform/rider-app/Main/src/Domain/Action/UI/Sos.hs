@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.Sos where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common

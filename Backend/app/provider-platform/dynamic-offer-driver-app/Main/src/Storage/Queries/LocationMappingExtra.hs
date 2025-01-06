@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-
 module Storage.Queries.LocationMappingExtra where
 
 import qualified Data.Text as T
@@ -98,7 +95,7 @@ incrementVersion mapping = do
 getNewVersion :: Text -> Text
 getNewVersion oldVersion =
   case T.splitOn "-" oldVersion of
-    ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
+    ["v", versionNum] -> "v-" <> T.pack (show (read @Integer (T.unpack versionNum) + 1))
     _ -> "v-1"
 
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id LocationMapping -> Text -> m ()

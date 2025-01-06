@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Dashboard.System (postSystemRunQuery, generateInsertQuery) where
 
 import qualified API.Types.RiderPlatform.Management.System

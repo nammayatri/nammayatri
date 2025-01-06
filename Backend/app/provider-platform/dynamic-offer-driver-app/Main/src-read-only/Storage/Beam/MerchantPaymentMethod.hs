@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantPaymentMethod where
@@ -14,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
-  { collectedBy :: (B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    paymentInstrument :: (B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
-    paymentType :: (B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentType),
-    priority :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { collectedBy :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    paymentInstrument :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
+    paymentType :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentType,
+    priority :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +30,6 @@ instance B.Table MerchantPaymentMethodT where
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
-$(enableKVPG (''MerchantPaymentMethodT) [('id)] [])
+$(enableKVPG ''MerchantPaymentMethodT ['id] [])
 
-$(mkTableInstances (''MerchantPaymentMethodT) "merchant_payment_method")
+$(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")

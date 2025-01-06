@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MessageReportExtra where
 
 import qualified Data.Time as T

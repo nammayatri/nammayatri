@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.LmsModule where
 
 import API.Types.UI.LmsModule

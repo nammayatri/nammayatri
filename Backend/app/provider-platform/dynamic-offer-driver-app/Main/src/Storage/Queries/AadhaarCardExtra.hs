@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.AadhaarCardExtra where
 
 import qualified Domain.Types.AadhaarCard as Domain

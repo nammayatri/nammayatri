@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.PersonExtra
   ( module Storage.Queries.PersonExtra,
     module Reexport,

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.SearchTryExtra where
 
 import qualified Database.Beam.Query ()

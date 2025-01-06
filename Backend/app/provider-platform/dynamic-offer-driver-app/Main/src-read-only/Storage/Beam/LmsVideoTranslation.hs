@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.LmsVideoTranslation where
@@ -15,24 +13,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LmsVideoTranslationT f = LmsVideoTranslationT
-  { bottomButtonConfig :: (B.C f Data.Aeson.Value),
-    completedThresholdInPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    completedWatchCount :: (B.C f Kernel.Prelude.Int),
-    description :: (B.C f Kernel.Prelude.Text),
-    duration :: (B.C f Kernel.Prelude.Int),
-    language :: (B.C f Kernel.External.Types.Language),
-    sideButtonConfig :: (B.C f Data.Aeson.Value),
-    startThresholdInPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    thresholdEnabled :: (B.C f Kernel.Prelude.Bool),
-    thumbnailImage :: (B.C f Kernel.Prelude.Text),
-    title :: (B.C f Kernel.Prelude.Text),
-    url :: (B.C f Kernel.Prelude.Text),
-    useMerchantOperatingCityDefaultLanguageVideoUrl :: (B.C f Kernel.Prelude.Bool),
-    videoId :: (B.C f Kernel.Prelude.Text),
-    viewCount :: (B.C f Kernel.Prelude.Int),
-    ytVideoId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bottomButtonConfig :: B.C f Data.Aeson.Value,
+    completedThresholdInPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    completedWatchCount :: B.C f Kernel.Prelude.Int,
+    description :: B.C f Kernel.Prelude.Text,
+    duration :: B.C f Kernel.Prelude.Int,
+    language :: B.C f Kernel.External.Types.Language,
+    sideButtonConfig :: B.C f Data.Aeson.Value,
+    startThresholdInPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    thresholdEnabled :: B.C f Kernel.Prelude.Bool,
+    thumbnailImage :: B.C f Kernel.Prelude.Text,
+    title :: B.C f Kernel.Prelude.Text,
+    url :: B.C f Kernel.Prelude.Text,
+    useMerchantOperatingCityDefaultLanguageVideoUrl :: B.C f Kernel.Prelude.Bool,
+    videoId :: B.C f Kernel.Prelude.Text,
+    viewCount :: B.C f Kernel.Prelude.Int,
+    ytVideoId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -42,6 +40,6 @@ instance B.Table LmsVideoTranslationT where
 
 type LmsVideoTranslation = LmsVideoTranslationT Identity
 
-$(enableKVPG (''LmsVideoTranslationT) [('language), ('videoId)] [])
+$(enableKVPG ''LmsVideoTranslationT ['language, 'videoId] [])
 
-$(mkTableInstances (''LmsVideoTranslationT) "lms_video_translation")
+$(mkTableInstances ''LmsVideoTranslationT "lms_video_translation")

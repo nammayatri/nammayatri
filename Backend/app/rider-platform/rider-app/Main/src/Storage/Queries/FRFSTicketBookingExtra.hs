@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FRFSTicketBookingExtra where
 
 import qualified BecknV2.FRFS.Enums as Spec

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-
 module SharedLogic.Allocator.Jobs.Overlay.SendOverlay where
 
 import Data.List (nub)

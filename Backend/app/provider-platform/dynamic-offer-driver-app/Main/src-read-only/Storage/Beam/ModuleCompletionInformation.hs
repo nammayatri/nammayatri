@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.ModuleCompletionInformation where
@@ -14,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ModuleCompletionInformationT f = ModuleCompletionInformationT
-  { attempt :: (B.C f Kernel.Prelude.Int),
-    completionId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    entity :: (B.C f Domain.Types.ModuleCompletionInformation.ModuleEntity),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    entityStatus :: (B.C f Domain.Types.ModuleCompletionInformation.EntityStatus),
-    selectedEntityId :: (B.C f [Kernel.Prelude.Text]),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { attempt :: B.C f Kernel.Prelude.Int,
+    completionId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entity :: B.C f Domain.Types.ModuleCompletionInformation.ModuleEntity,
+    entityId :: B.C f Kernel.Prelude.Text,
+    entityStatus :: B.C f Domain.Types.ModuleCompletionInformation.EntityStatus,
+    selectedEntityId :: B.C f [Kernel.Prelude.Text],
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +31,6 @@ instance B.Table ModuleCompletionInformationT where
 
 type ModuleCompletionInformation = ModuleCompletionInformationT Identity
 
-$(enableKVPG (''ModuleCompletionInformationT) [('attempt), ('completionId), ('entity), ('entityId)] [])
+$(enableKVPG ''ModuleCompletionInformationT ['attempt, 'completionId, 'entity, 'entityId] [])
 
-$(mkTableInstances (''ModuleCompletionInformationT) "module_completion_information")
+$(mkTableInstances ''ModuleCompletionInformationT "module_completion_information")

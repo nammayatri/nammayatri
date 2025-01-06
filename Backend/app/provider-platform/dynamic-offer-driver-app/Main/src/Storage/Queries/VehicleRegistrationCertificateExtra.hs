@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
 import qualified Database.Beam as B

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverPlanExtra where
 
 import qualified Data.Aeson as A

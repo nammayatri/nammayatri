@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.LmsModuleVideoInformation where
@@ -22,4 +21,4 @@ data LmsModuleVideoInformation = LmsModuleVideoInformation
 
 data VideoStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VideoStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VideoStatus)

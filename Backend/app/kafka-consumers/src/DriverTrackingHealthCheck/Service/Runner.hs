@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module DriverTrackingHealthCheck.Service.Runner where
 
@@ -56,7 +55,7 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
       Just allDrivers -> do
         results <- mapM (flip driverDevicePingService fcmNofificationSendCount) (toList allDrivers)
         let memberScores = catMaybes results
-        Redis.zRem key memberScores
+        void $ Redis.zRem key memberScores
         log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
     threadDelay (secondsToMcs serviceInterval).getMicroseconds

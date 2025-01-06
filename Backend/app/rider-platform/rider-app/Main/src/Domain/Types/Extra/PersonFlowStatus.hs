@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Extra.PersonFlowStatus where

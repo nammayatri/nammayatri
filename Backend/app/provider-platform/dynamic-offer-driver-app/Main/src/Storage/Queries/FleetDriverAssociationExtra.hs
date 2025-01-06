@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import qualified Database.Beam as B

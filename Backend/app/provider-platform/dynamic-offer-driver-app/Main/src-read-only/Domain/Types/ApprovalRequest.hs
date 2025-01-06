@@ -48,14 +48,14 @@ data EndRideData = EndRideData
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data RequestType = END_RIDE | CHANGE_ROUTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApprovalRequestData))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ApprovalRequestData)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RequestType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RequestType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''RequestStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequestStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RequestStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequestStatus)

@@ -1,5 +1,4 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Management.Endpoints.Merchant where

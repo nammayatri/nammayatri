@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Environment where
 
@@ -267,7 +266,7 @@ toConnectInfo config =
     }
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv cfg@AppCfg {..} = do
+buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
