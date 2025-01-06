@@ -2025,6 +2025,10 @@ homeScreenFlow = do
       void $ lift $ lift $ liftFlow $ showMarker markerConfig 9.9 9.9 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
+      if state.homeScreen.props.estimateId /= "" then
+        cancelEstimate state.homeScreen.props.estimateId
+      else
+        pure unit
       updateUserInfoToState state.homeScreen
       currentFlowStatus false
     UPDATE_LOCATION_NAME state lat lon -> do
@@ -2195,8 +2199,8 @@ homeScreenFlow = do
             { data
               { source =  if state.props.isSource == Just true then address.formattedAddress else state.data.source
               , sourceAddress = if state.props.isSource == Just true then encodeAddress address.formattedAddress address.addressComponents Nothing lat lon else state.data.sourceAddress
-              , destination = if state.props.isSource == Just true then state.data.destination else address.formattedAddress
-              , destinationAddress = if state.props.isSource == Just true then state.data.destinationAddress else encodeAddress address.formattedAddress address.addressComponents Nothing lat lon 
+              , destination = if state.props.isSource == Just false && state.data.fareProductType == FPT.DELIVERY then address.formattedAddress else state.data.destination
+              , destinationAddress = if state.props.isSource == Just false && state.data.fareProductType == FPT.DELIVERY then encodeAddress address.formattedAddress address.addressComponents Nothing lat lon else state.data.destinationAddress
               }
             , props
               { editedPickUpLocation {address = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
