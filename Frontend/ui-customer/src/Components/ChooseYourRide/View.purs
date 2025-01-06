@@ -699,7 +699,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services, activeIndex = config.activeIndex})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
