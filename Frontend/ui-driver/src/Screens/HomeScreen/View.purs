@@ -1208,7 +1208,7 @@ offlineView push state =
   where
     isBookingPreferenceVisible = 
       not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR", "DELIVERY_LIGHT_GOODS_VEHICLE"])
-      && state.props.driverStatusSet == ST.Offline
+      && state.props.driverStatusSet == ST.Offline && not (HU.specialVariantsForTracking FunctionCall)
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

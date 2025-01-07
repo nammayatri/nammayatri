@@ -546,7 +546,8 @@ updateSubscriptionForVehicleVariant :: GetDriverInfoResp -> AppConfig -> FlowBT 
 updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig = do
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       vehicleVariant = getDriverInfoResp.linkedVehicle
-  if cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription then do
+  if (getDriverInfoResp.onboardingVehicleCategory == Just "BUS") then setValueToLocalStore VEHICLE_CATEGORY "BusCategory" -- TODO@slow-codex: refactoring into a better way to classify
+  else if cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription then do
     case vehicleVariant of
       Just (API.Vehicle vehicle) -> do
         let category = RC.getCategoryFromVariant vehicle.variant
@@ -664,14 +665,18 @@ checkAndUpdateRCStatus :: FlowBT String Boolean
 checkAndUpdateRCStatus = do
   (GlobalState globalstate) <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
-  case getDriverInfoResp.linkedVehicle of
-    Nothing -> do
-      when (globalstate.homeScreen.props.driverStatusSet /= Offline) $ changeDriverStatus Offline
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = false, rcDeactivePopup = true}})
-      pure $ false
-    Just _ -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}})
-      pure $ true
+  if (getDriverInfoResp.onboardingVehicleCategory == Just "BUS") then do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}})
+    pure $ true 
+  else
+    case getDriverInfoResp.linkedVehicle of
+      Nothing -> do
+        when (globalstate.homeScreen.props.driverStatusSet /= Offline) $ changeDriverStatus Offline
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = false, rcDeactivePopup = true}})
+        pure $ false
+      Just _ -> do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}})
+        pure $ true
 
 checkStatusAndStartLocationUpdates :: FlowBT String Unit
 checkStatusAndStartLocationUpdates = do
@@ -1457,7 +1462,7 @@ driverProfileFlow = do
             let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
             config <- getAppConfigFlowBT Constants.appConfig
             updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
-            when (status /= Offline && not (fromMaybe false getDriverInfoResp.isVehicleSupported)) $ changeDriverStatus Offline
+            when (status /= Offline && not (fromMaybe false getDriverInfoResp.isVehicleSupported) && getDriverInfoResp.onboardingVehicleCategory /= Just "BUS") $ changeDriverStatus Offline
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
           refreshDriverProfile
