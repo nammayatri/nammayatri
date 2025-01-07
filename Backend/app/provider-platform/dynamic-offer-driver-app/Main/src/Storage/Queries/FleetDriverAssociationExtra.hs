@@ -33,6 +33,27 @@ upsert a@FleetDriverAssociation {..} = do
         [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
     else createWithKV a
 
+createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> Bool -> m ()
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId isActive = do
+  res <- findOneWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+  case res of
+    Nothing -> do
+      now <- getCurrentTime
+      id <- generateGUID
+      createWithKV $
+        FleetDriverAssociation
+          { associatedTill = Nothing,
+            driverId = driverId,
+            fleetOwnerId = fleetOwnerId.getId,
+            associatedOn = Just now,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+    Just fleetDriverAssociation -> do
+      when (fleetDriverAssociation.isActive /= isActive) $ do
+        upsert fleetDriverAssociation {isActive}
+
 findAllActiveDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
   findAllWithOptionsKV

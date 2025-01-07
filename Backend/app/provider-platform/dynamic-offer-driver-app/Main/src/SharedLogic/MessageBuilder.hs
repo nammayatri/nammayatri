@@ -35,6 +35,8 @@ module SharedLogic.MessageBuilder
     buildFleetJoiningMessage,
     BuildDownloadAppMessageReq (..),
     buildFleetJoinAndDownloadAppMessage,
+    BuildFleetDeepLinkAuthMessage (..),
+    buildFleetDeepLinkAuthMessage,
   )
 where
 
@@ -249,3 +251,15 @@ buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
 
   pure (merchantMessage.senderHeader, msg)
+
+newtype BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
+  { fleetOwnerName :: Text
+  }
+
+buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text)
+buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
+  (senderHeader, staticMsg) <- buildGenericMessage merchantOperatingCityId DMM.FLEET_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+  let dynamicMsg =
+        staticMsg
+          & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+  pure (senderHeader, dynamicMsg)

@@ -16,19 +16,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleRouteMappingT f = VehicleRouteMappingT
-  { blocked :: B.C f Kernel.Prelude.Bool,
-    fleetOwnerId :: B.C f Data.Text.Text,
-    routeCode :: B.C f Data.Text.Text,
-    vehicleClass :: B.C f Data.Text.Text,
-    vehicleColor :: B.C f Data.Text.Text,
-    vehicleModel :: B.C f Data.Text.Text,
-    vehicleNumberEncrypted :: B.C f Data.Text.Text,
-    vehicleNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    vehicleServiceTierType :: B.C f Domain.Types.Common.ServiceTierType,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { blocked :: (B.C f Kernel.Prelude.Bool),
+    fleetOwnerId :: (B.C f Data.Text.Text),
+    routeCode :: (B.C f Data.Text.Text),
+    vehicleClass :: (B.C f Data.Text.Text),
+    vehicleColor :: (B.C f Data.Text.Text),
+    vehicleModel :: (B.C f Data.Text.Text),
+    vehicleNumberEncrypted :: (B.C f Data.Text.Text),
+    vehicleNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
+    vehicleServiceTierType :: (B.C f Domain.Types.Common.ServiceTierType),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table VehicleRouteMappingT where
 
 type VehicleRouteMapping = VehicleRouteMappingT Identity
 
-$(enableKVPG ''VehicleRouteMappingT ['routeCode] [])
+$(enableKVPG (''VehicleRouteMappingT) [('routeCode)] [])
 
-$(mkTableInstances ''VehicleRouteMappingT "vehicle_route_mapping")
+$(mkTableInstances (''VehicleRouteMappingT) "vehicle_route_mapping")

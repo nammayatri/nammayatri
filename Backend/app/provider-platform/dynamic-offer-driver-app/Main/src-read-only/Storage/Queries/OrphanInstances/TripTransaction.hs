@@ -30,12 +30,12 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
-            sequenceNumber = sequenceNumber,
             startLocation = Storage.Queries.Transformers.Ride.mkLatLong startLocationLat startLocationLon,
             startedNearStopCode = startedNearStopCode,
             status = status,
             tripCode = tripCode,
             vehicleNumber = vehicleNumber,
+            vehicleServiceTierType = vehicleServiceTierType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -55,13 +55,13 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
-        Beam.sequenceNumber = sequenceNumber,
         Beam.startLocationLat = Kernel.Prelude.fmap (.lat) startLocation,
         Beam.startLocationLon = Kernel.Prelude.fmap (.lon) startLocation,
         Beam.startedNearStopCode = startedNearStopCode,
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.vehicleNumber = vehicleNumber,
+        Beam.vehicleServiceTierType = vehicleServiceTierType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

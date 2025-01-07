@@ -24,6 +24,13 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetRespondDriverRequest,
     postDriverFleetAddVehicles,
     putDriverDashboardFleetWmbTripDelete,
+    postDriverFleetAddDrivers,
+    getDriverFleetRoutes,
+    getDriverFleetPossibleRoutes,
+    postDriverFleetTripPlanner,
+    getDriverFleetTripTransactions,
+    postDriverFleetAddDriverBusRouteMapping,
+    getDriverDashboardFleetTrackDriver,
   )
 where
 
@@ -35,6 +42,7 @@ import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.TripTransaction
 import Environment
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Context as Context
@@ -275,3 +283,59 @@ putDriverDashboardFleetWmbTripDelete _ _ tripTransactionId _ = do
   QTT.updateStatus CANCELLED Nothing (cast @Common.TripTransaction @TripTransaction tripTransactionId)
   -- TODO : add notification to driver
   pure Success
+
+getDriverFleetRoutes ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe LatLong ->
+  Maybe Text ->
+  Flow Common.RouteAPIResp
+getDriverFleetRoutes = DDriver.getDriverFleetRoutes
+
+getDriverFleetPossibleRoutes ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  LatLong ->
+  Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes = DDriver.getDriverFleetPossibleRoutes
+
+postDriverFleetTripPlanner ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Text ->
+  Common.TripPlannerReq ->
+  Flow APISuccess
+postDriverFleetTripPlanner = DDriver.postDriverFleetTripPlanner
+
+getDriverFleetTripTransactions ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Text ->
+  Maybe Day ->
+  Flow Common.TripTransactionResp
+getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
+
+postDriverFleetAddDriverBusRouteMapping ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.CreateDriverBusRouteMappingReq ->
+  Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping = DDriver.postDriverFleetAddDriverBusRouteMapping
+
+postDriverFleetAddDrivers ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.CreateDriversReq ->
+  Flow APISuccess
+postDriverFleetAddDrivers = DDriver.postDriverFleetAddDrivers
+
+getDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
+getDriverDashboardFleetTrackDriver = DDriver.getDriverDashboardFleetTrackDriver

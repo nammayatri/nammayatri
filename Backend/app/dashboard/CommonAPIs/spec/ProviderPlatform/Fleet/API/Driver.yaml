@@ -13,6 +13,8 @@ imports:
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+  LatLong: Kernel.External.Maps.Types
+  TimeBound: Kernel.Types.TimeBound
 
 module: Driver
 
@@ -36,6 +38,7 @@ apis:
               type: CreateVehiclesReq
             response:
               type: APISuccess
+
   - POST: # AddVehicleForFleetAPI
       endpoint: /{mobileNo}/fleet/addVehicle
       auth: ApiAuthV2
@@ -64,6 +67,7 @@ apis:
             response:
               type: APISuccess
             validation: API.Types.ProviderPlatform.validateAddVehicleReq
+
   - GET: # GetAllDriverRequestsAPI
       endpoint: /fleet/getDriverRequests
       auth: ApiAuthV2
@@ -91,6 +95,7 @@ apis:
               - offset: Int
             response:
               type: DriverRequestResp
+
   - POST: # RespondDriverRequestsAPI
       endpoint: /fleet/respond/driverRequest/
       auth: ApiAuthV2
@@ -110,6 +115,7 @@ apis:
               type: RequestRespondReq
             response:
               type: APISuccess
+
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
       auth: ApiAuthV2
@@ -129,6 +135,7 @@ apis:
               type: RegisterRCReq
             response:
               type: APISuccess
+
   - GET: # GetAllVehicleForFleetAPI
       endpoint: /fleet/getAllVehicle
       auth: ApiAuthV2
@@ -150,6 +157,7 @@ apis:
               - offset: Int
             response:
               type: ListVehicleRes
+
   - GET: # GetAllDriverForFleetAPI
       endpoint: /fleet/getAllDriver
       auth: ApiAuthV2
@@ -171,6 +179,7 @@ apis:
               - offset: Int
             response:
               type: FleetListDriverRes
+
   - POST: # FleetUnlinkVehicleAPI
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
       auth: ApiAuthV2
@@ -191,6 +200,7 @@ apis:
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - POST: # FleetRemoveVehicleAPI
       endpoint: /{vehicleNo}/fleet/remove/vehicle
       auth: ApiAuthV2
@@ -209,6 +219,7 @@ apis:
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
       auth: ApiAuthV2
@@ -227,6 +238,7 @@ apis:
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - GET: # FleetTotalEarningAPI
       endpoint: /fleet/totalEarning
       auth: ApiAuthV2
@@ -248,6 +260,7 @@ apis:
               - to: UTCTime
             response:
               type: FleetTotalEarningResponse
+
   - GET: # FleetVehicleEarningAPI
       endpoint: /fleet/vehicleEarning
       auth: ApiAuthV2
@@ -275,6 +288,7 @@ apis:
               - to: UTCTime
             response:
               type: FleetEarningListRes
+
   - GET: # FleetDriverEarningAPI
       endpoint: /fleet/driverEarning
       auth: ApiAuthV2
@@ -308,6 +322,7 @@ apis:
               - SortOn: SortOn
             response:
               type: FleetEarningListRes
+
   - GET: # GetFleetDriverVehicleAssociationAPI
       endpoint: /fleet/driverVehicleAssociation
       auth: ApiAuthV2
@@ -341,6 +356,7 @@ apis:
               - to: UTCTime
             response:
               type: DrivertoVehicleAssociationRes
+
   - GET: # GetFleetDriverAssociationAPI
       endpoint: /fleet/driverAssociation
       auth: ApiAuthV2
@@ -376,6 +392,7 @@ apis:
               - status: DriverMode
             response:
               type: DrivertoVehicleAssociationRes
+
   - GET: # GetFleetVehicleAssociationAPI
       endpoint: /fleet/vehicleAssociation
       auth: ApiAuthV2
@@ -407,6 +424,7 @@ apis:
               - status: FleetVehicleStatus
             response:
               type: DrivertoVehicleAssociationRes
+
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       name: PostDriverFleetVehicleDriverRcStatus
@@ -432,6 +450,7 @@ apis:
         endpoint: DriverAPI SetVehicleDriverRcStatusForFleetEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
+
   - POST: # UpdateFleetOwnerInfoAPI
       endpoint: /{driverId}/updateFleetOwnerInfo
       auth: ApiAuthV2
@@ -445,6 +464,7 @@ apis:
         endpoint: DriverAPI UpdateFleetOwnerEndPoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
+
   - GET: # GetFleetOwnerInfoAPI
       endpoint: /{driverId}/fleetOwnerInfo
       auth: ApiAuthV2
@@ -454,6 +474,7 @@ apis:
         type: FleetOwnerInfoRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
+
   - POST: # SendFleetJoiningOtpAPI
       endpoint: /fleet/sendJoiningOtp
       auth: ApiAuthV2
@@ -473,6 +494,7 @@ apis:
               type: AuthReq
             response:
               type: AuthRes
+
   - POST: # VerifyFleetJoiningOtpAPI
       endpoint: /fleet/verifyJoiningOtp
       auth: ApiAuthV2
@@ -496,6 +518,139 @@ apis:
               type: VerifyFleetJoiningOtpReq
             response:
               type: APISuccess
+
+  - GET:
+      endpoint: /fleet/routes
+      auth: ApiAuthV2
+      query:
+        - mbCurrentLocation: LatLong
+        - mbSearchString: Text
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/routes
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - mbCurrentLocation: LatLong
+              - mbSearchString: Text
+            response:
+              type: RouteAPIResp
+
+  - GET:
+      endpoint: /fleet/possibleRoutes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        startLocation: LatLong
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_POSSIBLE_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/possibleRoutes
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              startLocation: LatLong
+            response:
+              type: RouteAPIResp
+
+  - POST:
+      endpoint: /fleet/tripPlanner/{driverId}/{vehicleNo}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        vehicleNo: Text
+      request:
+        type: TripPlannerReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_PLANNER_API
+      helperApi:
+        - POST:
+            endpoint: /{fleetOwnerId}/fleet/tripPlanner/{driverId}/{vehicleNo}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              driverId: Id Driver
+              vehicleNo: Text
+            request:
+              type: TripPlannerReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /fleet/trip/transactions/{driverId}/{vehicleNo}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        vehicleNo: Text
+      query:
+        - mbDate: Day
+      response:
+        type: TripTransactionResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}/{vehicleNo}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              driverId: Id Driver
+              vehicleNo: Text
+            query:
+              - mbDate: Day
+            response:
+              type: TripTransactionResp
+
+  - POST: # BulkUploadDriversForFleetAPI
+      endpoint: /fleet/addDrivers
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriversReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDrivers/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: CreateDriversReq
+            response:
+              type: APISuccess
+
+  - POST: # Add Driver Bus Route Bulk Mapping
+      endpoint: /fleet/addDriverBusRouteMapping
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriverBusRouteMappingReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDriverBusRouteMapping/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: CreateDriverBusRouteMappingReq
+            response:
+              type: APISuccess
+
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
       auth: ApiAuthV2
@@ -515,6 +670,7 @@ apis:
               type: LinkRCWithDriverForFleetReq
             response:
               type: APISuccess
+
   - PUT:
       endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/delete
       auth: ApiAuthV2
@@ -531,7 +687,34 @@ apis:
               fleetOwnerId: Text
             response:
               type: APISuccess
+  - GET:
+      endpoint: /dashboard/fleet/track/driver
+      auth: ApiAuthV2
+      request:
+        type: TrackDriverLocationsReq
+      response:
+        type: TrackDriverLocationsRes
+      helperApi:
+        - GET:
+            endpoint: /dashboard/fleet/track/driver/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: TrackDriverLocationsReq
+            response:
+              type: TrackDriverLocationsRes
 types:
+  TrackDriverLocationsReq:
+    - recordType: NewType
+    - driverIds: [Id Driver]
+  TrackDriverLocation:
+    - driverId: Id Driver
+    - point: LatLong
+    - lastUpdatedAt: UTCTime
+  TrackDriverLocationsRes:
+    - recordType: NewType
+    - driverLocations: [TrackDriverLocation]
   TripStatus:
     - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
@@ -544,6 +727,7 @@ types:
     - driverId: Id Driver
     - vehicleNumber: Text
     - trips: [TripDetails]
+    - summary: Summary
     - derive: "'HideSecrets"
   TripTransactionDetail:
     - routeCode: Text
@@ -554,6 +738,7 @@ types:
   TripTransactionResp:
     - trips: [TripTransactionDetail]
     - totalTrips: Int
+    - summary: Summary
   AddVehicleReq:
     - registrationNo: Text
     - vehicleClass: Text
@@ -660,6 +845,10 @@ types:
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
     - derive: "'HideSecrets"
+  CreateDriversReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
   CreateVehiclesReq:
     - recordType: NewType
     - file: FilePath
@@ -692,14 +881,14 @@ types:
   ApprovalRequestData:
     - enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
   EndRideData:
-    lat: Double
-    lon: Double
-    tripTransactionId: Id TripTransaction
-    tripCode: Maybe Text
-    driverName: Text
-    driverMobileNumber: Maybe Text
-    vehicleRegistrationNumber: Text
-    derive: "Eq,Ord,Read"
+    - lat: Double
+    - lon: Double
+    - tripTransactionId: Id TripTransaction
+    - tripCode: Maybe Text
+    - driverName: Text
+    - driverMobileNumber: Maybe Text
+    - vehicleRegistrationNumber: Text
+    - derive: "Eq,Ord,Read"
   DriverRequestDetails:
     - requestData: ApprovalRequestData
     - title: Text
@@ -714,6 +903,25 @@ types:
   DriverRequestResp:
     - recordType: NewType
     - requests: [DriverRequestDetails]
+  RouteAPIResp:
+    - listItem: [RouteRespItem]
+    - summary: Summary
+    - derive: "'HideSecrets"
+  RouteRespItem:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - distance: Maybe Int
+    - totalStops: Maybe Int
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+  CreateDriverBusRouteMappingReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

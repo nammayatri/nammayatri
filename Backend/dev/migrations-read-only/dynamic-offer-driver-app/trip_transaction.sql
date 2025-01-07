@@ -12,13 +12,13 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN is_currently_devi
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN route_code text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN sequence_number integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN start_location_lat double precision ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN start_location_lon double precision ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN started_near_stop_code text ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_code text ;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_number text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_service_tier_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);

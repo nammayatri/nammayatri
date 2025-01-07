@@ -395,4 +395,5 @@ in  { esqDBCfg
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , urlShortnerConfig = common.urlShortnerConfig
     }
