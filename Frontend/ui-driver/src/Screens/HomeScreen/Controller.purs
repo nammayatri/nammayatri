@@ -2190,7 +2190,7 @@ updateRoute state = do
       destination = srcDestConfig.destination
       routeType = if state.props.currentStage == ST.RideAccepted then "pickup" else "trip"
 
-      srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker", primaryText = source }
+      srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = HU.getCategorySpecificSrcMarkerIcon Common.FunctionCall, primaryText = source }
       destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0}
       
   if (state.data.activeRide.tripType == ST.Rental) && (state.props.currentStage == ST.RideStarted ) && isNothing state.data.activeRide.nextStopAddress then do
