@@ -54,51 +54,63 @@ public class MobilityCallAPI {
 
     private static final String LOG_TAG = "MobilityAPI";
 
-    public MobilityCallAPI (){}
-    
+    private static volatile MobilityCallAPI instance;
+
     // OkHttpClient with Keep-Alive and Connection Pooling
-    private static OkHttpClient client;
+    private OkHttpClient client;
 
     // Constructor to initialize OkHttpClient with Keep-Alive and Connection Pooling
-    public MobilityCallAPI (Context context){
+    private MobilityCallAPI(Context context) {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String config = sharedPref.getString("OK_HTTP_CONFIG", "null");
         try {
             JSONObject parsedConfig = new JSONObject(config);
             USE_OKHTTP = parsedConfig.optBoolean("useOkHttp", false);
             int maxIdleConnections = parsedConfig.optInt("maxIdleConnections", 5),
-                keepAliveDuration = parsedConfig.optInt("keepAliveDuration", 5);
+                    keepAliveDuration = parsedConfig.optInt("keepAliveDuration", 5);
             client = new OkHttpClient.Builder()
                     .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDuration, TimeUnit.MINUTES)) // default maxIdleConnections = 5 and keepAliveDuration = 5 minutes
                     .build();
         } catch (JSONException e) {
-            Log.e(LOG_TAG, e.getMessage());
+            Log.e(LOG_TAG, e.getMessage() != null ? e.getMessage() : "Unknown error occurred");
             USE_OKHTTP = false; // default to HttpURLConnection in case of any error
         }
     }
 
-    public static MobilityAPIResponse callAPI(String endpoint) {
+    public static MobilityCallAPI getInstance(Context context) {
+        if (instance == null) {
+            synchronized (MobilityCallAPI.class) {
+                if (instance == null) {
+                    instance = new MobilityCallAPI(context);
+                }
+            }
+        }
+        return instance;
+    }
+
+    public MobilityAPIResponse callAPI(String endpoint) {
         return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
     }
 
-    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers) {
+    public MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers) {
         return callAPI(endpoint, headers, null, DEFAULT_API_METHOD, true);
     }
 
-    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody) {
+    public MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody) {
         return callAPI(endpoint, headers, requestBody, DEFAULT_API_METHOD, true);
     }
-    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod){
+
+    public MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
         return callAPI(endpoint, headers, requestBody, apiMethod, true);
     }
 
-    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
+    public MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
         return USE_OKHTTP
                 ? callAPIWithOkHttp(endpoint, headers, requestBody, apiMethod)
                 : callAPIWithHttpURLConnection(endpoint, headers, requestBody, apiMethod, doOutput);
     }
 
-    private static MobilityAPIResponse callAPIWithOkHttp(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
+    private MobilityAPIResponse callAPIWithOkHttp(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
         MobilityAPIResponse response = new MobilityAPIResponse();
         try {
             Request.Builder requestBuilder = new Request.Builder()
@@ -116,14 +128,14 @@ public class MobilityCallAPI {
                 response.setResponseBody(okHttpResponse.body() != null ? okHttpResponse.body().string() : "");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(LOG_TAG, e.getMessage() != null ? e.getMessage() : "Unknown error occurred");
             response.setStatusCode(-1);
             response.setResponseBody(e.getMessage());
         }
         return response;
     }
 
-    private static MobilityAPIResponse callAPIWithHttpURLConnection(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
+    private MobilityAPIResponse callAPIWithHttpURLConnection(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
         MobilityAPIResponse defaultResp = new MobilityAPIResponse();
         defaultResp.setResponseBody("");
         defaultResp.setStatusCode(-1);
@@ -135,13 +147,13 @@ public class MobilityCallAPI {
             response.setStatusCode(responseCode);
             response.setResponseBody(apiResponseBuilder(getResponseStream(connection)));
             return response;
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return defaultResp;
         }
     }
 
-    public static InputStream getResponseStream (HttpURLConnection connection) throws IOException {
+    public static InputStream getResponseStream(HttpURLConnection connection) throws IOException {
         int responseCode = connection.getResponseCode();
         InputStream responseStream;
         if (responseCode >= 200 && responseCode < 300) {
@@ -156,7 +168,6 @@ public class MobilityCallAPI {
         HttpURLConnection connection = (HttpURLConnection) (new URL(endpoint).openConnection());
         if (connection instanceof HttpsURLConnection)
             ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
-
 
 
         connection.setRequestMethod(apiMethod);
@@ -215,13 +226,13 @@ public class MobilityCallAPI {
             MobilityAPIResponse response = new MobilityAPIResponse();
             response.setStatusCode(responseCode);
 
+            InputStream responseStream;
             if (responseCode >= 200 && responseCode < 300) {
-                InputStream responseStream = connection.getInputStream();
-                response.setResponseBody(apiResponseBuilder(responseStream));
+                responseStream = connection.getInputStream();
             } else {
-                InputStream responseStream = connection.getErrorStream();
-                response.setResponseBody(apiResponseBuilder(responseStream));
+                responseStream = connection.getErrorStream();
             }
+            response.setResponseBody(apiResponseBuilder(responseStream));
             return response;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -229,8 +240,7 @@ public class MobilityCallAPI {
     }
 
 
-
-    public static Map<String, String> getBaseHeaders(Context context){
+    public static Map<String, String> getBaseHeaders(Context context) {
 
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
@@ -249,7 +259,7 @@ public class MobilityCallAPI {
     }
 
     private static String apiResponseBuilder(InputStream responseStream) {
-        try{
+        try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
             StringBuilder responseBuilder = new StringBuilder();
             String line;
@@ -258,7 +268,7 @@ public class MobilityCallAPI {
             }
             reader.close();
             return responseBuilder.toString();
-        }catch (Exception e){
+        } catch (Exception e) {
             return "This happened - " + e;
         }
 
@@ -272,12 +282,17 @@ public class MobilityCallAPI {
         outputStream.writeBytes("--" + boundary + "\r\n");
         outputStream.writeBytes("Content-Disposition: form-data; name=\"" + fileField + "\"; filename=\"" + fileName + "\"\r\n");
 
-        if (fileType.equals("Image"))
-            outputStream.writeBytes("Content-Type: image/jpeg\r\n");
-        else if (fileType.equals("Audio"))
-            outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
-        else if (fileType.equals("Video"))
-            outputStream.writeBytes("Content-Type: video/mp4\r\n");
+        switch (fileType) {
+            case "Image":
+                outputStream.writeBytes("Content-Type: image/jpeg\r\n");
+                break;
+            case "Audio":
+                outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
+                break;
+            case "Video":
+                outputStream.writeBytes("Content-Type: video/mp4\r\n");
+                break;
+        }
 
         outputStream.writeBytes("\r\n");
 

@@ -482,7 +482,7 @@ public class LocationUpdateService extends Service {
             String modeStatus = status ? "ONLINE" : "OFFLINE";
             String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=" + modeStatus;
             try {
-                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders);
                 if (!status) {
@@ -753,7 +753,7 @@ public class LocationUpdateService extends Service {
             if (canCallAPI(executorLocUpdate.isShutdown())) {
                 Log.d(LOG_TAG, "DriverUpdateLoc CanCallAPI and ExecutorShutDown Passed");
                 executorLocUpdate = Executors.newSingleThreadExecutor();
-                MobilityCallAPI callAPIHandler = new MobilityCallAPI(getApplicationContext());
+                MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
@@ -847,7 +847,7 @@ public class LocationUpdateService extends Service {
                     String finalResult = result;
                     handler.post(() -> {
                         try {
-                            JSONObject resp = new JSONObject(String.valueOf(finalResult));
+                            JSONObject resp = new JSONObject(finalResult != null ? finalResult : "{}");
                             if (resp.has("errorCode"))
                                 Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
                             if (resp.has("errorCode") && (resp.get("errorCode").equals("INVALID_TOKEN") || resp.get("errorCode").equals("TOKEN_EXPIRED"))) {

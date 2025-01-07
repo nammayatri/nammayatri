@@ -174,7 +174,7 @@ public class MediaPlayer {
                 } else {
                     Thread thread = new Thread(() -> {
                         try {
-                            String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            String base64 = MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", "mp3", bridgeComponents.getContext().getCacheDir());
                             tempMp3.deleteOnExit();
@@ -219,7 +219,7 @@ public class MediaPlayer {
                 if (source.startsWith("http")) {
                     Thread thread = new Thread(() -> {
                         try {
-                            String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            String base64 = MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", source.substring(source.length()-3), context.getCacheDir());
                             tempMp3.deleteOnExit();

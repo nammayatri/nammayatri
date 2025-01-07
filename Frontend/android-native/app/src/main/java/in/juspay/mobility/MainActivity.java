@@ -301,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         String driverProfileUrl = baseUrl + "/driver/profile";
         try {
-            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
             Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
             MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, null, "GET", false);
             return apiResponse.getResponseBody();
@@ -403,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
-        String okHttpConfig = "";
+        String okHttpConfig = "{}";
         try{
             isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
             isPerfEnabledCustomer = remoteConfigs.getBoolean("perf_enabled_customer");
