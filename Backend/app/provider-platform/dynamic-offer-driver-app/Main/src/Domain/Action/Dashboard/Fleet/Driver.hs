@@ -97,6 +97,7 @@ getDriverFleetGetAllVehicle ::
   Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Flow Common.ListVehicleRes
 getDriverFleetGetAllVehicle = DDriver.getAllVehicleForFleet
 
@@ -317,7 +318,8 @@ getDriverFleetTripTransactions ::
   Text ->
   Id Common.Driver ->
   Text ->
-  Maybe Day ->
+  Maybe Int ->
+  Maybe Int ->
   Flow Common.TripTransactionResp
 getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
 

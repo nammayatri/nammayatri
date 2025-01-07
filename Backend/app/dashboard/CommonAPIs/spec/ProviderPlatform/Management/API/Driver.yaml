@@ -96,6 +96,7 @@ apis:
         - subscribed: Bool
         - phone: Text
         - vehicleNumberSearchString: Text
+        - mbNameSearchString: Text
       response:
         type: DriverListRes
       migrate:
