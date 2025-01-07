@@ -279,7 +279,19 @@ library
       ExternalBPP.Metro.ExternalAPI.CMRL.StationList
       ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
-      Lib.JourneyPlannerTypes
+      Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Interface
+      Lib.JourneyLeg.Metro
+      Lib.JourneyLeg.Taxi
+      Lib.JourneyLeg.Types
+      Lib.JourneyLeg.Types.Bus
+      Lib.JourneyLeg.Types.Metro
+      Lib.JourneyLeg.Types.Taxi
+      Lib.JourneyLeg.Types.Walk
+      Lib.JourneyLeg.Walk
+      Lib.JourneyModule.Base
+      Lib.JourneyModule.Types
+      Lib.JourneyModule.Utils
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
@@ -595,6 +607,7 @@ library
       Domain.Types.Issue
       Domain.Types.Journey
       Domain.Types.JourneyBooking
+      Domain.Types.JourneyLeg
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -701,6 +714,7 @@ library
       Storage.Beam.Issue
       Storage.Beam.Journey
       Storage.Beam.JourneyBooking
+      Storage.Beam.JourneyLeg
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -808,6 +822,7 @@ library
       Storage.Queries.Issue
       Storage.Queries.Journey
       Storage.Queries.JourneyBooking
+      Storage.Queries.JourneyLeg
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant

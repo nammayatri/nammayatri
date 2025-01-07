@@ -1,4 +1,4 @@
-module Lib.JourneyPlannerTypes where
+module Lib.JourneyLeg.Types where
 
 import Kernel.Prelude
 

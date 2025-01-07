@@ -27,7 +27,7 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
 
 FRFSSearch:
@@ -46,6 +46,9 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    lineColor : Maybe Text
+    lineColorCode : Maybe Text
+    frequency : Maybe Int
 
   beamFields:
     journeyLegInfo:

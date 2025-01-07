@@ -74,14 +74,19 @@ getStopLocationId = \case
   DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
-getToLocationId = \case
-  DRB.OneWayDetails details -> Just (getId details.toLocation.id)
+getToLocationId bookingDetails = do
+  toLocation <- getToLocation bookingDetails
+  return $ toLocation.id.getId
+
+getToLocation :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DL.Location
+getToLocation = \case
+  DRB.OneWayDetails details -> Just details.toLocation
   DRB.RentalDetails _ -> Nothing
-  DRB.DriverOfferDetails details -> Just (getId details.toLocation.id)
-  DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
-  DRB.InterCityDetails details -> Just (getId details.toLocation.id)
-  DRB.AmbulanceDetails details -> Just (getId details.toLocation.id)
-  DRB.DeliveryDetails details -> Just (getId details.toLocation.id)
+  DRB.DriverOfferDetails details -> Just details.toLocation
+  DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+  DRB.InterCityDetails details -> Just details.toLocation
+  DRB.AmbulanceDetails details -> Just details.toLocation
+  DRB.DeliveryDetails details -> Just details.toLocation
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case

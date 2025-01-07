@@ -15,7 +15,7 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    EditLocation (..),
+    EditLocation,
     EditLocationReq (..),
     EditLocationResp (..),
     getDriverLoc,
@@ -39,10 +39,9 @@ import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (buildRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.Extra.Ride (RideAPIEntity (..))
+import Domain.Types.Extra.Ride (EditLocation, RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -108,12 +107,6 @@ data EditLocationReq = EditLocationReq
 data EditLocationResp = EditLocationResp
   { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest),
     result :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data EditLocation = EditLocation
-  { gps :: Maps.LatLong,
-    address :: DLA.LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

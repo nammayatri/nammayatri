@@ -40,7 +40,7 @@ sendPublicTransportSearchRequest personId SLS.SearchRes {..} = do
   where
     publicTransportSearch =
       PublicTransportSearch
-        { id = getId searchId,
+        { id = getId searchRequest.id,
           gps = origin.gps,
           requestorId = getId personId,
           createdAt = now

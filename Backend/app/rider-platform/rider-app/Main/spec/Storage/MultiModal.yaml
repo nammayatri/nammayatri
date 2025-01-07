@@ -8,7 +8,12 @@ imports:
   Currency: Kernel.Types.Common
   Location: Domain.Types.Location
   Person: Domain.Types.Person
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
+  PolylinePoints: Kernel.External.Maps.Google.MapsClient.Types
+  LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
+  MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
+  MultiModalRouteDetails: Kernel.External.MultiModal.Interface.Types
+  MultiModalAgency: Kernel.External.MultiModal.Interface.Types
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -25,6 +30,8 @@ Journey:
     convenienceCost: Int
     totalLegs: Int
     legsDone: Int
+    estimatedMinFare: Maybe HighPrecMoney
+    estimatedMaxFare: Maybe HighPrecMoney
 
   beamFields:
     fare:
@@ -125,6 +132,10 @@ WalkLegMultimodal:
 
   derives: "Generic, Show"
 
+  types:
+    WalkLegStatus:
+      enum: "InPlan, Ongoing, Completed"
+
   fields:
     id: Id WalkLegMultimodal
     startTime: UTCTime
@@ -134,6 +145,8 @@ WalkLegMultimodal:
     toLocation: Maybe Location
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
+    status: WalkLegStatus
+    merchantId: Id Merchant
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
 
@@ -144,6 +157,10 @@ WalkLegMultimodal:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
       where: id
 
   beamFields:
@@ -183,3 +200,92 @@ WalkLegMultimodal:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+JourneyLeg:
+  fields:
+    id: Id JourneyLeg
+    distance: Distance
+    journeyId: Id Journey
+    duration: Seconds
+    # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
+    mode: TravelMode
+    startLocation: LatLngV2 #LocationV2     #Location.latLng
+    endLocation: LatLngV2 #LocationV2
+    fromStopDetails: Maybe MultiModalStopDetails
+    toStopDetails: Maybe MultiModalStopDetails
+    routeDetails: Maybe MultiModalRouteDetails
+    agency: Maybe MultiModalAgency
+    fromArrivalTime: Maybe UTCTime
+    fromDepartureTime: Maybe UTCTime
+    toArrivalTime: Maybe UTCTime
+    toDepartureTime: Maybe UTCTime
+    sequenceNumber: Int
+    legId: Maybe Text
+
+  beamFields:
+    distance:
+      distance: HighPrecDistance
+      distanceUnit: DistanceUnit
+    fromStopDetails:
+      fromStopCode: Maybe Text
+      fromStopName: Maybe Text
+      fromStopGtfsId: Maybe Text
+    toStopDetails:
+      toStopCode: Maybe Text
+      toStopName: Maybe Text
+      toStopGtfsId: Maybe Text
+    routeDetails:
+      routeGtfsId: Maybe Text
+      routeLongName: Maybe Text
+      routeShortName: Maybe Text
+      routeColorName : Maybe Text
+      routeColorCode : Maybe Text
+      frequency : Maybe Int
+    agency:
+      agencyGtfsId: Maybe Text
+      agencyName: Maybe Text
+    startLocation:
+      startLocationLat: Double
+      startLocationLon: Double
+    endLocation:
+      endLocationLat: Double
+      endLocationLon: Double
+
+  queries:
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+
+  fromTType:
+    distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
+    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId)|E
+    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
+    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName)|E
+    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
+    startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
+    endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
+
+  toTType:
+    distance: ((.value))|I
+    distanceUnit: ((.unit))|I
+    fromStopCode:  (fromStopDetails >>= (.stopCode))|E
+    fromStopName:  (fromStopDetails >>= (.name))|E
+    fromStopGtfsId: (fromStopDetails >>= (.gtfsId))|E
+    toStopCode:  (toStopDetails >>= (.stopCode))|E
+    toStopName:  (toStopDetails >>= (.name))|E
+    toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
+    routeGtfsId: (routeDetails >>= (.gtfsId))|E
+    routeLongName: (routeDetails >>= (.longName))|E
+    routeShortName: (routeDetails >>= (.shortName))|E
+    routeColorName: (Nothing)|E
+    routeColorCode: (Nothing)|E
+    frequency : (Nothing)|E
+    agencyGtfsId: (routeDetails >>= (.gtfsId))|E
+    agencyName: (routeDetails >>= (.longName))|E
+    startLocationLat: (startLocation & (.latitude))|E
+    startLocationLon: (startLocation & (.longitude))|E
+    endLocationLat: (endLocation & (.latitude))|E
+    endLocationLon: (endLocation & (.longitude))|E
+
+  constraints:
+    id: PrimaryKey
+    journeyId: "!SecondaryKey"
