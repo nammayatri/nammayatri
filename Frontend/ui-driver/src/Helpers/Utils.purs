@@ -1281,7 +1281,6 @@ getSrcDestConfig state =
 specialVariantsForTracking :: LazyCheck -> Boolean
 specialVariantsForTracking _ = do
   case (getValueToLocalStore VEHICLE_CATEGORY) of
-    "BikeCategory" -> true
     "BusCategory" -> true
     _ -> false
 
