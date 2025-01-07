@@ -514,7 +514,7 @@ public class OverlayMessagingService extends Service {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(getApplicationContext());
                                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
                                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(endPoint, baseHeaders, reqBody, method);
                                 Handler handler = new Handler(Looper.getMainLooper());
@@ -603,7 +603,7 @@ public class OverlayMessagingService extends Service {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                                    MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(getApplicationContext());
                                     Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
                                     MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(endPoint, baseHeaders, reqBody, method);
                                     Handler handler = new Handler(Looper.getMainLooper());

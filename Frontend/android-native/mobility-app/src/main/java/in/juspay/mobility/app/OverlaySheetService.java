@@ -1051,7 +1051,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String baseUrl = sharedPref.getString("BASE_URL", "null");
             String orderUrl = baseUrl + "/driver/ride/list?limit=1&offset=0&onlyActive=true";
             try {
-                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(getApplicationContext());
                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(this);
                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders, null, "GET", false);
                 String apiResp = apiResponse.getResponseBody();
