@@ -49,5 +49,5 @@ onTrack _ reqV2 = withFlowHandlerBecknAPI do
         DOnTrack.onTrack validatedReq
       fork "on track received pushing ondc logs" do
         booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
-        void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId
+        void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
     pure Ack

@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.Metrics as Metrics
+import TransactionLogs.PushLogs
 
 type API = Spec.OnInitAPI
 
@@ -48,6 +49,8 @@ onInit _ req = withFlowHandlerAPI $ do
       fork "FRFS on_init processing" $ do
         Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $
           DOnInit.onInit onInitReq merchant booking
+      fork "FRFS onInit received pushing ondc logs" do
+        void $ pushLogs "on_init" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
 
 onInitLockKey :: Text -> Text

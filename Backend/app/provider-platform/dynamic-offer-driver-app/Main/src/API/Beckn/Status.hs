@@ -57,7 +57,7 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
     fork "status received pushing ondc logs" do
-      void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId
+      void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     msgId <- Utils.getMessageId context
     onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)

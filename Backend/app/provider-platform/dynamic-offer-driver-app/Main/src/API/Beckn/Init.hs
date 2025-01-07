@@ -87,7 +87,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
           bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
           fork "init received pushing ondc logs" do
-            void $ pushLogs "init" (toJSON reqV2) transporterId.getId
+            void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
           ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
           context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $

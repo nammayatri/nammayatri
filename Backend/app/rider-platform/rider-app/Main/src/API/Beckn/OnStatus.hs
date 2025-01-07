@@ -53,7 +53,7 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
             DOnStatus.onStatus validatedOnStatusReq
           fork "on status received pushing ondc logs" do
             booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
-            void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId
+            void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
   pure Ack
 
 onStatusLockKey :: Text -> Text
