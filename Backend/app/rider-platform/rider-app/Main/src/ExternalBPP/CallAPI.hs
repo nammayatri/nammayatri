@@ -22,6 +22,7 @@ import Environment
 import qualified ExternalBPP.Bus.Flow as BusFlow
 import qualified ExternalBPP.Metro.Flow as MetroFlow
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,7 +33,16 @@ import qualified Storage.CachedQueries.Station as QStation
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-search :: Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Flow ()
+type FRFSSearchFlow m r =
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    EncFlow m r
+  )
+
+search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> m ()
 search merchant merchantOperatingCity bapConfig searchReq = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
@@ -54,6 +64,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         processOnSearch onSearchReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
+    processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch

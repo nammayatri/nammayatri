@@ -21,10 +21,10 @@ import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
-import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -109,7 +109,7 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     mbMaxFreeTicketCashback :: Maybe Int
   }
 
-validateRequest :: DOnSearch -> Flow ValidatedDOnSearch
+validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   let merchantId = search.merchantId
@@ -122,9 +122,13 @@ validateRequest DOnSearch {..} = do
     else return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = 0, isEventOngoing = False, mbFreeTicketInterval = Nothing, mbMaxFreeTicketCashback = Nothing}
 
 onSearch ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r
+  ) =>
   DOnSearch ->
   ValidatedDOnSearch ->
-  Flow ()
+  m ()
 onSearch onSearchReq validatedReq = do
   quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
   QQuote.createMany quotes
@@ -139,7 +143,7 @@ onSearch onSearchReq validatedReq = do
 filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
 filterQuotes quotes = listToMaybe quotes
 
-mkQuotes :: DOnSearch -> ValidatedDOnSearch -> DQuote -> Flow Quote.FRFSQuote
+mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")

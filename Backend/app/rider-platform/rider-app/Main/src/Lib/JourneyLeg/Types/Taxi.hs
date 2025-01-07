@@ -23,9 +23,10 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
   { skipBooking :: Bool,
+    startTime :: UTCTime,
     personId :: Id DP.Person,
     merchantId :: Id DM.Merchant,
-    estimateId :: Maybe (Id DE.Estimate)
+    estimateId :: Id DE.Estimate
   }
 
 data ChangeServiceTierData = ChangeServiceTierData

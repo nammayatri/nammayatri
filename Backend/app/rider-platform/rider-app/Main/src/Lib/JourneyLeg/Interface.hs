@@ -25,17 +25,12 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 getFare ::
-  forall m r.
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r
-  ) =>
+  JL.GetFareFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
   DTrip.TravelMode ->
-  m JL.GetFareResponse
+  m (Maybe JL.GetFareResponse)
 getFare merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
@@ -88,15 +83,15 @@ getFare merchantId merchantOperatingCityId leg = \case
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
-mkTaxiLegConfirmReq :: JL.LegInfo -> TaxiLegRequest
-mkTaxiLegConfirmReq JL.LegInfo {..} =
-  TaxiLegRequestConfirm $
-    TaxiLegRequestConfirmData
-      { skipBooking = skipBooking,
-        estimateId = Id <$> legId,
-        personId,
-        merchantId
-      }
+-- mkTaxiLegConfirmReq :: JL.LegInfo -> TaxiLegRequest
+-- mkTaxiLegConfirmReq JL.LegInfo {..} =
+--   TaxiLegRequestConfirm $
+--     TaxiLegRequestConfirmData
+--       { skipBooking = skipBooking,
+--         estimateId = Id <$> legId,
+--         personId,
+--         merchantId
+--       }
 
 -- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
 -- mkCancelReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
@@ -117,51 +112,6 @@ mkTaxiLegConfirmReq JL.LegInfo {..} =
 mkTaxiSearchReq :: DSR.SearchRequest -> DJL.JourneyLeg -> SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
 mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSearch $ TaxiLegRequestSearchData {..}
 
--- -- mkGetFareReq ::  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTrip.TravelMode -> EMInterface.MultiModalLeg -> m JLRequest
--- mkGetFareReq :: JL.JourneyLeg a m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTrip.TravelMode -> EMInterface.MultiModalLeg -> m a
--- mkGetFareReq merchantId merchantOperatingCityId tripMode leg =
---   case tripMode of
---     DTrip.Taxi -> do
---       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
---       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
---       return $
---           TaxiLegRequestGetFare $
---             TaxiLegRequestGetFareData
---               { startLocation = leg.startLocation.latLng,
---                 endLocation = leg.endLocation.latLng,
---                 distance = leg.distance,
---                 duration = leg.duration,
---                 merchant,
---                 merchantOpCity
---               }
---     DTrip.Bus ->
---       return $
---           BusLegRequestGetFare $
---             BusLegRequestGetFareData
---               { startLocation = leg.startLocation.latLng,
---                 endLocation = leg.endLocation.latLng
---               }
---     DTrip.Metro ->
---       return $
---           MetroLegRequestGetFare $
---             MetroLegRequestGetFareData
---               { startLocation = leg.startLocation.latLng,
---                 endLocation = leg.endLocation.latLng
---               }
---     DTrip.Walk ->
---       return $
---           (WalkLegRequestGetFare WalkLegRequestGetFareData)
-
--- mkTaxiLegConfirmReq :: JL.LegInfo -> TaxiLegRequest
--- mkTaxiLegConfirmReq JL.LegInfo {..} =
---   TaxiLegRequestConfirm $
---     TaxiLegRequestConfirmData
---       { skipBooking = skipBooking,
---         estimateId = Id <$> legId,
---         personId,
---         merchantId
---       }
-
 -- -- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
 -- mkCancelReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
 -- mkCancelReq legInfo =
@@ -169,7 +119,6 @@ mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSear
 --     DTrip.Taxi -> return $ TaxiLegRequestCancel TaxiLegRequestCancelData
 --     _ -> return $ MetroLegRequestCancel MetroLegRequestCancelData
 
--- -- mkConfirmReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
 -- mkConfirmReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
 -- mkConfirmReq legInfo =
 --   case legInfo.travelMode of

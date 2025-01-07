@@ -19,6 +19,7 @@ module Domain.Action.UI.Select
     SelectListRes (..),
     QuotesResultResponse (..),
     CancelAPIResponse (..),
+    SelectFlow,
     select,
     select2,
     selectList,
@@ -31,6 +32,7 @@ import Control.Monad.Extra (anyM)
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
@@ -47,13 +49,14 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
-import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -61,6 +64,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -76,6 +80,23 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
+import TransactionLogs.Types
+
+type SelectFlow m r c =
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasCoreMetrics r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    Redis.HedisFlow m r
+  )
 
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
@@ -172,14 +193,14 @@ instance FromJSON CancelAPIResponse where
       _ -> parseFail "Expected \"Success\" in \"result\" field."
   parseJSON err = typeMismatch "Object APISuccess" err
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Flow DSelectRes
+select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select personId estimateId req = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id) -- select validation check
   select2 personId estimateId req
 
-select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Flow DSelectRes
+select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
@@ -246,6 +267,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         ..
       }
   where
+    getPhoneNo :: EncFlow m r => DPerson.Person -> m (Maybe (UnencryptedItem (EncryptedHashed Text)))
     getPhoneNo person = do
       mapM decrypt person.mobileNumber
 
@@ -276,7 +298,7 @@ selectResult estimateId = do
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
 
-makeDeliverySearchParties :: Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> Flow ()
+makeDeliverySearchParties :: SelectFlow m r c => Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> m ()
 makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
   senderPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.senderDetails.phoneNumber) (deliveryDetails.senderDetails.countryCode)
   receiverPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.receiverDetails.phoneNumber) (deliveryDetails.receiverDetails.countryCode)

@@ -2,23 +2,18 @@
 
 module Lib.JourneyLeg.Metro where
 
+import qualified API.Types.UI.FRFSTicketService as API
+import qualified API.Types.UI.FRFSTicketService as DFRFSTypes
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.TicketBookingService as TBS
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
-
--- import qualified Domain.Types.FRFSSearch as DFRFSSearch
--- import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
--- import qualified API.Types.UI.FRFSTicketService as API
--- import qualified Storage.Queries.JourneyLeg as QJourneyLeg
--- import qualified BecknV2.FRFS.APIs as Spec
--- import qualified BecknV2.FRFS.Enums as Spec
--- import qualified BecknV2.FRFS.Types as Spec
--- import qualified Lib.JourneyLeg.Types as JPT
--- import qualified API.Types.UI.FRFSTicketService as DFRFSTypes
 
 mapServiceStatusToJourneyLegStatus :: TBS.ServiceStatus -> JT.JourneyLegStatus
 mapServiceStatusToJourneyLegStatus status = case status of
@@ -29,14 +24,28 @@ mapServiceStatusToJourneyLegStatus status = case status of
   TBS.Cancelled -> JT.Cancelled -- Indicates the service has been cancelled.
 
 instance JT.JourneyLeg MetroLegRequest m where
-  search (MetroLegRequestSearch _) = return ()
-  -- let frfsSearchReq = buildFRFSSearchReq req.fromStationCode req.toStationCode req.routeCode 1 Nothing
-  -- journeyLegInfo <- QJourneyLeg.findByPrimaryKey journeyLegId >>= fromMaybeM (JourneyLegIdNotFound journeyLegId)
-  -- res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) Spec.METRO frfsSearchReq Nothing Nothing journeyLeg.routeDetails.routeColorName  journeyLeg.routeDetails.routeColorCode journeyLeg.routeDetails.frequency  --(Just partnerOrg.orgId)
-  -- return $ API.FRFSSearchAPIRes res
-  -- where
-  --   buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
-  --   buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
+  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = do
+    let journeySearchData =
+          JPT.JourneySearchData
+            { journeyId = journeyLeg.journeyId.getId,
+              journeyLegOrder = journeyLeg.sequenceNumber,
+              agency = journeyLeg.agency <&> (.name),
+              skipBooking = False,
+              convenienceCost = 0,
+              pricingId = Nothing
+            }
+    frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
+    let colorName = Nothing -- journeyLeg.routeDetails >>= (.routeColorName)
+    let routeColorCode = Nothing -- journeyLeg.routeDetails >>= (.routeColorCode)
+    let frequency = Nothing -- journeyLeg.routeDetails >>= (.frequency)
+    void $ FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) Spec.METRO frfsSearchReq Nothing Nothing colorName routeColorCode frequency
+    where
+      -- buildFRFSSearchReq :: Maybe JPT.JourneySearchData -> m DFRFSTypes.FRFSSearchAPIReq
+      buildFRFSSearchReq journeySearchData = do
+        fromStationCode <- journeyLeg.fromStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "From station code not found")
+        toStationCode <- journeyLeg.toStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "To station code not found")
+        let routeCode = Nothing
+        return $ DFRFSTypes.FRFSSearchAPIReq {..}
   search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm _) = return ()
@@ -58,5 +67,5 @@ instance JT.JourneyLeg MetroLegRequest m where
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (MetroLegRequestGetFare _) = do
-    return JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}}
+    return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 10}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 10}})
   getFare _ = throwError (InternalError "Not supported")

@@ -2,22 +2,19 @@
 
 module Lib.JourneyLeg.Taxi where
 
--- import qualified API.UI.Select as DSelect
-
+import qualified API.UI.Select as DSelect
 -- import qualified Domain.Types.JourneyLeg as DJourenyLeg
 -- import qualified Domain.Types.SearchRequest as DSR
--- import qualified SharedLogic.CallBPPInternal as CallBPPInternal
--- import qualified Storage.Queries.Booking as QBooking
+
 -- import qualified Storage.Queries.Estimate as QEstimate
 -- import qualified Storage.Queries.Journey as QJourney
--- import qualified Storage.Queries.Ride as QRide
--- import qualified Storage.Queries.SearchRequest as QSearchRequest
--- import Kernel.External.Maps.Types
 
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.ServiceTierType
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -25,7 +22,11 @@ import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Search
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 
 instance JT.JourneyLeg TaxiLegRequest m where
   search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
@@ -83,25 +84,24 @@ instance JT.JourneyLeg TaxiLegRequest m where
           }
   search _ = throwError (InternalError "Not Supported")
 
-  confirm (TaxiLegRequestConfirm _) = return ()
+  confirm (TaxiLegRequestConfirm req) = do
+    now <- getCurrentTime
+    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 -- 5 minutes buffer
+    unless shouldSkipBooking $ do
+      let selectReq =
+            DSelect.DSelectReq
+              { customerExtraFee = Nothing,
+                customerExtraFeeWithCurrency = Nothing,
+                autoAssignEnabled = True,
+                autoAssignEnabledV2 = Just True,
+                paymentMethodId = Nothing,
+                otherSelectedEstimates = Nothing,
+                isAdvancedBookingEnabled = Nothing,
+                deliveryDetails = Nothing,
+                disabilityDisable = Nothing
+              }
+      void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
   confirm _ = throwError (InternalError "Not Supported")
-
-  -- now <- getCurrentTime
-  -- let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime newTime oldTime) :: Integer) >= 300 -- 5 minutes buffer
-  -- unless shouldSkipBooking $ do
-  --   let selectReq =
-  --         DSelect.DSelectReq
-  --           { customerExtraFee = Nothing,
-  --             customerExtraFeeWithCurrency = Nothing,
-  --             autoAssignEnabled = True,
-  --             autoAssignEnabledV2 = Just True,
-  --             paymentMethodId = Nothing,
-  --             otherSelectedEstimates = Nothing,
-  --             isAdvancedBookingEnabled = Nothing,
-  --             deliveryDetails = Nothing,
-  --             disabilityDisable = Nothing
-  --           }
-  --   void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
 
   update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()
   update _ = throwError (InternalError "Not Supported")
@@ -131,42 +131,40 @@ instance JT.JourneyLeg TaxiLegRequest m where
   cancel (TaxiLegRequestCancel _legData) = return ()
   cancel _ = throwError (InternalError "Not Supported")
 
-  getState (TaxiLegRequestGetState _req) = return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing}
+  getState (TaxiLegRequestGetState req) = do
+    mbBooking <- QBooking.findByTransactionId req.searchId.getId
+    case mbBooking of
+      Just booking -> do
+        mbRide <- QRide.findByRBId booking.id
+        let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
+      Nothing -> do
+        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
+        let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
   getState _ = throwError (InternalError "Not Supported")
 
-  -- mbBooking <- QBooking.findByTransactionId req.searchId.getId
-  -- case mbBooking of
-  --   Just booking -> do
-  --     mbRide <- QRide.findByRBId booking.Id
-  --     let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
-  --     return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
-  --   Nothing -> do
-  --     searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-  --     journeyLegInfo <- searchReq.journeySearchData & fromMaybeM (InvalidRequest "JourneySearchData not found")
-  --     let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo
-  --     return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing}
-
-  getInfo (TaxiLegRequestGetInfo _req) = throwError (InternalError "Not Supported")
+  getInfo (TaxiLegRequestGetInfo req) = do
+    mbBooking <- QBooking.findByTransactionId req.searchId.getId
+    case mbBooking of
+      Just booking -> do
+        mRide <- QRide.findByRBId booking.id
+        JT.mkLegInfoFromBookingAndRide booking mRide
+      Nothing -> do
+        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        JT.mkLegInfoFromSearchRequest searchReq
   getInfo _ = throwError (InternalError "Not Supported")
 
-  -- mbBooking <- QBooking.findByTransactionId req.searchId.getId
-  -- case mbBooking of
-  --   Just booking -> do
-  --     mRide <- QRide.findByRBId booking.Id
-  --     JT.mkLegInfoFromBookingAndRide booking mRide
-  --   Nothing -> do
-  --     searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-  --     JT.mkLegInfoFromSearchRequest searchReq
-
-  getFare (TaxiLegRequestGetFare _taxiGetFareData) = throwError (InternalError "Not Supported")
+  getFare (TaxiLegRequestGetFare taxiGetFareData) = do
+    let calculateFareReq =
+          CallBPPInternal.CalculateFareReq
+            { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latitude, lon = taxiGetFareData.startLocation.longitude},
+              dropLatLong = LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
+              mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
+              mbDuration = Just taxiGetFareData.duration
+            }
+    fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
+    let mbAutoFare = find (\f -> f.vehicleServiceTier == AUTO_RICKSHAW) fareData.estimatedFares
+    return $ mbAutoFare <&> \auto -> JT.GetFareResponse {estimatedMinFare = auto.minFare, estimatedMaxFare = auto.maxFare}
   getFare _ = throwError (InternalError "Not Supported")
-
--- let calculateFareReq =
---       CallBPPInternal.CalculateFareReq
---         { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latLng.latitude, lon = taxiGetFareData.startLocation.latLng.longitude},
---           dropLatLong = LatLong {lat = taxiGetFareData.endLocation.latLng.latitude, lon = taxiGetFareData.endLocation.latLng.longitude},
---           mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
---           mbDuration = Just taxiGetFareData.duration
---         }
--- fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
--- return JT.GetFareResponse {estimatedMinFare = fareData.minFare, estimatedMaxFare = fareData.maxFare}

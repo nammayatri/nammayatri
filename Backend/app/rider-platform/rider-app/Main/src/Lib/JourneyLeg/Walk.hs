@@ -46,7 +46,7 @@ instance JT.JourneyLeg WalkLegRequest m where
     QWalkLeg.create walkLeg
   search _ = throwError (InternalError "Not supported")
 
-  confirm (WalkLegRequestConfirm _) = return () -- return nothing
+  confirm (WalkLegRequestConfirm _) = return ()
   confirm _ = throwError (InternalError "Not supported")
 
   update (WalkLegRequestUpdate _) = return ()
@@ -69,8 +69,9 @@ instance JT.JourneyLeg WalkLegRequest m where
 
   getFare (WalkLegRequestGetFare _) = do
     return $
-      JT.GetFareResponse
-        { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
-          estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0}
-        }
+      Just $
+        JT.GetFareResponse
+          { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
+            estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0}
+          }
   getFare _ = throwError (InternalError "Not supported")
