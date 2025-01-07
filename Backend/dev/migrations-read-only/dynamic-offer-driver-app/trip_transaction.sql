@@ -22,3 +22,10 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_service_t
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_start_time timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_end_time timestamp with time zone ;

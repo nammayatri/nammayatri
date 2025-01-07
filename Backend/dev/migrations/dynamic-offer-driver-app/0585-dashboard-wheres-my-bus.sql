@@ -5,8 +5,10 @@ Welcome to {#fleetOwnerName#}!
 Please confirm your onboarding by clicking this link: {#var1#}
 - Namma Yatri' -- change merchant name as per requirement
   , T1.id
-  FROM atlas_app.merchant_operating_city AS T1
-);
+  FROM atlas_driver_offer_bpp.merchant_operating_city AS T1
+)
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, json_data, message, merchant_operating_city_id)
+  (SELECT * FROM MerchantMessages);
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
     fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at

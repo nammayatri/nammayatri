@@ -209,3 +209,25 @@ updateVerificationStatusAndRejectReason ::
 updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
+
+findAllByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchStringHash = do
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limit $
+            B.offset_ offset $
+              B.orderBy_ (\rc' -> B.desc_ rc'.updatedAt) $
+                B.filter_'
+                  ( \rc ->
+                      rc.merchantId B.==?. B.val_ (Just merchantId')
+                        B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStringHash
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right res' -> do
+      catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []

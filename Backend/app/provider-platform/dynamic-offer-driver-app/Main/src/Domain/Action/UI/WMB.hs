@@ -223,6 +223,8 @@ postWmbTripLink (mbDriverId, merchantId, merchantOperatingCityId) req = do
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
           updatedAt = now,
+          tripStartTime = Nothing,
+          tripEndTime = Nothing,
           ..
         }
 
