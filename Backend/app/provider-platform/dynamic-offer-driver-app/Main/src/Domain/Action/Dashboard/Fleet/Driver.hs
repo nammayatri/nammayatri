@@ -96,6 +96,7 @@ getDriverFleetGetAllVehicle ::
   Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Flow Common.ListVehicleRes
 getDriverFleetGetAllVehicle = DDriver.getAllVehicleForFleet
 

@@ -34,6 +34,8 @@ data TripTransaction = TripTransaction
     startedNearStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Text.Text,
     vehicleServiceTierType :: Domain.Types.Common.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,

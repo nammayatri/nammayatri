@@ -142,6 +142,7 @@ apis:
       query:
         - mblimit: Int
         - mboffset: Int
+        - mbRegNumberString: Text
       response:
         type: ListVehicleRes
       migrate:
@@ -155,6 +156,7 @@ apis:
             query:
               - limit: Int
               - offset: Int
+              - mbRegNumberString: Text
             response:
               type: ListVehicleRes
 
@@ -886,7 +888,7 @@ types:
     - longName: Text
     - startPoint: LatLong
     - endPoint: LatLong
-    - distance: Maybe Int
+    - distance: Maybe Meters
     - totalStops: Maybe Int
     - waypoints: Maybe [LatLong]
     - timeBounds: Maybe TimeBound

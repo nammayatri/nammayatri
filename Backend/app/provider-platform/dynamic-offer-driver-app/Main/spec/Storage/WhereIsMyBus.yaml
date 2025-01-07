@@ -53,6 +53,8 @@ TripTransaction:
     endStopCode: Text
     allowEndingMidRoute: Bool
     sequenceNumber: Int
+    tripStartTime: Maybe UTCTime
+    tripEndTime: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
@@ -95,6 +97,12 @@ TripTransaction:
       kvFunction: updateOneWithKV
       params: [status, endLocation]
       where: id
+    findAllTripTransactionByDriverIdAndStatuses:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [driverId]
+          - in: [status]
 
   extraOperations:
     - EXTRA_QUERY_FILE

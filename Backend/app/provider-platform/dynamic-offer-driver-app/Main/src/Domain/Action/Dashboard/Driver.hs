@@ -113,7 +113,7 @@ import Data.Coerce
 import Data.Csv
 import qualified Data.HashSet as HS
 import Data.List (groupBy, partition, sortOn)
-import Data.List.NonEmpty (nonEmpty)
+import Data.List.NonEmpty (fromList, nonEmpty, toList)
 import Data.List.Split (chunksOf)
 import Data.Ord (Down (..))
 import Data.String.Conversions (cs)
@@ -156,6 +156,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Route as DRoute
 import Domain.Types.TransporterConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
@@ -169,8 +170,9 @@ import EulerHS.KVConnector.Helper.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
-import Kernel.Prelude
+import Kernel.Prelude hiding (toList)
 import Kernel.ServantMultipart
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
@@ -238,6 +240,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
@@ -331,15 +334,19 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
-listDrivers merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString = do
+listDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
-  items <- mapM buildDriverListItem driversWithInfo
+  let filteredItems =
+        case mbNameSearchString of
+          Just nameSearchString -> filter (\(person, _, _) -> T.isInfixOf nameSearchString (T.toLower person.firstName) || T.isInfixOf nameSearchString (T.toLower person.firstName)) driversWithInfo
+          Nothing -> driversWithInfo
+  items <- mapM buildDriverListItem filteredItems
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
   -- totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
@@ -1350,13 +1357,124 @@ postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
 
 getDriverFleetRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Maybe LatLong -> Maybe Text -> Flow Common.RouteAPIResp
-getDriverFleetRoutes _merchantShortId _opCity _fleetOwnerId _mbCurrentLocation _mbSearchString = do error "Logic yet to be decided"
+getDriverFleetRoutes merchantShortId opCity _fleetOwnerId mbCurrentLocation mbSearchString = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mbLimit = Just 100
+      mbOffset = Just 0
+  allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType mbLimit mbOffset merchantOpCity.id DVC.BUS
+  filteredRoutes <- case mbSearchString of
+    Just searchString_ -> do
+      let searchString = T.toLower searchString_
+          filteredRoutes = filter (\route -> T.isInfixOf searchString route.shortName || T.isInfixOf searchString route.longName) allRoutes
+      pure filteredRoutes
+    Nothing -> pure allRoutes
+
+  listItem <- case mbCurrentLocation of
+    Nothing -> return $ map (\route -> createRouteRespItem route Nothing) filteredRoutes
+    Just startLocation -> do
+      sortedRoutesWithDistance <- getRoutesByLocation merchant.id merchantOpCity.id startLocation filteredRoutes
+      return $ map (\rData -> createRouteRespItem rData.route rData.distance) sortedRoutesWithDistance
+  let summary = Common.Summary {totalCount = 10000, count = length listItem}
+  pure $ Common.RouteAPIResp {listItem = listItem, summary = summary}
 
 getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> Context.City -> Text -> LatLong -> Flow Common.RouteAPIResp
-getDriverFleetPossibleRoutes _merchantShortId _opCity _fleetOwnerId _startLocation = do error "Logic yet to be decided"
+getDriverFleetPossibleRoutes merchantShortId opCity _fleetOwnerId startLocation = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mbLimit = Just 100
+      mbOffset = Just 0
+  allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType mbLimit mbOffset merchantOpCity.id DVC.BUS
+  sortedRoutesWithDistance <- getRoutesByLocation merchant.id merchantOpCity.id startLocation allRoutes
+  let listItem = map (\rData -> createRouteRespItem rData.route rData.distance) sortedRoutesWithDistance
+      summary = Common.Summary {totalCount = 10000, count = length listItem}
+  pure $ Common.RouteAPIResp {listItem = listItem, summary = summary}
+
+data RouteData = RouteData
+  { route :: DRoute.Route,
+    distance :: Maybe Meters
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data RouteDetails = RouteDetails
+  { lat :: Double,
+    lon :: Double,
+    route :: DRoute.Route
+  }
+  deriving (Generic, Show, HasCoordinates, ToJSON, FromJSON)
+
+createRouteRespItem :: DRoute.Route -> Maybe Meters -> Common.RouteRespItem
+createRouteRespItem route distance = do
+  Common.RouteRespItem
+    { code = route.code,
+      shortName = route.shortName,
+      longName = route.longName,
+      startPoint = route.startPoint,
+      endPoint = route.endPoint,
+      distance = distance,
+      totalStops = Nothing,
+      waypoints = Nothing,
+      timeBounds = Just route.timeBounds
+    }
+
+getRoutesByLocation :: () => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> [DRoute.Route] -> Flow [RouteData]
+getRoutesByLocation merchantId merchantOpCityId origin routes_ = do
+  if null routes_
+    then return []
+    else do
+      let routes = map mkRouteWithLatLon routes_
+      let maxBatchSize = 100
+          routeBatches = chunksOf maxBatchSize routes
+      batchedResults <- fmap concat $
+        forM routeBatches $ \batch -> do
+          res <-
+            try @_ @SomeException $
+              Maps.getDistances merchantId merchantOpCityId $
+                Maps.GetDistancesReq
+                  { origins = fromList batch,
+                    destinations = fromList [origin],
+                    distanceUnit = Meter,
+                    sourceDestinationMapping = Nothing,
+                    travelMode = Just Maps.CAR
+                  }
+          case res of
+            Left _ -> return $ map (\routeDetails -> RouteData {route = routeDetails.route, distance = Nothing}) batch
+            Right routeDistanceResp -> return $ map (\routeWithDistance -> RouteData {route = routeWithDistance.origin.route, distance = Just routeWithDistance.distance}) (toList routeDistanceResp)
+      let sortedRoutes = sortOn (.distance) batchedResults
+      pure sortedRoutes
+  where
+    mkRouteWithLatLon route =
+      RouteDetails
+        { lat = route.startPoint.lat,
+          lon = route.startPoint.lon,
+          route = route
+        }
 
 getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Maybe Day -> Flow Common.TripTransactionResp
-getDriverFleetTripTransactions _merchantShortId _opCity _fleetOwnerId _reqDriverId _vehicleNo _reqDay = do error "Logic yet to be decided"
+getDriverFleetTripTransactions merchantShortId opCity _fleetOwnerId reqDriverId _vehicleNo _reqDay = do
+  merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  tripTransactions_ <- QTT.findAllTripTransactionByDriverIdAndStatuses (cast reqDriverId) [IN_PROGRESS, TRIP_ASSIGNED]
+  let tripTransactions = sortOn (.sequenceNumber) tripTransactions_
+      trips = map buildTripTransactionDetails tripTransactions
+      summary = Common.Summary {totalCount = 10000, count = length trips}
+  pure Common.TripTransactionResp {trips = trips, totalTrips = length tripTransactions, summary = summary}
+  where
+    buildTripTransactionDetails tripTransaction =
+      Common.TripTransactionDetail
+        { routeCode = tripTransaction.routeCode,
+          tripSequence = tripTransaction.sequenceNumber,
+          tripStartTime = tripTransaction.tripStartTime,
+          tripEndTime = tripTransaction.tripEndTime,
+          tripStatus = castTripStatus tripTransaction.status
+        }
+
+    castTripStatus = \case
+      TRIP_ASSIGNED -> Common.TRIP_ASSIGNED
+      IN_PROGRESS -> Common.IN_PROGRESS
+      PAUSED -> Common.PAUSED
+      COMPLETED -> Common.COMPLETED
+      CANCELLED -> Common.CANCELLED
 
 linkVehicleToDriver :: Id Common.Driver -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Flow DVeh.Vehicle
 linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
@@ -1436,6 +1554,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
                 vehicleServiceTierType = vehicleServiceTierType,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOpCityId,
+                tripStartTime = Nothing,
+                tripEndTime = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -1987,12 +2107,16 @@ castVehicleVariantDashboard = \case
   _ -> Nothing
 
 ---------------------------------------------------------------------
-getAllVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.ListVehicleRes
-getAllVehicleForFleet _ _ fleetOwnerId mbLimit mbOffset = do
+getAllVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Flow Common.ListVehicleRes
+getAllVehicleForFleet _ _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   vehicleList <- RCQuery.findAllByFleetOwnerId (Just limit) (Just offset) (Just fleetOwnerId)
-  vehicles <- traverse convertToVehicleAPIEntity vehicleList
+  vehicles_ <- traverse convertToVehicleAPIEntity vehicleList
+  let vehicles =
+        case mbRegNumberString of
+          Just regNumberString -> filter (\vehicle -> T.isInfixOf regNumberString (T.toLower vehicle.registrationNo)) vehicles_
+          _ -> vehicles_
   return $ Common.ListVehicleRes vehicles
 
 convertToVehicleAPIEntity :: EncFlow m r => VehicleRegistrationCertificate -> m Common.VehicleAPIEntity
