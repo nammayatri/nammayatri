@@ -52,14 +52,15 @@ init journeyReq = do
           return mbTotalLegFare
       )
       journeyReq.legs
+
   if any isNothing mbTotalFares
-    then do
+    then do return Nothing
+    else do
       let totalFares = catMaybes mbTotalFares
       journey <- JL.mkJourney journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId totalFares journeyReq.legs journeyReq.maximumWalkDistance
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
-    else return Nothing
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (InternalError "JourneyNotFound id.getId")
@@ -95,10 +96,7 @@ getAllLegsInfo journeyId = do
   return $ sortBy (comparing (.order)) allLegsInfo
 
 startJourney ::
-  ( CacheFlow m r,
-    EncFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+  ( JL.ConfirmFlow m r c,
     JL.JourneyLeg TaxiLegRequest m,
     JL.JourneyLeg BusLegRequest m,
     JL.JourneyLeg MetroLegRequest m,
@@ -106,10 +104,9 @@ startJourney ::
   ) =>
   Id DJourney.Journey ->
   m ()
-startJourney _ = do
-  -- allLegs <- getAllLegsInfo journeyId
-  -- mapM_ (JL.confirm . mkConfirmReq) allLegs
-  return ()
+startJourney journeyId = do
+  allLegs <- getAllLegsInfo journeyId
+  mapM_ JLI.confirm allLegs
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,

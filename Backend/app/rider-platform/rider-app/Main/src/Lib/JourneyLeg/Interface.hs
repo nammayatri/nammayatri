@@ -83,31 +83,34 @@ getFare merchantId merchantOperatingCityId leg = \case
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
--- mkTaxiLegConfirmReq :: JL.LegInfo -> TaxiLegRequest
--- mkTaxiLegConfirmReq JL.LegInfo {..} =
---   TaxiLegRequestConfirm $
---     TaxiLegRequestConfirmData
---       { skipBooking = skipBooking,
---         estimateId = Id <$> legId,
---         personId,
---         merchantId
---       }
-
--- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
--- mkCancelReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
--- mkCancelReq legInfo =
---   case legInfo.travelMode of
---     DTrip.Taxi -> return $ TaxiLegRequestCancel TaxiLegRequestCancelData
---     _ -> return $ MetroLegRequestCancel MetroLegRequestCancelData
-
--- mkConfirmReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
--- mkConfirmReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
--- mkConfirmReq legInfo =
---   case legInfo.travelMode of
---     DTrip.Taxi -> return $ mkTaxiLegConfirmReq legInfo
---     DTrip.Metro -> return $ MetroLegRequestConfirm MetroLegRequestConfirmData
---     DTrip.Bus -> return $ BusLegRequestConfirm BusLegRequestConfirmData
---     DTrip.Walk -> return $ WalkLegRequestConfirm WalkLegRequestConfirmData
+confirm :: JL.ConfirmFlow m r c => JL.LegInfo -> m ()
+confirm JL.LegInfo {..} =
+  case travelMode of
+    DTrip.Taxi -> do
+      confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
+      JL.confirm confirmReq
+    DTrip.Bus -> do
+      let confirmReq :: BusLegRequest = BusLegRequestConfirm BusLegRequestConfirmData
+      JL.confirm confirmReq
+    DTrip.Metro -> do
+      let confirmReq :: MetroLegRequest = MetroLegRequestConfirm MetroLegRequestConfirmData
+      JL.confirm confirmReq
+    DTrip.Walk -> do
+      let confirmReq :: WalkLegRequest = WalkLegRequestConfirm WalkLegRequestConfirmData
+      JL.confirm confirmReq
+  where
+    mkTaxiLegConfirmReq :: JL.ConfirmFlow m r c => m TaxiLegRequest
+    mkTaxiLegConfirmReq = do
+      estimateIdText <- legId & fromMaybeM (InvalidRequest "You can't confirm before getting fare")
+      return $
+        TaxiLegRequestConfirm $
+          TaxiLegRequestConfirmData
+            { skipBooking = skipBooking,
+              estimateId = Id estimateIdText,
+              startTime,
+              personId,
+              merchantId
+            }
 
 mkTaxiSearchReq :: DSR.SearchRequest -> DJL.JourneyLeg -> SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
 mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSearch $ TaxiLegRequestSearchData {..}
@@ -118,11 +121,3 @@ mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSear
 --   case legInfo.travelMode of
 --     DTrip.Taxi -> return $ TaxiLegRequestCancel TaxiLegRequestCancelData
 --     _ -> return $ MetroLegRequestCancel MetroLegRequestCancelData
-
--- mkConfirmReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
--- mkConfirmReq legInfo =
---   case legInfo.travelMode of
---     DTrip.Taxi -> return $ mkTaxiLegConfirmReq legInfo
---     DTrip.Metro -> return $ MetroLegRequestConfirm MetroLegRequestConfirmData
---     DTrip.Bus -> return $ BusLegRequestConfirm BusLegRequestConfirmData
---     DTrip.Walk -> return $ WalkLegRequestConfirm WalkLegRequestConfirmData

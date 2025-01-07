@@ -56,7 +56,7 @@ type API =
       :> Capture
            "searchRequestId"
            (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest)
-      :> "switch"
+      :> "switchVariant"
       :> Capture
            "estimateId"
            (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate)
