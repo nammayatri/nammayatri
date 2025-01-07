@@ -11,6 +11,7 @@ imports:
   JourneyLeg: Domain.Types.JourneyLeg
   LatLong: Kernel.External.Maps.Types
   Price: Kernel.Types.Common
+  JourneyLegStatus : Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -57,7 +58,7 @@ types:
   LegStatus:
     legOrder: Int
     legId: Id JourneyLeg
-    status: Text
+    status: JourneyLegStatus
 
   JourneyDetails:
     legDetails: [LegDetails]
@@ -138,7 +139,7 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  - POST:
+  - GET:
       endpoint: /multimodal/journey/{journeyId}/status
       params:
         journeyId: Id Journey
@@ -152,7 +153,7 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  - POST:
+  - GET:
       endpoint: multimodal/journey/{journeyId}/details
       params:
         journeyId: Id Journey
