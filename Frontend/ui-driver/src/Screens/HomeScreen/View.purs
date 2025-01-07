@@ -3530,10 +3530,11 @@ qrScannerView push state =
 
 recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recentBusRideView push state =
-  let tripDetails = if HU.isGovtBusDriver then state.data.whereIsMyBusData.currentActiveTrip else state.data.whereIsMyBusData.previousCompletedTrip
+  let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
       Nothing -> linearLayout[][]
-      Just (TripTransactionDetails tripDetails) ->
+      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> linearLayout[][]
+      Just (ST.CURRENT_TRIP (TripTransactionDetails tripDetails)) ->
         let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
             busNumber = tripDetails.vehicleNum
             busType = tripDetails.vehicleType

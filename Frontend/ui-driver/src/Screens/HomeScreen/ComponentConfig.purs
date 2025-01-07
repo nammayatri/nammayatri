@@ -3207,7 +3207,7 @@ chooseBusRouteModalPopup state =
     }
     , option1 {
       background = Color.green900
-      , strokeColor = Color.white900
+      , strokeColor = Color.green900
       , color = Color.white900
       , text = getString START_RIDE
       , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
@@ -3244,6 +3244,7 @@ chooseBusRouteModalPopup state =
             enabled = false,
             textStyle = FontStyle.SubHeading3
           },
+          stroke = "1," <> Color.grey700,
           topLabel { 
             text = topLabel,
             color = Color.black800,
@@ -3259,9 +3260,9 @@ chooseBusRouteModalPopup state =
       PrimaryButton.config {
         textConfig {
           textFromHtml = if isJust state.props.whereIsMyBusConfig.selectedRoute then Just $ "<span style='color:#000000;'><strong>S-102</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>Howrah Station → Airport</span>" else  Just "<b>Select Route Number</b>",
-          color = Color.black700,
+          color = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900,
           textStyle = SubHeading3,
-          gravity = LEFT,
+          gravity = CENTER_VERTICAL,
           width = V $ (EHC.screenWidth unit) - 100
         },
         isSuffixImage = true,

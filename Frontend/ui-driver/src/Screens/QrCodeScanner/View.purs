@@ -41,7 +41,9 @@ view push state =
     Anim.screenAnimation $
     frameLayout 
     [ height MATCH_PARENT
-    , width MATCH_PARENT] $ 
+    , width MATCH_PARENT
+    , onBackPressed push $ const GoBack
+    ] $ 
     [
         linearLayout
         [

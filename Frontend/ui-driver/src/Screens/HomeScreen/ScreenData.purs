@@ -205,8 +205,7 @@ initData =
       , bus_number : "" 
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
-          currentActiveTrip : Nothing,
-          previousCompletedTrip : Nothing
+          trip : Nothing
           }
     }
   , props:
@@ -311,7 +310,7 @@ initData =
       , bus_input_data : ""
       , showRecentBusTripModal : false
       , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : false -- FOR_TEST_REVERT
+          showSelectAvailableBusRoutes : false
         , selectRouteStage : false
         , selectedRoute : Nothing
         , tripTransactionId : Nothing

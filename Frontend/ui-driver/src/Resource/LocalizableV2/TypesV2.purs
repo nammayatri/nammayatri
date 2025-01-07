@@ -1797,6 +1797,17 @@ newtype Keymap
   , metro_warriors :: String
   , search :: String
   , bus__ :: String 
+  , route_bus_number :: String
+  , bus_number :: String
+  , bus_type :: String
+  , route_number :: String
+  , select_route_number :: String
+  , scan_bus_qr :: String
+  , bus_no :: String
+  , route_no :: String
+  , bus_type_ :: String
+  , recent_ride :: String
+  , assigned_rides :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7136,3 +7147,36 @@ search = Proxy
 
 bus__ :: Proxy "bus__"
 bus__ = Proxy
+
+route_bus_number :: Proxy "route_bus_number"
+route_bus_number = Proxy
+
+bus_number :: Proxy "bus_number"
+bus_number = Proxy
+
+bus_type :: Proxy "bus_type"
+bus_type = Proxy
+
+route_number :: Proxy "route_number"
+route_number = Proxy
+
+select_route_number :: Proxy "select_route_number"
+select_route_number = Proxy
+
+scan_bus_qr :: Proxy "scan_bus_qr"
+scan_bus_qr = Proxy
+
+bus_no :: Proxy "bus_no"
+bus_no = Proxy
+
+route_no :: Proxy "route_no"
+route_no = Proxy
+
+bus_type_ :: Proxy "bus_type_"
+bus_type_ = Proxy
+
+recent_ride :: Proxy "recent_ride"
+recent_ride = Proxy
+
+assigned_rides :: Proxy "assigned_rides"
+assigned_rides = Proxy
