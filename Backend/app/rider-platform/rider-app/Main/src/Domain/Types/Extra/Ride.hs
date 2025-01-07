@@ -9,7 +9,6 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
-import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common

@@ -4,12 +4,8 @@ module Domain.Action.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
-import Data.OpenApi (ToSchema)
-import Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import Domain.Action.UI.Select as Select
 import Domain.Types.Estimate
 import qualified Domain.Types.Journey
-import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -20,14 +16,9 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
-import qualified Lib.JourneyModule.Types as JMTypes
-import Servant hiding (throwError)
 import Storage.Queries.Estimate as QEstimate
-import Storage.Queries.FRFSQuote as QFRFSQuote
-import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error

@@ -27,10 +27,7 @@ module Domain.Action.UI.Quote
   )
 where
 
--- import API.Types.UI.FRFSTicketService
--- import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Beckn.ACL.Cancel as CancelACL
--- import BecknV2.FRFS.Enums as BecknSpec
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -80,8 +77,6 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
--- import qualified Storage.Queries.FRFSQuote as QFRFSQuote
--- import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -350,29 +345,26 @@ sortByEstimatedFare resultList = do
 getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
 getJourneys searchRequest = do
   case searchRequest.hasMultimodalSearch of
-    Just hasMultimodalSearch -> do
-      if hasMultimodalSearch
-        then do
-          allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
-          journeyData <-
-            forM allJourneys \journey -> do
-              journeyLegsFromOtp <- JM.getJourneyLegs journey.id
-              journeyLegs <- do
-                forM journeyLegsFromOtp \journeyLeg -> do
-                  return $
-                    JourneyLeg
-                      { journeyLegOrder = journeyLeg.sequenceNumber,
-                        journeyMode = journeyLeg.mode,
-                        duration = journeyLeg.duration
-                      }
+    Just True -> do
+      allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
+      journeyData <-
+        forM allJourneys \journey -> do
+          journeyLegsFromOtp <- JM.getJourneyLegs journey.id
+          journeyLegs <- do
+            forM journeyLegsFromOtp \journeyLeg -> do
               return $
-                JourneyData
-                  { totalMinFare = journey.estimatedMinFare,
-                    totalMaxFare = journey.estimatedMaxFare,
-                    modes = journey.modes,
-                    journeyLegs,
-                    duration = journey.estimatedDuration
+                JourneyLeg
+                  { journeyLegOrder = journeyLeg.sequenceNumber,
+                    journeyMode = journeyLeg.mode,
+                    duration = journeyLeg.duration
                   }
-          return $ Just journeyData
-        else return Nothing
-    Nothing -> return Nothing
+          return $
+            JourneyData
+              { totalMinFare = journey.estimatedMinFare,
+                totalMaxFare = journey.estimatedMaxFare,
+                modes = journey.modes,
+                journeyLegs,
+                duration = journey.estimatedDuration
+              }
+      return $ Just journeyData
+    _ -> return Nothing

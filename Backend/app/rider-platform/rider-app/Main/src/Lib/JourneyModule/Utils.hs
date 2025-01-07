@@ -30,7 +30,7 @@ import Kernel.Utils.Common
 --   extendLeg journey legs autoLeg
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
-mapWithIndex f xs = go 0 xs
+mapWithIndex f = go 0
   where
     go _ [] = return []
     go idx (x : xs') = do
@@ -41,6 +41,6 @@ mapWithIndex f xs = go 0 xs
 convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.TravelMode
 convertMultiModalModeToTripMode input distance maximumWalkDistance = case input of
   MultiModal.MetroRail -> DTrip.Metro
-  MultiModal.Walk -> if (distance > maximumWalkDistance) then DTrip.Taxi else DTrip.Walk
+  MultiModal.Walk -> if distance > maximumWalkDistance then DTrip.Taxi else DTrip.Walk
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi

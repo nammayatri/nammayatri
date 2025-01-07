@@ -42,14 +42,12 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.Extra.Ride (EditLocation, RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
---import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
---import qualified Domain.Types.Extra.Ride
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption

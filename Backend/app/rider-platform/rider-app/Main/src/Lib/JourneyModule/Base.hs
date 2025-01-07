@@ -3,7 +3,6 @@ module Lib.JourneyModule.Base where
 import qualified API.Types.UI.MultimodalConfirm as MultimodalConfirm
 import Data.List (sortBy)
 import Data.Ord (comparing)
-import Data.Text (unpack)
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Trip as DTrip
@@ -14,7 +13,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
-import Lib.JourneyLeg.Interface
+import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyLeg.Metro ()
 import Lib.JourneyLeg.Taxi ()
 import Lib.JourneyLeg.Types.Bus
@@ -22,8 +21,7 @@ import Lib.JourneyLeg.Types.Metro
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
-import Lib.JourneyModule.Types
-import Lib.JourneyModule.Types as JL
+import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
@@ -35,92 +33,72 @@ init ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
   ) =>
-  JourneyInitData ->
+  JL.JourneyInitData ->
   m DJourney.Journey
 init journeyReq = do
   journeyId <- Common.generateGUID
-  --let journeyLegsCount = length journeyReq.legs
   totalFares <-
     mapWithIndex
       ( \idx leg -> do
-          let travelMode = (convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance)
-          totalLegFare <-
-            case travelMode of
-              DTrip.Taxi -> do
-                getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq journeyReq.merchantId journeyReq.merchantOperatingCityId leg
-                JL.getFare getFareReq
-              DTrip.Bus -> do
-                getFareReq :: BusLegRequest <- mkBusGetFareReq leg
-                JL.getFare getFareReq
-              DTrip.Metro -> do
-                getFareReq :: MetroLegRequest <- mkMetroGetFareReq leg
-                JL.getFare getFareReq
-              DTrip.Walk -> do
-                getFareReq :: WalkLegRequest <- mkWalkGetFareReq leg
-                JL.getFare getFareReq
-
-          journeyLeg <- mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
+          let travelMode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
+          totalLegFare <- JLI.getFare journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
+          journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
           QJourneyLeg.create journeyLeg
           return totalLegFare
       )
       journeyReq.legs
-  journey <- mkJourney journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId totalFares journeyReq.legs journeyReq.maximumWalkDistance
+  journey <- JL.mkJourney journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId totalFares journeyReq.legs journeyReq.maximumWalkDistance
   QJourney.create journey
   logDebug $ "journey for multi-modal: " <> show journey
   return journey
 
--- (MonadReader r m, EsqDBFlow m r, CoreMetrics m, HasField "hedisMigrationStage" r Bool) =>
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (InternalError "JourneyNotFound id.getId")
 
--- Return only the OTP raw data without the search and bookings
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
-getJourneyLegs journeyId = QJourneyLeg.findAllByJourneyId journeyId
+getJourneyLegs = QJourneyLeg.findAllByJourneyId
 
--- Return complete data with search and bookings
 getAllLegsInfo ::
   ( EsqDBFlow m r,
     Monad m,
     CacheFlow m r,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m,
     EncFlow m r
   ) =>
   Id DJourney.Journey ->
-  m [LegInfo]
+  m [JL.LegInfo]
 getAllLegsInfo journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   allLegsInfo <-
     allLegsRawData `forM` \leg -> do
       case leg.legId of
         Just legIdText -> do
-          case readMaybe (unpack legIdText) :: Maybe (Id DJourneyLeg.JourneyLeg) of
-            Just legId -> do
-              case leg.mode of
-                DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legId}
-                DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legId}
-                DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legId}
-                _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
-            Nothing -> throwError $ InvalidRequest ("Mode not supported!")
-        Nothing -> throwError $ InvalidRequest ("Mode not supported!")
-  return $ sortBy (comparing order) allLegsInfo
+          let legId = Id legIdText
+          case leg.mode of
+            DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legId}
+            DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legId}
+            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legId}
+            _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+        Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+  return $ sortBy (comparing (.order)) allLegsInfo
 
 startJourney ::
   ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
   ) =>
   Id DJourney.Journey ->
   m () -- confirm request
@@ -131,11 +109,11 @@ startJourney _ = do
   return ()
 
 addAllLegs ::
-  ( SearchRequestFlow m r c,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m
+  ( JL.SearchRequestFlow m r c,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
   ) =>
   Id DJourney.Journey ->
   [MultimodalConfirm.JourneyLegsReq] ->
@@ -143,21 +121,19 @@ addAllLegs ::
 addAllLegs journeyId legsReq = do
   journey <- getJourney journeyId
   journeyLegs <- getJourneyLegs journeyId
-  _ <-
-    journeyLegs `forM` \journeyLeg -> do
-      case journeyLeg.mode of
-        DTrip.Taxi -> do
-          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
-          addTaxiLeg journey journeyLeg currentLegReq
-        _ -> return () -- handle metro and other cases
-  return ()
+  forM_ journeyLegs $ \journeyLeg -> do
+    case journeyLeg.mode of
+      DTrip.Taxi -> do
+        currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
+        addTaxiLeg journey journeyLeg currentLegReq
+      _ -> return () -- handle metro and other cases
 
 addTaxiLeg ::
-  ( SearchRequestFlow m r c,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m
+  ( JL.SearchRequestFlow m r c,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
   ) =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
@@ -165,13 +141,13 @@ addTaxiLeg ::
   m ()
 addTaxiLeg journey journeyLeg currentLegReq = do
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (InternalError "JourneyNotFound journey.searchRequestId")
-  let startLocation = mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
-  let endLocation = mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
-  let taxiSearchReq = mkTaxiSearchReq parentSearchReq journeyLeg startLocation [endLocation]
+  let startLocation = JL.mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
+  let endLocation = JL.mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
+  let taxiSearchReq = JLI.mkTaxiSearchReq parentSearchReq journeyLeg startLocation [endLocation]
   JL.search taxiSearchReq
   return ()
 
--- getCurrentLeg :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, Monad m, MonadTime m, JourneyLeg TaxiLegRequest Maybe, JourneyLeg BusLegRequest Maybe, JourneyLeg MetroLegRequest Maybe, JourneyLeg WalkLegRequest Maybe) => Id DJourney.Journey -> Maybe LegInfo
+-- getCurrentLeg :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, Monad m, MonadTime m, JourneyLeg TaxiLegRequest Maybe, JourneyLeg BusLegRequest Maybe, JourneyLeg MetroLegRequest Maybe, JourneyLeg WalkLegRequest Maybe) => Id DJourney.Journey -> Maybe JL.LegInfo
 -- getCurrentLeg journeyId = do
 --   journeyLegs <- getAllLegsInfo journeyId
 --   --let completedStatus = [] -- TODO: to be passed
@@ -184,17 +160,16 @@ getRemainingLegs ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    JourneyLeg TaxiLegRequest m,
-    JourneyLeg BusLegRequest m,
-    JourneyLeg MetroLegRequest m,
-    JourneyLeg WalkLegRequest m
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
   ) =>
   Id DJourney.Journey ->
-  m [LegInfo]
+  m [JL.LegInfo]
 getRemainingLegs journeyId = do
   journeyLegs <- getAllLegsInfo journeyId
-  --let completedStatus = [] -- TODO: to be passed
-  let remainingLegs = dropWhile (\leg -> leg.status `notElem` completedStatus) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
+  let remainingLegs = dropWhile (\leg -> leg.status `notElem` JL.completedStatus) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()
