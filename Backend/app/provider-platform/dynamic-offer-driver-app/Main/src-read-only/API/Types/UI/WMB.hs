@@ -70,7 +70,7 @@ data TripTransactionDetails = TripTransactionDetails
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
-    vehicleNum :: Data.Text.Text,
+    vehicleNumber :: Data.Text.Text,
     vehicleType :: Domain.Types.Common.ServiceTierType
   }
   deriving stock (Generic)

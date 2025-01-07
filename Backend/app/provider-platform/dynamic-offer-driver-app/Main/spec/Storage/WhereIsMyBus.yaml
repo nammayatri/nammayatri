@@ -45,13 +45,13 @@ TripTransaction:
     routeCode: Text
     status: TripStatus
     isCurrentlyDeviated: Bool
+    vehicleServiceTierType: ServiceTierType
     deviationCount: Int
     startLocation: Maybe LatLong
     endLocation: Maybe LatLong
     startedNearStopCode: Maybe Text
     endStopCode: Text
     allowEndingMidRoute: Bool
-    sequenceNumber: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 

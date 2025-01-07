@@ -4,6 +4,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   ServiceTierType: Domain.Types.Common
   ToParamSchema: Kernel.Prelude
+  Person: Domain.Types.Person
   ApprovalRequestData: Domain.Types.ApprovalRequest
   TripStatus: Domain.Types.TripTransaction
   TripTransaction: Domain.Types.TripTransaction
@@ -41,7 +42,7 @@ types:
 
   TripTransactionDetails:
     tripTransactionId: Id TripTransaction
-    vehicleNum: Text
+    vehicleNumber: Text
     vehicleType: ServiceTierType
     source: StopInfo
     destination: StopInfo
@@ -76,14 +77,14 @@ types:
     vehicleNumber: Text
 
 apis:
-  - GET:
+  - GET: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: AvailableRouteReq
       response:
         type: "[AvailableRoute]"
-  - POST:
+  - POST: # Link a trip to a specific route for a driver of private fleet.
       endpoint: /wmb/trip/link
       auth: TokenAuth PROVIDER_TYPE
       request:
@@ -91,13 +92,13 @@ apis:
       response:
         type: TripTransactionDetails
 
-  - GET:
+  - GET: # Retrieve details of the currently active trip.
       endpoint: /wmb/trip/active
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: ActiveTripTransaction
 
-  - GET:
+  - GET: # List all trips with optional filters (e.g., limit, offset, and status).
       endpoint: /wmb/trip/list
       auth: TokenAuth PROVIDER_TYPE
       query:
@@ -107,7 +108,7 @@ apis:
       response:
         type: "[TripTransactionDetails]"
 
-  - POST:
+  - POST: # Start a trip by trip transaction ID.
       endpoint: /wmb/trip/{tripTransactionId}/start
       auth: TokenAuth PROVIDER_TYPE
       params:
@@ -117,7 +118,7 @@ apis:
       response:
         type: APISuccess
 
-  - POST:
+  - POST: # End a trip by trip transaction ID.
       endpoint: /wmb/trip/{tripTransactionId}/end
       auth: TokenAuth PROVIDER_TYPE
       params:
@@ -127,7 +128,7 @@ apis:
       response:
         type: TripEndResp
 
-  - POST:
+  - POST: # Add a driver request for a specific trip transaction.
       endpoint: /wmb/trip/{tripTransactionId}/request
       auth: TokenAuth PROVIDER_TYPE
       params:
@@ -136,10 +137,17 @@ apis:
         type: RequestDetails
       response:
         type: DriverReqResp
-  - POST:
+
+  - POST: # Cancel a driver request by approval request ID.
       endpoint: /wmb/requests/{approvalRequestId}/cancel
       auth: TokenAuth PROVIDER_TYPE
       params:
         approvalRequestId: Id ApprovalRequest
+      response:
+        type: APISuccess
+
+  - POST: # Provide consent for fleet-related actions.
+      endpoint: /fleet/consent
+      auth: TokenAuth PROVIDER_TYPE
       response:
         type: APISuccess

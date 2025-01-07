@@ -379,6 +379,7 @@ library
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.VehicleServiceTier
+      SharedLogic.WMB
       Storage.Beam.BecknRequest
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig

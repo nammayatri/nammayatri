@@ -6,6 +6,7 @@ module Domain.Types.TripTransaction where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -28,19 +29,19 @@ data TripTransaction = TripTransaction
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     routeCode :: Data.Text.Text,
-    sequenceNumber :: Kernel.Prelude.Int,
     startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     startedNearStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Data.Text.Text,
+    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
