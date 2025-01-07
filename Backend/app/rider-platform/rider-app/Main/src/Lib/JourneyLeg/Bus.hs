@@ -46,5 +46,5 @@ instance JT.JourneyLeg BusLegRequest m where
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (BusLegRequestGetFare _) = do
-    return JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 20}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 20}}
+    return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 20}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 20}})
   getFare _ = throwError (InternalError "Not supported")

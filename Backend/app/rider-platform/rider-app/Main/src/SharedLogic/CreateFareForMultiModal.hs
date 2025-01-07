@@ -14,8 +14,8 @@
 
 module SharedLogic.CreateFareForMultiModal where
 
-import Environment
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -26,7 +26,7 @@ import Tools.Error
 fareProcessingLockKey :: Text -> Text
 fareProcessingLockKey journeyId = "Fare:Processing:JourneyId" <> journeyId
 
-createFares :: Maybe JPT.JourneySearchData -> Price -> Flow () -> Flow ()
+createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Maybe JPT.JourneySearchData -> Price -> m () -> m ()
 createFares journeyLegInfo requiredPrice updateInSearchReqFunc = do
   case journeyLegInfo of
     Just journeySearchData -> do

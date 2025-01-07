@@ -69,7 +69,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
-import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
@@ -78,6 +77,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -349,7 +349,7 @@ getJourneys searchRequest = do
       allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
       journeyData <-
         forM allJourneys \journey -> do
-          journeyLegsFromOtp <- JM.getJourneyLegs journey.id
+          journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
           journeyLegs <- do
             forM journeyLegsFromOtp \journeyLeg -> do
               return $

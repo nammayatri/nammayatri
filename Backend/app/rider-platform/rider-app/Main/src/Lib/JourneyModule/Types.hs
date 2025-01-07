@@ -21,7 +21,9 @@ import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,9 +59,34 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   )
 
+type ConfirmFlow m r c =
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasCoreMetrics r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    Redis.HedisFlow m r
+  )
+
+type GetFareFlow m r =
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  )
+
 type SearchJourneyLeg leg m = leg -> m ()
 
-type GetFareJourneyLeg leg m = leg -> m GetFareResponse
+type GetFareJourneyLeg leg m = leg -> m (Maybe GetFareResponse)
 
 type ConfirmJourneyLeg leg m = leg -> m ()
 
@@ -73,12 +100,12 @@ type GetJourneyLeg leg m = leg -> m LegInfo
 
 class JourneyLeg leg m where
   search :: SearchRequestFlow m r c => SearchJourneyLeg leg m
-  confirm :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => ConfirmJourneyLeg leg m
+  confirm :: ConfirmFlow m r c => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m
   getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLegState leg m
   getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLeg leg m
-  getFare :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetFareJourneyLeg leg m
+  getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
 
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
