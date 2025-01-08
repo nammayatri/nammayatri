@@ -1,0 +1,97 @@
+version: 0.2
+env:
+  variables:
+    DOCKER_BUILDKIT: "1"
+  parameter-store:
+    GH_PAT: "/github/pat"
+phases:
+  pre_build:
+    commands:
+      # Standard setup
+      - pwd
+      - ls -la
+      - REPO_NAME=$(echo $CODEBUILD_SOURCE_REPO_URL | awk -F'/' '{print $NF}' | sed 's/.git//')
+      - echo "Building repository $REPO_NAME"
+      - cd $CODEBUILD_SRC_DIR
+      - pwd
+      - ls -la
+      
+      # Docker auth
+      - echo "Authenticating with GitHub Container Registry..."
+      - |
+        if [ -z "$GH_PAT" ]; then
+          echo "Error: GH_PAT is empty"
+          exit 1
+        fi
+      - |
+        if [ -z "$GITHUB_ACTOR" ]; then
+          echo "Error: GITHUB_ACTOR is empty"
+          exit 1
+        fi
+      - echo "$GH_PAT" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || exit 1
+      
+      # Nix setup with optimizations
+      - export USER=root
+      - groupadd -r nixbld
+      - for n in $(seq 1 10); do useradd -r -M -N -g nixbld -G nixbld -c "Nix build user $n" "nixbld$n"; done
+      - mkdir -m 0755 /nix
+      - chown root /nix
+      
+      # Git optimizations for better network handling
+      - git config --global http.lowSpeedLimit 1000
+      - git config --global http.lowSpeedTime 60
+      - git config --global protocol.version 2
+      - git config --global url."https://github.com/".insteadOf git://github.com/
+      - git config --global core.compression 9
+      
+      # Install and configure Nix
+      - curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+      - . $HOME/.nix-profile/etc/profile.d/nix.sh
+      - export PATH=$HOME/.nix-profile/bin:$PATH
+      
+      # Enhanced Nix configuration
+      - mkdir -p ~/.config/nix
+      - |
+        cat <<EOF > ~/.config/nix/nix.conf
+        experimental-features = nix-command flakes
+        max-jobs = auto
+        cores = 0
+        trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nammayatri.cachix.org-1:QC640PhgS0x+ex04x6Dn9bBXNUTHc73HzHZQfS6Y8Kg=
+        substituters = https://cache.nixos.org https://nammayatri.cachix.org
+        connect-timeout = 30
+        stalled-download-timeout = 90
+        fallback = true
+        keep-going = true
+        sandbox = false
+        EOF
+      
+      # Cachix setup
+      - nix-env -iA cachix -f https://cachix.org/api/v1/install
+      - cachix use nammayatri
+      
+      # Diagnostic information
+      - nix --version
+      - git --version
+      - df -h
+      - free -h
+      - nix show-config
+  build:
+    commands:
+      - . $HOME/.nix-profile/etc/profile.d/nix.sh
+      - pwd
+      - ls -la
+      - echo "Checking for .envrc.backend"
+      - cat .envrc.backend || echo ".envrc.backend not found"
+      - nix --accept-flake-config profile install github:juspay/omnix
+      - om ci
+      - nix build .#dockerImage -o docker-image.tgz
+      - docker load < docker-image.tgz
+      - image_id=$(docker images --format "{{.ID}}" | head -n 1)
+      - docker tag ${image_id} ${IMAGE_NAME}
+      - docker push ${IMAGE_NAME}
+  post_build:
+    commands:
+      - docker logout ghcr.io
+artifacts:
+  files:
+    - docker-image.tgz

@@ -76,3 +76,6 @@ jobs: 6
 -- #  +flagname enables the flag.
 -- #  -flagname disables it.
 flags: +Local
+
+package entropy
+  flags: -rdrand

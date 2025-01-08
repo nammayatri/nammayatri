@@ -14,7 +14,7 @@
           "Frontend/packages.dhall"
         ];
       };
-      devShells = lib.optionalAttrs (system != "aarch64-linux") {
+      devShells = {
         frontend = pkgs.mkShell {
           name = "ny-frontend";
           meta.description = "Frontend development environment for nammayatri";

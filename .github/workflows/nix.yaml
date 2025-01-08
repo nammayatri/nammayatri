@@ -1,61 +1,50 @@
-name: CI
-
+name: ARM64 Build and Push
 on:
   push:
     branches: ["main", "prodHotPush-Common"]
   pull_request:
     branches: ["main", "prodHotPush-Common"]
   workflow_dispatch:
-
+permissions:
+  packages: write
+  contents: read
+  id-token: write
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 jobs:
-  build:
-    runs-on: x86_64-linux
+  arm64-build:
+    runs-on: ubuntu-latest
     outputs:
-      docker-image-name: ${{ steps.docker.outputs.image_name }}
+      image-name: ${{ steps.image-name.outputs.value }}
+    permissions:
+      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/cachix-action@v15
-        with:
-          name: nammayatri
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          skipPush: true
-
-      - name: Build all flake outputs
-        run: om ci
-
-      # Push and pin whitelisted paths to cachix
-      - name: Push to cachix
-        if: github.ref == 'refs/heads/main'
-        run: nix run .#cachix-push
-
-      - name: Docker tasks
-        id: docker
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+      - name: Set image name
+        id: image-name
         run: |
-          nix build .#dockerImage -o docker-image.tgz
-          echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
-
-      - name: Upload Docker image tarball
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
-        uses: actions/upload-artifact@v4
+          echo "value=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: docker-image
-          path: docker-image.tgz
-
-  push-docker:
-    needs: build
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+      - name: Start CodeBuild
+        uses: aws-actions/aws-codebuild-run-build@v1
+        with:
+          project-name: nammayatri-arm64-build
+          env-vars-for-codebuild: |
+            GH_PAT=${{ secrets.GH_PAT }},
+            GITHUB_ACTOR=${{ github.actor }},
+            IMAGE_NAME=${{ steps.image-name.outputs.value }}
+  verify-push:
+    needs: arm64-build
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+    if: github.event_name == 'push'
     steps:
-      - name: Download Docker image tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-      - name: Load and push Docker image
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check image existence
         run: |
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker load < docker-image.tgz
-          docker push ${{ needs.build.outputs.docker-image-name }}
-          docker logout ghcr.io
+          docker pull ${{ needs.arm64-build.outputs.image-name }}
