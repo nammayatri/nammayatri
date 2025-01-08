@@ -1711,4 +1711,6 @@ getMl = Keymap {
 , were_you_asked_to_pay_extra_q : "നിങ്ങളോട് കൂടുതൽ പണം നൽകാൻ പറഞ്ഞോ?"
 , were_you_asked_to_pay_extra_desc : "ഡ്രൈവർ/റൈഡർ മേൽ കാണിച്ചിരിക്കുന്ന അവസാന നിരക്കിൽ നിന്ന് കൂടുതൽ പണം ആവശ്യപ്പെട്ടാൽ, ഞങ്ങളോട് അറിയിക്കുക."
 , we_are_sorry_to_hear_this_please_click_on_need_help : "ഞങ്ങൾ അസൗകര്യത്തിനായി ഹൃദയപൂർവ്വം മാപ്പ് അഭ്യർത്ഥിക്കുന്നു"
+, driver_asked_extra_money : "ഡ്രൈവർ അധിക പണം ചോദിച്ചു"
+, driver_is_asking_for_extra_fare : "ഡ്രൈവർ അധിക നിരക്ക് ആവശ്യപ്പെടുന്നു"
 }

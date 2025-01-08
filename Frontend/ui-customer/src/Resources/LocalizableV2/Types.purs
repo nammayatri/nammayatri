@@ -1724,6 +1724,8 @@ newtype Keymap = Keymap {
 , were_you_asked_to_pay_extra_q :: String
 , were_you_asked_to_pay_extra_desc :: String 
 , we_are_sorry_to_hear_this_please_click_on_need_help :: String
+, driver_asked_extra_money :: String
+, driver_is_asking_for_extra_fare :: String
 }
 
 
@@ -6867,3 +6869,9 @@ were_you_asked_to_pay_extra_desc = a
 
 we_are_sorry_to_hear_this_please_click_on_need_help :: Proxy "we_are_sorry_to_hear_this_please_click_on_need_help"
 we_are_sorry_to_hear_this_please_click_on_need_help = a
+
+driver_asked_extra_money :: Proxy "driver_asked_extra_money"
+driver_asked_extra_money = a
+
+driver_is_asking_for_extra_fare :: Proxy "driver_is_asking_for_extra_fare"
+driver_is_asking_for_extra_fare = a

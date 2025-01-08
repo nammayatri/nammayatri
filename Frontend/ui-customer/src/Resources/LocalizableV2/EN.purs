@@ -1710,4 +1710,6 @@ getEn = Keymap {
 , were_you_asked_to_pay_extra_q : "Were you asked to pay extra?"
 , were_you_asked_to_pay_extra_desc : "Let us know if the driver/rider demanded payment more than the final fare shown above."
 , we_are_sorry_to_hear_this_please_click_on_need_help : "We sincerely apologize for the inconvenience."
+, driver_asked_extra_money : "Driver asked for extra money"
+, driver_is_asking_for_extra_fare : "Driver is asking for extra fare"
 }

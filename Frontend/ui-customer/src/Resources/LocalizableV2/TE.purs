@@ -1710,4 +1710,6 @@ getTe = Keymap {
 , were_you_asked_to_pay_extra_q : "మీకు ఎక్కువ డబ్బు ఇవ్వమని అడిగారా?"
 , were_you_asked_to_pay_extra_desc : "పైన చూపిన తుది చార్జీ కంటే డ్రైవర్/రైడర్ ఎక్కువ డబ్బు అడిగితే, మాకు తెలియజేయండి"
 , we_are_sorry_to_hear_this_please_click_on_need_help : "మేము అసౌకర్యం కోసం హృదయపూర్వకంగా క్షమాపణ తెలుపుతున్నాము"
+, driver_asked_extra_money : "డ్రైవర్ అదనపు డబ్బు అడిగారు"
+, driver_is_asking_for_extra_fare : "డ్రైవర్ అదనపు చార్జీ అడుగుతున్నారు"
 }

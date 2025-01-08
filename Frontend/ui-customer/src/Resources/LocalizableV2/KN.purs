@@ -1710,4 +1710,6 @@ getKn = Keymap {
 , were_you_asked_to_pay_extra_q : "ನಿಮ್ಮನ್ನು ಹೆಚ್ಚಿನ ಹಣ ಕೊಡಲು ಕೇಳಲಾಗಿತ್ತಾ?"
 , were_you_asked_to_pay_extra_desc : "ಮೇಲಿನ ಅಂತಿಮ ಭಾಡಿಯಿಂದ ಹೆಚ್ಚು ಹಣ ಕೇಳಿದ್ದರೆ, ದಯವಿಟ್ಟು ನಮಗೆ ತಿಳಿಸಿ."
 , we_are_sorry_to_hear_this_please_click_on_need_help : "ನಾವು ಅಸೌಕರ್ಯಕ್ಕಾಗಿ ನಿಮ್ಮಲ್ಲಿ ಕ್ಷಮೆ ಕೇಳುತ್ತೇವೆ"
+, driver_asked_extra_money : "ಚಾಲಕ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳಿದ್ದಾರೆ"
+, driver_is_asking_for_extra_fare : "ಚಾಲಕ ಹೆಚ್ಚುವರಿ ಭಾಡಿ ಕೇಳುತ್ತಿದ್ದಾರೆ"
 }

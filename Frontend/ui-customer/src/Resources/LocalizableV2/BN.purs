@@ -1710,4 +1710,6 @@ getBn = Keymap {
 , were_you_asked_to_pay_extra_q : "আপনাকে কি বেশি টাকা দিতে বলা হয়েছিল?"
 , were_you_asked_to_pay_extra_desc : "যদি চালক/রাইডার উপরে দেখানো চূড়ান্ত ভাড়ার চেয়ে বেশি টাকা চায়, তবে আমাদের জানান।"
 , we_are_sorry_to_hear_this_please_click_on_need_help : "আমরা অসুবিধার জন্য অন্তঃপুরে দুঃখিত"
+, driver_asked_extra_money : "ড্রাইভার অতিরিক্ত টাকা চেয়েছে"
+, driver_is_asking_for_extra_fare : "ড্রাইভার অতিরিক্ত ভাড়া চাইছে।"
 }

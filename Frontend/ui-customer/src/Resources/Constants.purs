@@ -31,6 +31,8 @@ import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareTyp
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Resources.LocalizableV2.Types as TypesV2
+import Resources.LocalizableV2.Strings as StringsV2
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Resources.LocalizableV2.Strings (getEN)
@@ -404,6 +406,11 @@ cancelReasons showAcReason =
   , { reasonCode: "DIFFERENT_VEHICLE_NUMBER"
     , description: getString DIFFERENT_VEHICLE_NUMBER
     , subtext: Just $ getString VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "DRIVER_ASKED_EXTRA_MONEY"
+    , description: StringsV2.getStringV2 TypesV2.driver_asked_extra_money
+    , subtext: Just $ StringsV2.getStringV2 TypesV2.driver_is_asking_for_extra_fare
     , textBoxRequired : false
     }
   , { reasonCode: "OTHER"
