@@ -2895,7 +2895,7 @@ homeScreenFlow = do
           destination = srcDestConfig.destination
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
 
-          srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = "ny_ic_src_marker", primaryText = source }
+          srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_src_marker", pointerIcon = HU.getCategorySpecificSrcMarkerIcon FunctionCall, primaryText = source }
           destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0}
           
       if (state.data.activeRide.tripType == ST.Rental) && (state.props.currentStage == RideStarted ) && isNothing state.data.activeRide.nextStopAddress then do
@@ -3083,7 +3083,7 @@ homeScreenFlow = do
           source = srcDestConfig.source
           destination = srcDestConfig.destination
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
-          srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
+          srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = HU.getCategorySpecificSrcMarkerIcon FunctionCall, primaryText = source }
           destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination, anchorU = 0.5, anchorV = 1.0 }
       eRouteAPIResponse <- lift $ lift $ Remote.getRoute (makeGetRouteReq srcLat srcLon destLat destLon) routeType
       case eRouteAPIResponse of
@@ -3795,12 +3795,13 @@ updateDriverDataToStates = do
       showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
       dbClientVersion = getDriverInfoResp.clientVersion
       dbBundleVersion = getDriverInfoResp.bundleVersion
+      linkedVehicleCategory = fromMaybe linkedVehicle.variant getDriverInfoResp.onboardingVehicleCategory -- For special Variants this comes instead from BE
   modifyScreenState $ BookingOptionsScreenType $ \bookingOptionsScreen -> bookingOptionsScreen { data{ vehicleNumber = linkedVehicle.registrationNo }}
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {driverName = getDriverInfoResp.firstName
         , vehicleType = linkedVehicle.variant
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
-        , linkedVehicleCategory = fromMaybe linkedVehicle.variant linkedVehicle.serviceTierType
+        , linkedVehicleCategory = fromMaybe linkedVehicleCategory linkedVehicle.serviceTierType
         , linkedVehicleVariant = linkedVehicle.variant
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
         , payoutVpa = getDriverInfoResp.payoutVpa

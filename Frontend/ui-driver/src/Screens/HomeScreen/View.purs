@@ -1163,8 +1163,10 @@ offlineView push state =
                 height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
-              , text $ getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
-                                 else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
+              , text $ if (HU.specialVariantsForTracking FunctionCall) 
+                        then "You are currently offline.\nGo online to start your duty!"
+                        else getString if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then GO_ONLINE_PROMPT_PAYMENT_PENDING
+                                 else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE      
                                  else GO_ONLINE_PROMPT
               , margin $ MarginBottom if isBookingPreferenceVisible then 0 else 10
               , padding $ PaddingBottom $ if (HU.specialVariantsForTracking FunctionCall) then 24 else 0
