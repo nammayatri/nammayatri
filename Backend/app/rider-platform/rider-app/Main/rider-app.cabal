@@ -144,7 +144,6 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
-      Domain.Action.Dashboard.AppManagement.HotSpot
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
@@ -479,7 +478,6 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
-      API.Action.Dashboard.AppManagement.HotSpot
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
@@ -522,9 +520,7 @@ library
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
       API.Types.Dashboard.AppManagement
-      API.Types.Dashboard.AppManagement.Endpoints.HotSpot
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
-      API.Types.Dashboard.AppManagement.HotSpot
       API.Types.Dashboard.AppManagement.Tickets
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
