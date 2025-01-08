@@ -38,7 +38,8 @@ instance JT.JourneyLeg MetroLegRequest m where
     let colorName = journeyLeg.routeDetails >>= (.shortName)
     let routeColorCode = journeyLeg.routeDetails >>= (.color)
     let frequency = Just 300 -- hard code to 5 seconds
-    void $ FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) Spec.METRO frfsSearchReq Nothing Nothing colorName routeColorCode frequency
+    res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) Spec.METRO frfsSearchReq Nothing Nothing colorName routeColorCode frequency
+    return $ JT.SearchResponse {id = res.searchId.getId}
     where
       -- buildFRFSSearchReq :: Maybe JPT.JourneySearchData -> m DFRFSTypes.FRFSSearchAPIReq
       buildFRFSSearchReq journeySearchData = do

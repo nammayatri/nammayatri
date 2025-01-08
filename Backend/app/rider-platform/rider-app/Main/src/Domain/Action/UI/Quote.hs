@@ -205,6 +205,7 @@ data JourneyData = JourneyData
   { totalMinFare :: Maybe HighPrecMoney,
     totalMaxFare :: Maybe HighPrecMoney,
     duration :: Maybe Seconds,
+    distance :: Distance,
     modes :: [DTrip.TravelMode],
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
@@ -219,7 +220,8 @@ data JourneyLeg = JourneyLeg
     journeyLegId :: Id DJL.JourneyLeg,
     color :: Maybe Text,
     colorCode :: Maybe Text,
-    duration :: Seconds
+    duration :: Seconds,
+    distance :: Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -366,7 +368,8 @@ getJourneys searchRequest = do
                     journeyLegId = journeyLeg.id,
                     color = journeyLeg.routeDetails >>= (.shortName),
                     colorCode = journeyLeg.routeDetails >>= (.color),
-                    duration = journeyLeg.duration
+                    duration = journeyLeg.duration,
+                    distance = journeyLeg.distance
                   }
           return $
             JourneyData
@@ -377,7 +380,8 @@ getJourneys searchRequest = do
                 startTime = journey.startTime,
                 endTime = journey.endTime,
                 journeyId = journey.id,
-                duration = journey.estimatedDuration
+                duration = journey.estimatedDuration,
+                distance = journey.estimatedDistance
               }
       return $ Just journeyData
     _ -> return Nothing

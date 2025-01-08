@@ -12,7 +12,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch _) = do
     -- FRFSSearch.create multimodalLeg busLegSearchData
     -- void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) (Just originCity) Spec.BUS frfsSearchReq
-    return ()
+    return $ JT.SearchResponse {id = ""} -- fix this
   search _ = throwError (InternalError "Not supported")
 
   confirm (BusLegRequestConfirm _) = do

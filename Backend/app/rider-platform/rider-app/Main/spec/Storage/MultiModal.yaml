@@ -256,6 +256,10 @@ JourneyLeg:
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
+    updateLegId:
+      kvFunction: updateOneWithKV
+      params: [legId]
+      where: id
 
   fromTType:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E

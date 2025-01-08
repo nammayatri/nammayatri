@@ -24,6 +24,7 @@ import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
+import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
@@ -123,13 +124,18 @@ addAllLegs journeyId legsReq = do
   journeyLegs <- getJourneyLegs journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   forM_ journeyLegs $ \journeyLeg -> do
-    case journeyLeg.mode of
-      DTrip.Taxi -> do
-        currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
-        addTaxiLeg parentSearchReq journeyLeg currentLegReq
-      DTrip.Metro -> do
-        addMetroLeg parentSearchReq journeyLeg
-      _ -> return () -- handle metro and other cases
+    searchResp <-
+      case journeyLeg.mode of
+        DTrip.Taxi -> do
+          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
+          addTaxiLeg parentSearchReq journeyLeg currentLegReq
+        DTrip.Metro -> do
+          addMetroLeg parentSearchReq journeyLeg
+        DTrip.Walk -> do
+          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
+          addWalkLeg parentSearchReq journeyLeg currentLegReq
+        _ -> throwError $ InvalidRequest ("Mode not supported: " <> show journeyLeg.mode)
+    QJourneyLeg.updateLegId (Just searchResp.id) journeyLeg.id
 
 addTaxiLeg ::
   ( JL.SearchRequestFlow m r c,
@@ -141,12 +147,45 @@ addTaxiLeg ::
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   MultimodalConfirm.JourneyLegsReq ->
-  m ()
+  m JL.SearchResponse
 addTaxiLeg parentSearchReq journeyLeg currentLegReq = do
   let startLocation = JL.mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
   let endLocation = JL.mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
-  let taxiSearchReq = JLI.mkTaxiSearchReq parentSearchReq journeyLeg startLocation [endLocation]
+  let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
   JL.search taxiSearchReq
+  where
+    mkTaxiSearchReq :: SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
+    mkTaxiSearchReq origin stops =
+      TaxiLegRequestSearch $
+        TaxiLegRequestSearchData
+          { journeyLegData = journeyLeg,
+            ..
+          }
+
+addWalkLeg ::
+  ( JL.SearchRequestFlow m r c,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  SearchRequest.SearchRequest ->
+  DJourneyLeg.JourneyLeg ->
+  MultimodalConfirm.JourneyLegsReq ->
+  m JL.SearchResponse
+addWalkLeg parentSearchReq journeyLeg currentLegReq = do
+  let startLocation = JL.mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
+  let endLocation = JL.mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
+  let walkSearchReq = mkWalkSearchReq startLocation endLocation
+  JL.search walkSearchReq
+  where
+    mkWalkSearchReq :: SearchReqLocation -> SearchReqLocation -> WalkLegRequest
+    mkWalkSearchReq origin destination =
+      WalkLegRequestSearch $
+        WalkLegRequestSearchData
+          { journeyLegData = journeyLeg,
+            ..
+          }
 
 addMetroLeg ::
   ( JL.SearchRequestFlow m r c,
@@ -157,7 +196,7 @@ addMetroLeg ::
   ) =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
-  m ()
+  m JL.SearchResponse
 addMetroLeg parentSearchReq journeyLeg = do
   merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city

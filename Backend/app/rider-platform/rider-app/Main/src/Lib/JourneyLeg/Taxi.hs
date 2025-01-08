@@ -49,6 +49,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
       let generatedJson = encode becknTaxiReqV2
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
       void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 parentSearchReq.merchantId
+    return $ JT.SearchResponse {id = dSearchRes.searchRequest.id.getId}
     where
       lastAndRest :: [a] -> Maybe (a, [a])
       lastAndRest [] = Nothing -- Handle empty list case

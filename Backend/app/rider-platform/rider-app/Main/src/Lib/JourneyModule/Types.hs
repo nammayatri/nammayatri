@@ -84,7 +84,7 @@ type GetFareFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
-type SearchJourneyLeg leg m = leg -> m ()
+type SearchJourneyLeg leg m = leg -> m SearchResponse
 
 type GetFareJourneyLeg leg m = leg -> m (Maybe GetFareResponse)
 
@@ -106,6 +106,12 @@ class JourneyLeg leg m where
   getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLegState leg m
   getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLeg leg m
   getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
+
+newtype SearchResponse = SearchResponse
+  { id :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,

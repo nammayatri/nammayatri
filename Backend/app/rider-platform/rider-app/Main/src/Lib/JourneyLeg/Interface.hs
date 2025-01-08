@@ -1,9 +1,7 @@
 module Lib.JourneyLeg.Interface where
 
-import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
@@ -20,7 +18,6 @@ import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
 import qualified Lib.JourneyModule.Types as JL
-import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
@@ -111,9 +108,6 @@ confirm JL.LegInfo {..} =
               personId,
               merchantId
             }
-
-mkTaxiSearchReq :: DSR.SearchRequest -> DJL.JourneyLeg -> SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
-mkTaxiSearchReq parentSearchReq journeyLegData origin stops = TaxiLegRequestSearch $ TaxiLegRequestSearchData {..}
 
 -- -- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
 -- mkCancelReq :: JL.JourneyLeg a m => JL.LegInfo -> m a

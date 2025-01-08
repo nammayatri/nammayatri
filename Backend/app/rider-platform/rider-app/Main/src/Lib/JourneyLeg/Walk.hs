@@ -14,8 +14,8 @@ import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 
 instance JT.JourneyLeg WalkLegRequest m where
   search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do
-    fromLocation <- buildSearchReqLoc merchantId merchantOperatingCityId origin
-    toLocation <- buildSearchReqLoc merchantId merchantOperatingCityId destination
+    fromLocation <- buildSearchReqLoc parentSearchReq.merchantId parentSearchReq.merchantOperatingCityId origin
+    toLocation <- buildSearchReqLoc parentSearchReq.merchantId parentSearchReq.merchantOperatingCityId destination
     now <- getCurrentTime
     id <- generateGUID
     let journeySearchData =
@@ -44,6 +44,7 @@ instance JT.JourneyLeg WalkLegRequest m where
               updatedAt = now
             }
     QWalkLeg.create walkLeg
+    return $ JT.SearchResponse {id = id.getId}
   search _ = throwError (InternalError "Not supported")
 
   confirm (WalkLegRequestConfirm _) = return ()
