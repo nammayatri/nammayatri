@@ -13,4 +13,4 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD COLUMN merchant_id 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD PRIMARY KEY ( route_code);
+ALTER TABLE atlas_driver_offer_bpp.vehicle_route_mapping ADD PRIMARY KEY ( route_code, vehicle_number_hash);

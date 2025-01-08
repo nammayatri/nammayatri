@@ -10,7 +10,9 @@ import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Distance
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import Servant
 import Tools.Auth
 
@@ -18,7 +20,7 @@ data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AvailableRoute = AvailableRoute {destination :: StopInfo, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
+data AvailableRoute = AvailableRoute {destination :: StopInfo, roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -36,8 +38,25 @@ data EndTripStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetConfigData = FleetConfigData {allowedEndingMidRoute :: Kernel.Prelude.Bool, endRideDistanceThreshold :: Kernel.Types.Distance.HighPrecMeters, rideEndApproval :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData, title :: Data.Text.Text}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteDetails = RouteDetails
+  { code :: Data.Text.Text,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    longName :: Data.Text.Text,
+    shortName :: Data.Text.Text,
+    startPoint :: Kernel.External.Maps.Types.LatLong,
+    stops :: [StopInfo],
+    timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
+    waypoints :: Kernel.Prelude.Maybe [Kernel.External.Maps.Types.LatLong]
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.Maps.Types.LatLong, longName :: Data.Text.Text, shortName :: Data.Text.Text, startPoint :: Kernel.External.Maps.Types.LatLong}
@@ -45,7 +64,7 @@ data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StopInfo = StopInfo {code :: Data.Text.Text, name :: Data.Text.Text, point :: Kernel.External.Maps.Types.LatLong}
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TripEndReq = TripEndReq {location :: Kernel.External.Maps.Types.LatLong}
@@ -56,7 +75,7 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripLinkReq = TripLinkReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
+data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

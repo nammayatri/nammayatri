@@ -22,7 +22,7 @@ VehicleRouteMapping:
     blocked: Bool
 
   constraints:
-    vehicleNumber: PrimaryKey
+    vehicleNumberHash: PrimaryKey
     routeCode: PrimaryKey
 
   extraOperations:
