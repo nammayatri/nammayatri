@@ -489,7 +489,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
   fork "ride start geohash frequencyUpdater" $ do
     case tripStartLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart Nothing
       Nothing -> return ()
   let updRideForStartReq =
         ride{status = DRide.INPROGRESS,
@@ -593,7 +593,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
   fork "ride end geohash frequencyUpdater" $ do
     case tripEndLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
       Nothing -> return ()
   fork "updating total rides count" $ SMC.updateTotalRidesCounters person
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
