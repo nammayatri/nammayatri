@@ -1113,6 +1113,7 @@ getDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLim
         { raisedAt = createdAt,
           requestData = castCommonReqData requestData,
           status = castStatusToCommon (Just status),
+          approvalRequestId = id.getId,
           ..
         }
 
