@@ -30,6 +30,7 @@ import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Error
 
 init ::
   ( JL.GetFareFlow m r,
@@ -127,12 +128,12 @@ addAllLegs journeyId legsReq = do
     searchResp <-
       case journeyLeg.mode of
         DTrip.Taxi -> do
-          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
+          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
           addTaxiLeg parentSearchReq journeyLeg currentLegReq
         DTrip.Metro -> do
           addMetroLeg parentSearchReq journeyLeg
         DTrip.Walk -> do
-          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (InternalError "JourneyLegReqDataNotFound journeyLeg.sequenceNumber")
+          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
           addWalkLeg parentSearchReq journeyLeg currentLegReq
         _ -> throwError $ InvalidRequest ("Mode not supported: " <> show journeyLeg.mode)
     QJourneyLeg.updateLegId (Just searchResp.id) journeyLeg.id

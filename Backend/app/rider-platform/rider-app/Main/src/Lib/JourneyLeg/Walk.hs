@@ -43,7 +43,7 @@ instance JT.JourneyLeg WalkLegRequest m where
               createdAt = now,
               updatedAt = now
             }
-    QWalkLeg.create walkLeg
+    QWalkLeg.createWalkLeg walkLeg
     return $ JT.SearchResponse {id = id.getId}
   search _ = throwError (InternalError "Not supported")
 
