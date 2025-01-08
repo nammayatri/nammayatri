@@ -847,7 +847,7 @@ public class LocationUpdateService extends Service {
                     String finalResult = result;
                     handler.post(() -> {
                         try {
-                            JSONObject resp = new JSONObject(finalResult != null ? finalResult : "{}");
+                            JSONObject resp = new JSONObject((finalResult != null && !finalResult.trim().isEmpty()) ? finalResult : "{}");
                             if (resp.has("errorCode"))
                                 Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
                             if (resp.has("errorCode") && (resp.get("errorCode").equals("INVALID_TOKEN") || resp.get("errorCode").equals("TOKEN_EXPIRED"))) {
