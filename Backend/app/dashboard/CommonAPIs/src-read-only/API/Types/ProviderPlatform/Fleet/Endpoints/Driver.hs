@@ -1,5 +1,4 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
@@ -102,7 +101,14 @@ data DriverMode
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data DriverRequestDetails = DriverRequestDetails {requestData :: ApprovalRequestData, title :: Kernel.Prelude.Text, body :: Kernel.Prelude.Text, raisedAt :: Kernel.Prelude.UTCTime, status :: Kernel.Prelude.Maybe RequestStatus}
+data DriverRequestDetails = DriverRequestDetails
+  { requestData :: ApprovalRequestData,
+    title :: Kernel.Prelude.Text,
+    body :: Kernel.Prelude.Text,
+    raisedAt :: Kernel.Prelude.UTCTime,
+    status :: Kernel.Prelude.Maybe RequestStatus,
+    approvalRequestId :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
