@@ -23,6 +23,8 @@ Journey:
     id: Id Journey
     searchRequestId: Id SearchRequest
     fare: Maybe Price
+    startTime: Maybe UTCTime
+    endTime: Maybe UTCTime
     estimatedFare: Maybe Price
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
@@ -259,7 +261,7 @@ JourneyLeg:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
-    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName)|E
+    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
@@ -276,8 +278,8 @@ JourneyLeg:
     routeGtfsId: (routeDetails >>= (.gtfsId))|E
     routeLongName: (routeDetails >>= (.longName))|E
     routeShortName: (routeDetails >>= (.shortName))|E
-    routeColorName: (Nothing)|E
-    routeColorCode: (Nothing)|E
+    routeColorName: (routeDetails >>= (.shortName))|E
+    routeColorCode: (routeDetails >>= (.color))|E
     frequency : (Nothing)|E
     agencyGtfsId: (routeDetails >>= (.gtfsId))|E
     agencyName: (routeDetails >>= (.longName))|E

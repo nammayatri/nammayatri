@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.convenienceCost convenienceCost,
+      Se.Set Beam.endTime endTime,
       Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
       Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
@@ -53,6 +54,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.legsDone legsDone,
       Se.Set Beam.modes modes,
       Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
+      Se.Set Beam.startTime startTime,
       Se.Set Beam.totalLegs totalLegs,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -67,6 +69,7 @@ instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
       Just
         Domain.Types.Journey.Journey
           { convenienceCost = convenienceCost,
+            endTime = endTime,
             estimatedDistance = Kernel.Types.Common.Distance estimatedDistance distanceUnit,
             estimatedDuration = estimatedDuration,
             estimatedFare = Kernel.Types.Common.mkPrice currency <$> estimatedFare,
@@ -77,6 +80,7 @@ instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
             legsDone = legsDone,
             modes = modes,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
+            startTime = startTime,
             totalLegs = totalLegs,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -88,6 +92,7 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
   toTType' (Domain.Types.Journey.Journey {..}) = do
     Beam.JourneyT
       { Beam.convenienceCost = convenienceCost,
+        Beam.endTime = endTime,
         Beam.distanceUnit = (.unit) estimatedDistance,
         Beam.estimatedDistance = (.value) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
@@ -100,6 +105,7 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
         Beam.legsDone = legsDone,
         Beam.modes = modes,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
+        Beam.startTime = startTime,
         Beam.totalLegs = totalLegs,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

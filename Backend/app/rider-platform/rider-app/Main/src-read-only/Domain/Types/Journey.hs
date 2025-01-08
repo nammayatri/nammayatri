@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Journey = Journey
   { convenienceCost :: Kernel.Prelude.Int,
+    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
@@ -25,6 +26,7 @@ data Journey = Journey
     legsDone :: Kernel.Prelude.Int,
     modes :: [Domain.Types.Common.TravelMode],
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     totalLegs :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

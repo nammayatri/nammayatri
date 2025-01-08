@@ -23,3 +23,9 @@ ALTER TABLE atlas_app.journey ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.journey ADD COLUMN estimated_min_fare double precision ;
 ALTER TABLE atlas_app.journey ADD COLUMN estimated_max_fare double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN start_time timestamp with time zone ;
+ALTER TABLE atlas_app.journey ADD COLUMN end_time timestamp with time zone ;

@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data JourneyT f = JourneyT
   { convenienceCost :: B.C f Kernel.Prelude.Int,
+    endTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
     estimatedDistance :: B.C f Kernel.Types.Common.HighPrecDistance,
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
@@ -26,6 +27,7 @@ data JourneyT f = JourneyT
     legsDone :: B.C f Kernel.Prelude.Int,
     modes :: B.C f [Domain.Types.Common.TravelMode],
     searchRequestId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalLegs :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

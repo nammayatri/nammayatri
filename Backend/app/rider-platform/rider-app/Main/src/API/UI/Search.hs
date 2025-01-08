@@ -133,6 +133,8 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
               legs = r.legs,
               estimatedDistance = r.distance,
               estimatedDuration = r.duration,
+              startTime = r.startTime,
+              endTime = r.endTime,
               maximumWalkDistance
             }
     QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id

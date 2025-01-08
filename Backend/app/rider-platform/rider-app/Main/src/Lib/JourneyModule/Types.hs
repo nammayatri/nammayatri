@@ -146,6 +146,8 @@ data JourneyInitData = JourneyInitData
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     estimatedDistance :: Distance,
     estimatedDuration :: Seconds,
+    startTime :: Maybe UTCTime,
+    endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters
   }
   deriving stock (Show, Generic)
@@ -367,8 +369,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [GetFareResponse] -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
-mkJourney estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId totalFares legs maximumWalkDistance = do
+mkJourney :: MonadFlow m => Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [GetFareResponse] -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
+mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId totalFares legs maximumWalkDistance = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
   now <- getCurrentTime
@@ -385,6 +387,8 @@ mkJourney estimatedDistance estiamtedDuration journeyId parentSearchId merchantI
         modes = modes,
         searchRequestId = parentSearchId,
         merchantId = Just merchantId,
+        startTime,
+        endTime,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,

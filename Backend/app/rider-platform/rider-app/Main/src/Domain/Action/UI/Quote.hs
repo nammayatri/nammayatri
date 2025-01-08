@@ -46,6 +46,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
@@ -205,6 +206,9 @@ data JourneyData = JourneyData
     totalMaxFare :: Maybe HighPrecMoney,
     duration :: Maybe Seconds,
     modes :: [DTrip.TravelMode],
+    startTime :: Maybe UTCTime,
+    endTime :: Maybe UTCTime,
+    journeyId :: Id DJ.Journey,
     journeyLegs :: [JourneyLeg]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -212,6 +216,9 @@ data JourneyData = JourneyData
 data JourneyLeg = JourneyLeg
   { journeyLegOrder :: Int,
     journeyMode :: DTrip.TravelMode,
+    journeyLegId :: Id DJL.JourneyLeg,
+    color :: Maybe Text,
+    colorCode :: Maybe Text,
     duration :: Seconds
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -356,6 +363,9 @@ getJourneys searchRequest = do
                 JourneyLeg
                   { journeyLegOrder = journeyLeg.sequenceNumber,
                     journeyMode = journeyLeg.mode,
+                    journeyLegId = journeyLeg.id,
+                    color = journeyLeg.routeDetails >>= (.shortName),
+                    colorCode = journeyLeg.routeDetails >>= (.color),
                     duration = journeyLeg.duration
                   }
           return $
@@ -364,6 +374,9 @@ getJourneys searchRequest = do
                 totalMaxFare = journey.estimatedMaxFare,
                 modes = journey.modes,
                 journeyLegs,
+                startTime = journey.startTime,
+                endTime = journey.endTime,
+                journeyId = journey.id,
                 duration = journey.estimatedDuration
               }
       return $ Just journeyData
