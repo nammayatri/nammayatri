@@ -260,8 +260,8 @@ public class NotificationUtils {
                     sheetData.putDouble("destLng", addressDrop.has("lon") && !addressDrop.isNull("lon") ? addressDrop.getDouble("lon"): 0.0);
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
                     sheetData.putString("addressDrop", addressDrop.has("full_address") && !addressDrop.isNull("full_address") ? addressDrop.getString("full_address") : "");
-                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);
-                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 20);
+                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 0);
+                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 0);
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
