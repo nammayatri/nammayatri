@@ -319,38 +319,108 @@ chooseLanguageFlow = do
   case action of
     TA.LOGIN_FLOW -> loginFlow
 
+type RideInfo = { mbRideListResponse :: Maybe GetRidesHistoryResp, activeRide :: Boolean, mbActiveBusTrip :: Maybe TripTransactionDetails, busActiveRide :: Boolean }
+
 checkRideAndInitiate :: Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 checkRideAndInitiate event driverInfoResponse = do
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_START"
-  Tuple mbRideListResponse activeRide <- 
-    case driverInfoResponse of
-      Just (Right (GetDriverInfoResp driverInfoResp)) -> do        
-        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
-        pure (Tuple Nothing driverInfoResp.onRide)
-      _ -> do
-        GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-        let activeRide = not (null rideListResponse.list)
-        pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
-  void $ lift $ lift $ fork $ checkAndDownloadMLModel
+
+  -- Handle driver info response and determine ride state
+  rideInfo <- handleDriverInfoResponse driverInfoResponse
+  let { mbRideListResponse, activeRide, mbActiveBusTrip, busActiveRide } = rideInfo
+
+  -- Initiate any required setup, such as downloading ML models
+  void $ lift $ lift $ fork checkAndDownloadMLModel
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
-  modifyScreenState $ HomeScreenStateType (\homeScreenState → homeScreenState { props { retryRideList = activeRide }})
-  activeRide ?
-    currentRideFlow mbRideListResponse (Just activeRide)
-    $ do
-      void $ updateStage $ HomeScreenStage HomeScreen
-      getDriverInfoFlow event mbRideListResponse driverInfoResponse true Nothing false
+
+  -- Update the UI state based on the ride's activity status
+  updateScreenState activeRide
+
+  -- Handle active or inactive ride flows
+  handleRideFlow activeRide mbRideListResponse mbActiveBusTrip busActiveRide driverInfoResponse event
   where
+    -- Handles driver info or fetches ride history to determine ride state
+    handleDriverInfoResponse :: Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String RideInfo
+    handleDriverInfoResponse response = 
+      if checkIfBusDriver response then
+        processBusDriverInfoResponse 
+      else
+        case response of
+          Just (Right driverInfoResp) -> processDriverInfoResponse driverInfoResp 
+          _ -> fetchAndProcessRideHistory
+
+    -- To check if bus trip is active or not
+    processBusDriverInfoResponse :: FlowBT String RideInfo
+    processBusDriverInfoResponse = do
+      response <- lift $ lift $ Remote.getActiveTrip
+      case response of
+        Right (ActiveTripTransaction activeTrip) -> case activeTrip.tripTransactionDetails of
+          Just (TripTransactionDetails tripTransactionDetails) -> do
+            let _ = spy "processBusDriverInfoResponse: TripTransactionDetails tripTransactionDetails" tripTransactionDetails
+            let busActiveRide = tripTransactionDetails.status == API.IN_PROGRESS || tripTransactionDetails.status == API.PAUSED || tripTransactionDetails.status == API.TRIP_ASSIGNED
+            pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : activeTrip.tripTransactionDetails, busActiveRide : busActiveRide }
+          Nothing -> pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : Nothing, busActiveRide : false }
+        _ -> pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : Nothing, busActiveRide : false }
+          
+    -- Processes driver information when available
+    processDriverInfoResponse :: GetDriverInfoResp -> FlowBT String RideInfo
+    processDriverInfoResponse (GetDriverInfoResp driverInfoResp) = do
+      modifyScreenState $ GlobalPropsType \globalProps -> 
+        globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
+      pure {mbRideListResponse : Nothing, activeRide : driverInfoResp.onRide, mbActiveBusTrip : Nothing, busActiveRide : false }
+
+    -- Fetches ride history when driver information is unavailable
+    fetchAndProcessRideHistory :: FlowBT String RideInfo
+    fetchAndProcessRideHistory = do
+      (GetRidesHistoryResp rideListResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+      let activeRide = not (null rideListResponse.list)
+      pure {mbRideListResponse : (Just $ GetRidesHistoryResp rideListResponse), activeRide : activeRide, mbActiveBusTrip : Nothing, busActiveRide : false }
+
+    -- Downloads ML models if needed
     checkAndDownloadMLModel :: Flow GlobalState Unit
     checkAndDownloadMLModel = do
       let language = getLanguageLocale languageKey
-      downloadedLanguages <- doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
-      if (language /= "__failed" && not (languageExists downloadedLanguages language)) then do
+      downloadedLanguages <- doAff $ makeAff \cb -> 
+        JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
+      unless (language == "__failed" || languageExists downloadedLanguages language) $ do
         void $ liftFlow $ runEffectFn1 JB.downloadMLTranslationModel language
-      else pure unit
+
+    -- Checks if a language exists in the downloaded list
     languageExists :: Array String -> String -> Boolean
     languageExists languages lang =
       let firstTwoChars = toLower $ take 2 lang
       in firstTwoChars `elem` languages
+
+    -- Updates the UI state with the ride activity status
+    updateScreenState :: Boolean -> FlowBT String Unit
+    updateScreenState activeRide =
+      modifyScreenState $ HomeScreenStateType \homeScreenState -> 
+        homeScreenState { props { retryRideList = activeRide }}
+
+    -- Handles the flow based on ride activity status
+    handleRideFlow :: Boolean -> Maybe GetRidesHistoryResp -> Maybe TripTransactionDetails -> Boolean -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Maybe Event -> FlowBT String Unit
+    handleRideFlow activeRide mbRideListResponse mbActiveBusTrip busActiveRide driverInfoResponse event =
+      if activeRide == true || busActiveRide == true
+        then handleActiveRideFlow mbRideListResponse activeRide mbActiveBusTrip busActiveRide
+        else handleInactiveRideFlow event mbRideListResponse driverInfoResponse
+
+    -- Handles the flow for active rides
+    handleActiveRideFlow :: Maybe GetRidesHistoryResp -> Boolean -> Maybe TripTransactionDetails -> Boolean -> FlowBT String Unit
+    handleActiveRideFlow mbRideListResponse activeRide mbActiveBusTrip busActiveRide =
+      currentRideFlow mbRideListResponse (Just activeRide) mbActiveBusTrip (Just busActiveRide)
+
+    -- Handles the flow for inactive rides
+    handleInactiveRideFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
+    handleInactiveRideFlow event mbRideListResponse driverInfoResponse = do
+      void $ updateStage $ HomeScreenStage HomeScreen
+      getDriverInfoFlow event mbRideListResponse driverInfoResponse true Nothing false
+    
+    checkIfBusDriver :: Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean
+    checkIfBusDriver driverInfoResponse = 
+       (HU.specialVariantsForTracking FunctionCall) || (case driverInfoResponse of
+        Just (Right (GetDriverInfoResp driverInfoResp)) -> 
+          driverInfoResp.onboardingVehicleCategory == Just "BUS"
+        _ -> false)
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
@@ -658,7 +728,7 @@ checkPreRequisites activeRideResp isActiveRide = do
   status <- checkAndUpdateRCStatus
   status ? do
     checkStatusAndStartLocationUpdates
-    currentRideFlow activeRideResp isActiveRide
+    currentRideFlow activeRideResp isActiveRide Nothing Nothing
     $ homeScreenFlow
 
 checkAndUpdateRCStatus :: FlowBT String Boolean
@@ -2273,8 +2343,8 @@ tripDetailsScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
       helpAndSupportFlow
 
-currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
-currentRideFlow activeRideResp isActiveRide = do
+currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> Maybe TripTransactionDetails -> Maybe Boolean -> FlowBT String Unit
+currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_START"
   let isRequestExpired = 
         if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
@@ -2288,10 +2358,22 @@ currentRideFlow activeRideResp isActiveRide = do
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
   
-  case isActiveRide of
-    Just false -> do
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
+  let isBusVariant = getDriverInfoResp.onboardingVehicleCategory == Just "BUS" || HU.specialVariantsForTracking FunctionCall
+  case isBusVariant, isActiveRide of
+    true, _ -> do
+      case mbActiveBusTrip of
+        Just tripDetails -> do
+          activeBusRidePatch (Just tripDetails)
+        Nothing -> do
+          response <- lift $ lift $ Remote.getActiveTrip
+          let _ = spy "currentRideFlow: response - TripTransactionDetails tripTransactionDetails" response
+          case response of
+            (Right (API.ActiveTripTransaction activeTrip)) -> activeBusRidePatch activeTrip.tripTransactionDetails
+            _ -> pure unit
+    _, Just false -> do
       noActiveRidePatch allState onBoardingSubscriptionViewCount
-    _ -> do
+    _, _ -> do
       if isJust activeRideResp
         then do
           let (GetRidesHistoryResp activeRideResponse) = fromMaybe (GetRidesHistoryResp{list:[]}) activeRideResp
@@ -2304,6 +2386,7 @@ currentRideFlow activeRideResp isActiveRide = do
           (not (null activeRideResponse.list)) ?
             activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
             $ noActiveRidePatch allState onBoardingSubscriptionViewCount
+  
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
@@ -2377,6 +2460,25 @@ currentRideFlow activeRideResp isActiveRide = do
           setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
           pure unit
       else pure unit
+    
+    activeBusRidePatch mbTripTransactionDetails = do
+      let _ = spy "activeBusRidePatch" mbTripTransactionDetails
+      case mbTripTransactionDetails of
+        Just (API.TripTransactionDetails tripDetails) -> do 
+          if tripDetails.status == API.TRIP_ASSIGNED then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
+            response <- lift $ lift $ Remote.getAvailableRoutes tripDetails.vehicleNumber
+            let _ = spy "activeBusRidePatch - getAvailableRoutes" response
+            case response of
+              Right availableRoutes -> do 
+                let _ = spy "activeBusRidePatch - getAvailableRoutes - Right" availableRoutes
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails), availableRoutes = Just availableRoutes}}, props { currentStage = ST.TripAssigned}})
+                pure unit
+              _ -> pure unit
+          else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
+          else (pure unit)
+        Nothing -> pure unit
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -2471,7 +2573,7 @@ homeScreenFlow = do
     void $ pure $ cleverTapSetLocation unit
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
       then do  
-        currentRideFlow Nothing Nothing
+        currentRideFlow Nothing Nothing Nothing Nothing
       else do 
         pure unit
     (GlobalState globalState) <- getState  
@@ -2553,7 +2655,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore RIDE_START_TIME (getCurrentUTC "")
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
-          currentRideFlow Nothing Nothing
+          currentRideFlow Nothing Nothing Nothing Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
@@ -2580,7 +2682,7 @@ homeScreenFlow = do
           void $ updateStage $ HomeScreenStage RideStarted
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
           void $ lift $ lift $ toggleLoader false
-          currentRideFlow Nothing Nothing
+          currentRideFlow Nothing Nothing Nothing Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
@@ -2806,7 +2908,7 @@ homeScreenFlow = do
           when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true, retryRideList = true}})
-          currentRideFlow Nothing Nothing
+          currentRideFlow Nothing Nothing Nothing Nothing
         "RIDE_REQUESTED"    -> do
           void $ updateStage $ HomeScreenStage RideRequested
           homeScreenFlow
@@ -2816,7 +2918,7 @@ homeScreenFlow = do
             void $ updateStage $ HomeScreenStage RideStarted
             void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
             void $ pure $ setValueToLocalStore TRIP_STATUS "started"
-            currentRideFlow Nothing Nothing
+            currentRideFlow Nothing Nothing Nothing Nothing
           else do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatServiceKilled = true}})
             homeScreenFlow
@@ -2842,7 +2944,7 @@ homeScreenFlow = do
     RELOAD state -> homeScreenFlow
     GO_TO_NEW_STOP state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { route = [] }, props{ mapRendered = true }})
-      currentRideFlow Nothing Nothing
+      currentRideFlow Nothing Nothing Nothing Nothing
     GO_TO_ARRIVED_AT_STOP {id, lat, lon, ts} state -> do
       (resp :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ callApi $ API.ArrivedAtStopRequest id (Remote.makeArrivedAtStopReq lat lon)
       case resp of
@@ -3149,46 +3251,39 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_METRO_WARRIOR state -> metroWarriorsScreenFlow
     GO_TO_SCAN_BUS_QR state -> qrCodeScannerScreenFlow (\qrData -> do
-      let _ = spy "GO_TO_SCAN_BUS_QR" qrData
-          -- (rsp) = runExcept $ decodeJSON $ EHC.atobImpl qrData
-          -- _ = spy "runExcept $ decodeJSON $ EHC.atobImpl qrData" rsp
       case runExcept $ decodeJSON $ EHC.atobImpl qrData of
         Right (response :: ST.BusQrCodeData) -> do
-          let _ = spy "response" response
           availableRoutes <- Remote.getAvailableRoutesBT response.busNumber
-          let _ = spy "availableRoutes" availableRoutes
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true }}})
           homeScreenFlow
-        Left err -> 
-          let _ = spy " DECODED qrData" err 
-          in pure unit
+        Left err -> pure unit
       )
     LINK_BUS_TRIP state -> do
       case state.props.whereIsMyBusConfig.selectedRoute of
         Just (API.AvailableRoutes selectedRoute) -> do
           let (API.BusVehicleDetails vehicleDetails) = selectedRoute.vehicleDetails
           let (API.RouteInfo routeInfo) = selectedRoute.routeInfo
-          (API.TripTransactionDetails response) <- Remote.linkTripBT vehicleDetails.number routeInfo.code
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { whereIsMyBusConfig { selectRouteStage = false, tripTransactionId = Just $ response.tripTransactionId }}})
+          assignedTrip <- Remote.linkTripBT vehicleDetails.number routeInfo.code
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP assignedTrip }}, props { whereIsMyBusConfig { selectRouteStage = false }}})
           pure unit
         Nothing -> pure unit
       homeScreenFlow
     GO_START_BUS_RIDE state -> do
-      case state.props.whereIsMyBusConfig.tripTransactionId of
-        Just tripTransactionId -> do
+      case state.data.whereIsMyBusData.trip of
+        Just (ST.ASSIGNED_TRIP (API.TripTransactionDetails assignedTrip)) -> do
           let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
               currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
           (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
-          response <- lift $ lift $ Remote.startTrip tripTransactionId (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lon)
+          response <- lift $ lift $ Remote.startTrip assignedTrip.tripTransactionId (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lon)
           case response of
             Right _ -> do
               liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, mapRendered = true, whereIsMyBusConfig { showSelectAvailableBusRoutes = false }}, data{ route = [], activeRide{status = INPROGRESS}}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, mapRendered = true, whereIsMyBusConfig { showSelectAvailableBusRoutes = false }}})
               void $ pure $ hideKeyboardOnNavigation true
               void $ pure $ JB.exitLocateOnMap ""
               void $ updateStage $ HomeScreenStage RideTracking
               void $ lift $ lift $ toggleLoader false
-              homeScreenFlow
+              currentRideFlow Nothing Nothing Nothing Nothing
             Left errorPayload -> do
               let errResp = errorPayload.response
               let codeMessage = decodeErrorCode errResp.errorMessage
@@ -3200,7 +3295,7 @@ homeScreenFlow = do
                   else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
               void $ lift $ lift $ toggleLoader false
               homeScreenFlow
-        Nothing -> pure unit
+        _ -> pure unit
     GO_TO_EDUCATION_SCREEN state -> do
       modifyScreenState $ EducationScreenStateType (\educationScreen -> educationScreen { videoUrl = state.data.config.whereIsMyBusEducationVideo})
       educationScreenFlow (\_ -> do
@@ -3755,7 +3850,7 @@ notificationFlow = do
     GO_EARNINGS_SCREEN -> driverEarningsFlow
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
-    CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing Nothing
+    CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing Nothing Nothing Nothing
     NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow
 
@@ -4639,7 +4734,7 @@ rideRequestScreenFlow = do
       void $ pure $ removeAllPolylines ""
       case notificationType of
         "DRIVER_ASSIGNMENT" -> do
-          currentRideFlow Nothing Nothing
+          currentRideFlow Nothing Nothing Nothing Nothing
         _ -> rideRequestScreenFlow
     TA.GO_BACK_TO_RIDEREQUEST_SCREEN state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{filteredArr = [],resp = RideRequestData.dummyResp, offset =0}})
@@ -4694,7 +4789,7 @@ rideSummaryScreenFlow = do
       case notificationType of
         "DRIVER_ASSIGNMENT" -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{rideStartRemainingTime = -1}}) 
-          currentRideFlow Nothing Nothing
+          currentRideFlow Nothing Nothing Nothing Nothing
         "CANCELLED_PRODUCT" -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{checkUpcomingRide = true  }}  ) 
           homeScreenFlow

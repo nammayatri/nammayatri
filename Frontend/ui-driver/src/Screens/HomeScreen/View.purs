@@ -95,7 +95,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
-import Services.Accessor (_lat, _lon, _stopName, _stopCode, _routeCode)
+import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -694,7 +694,7 @@ driverMapsHeaderView push state =
                 onRideScreenBannerView state push 
                 ]
             <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            <> if state.props.driverStatusSet == ST.Online && state.props.currentStage == ST.HomeScreen && state.props.whereIsMyBusConfig.showStartBusTripModal then [ recentBusRideView push state ] else []
+            <> if state.props.driverStatusSet == ST.Online && state.props.currentStage == ST.TripAssigned && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then [ recentBusRideView push state ] else []
         , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
@@ -712,7 +712,7 @@ driverMapsHeaderView push state =
   , if (not $ HU.specialVariantsForTracking FunctionCall) then bottomNavBar push state else textView [text "", visibility GONE]
   ]
   where
-    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, TripAssigned, RideTracking] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
 
 bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bookingPreferenceNavView push state =
@@ -3532,128 +3532,155 @@ qrScannerView push state =
 
 recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recentBusRideView push state =
-  let tripDetails = if HU.isGovtBusDriver then state.data.whereIsMyBusData.currentActiveTrip else state.data.whereIsMyBusData.previousCompletedTrip
+  let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
-      Nothing -> linearLayout[][]
-      Just (TripTransactionDetails tripDetails) ->
-        let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
-            busNumber = tripDetails.vehicleNum
-            busType = tripDetails.vehicleType
-            routeNumber = "dummy"
-            sourceName = tripDetails.source ^. _stopName
-            destinationName = tripDetails.destination ^. _stopName
-        in linearLayout
+      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> assignedTripView tripDetails
+      _ -> linearLayout[][]
+  where
+    assignedTripView tripDetails = 
+      let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
+          busNumber = tripDetails.vehicleNumber
+          busType = tripDetails.vehicleType
+          routeNumber = tripDetails.routeInfo ^. _routeCode
+          sourceName = tripDetails.source ^. _stopName
+          destinationName = tripDetails.destination ^. _stopName
+      in linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , margin $ Margin 16 16 16 16
+          , background Color.white900
+          , cornerRadius 16.0
+          , padding $ Padding 6 6 6 16
+          , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
+          -- , visibility $ boolToVisibility $ (tripDetails.status == TRIP_COMPLETED && not HU.isGovtBusDriver) || (tripDetails.status == TRIP_ASSIGNED && HU.isGovtBusDriver)
+          ][
+            textView $
+            [ text title
+            , width MATCH_PARENT
+            , height WRAP_CONTENT
+            , background Color.grey700
+            , color Color.black700
+            , gravity CENTER
+            , margin $ MarginBottom 20
+            , padding $ Padding 0 6 0 6
+            , cornerRadius 14.0
+            ] <> FontStyle.subHeading3 TypoGraphy,
+            linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , orientation VERTICAL
-            , margin $ Margin 16 16 16 16
-            , background Color.white900
-            , cornerRadius 16.0
-            , padding $ Padding 6 6 6 16
-            , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
-            , visibility $ boolToVisibility $ (tripDetails.status == TRIP_COMPLETED && not HU.isGovtBusDriver) || (tripDetails.status == TRIP_ASSIGNED && HU.isGovtBusDriver)
+            , orientation HORIZONTAL
+            , margin $ Margin 10 0 10 24
+            ][
+              linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , weight 1.0
+              ][
+                textView $ 
+                [ text "Bus Number"
+                , color Color.black800
+                , margin $ MarginBottom 8
+                ] <> FontStyle.body3 TypoGraphy,
+                textView $ 
+                [ text busNumber
+                , color Color.black800
+                ] <> FontStyle.subHeading3 TypoGraphy
+              ],
+              linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ Margin 0 0 64 0
+              ][
+                textView $
+                [ text "Bus Type"
+                , color Color.black800
+                , margin $ MarginBottom 8
+                ] <> FontStyle.body3 TypoGraphy,
+                textView $
+                [ text busType
+                , color Color.black800
+                ] <> FontStyle.subHeading3 TypoGraphy
+              ]
+            ],
+            textView $
+            [ text "Route Number"
+            , color Color.black800
+            , margin $ Margin 10 0 10 8
+            ] <> FontStyle.body3 TypoGraphy,
+            linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , padding $ Padding 16 16 16 16
+            , cornerRadius 12.0
+            , margin $ Margin 10 0 10 24
+            , stroke $ "1," <> Color.grey900
+            , gravity CENTER_VERTICAL
+            , onClick push $ const $ SelectBusRoute
             ][
               textView $
-              [ text title
-              , width MATCH_PARENT
-              , height WRAP_CONTENT
-              , background Color.grey700
-              , color Color.black700
-              , gravity CENTER
-              , margin $ MarginBottom 20
-              , padding $ Padding 0 6 0 6
-              , cornerRadius 14.0
-              ] <> FontStyle.subHeading3 TypoGraphy,
+              [ text routeNumber
+              , textSize FontSize.a_20
+              , color Color.black900
+              ] <> FontStyle.subHeading3 LanguageStyle,
+              linearLayout [
+                color Color.black600,
+                margin $ Margin 8 0 8 0,
+                background Color.black600,
+                gravity CENTER,
+                width $ V 6,
+                height $ V 6,
+                cornerRadius 32.0 
+              ] [],
               linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation HORIZONTAL
-              , margin $ Margin 10 0 10 24
-              ][
-                linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation VERTICAL
-                , weight 1.0
-                ][
-                  textView $ 
-                  [ text "Bus Number"
-                  , color Color.black800
-                  , margin $ MarginBottom 8
-                  ] <> FontStyle.body3 TypoGraphy,
-                  textView $ 
-                  [ text busNumber
-                  , color Color.black800
-                  ] <> FontStyle.subHeading3 TypoGraphy
-                ],
-                linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation VERTICAL
-                , margin $ Margin 0 0 64 0
-                ][
-                  textView $
-                  [ text "Bus Type"
-                  , color Color.black800
-                  , margin $ MarginBottom 8
-                  ] <> FontStyle.body3 TypoGraphy,
-                  textView $
-                  [ text busType
-                  , color Color.black800
-                  ] <> FontStyle.subHeading3 TypoGraphy
-                ]
-              ],
-              textView $
-              [ text "Route Number"
-              , color Color.black800
-              , margin $ Margin 10 0 10 8
-              ] <> FontStyle.body3 TypoGraphy,
-              linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation HORIZONTAL
-              , padding $ Padding 16 16 16 16
-              , cornerRadius 12.0
-              , margin $ Margin 10 0 10 24
-              , stroke $ "1," <> Color.grey900
-              , gravity CENTER_VERTICAL
-              , onClick push $ const $ SelectBusRoute
-              ][
-                textView
-                [ text routeNumber
-                , textSize FontSize.a_20
-                , fontStyle $ FontStyle.bold LanguageStyle
-                , margin $ MarginRight 8
-                ],
-                textView
-                [ text "•"
-                , textSize FontSize.a_20
-                , color Color.black600
-                , margin $ MarginHorizontal 8 8
-                ],
-                textView
-                [ text $ sourceName <> " → " <> destinationName
-                , textSize FontSize.a_16
+              [
+                height WRAP_CONTENT,
+                width WRAP_CONTENT,
+                orientation HORIZONTAL,
+                gravity CENTER_VERTICAL,
+                weight 1.0
+              ]
+              [
+                textView $
+                [ text $ sourceName
+                -- , textSize FontSize.a_16
                 , color Color.black700
-                , weight 1.0
-                ],
-                imageView
-                [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_chevron_down"
-                , width $ V 20
-                , height $ V 20
-                ]
+                -- , weight 1.0
+                ] <> FontStyle.body20 TypoGraphy,
+                textView $
+                [ text $ "  →  "
+                -- , textSize FontSize.a_16
+                , color Color.black700
+                -- , weight 1.0
+                ] <> FontStyle.body20 TypoGraphy,
+                textView $
+                [ text $ destinationName
+                -- , textSize FontSize.a_16
+                , color Color.black700
+                -- , weight 1.0
+                ] <> FontStyle.body20 TypoGraphy
               ],
-              PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
-              -- primaryButton
-              -- [ text "Start Ride"
-              -- , width MATCH_PARENT
-              -- , height $ V 56
-              -- , cornerRadius 28.0
-              -- , background Color.green500
-              -- , color Color.white900
-              -- , textSize FontSize.a_18
-              -- , fontStyle $ FontStyle.bold LanguageStyle
-              -- , onClick push $ const StartRide
-              -- ]
-            ]
+              imageView
+              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
+              , width $ V 8
+              , margin $ MarginHorizontal 8 0
+              , height $ V 12
+              ]
+            ],
+            PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
+            -- primaryButton
+            -- [ text "Start Ride"
+            -- , width MATCH_PARENT
+            -- , height $ V 56
+            -- , cornerRadius 28.0
+            -- , background Color.green500
+            -- , color Color.white900
+            -- , textSize FontSize.a_18
+            -- , fontStyle $ FontStyle.bold LanguageStyle
+            -- , onClick push $ const StartRide
+            -- ]
+          ]
           

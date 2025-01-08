@@ -5471,11 +5471,12 @@ instance encodeStopInfo :: Encode StopInfo where encode = defaultEncode
 
 newtype TripTransactionDetails = TripTransactionDetails
   { tripTransactionId :: String
-  , vehicleNum :: String
+  , vehicleNumber :: String
   , vehicleType :: String
   , source :: StopInfo
   , destination :: StopInfo
   , status :: BusTripStatus
+  , routeInfo :: RouteInfo
   }
 
 derive instance genericTripLinkResp :: Generic TripTransactionDetails _
@@ -5514,16 +5515,19 @@ instance makeGetActiveBusTrip :: RestEndpoint GetActiveBusTrip where
 
 --------------------------------------------------------------------------------- 
 
-data GetAvailableRoutes = GetAvailableRoutes String
+newtype GetAvailableRoutes = GetAvailableRoutes {
+  vehicleNumber :: String
+}
 
 derive instance genericGetAvailableRoutes :: Generic GetAvailableRoutes _
-instance standardEncodeGetAvailableRoutes :: StandardEncode GetAvailableRoutes where standardEncode _ = standardEncode {}
+derive instance newtypeGetAvailableRoutes :: Newtype GetAvailableRoutes _
+instance standardEncodeGetAvailableRoutes :: StandardEncode GetAvailableRoutes where standardEncode (GetAvailableRoutes res) = standardEncode res
 instance showGetAvailableRoutes :: Show GetAvailableRoutes where show = genericShow
 instance decodeGetAvailableRoutes :: Decode GetAvailableRoutes where decode = defaultDecode
 instance encodeGetAvailableRoutes :: Encode GetAvailableRoutes where encode = defaultEncode
 
 instance makeGetAvailableRoutes :: RestEndpoint GetAvailableRoutes where
-  makeRequest reqBody@(GetAvailableRoutes busNumber) headers = defaultMakeRequestWithoutLogs GET (EP.busAvailableRoutes busNumber) headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.busAvailableRoutes "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 

@@ -414,23 +414,26 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
 
+-- busAvailableRoutes :: String -> String 
+-- busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes"
+
 busAvailableRoutes :: String -> String 
-busAvailableRoutes vehicleNo = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/availableRoutes/" <> vehicleNo
+busAvailableRoutes _ = "https://ee2a-65-2-105-122.ngrok-free.app/ui/wmb/availableRoutes"
 
 busTripLink :: String -> String
-busTripLink _ = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/link"
+busTripLink _ = (getBaseUrl "") <> "/wmb/trip/link"
 
 busActiveTrip :: String -> String
-busActiveTrip _ = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/active"
+busActiveTrip _ = (getBaseUrl "") <> "/wmb/trip/active"
 
 busTripStart :: String -> String
-busTripStart tripTransactionId = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/start"
+busTripStart tripTransactionId = (getBaseUrl "") <> "/wmb/trip/" <> tripTransactionId <> "/start"
 
 busTripEnd :: String -> String
-busTripEnd tripTransactionId = "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/" <> tripTransactionId <> "/end"
+busTripEnd tripTransactionId = (getBaseUrl "") <> "/wmb/trip/" <> tripTransactionId <> "/end"
 
 getBusRideHistory :: String -> String -> Maybe String -> String
 getBusRideHistory limit offset status' = 
   case status' of
-    Just status -> "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/list?limit="<>limit<>"&offset="<>offset<>"&status=" <> status
-    Nothing -> "https://e52a-2409-40e4-0-a439-f9c4-3658-2ff5-62ea.ngrok-free.app/ui/wmb/trip/list?limit="<>limit<>"&offset="<>offset
+    Just status -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset<>"&status=" <> status
+    Nothing -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset

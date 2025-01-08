@@ -1846,7 +1846,7 @@ eval (ChooseBusRoute action) state =
 eval (StartBusTrip PrimaryButtonController.OnClick) state =
       exit $ StartBusRide state
 
-eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showStartBusTripModal = false, showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
+eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 
 eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" then exit $ GoToBusEducationScreen state else exit $ GoToScanBusQR state
 

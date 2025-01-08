@@ -16,7 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..))
+import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -205,8 +205,7 @@ initData =
       , bus_number : "" 
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
-          currentActiveTrip : Nothing,
-          previousCompletedTrip : Nothing
+          trip : Nothing
           }
     }
   , props:
@@ -311,7 +310,7 @@ initData =
       , bus_input_data : ""
       , showRecentBusTripModal : false
       , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : false -- FOR_TEST_REVERT
+          showSelectAvailableBusRoutes : false
         , selectRouteStage : false
         , selectedRoute : Nothing
         , tripTransactionId : Nothing
@@ -455,9 +454,25 @@ dummyStopInfo = StopInfo
 dummyTripTransactionDetails :: TripTransactionDetails
 dummyTripTransactionDetails = TripTransactionDetails
   { tripTransactionId: "TTD001"
-  , vehicleNum: "KA01AB1234"
+  , vehicleNumber: "KA01AB1234"
   , vehicleType: "Bus"
   , source: dummyStopInfo
   , destination: dummyStopInfo
   , status: TRIP_COMPLETED
+  , routeInfo: dummyRouteInfo
+  }
+
+dummyRouteInfo :: RouteInfo
+dummyRouteInfo = RouteInfo
+  { code : "RI001"
+  , shortName : "S-12"
+  , longName : "Bus Name"
+  , startPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
+  , endPoint : (LatLong {
+    lat : 0.0,
+    lon : 0.0
+  })
   }

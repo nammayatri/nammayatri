@@ -1106,9 +1106,10 @@ type HomeScreenData =  {
 
 type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
-  currentActiveTrip :: Maybe API.TripTransactionDetails,
-  previousCompletedTrip :: Maybe API.TripTransactionDetails
+  trip :: Maybe BusTrip
 }
+
+data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
 
 type FavouritePopUp = {
   visibility :: Boolean,
@@ -1975,6 +1976,7 @@ data HomeScreenStage =  HomeScreen
                       | RideCompleted
                       | ChatWithCustomer
                       | NotAssigned
+                      | TripAssigned
                       | RideTracking
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
