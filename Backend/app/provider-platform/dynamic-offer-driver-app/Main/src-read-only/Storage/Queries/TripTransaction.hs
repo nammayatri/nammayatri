@@ -47,11 +47,11 @@ findByTransactionId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.I
 
 updateOnStart ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
-updateOnStart routeCode startLocation status id = do
+  (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateOnStart tripCode startLocation status id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.routeCode routeCode,
+    [ Se.Set Beam.tripCode tripCode,
       Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
       Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
       Se.Set Beam.status status,

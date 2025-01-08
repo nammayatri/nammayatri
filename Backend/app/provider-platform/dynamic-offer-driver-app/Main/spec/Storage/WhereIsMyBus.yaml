@@ -87,7 +87,7 @@ TripTransaction:
       where: id
     updateOnStart:
       kvFunction: updateOneWithKV
-      params: [routeCode, startLocation, status]
+      params: [tripCode, startLocation, status]
       where: id
     findAllTripTransactionByDriverId:
       kvFunction: findAllWithKV

@@ -288,7 +288,7 @@ postWmbTripStart (_, _, _) tripTransactionId req = do
       tripEndStop <- (listToMaybe $ sortBy (EHS.comparing (.stopSequenceNum)) $ filter (\stop -> stop.tripCode == tripCode) allStops) & fromMaybeM (InternalError "End Stop Not Found.")
       let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode tripEndStop.stopPoint
       void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
-      QTT.updateOnStart tripCode (Just req.location) IN_PROGRESS tripTransactionId
+      QTT.updateOnStart (Just tripCode) (Just req.location) IN_PROGRESS tripTransactionId
       TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" Nothing
       pure Success
     Nothing -> throwError (InvalidRequest "Could not start trip")
