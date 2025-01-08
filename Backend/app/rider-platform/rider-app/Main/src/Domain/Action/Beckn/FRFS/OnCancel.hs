@@ -15,6 +15,9 @@
 module Domain.Action.Beckn.FRFS.OnCancel where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
+import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
@@ -34,6 +37,8 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Utils.Common.JWT.Config as GW
+import qualified Utils.Common.JWT.TransitClaim as TC
 
 data DOnCancel = DOnCancel
   { providerId :: Text,
@@ -84,6 +89,16 @@ onCancel _ booking' dOnCancel = do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
+  tickets <- QTicket.findAllByTicketBookingId booking.id
+  let serviceName = DEMSC.WalletService GW.GoogleWallet
+  let mId = booking.merchantId
+  let mocId' = booking.merchantOperatingCityId
+  serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+  forM_ tickets $ \ticket -> do
+    let googleStatus = GWLink.mapToGoogleTicketStatus ticket.status
+    let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
+    let obj = TC.TransitObjectPatch {TC.state = googleStatus}
+    void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
   return ()
   where
     checkRefundAndCancellationCharges bookingId = do

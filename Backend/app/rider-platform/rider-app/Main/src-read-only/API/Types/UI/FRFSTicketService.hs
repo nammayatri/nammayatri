@@ -188,6 +188,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,

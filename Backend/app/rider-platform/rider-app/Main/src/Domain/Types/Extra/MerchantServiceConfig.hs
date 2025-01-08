@@ -24,6 +24,7 @@ import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
+import Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
 data ServiceName
@@ -41,6 +42,7 @@ data ServiceName
   | IncidentReportService IncidentReport.IncidentReportService
   | PayoutService Payout.PayoutService
   | MultiModalService MultiModal.MultiModalService
+  | WalletService GW.WalletService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -61,6 +63,7 @@ instance Show ServiceName where
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (PayoutService s) = "Payout_" <> show s
   show (MultiModalService s) = "MultiModal_" <> show s
+  show (WalletService s) = "Wallet_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -123,6 +126,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "MultiModal_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (WalletService v1, r2)
+                 | r1 <- stripPrefix "Wallet_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -143,6 +150,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
   | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
+  | WalletServiceConfig !GW.WalletServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
