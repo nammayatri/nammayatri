@@ -13,6 +13,7 @@ import qualified API.Types.Dashboard.RideBooking.Quote
 import qualified API.Types.Dashboard.RideBooking.Registration
 import qualified API.Types.Dashboard.RideBooking.Search
 import qualified API.Types.Dashboard.RideBooking.Select
+import qualified API.Types.Dashboard.RideBooking.Status
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -31,6 +32,7 @@ data RideBookingUserActionType
   | REGISTRATION API.Types.Dashboard.RideBooking.Registration.RegistrationUserActionType
   | SEARCH API.Types.Dashboard.RideBooking.Search.SearchUserActionType
   | SELECT API.Types.Dashboard.RideBooking.Select.SelectUserActionType
+  | STATUS API.Types.Dashboard.RideBooking.Status.StatusUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -46,6 +48,7 @@ instance Text.Show.Show RideBookingUserActionType where
     REGISTRATION e -> "REGISTRATION/" <> show e
     SEARCH e -> "SEARCH/" <> show e
     SELECT e -> "SELECT/" <> show e
+    STATUS e -> "STATUS/" <> show e
 
 instance Text.Read.Read RideBookingUserActionType where
   readsPrec d' =
@@ -126,6 +129,15 @@ instance Text.Read.Read RideBookingUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SELECT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( STATUS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "STATUS/" r,
                    ( v1,
                      r2
                      ) <-

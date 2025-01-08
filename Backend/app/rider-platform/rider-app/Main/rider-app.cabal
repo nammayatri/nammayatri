@@ -167,6 +167,7 @@ library
       Domain.Action.Dashboard.RideBooking.Registration
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
+      Domain.Action.Dashboard.RideBooking.Status
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
@@ -504,6 +505,7 @@ library
       API.Action.Dashboard.RideBooking.Registration
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
+      API.Action.Dashboard.RideBooking.Status
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
@@ -540,6 +542,7 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Registration
       API.Types.Dashboard.RideBooking.Endpoints.Search
       API.Types.Dashboard.RideBooking.Endpoints.Select
+      API.Types.Dashboard.RideBooking.Endpoints.Status
       API.Types.Dashboard.RideBooking.Frontend
       API.Types.Dashboard.RideBooking.Maps
       API.Types.Dashboard.RideBooking.Profile
@@ -547,6 +550,7 @@ library
       API.Types.Dashboard.RideBooking.Registration
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
+      API.Types.Dashboard.RideBooking.Status
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
