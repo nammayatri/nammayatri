@@ -9,6 +9,8 @@ imports:
   TripStatus: Domain.Types.TripTransaction
   TripTransaction: Domain.Types.TripTransaction
   ApprovalRequest: Domain.Types.ApprovalRequest
+  TimeBound: Kernel.Types.TimeBound
+  HighPrecMeters: Kernel.Types.Distance
 
 module: WMB
 
@@ -25,17 +27,19 @@ types:
     source: StopInfo
     destination: StopInfo
     vehicleDetails: VehicleDetails
+    roundRouteCode: Maybe Text
 
   StopInfo:
     name: Text
     code: Text
     point: LatLong
+    derive: "Show"
 
   VehicleDetails:
     number: Text
     _type: ServiceTierType
 
-  TripLinkReq:
+  TripQrStartReq:
     vehicleNumberHash: Text
     routeCode: Text
     location: LatLong
@@ -76,19 +80,43 @@ types:
   AvailableRouteReq:
     vehicleNumber: Text
 
+  FleetConfigData:
+    allowedEndingMidRoute: Bool
+    rideEndApproval: Bool
+    endRideDistanceThreshold: HighPrecMeters
+
+  RouteDetails:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    stops: [StopInfo]
+    waypoints: Maybe [LatLong]
+    timeBounds: Maybe TimeBound
+    derive: "Show"
+
 apis:
-  - GET: # Fetch available routes for a driver of private fleet.
+  - POST: # Fetch available routes for a driver of private fleet.
       endpoint: /wmb/availableRoutes
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: AvailableRouteReq
       response:
         type: "[AvailableRoute]"
-  - POST: # Link a trip to a specific route for a driver of private fleet.
-      endpoint: /wmb/trip/link
+  # - POST: # Link a trip to a specific route for a driver of private fleet.
+  #     endpoint: /wmb/trip/link
+  #     auth: TokenAuth PROVIDER_TYPE
+  #     request:
+  #       type: TripLinkReq
+  #     response:
+  #       type: TripTransactionDetails
+
+  - POST: # qr start api
+      endpoint: /wmb/qr/start
       auth: TokenAuth PROVIDER_TYPE
       request:
-        type: TripLinkReq
+        type: TripQrStartReq
       response:
         type: TripTransactionDetails
 
@@ -97,6 +125,22 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: ActiveTripTransaction
+
+  - GET: # Retrieve the fleet config information
+      endpoint: /wmb/fleetconfig/{fleetOwnerId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        fleetOwnerId: Text
+      response:
+        type: FleetConfigData
+
+  - GET: # Retrieve the route details
+      endpoint: /wmb/route/{routeCode}/details
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        routeCode: Text
+      response:
+        type: RouteDetails
 
   - GET: # List all trips with optional filters (e.g., limit, offset, and status).
       endpoint: /wmb/trip/list

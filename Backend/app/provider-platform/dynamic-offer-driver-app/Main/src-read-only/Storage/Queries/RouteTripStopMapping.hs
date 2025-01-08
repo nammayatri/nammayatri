@@ -23,6 +23,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteTripStopMapping.RouteTripStopMapping] -> m ())
 createMany = traverse_ create
 
+findALLByRouteCodeForStops ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Int -> Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+findALLByRouteCodeForStops routeCode tripSequenceNum scheduledDay = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.tripSequenceNum $ Se.Eq tripSequenceNum,
+          Se.Is Beam.scheduledDay $ Se.Eq scheduledDay
+        ]
+    ]
+
 findAllRTSMappingByRouteAndDay :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
 findAllRTSMappingByRouteAndDay routeCode scheduledDay = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.scheduledDay $ Se.Eq scheduledDay]]
 
