@@ -1865,14 +1865,14 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
 getAvailableRoutes :: String -> Flow GlobalState (Either ErrorResponse AvailableRoutesList)
 getAvailableRoutes vehicleNumber = do
   headers <- getHeaders "" false
-  withAPIResult (EP.busAvailableRoutes vehicleNumber) unwrapResponse $ callAPI headers $ GetAvailableRoutes ""
+  withAPIResult (EP.busAvailableRoutes vehicleNumber) unwrapResponse $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber}
   where
     unwrapResponse (x) = x
 
 getAvailableRoutesBT :: String -> FlowBT String AvailableRoutesList
 getAvailableRoutesBT vehicleNumber = do
   headers <- getHeaders' "" false
-  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes vehicleNumber)
+  withAPIResultBT (EP.busAvailableRoutes vehicleNumber) identity errorHandler (lift $ lift $ callAPI headers $ GetAvailableRoutes {vehicleNumber : vehicleNumber})
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 

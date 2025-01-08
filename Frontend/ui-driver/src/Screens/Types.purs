@@ -1976,6 +1976,7 @@ data HomeScreenStage =  HomeScreen
                       | RideCompleted
                       | ChatWithCustomer
                       | NotAssigned
+                      | TripAssigned
                       | RideTracking
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _

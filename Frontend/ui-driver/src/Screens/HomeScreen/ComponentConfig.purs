@@ -93,6 +93,8 @@ import Control.Apply as CA
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Services.Accessor as Acc
+import Data.Lens ((^.))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -3315,5 +3317,18 @@ startBusTripButtonConfig state = PrimaryButton.config
 
 rideTrackingModalConfig :: ST.HomeScreenState -> RideTrackingModal.Config
 rideTrackingModalConfig state = 
-  let config = RideTrackingModal.config
-  in config
+  case state.data.whereIsMyBusData.trip of
+    Just (ST.CURRENT_TRIP tripDetails) -> mkConfig tripDetails
+    Just (ST.ASSIGNED_TRIP tripDetails) -> mkConfig tripDetails
+    _ -> RideTrackingModal.config
+  where
+    mkConfig (API.TripTransactionDetails tripDetails) =
+        let config = RideTrackingModal.config
+        in
+          config {
+            sourceStopName = tripDetails.source ^. Acc._stopName,
+            destinationStopName = tripDetails.destination ^. Acc._stopName,
+            busNumber = tripDetails.vehicleNumber,
+            busType = tripDetails.vehicleType,
+            routeNumber = tripDetails.routeInfo ^. Acc._routeCode
+          }
