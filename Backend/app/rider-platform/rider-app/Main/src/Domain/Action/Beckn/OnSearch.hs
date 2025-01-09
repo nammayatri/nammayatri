@@ -287,8 +287,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
     filterQuotesByPrefference _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        Rental -> filter (not . isNotRental) _quotesInfo
-        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        Rental -> filter (\qInfo -> not (qInfo.vehicleVariant `elem` ambulanceVariants) && (not $ isNotRental qInfo)) _quotesInfo
+        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
+        Ambulance -> filter (\qInfo -> qInfo.vehicleVariant `elem` ambulanceVariants) _quotesInfo
         Delivery -> []
         _ -> filter isNotRental _quotesInfo
 
