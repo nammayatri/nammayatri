@@ -21,4 +21,5 @@
     <color name="Black800">#454545</color>
     <color name="Black500">#B9BABE</color>
     <color name="green">#268C6E</color>
+    <color name="colorVoipBackground">#0000FF</color>
 </resources>

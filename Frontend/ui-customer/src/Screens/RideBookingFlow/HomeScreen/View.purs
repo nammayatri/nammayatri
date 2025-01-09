@@ -162,6 +162,7 @@ import Resources.Constants (markerArrowSize)
 import Constants (defaultDensity)
 import Resources.Constants (getEditDestPollingCount)
 import RemoteConfig as RemoteConfig
+import RemoteConfig.Utils (getCustomerVoipConfig)
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Components.SourceToDestination as SourceToDestination
@@ -334,6 +335,7 @@ screen initialState =
               PickUpFarFromCurrentLocation ->
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
+                initVoipIfEnabled initialState
                 when
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -434,7 +436,7 @@ screen initialState =
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
                 pure unit
-              ReAllocated ->
+              ReAllocated -> do
                 void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
               ShortDistance -> do
                 when (initialState.props.suggestedRideFlow || initialState.props.isRepeatRide) $ push $ ShortDistanceActionController PopUpModal.OnButton2Click
@@ -470,6 +472,13 @@ screen initialState =
 
 isCurrentLocationEnabled :: Boolean
 isCurrentLocationEnabled = isLocalStageOn HomeScreen
+
+initVoipIfEnabled :: HomeScreenState -> Effect Unit
+initVoipIfEnabled state = do
+  let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  if voipConfig.customer.enableVoipFeature 
+    then void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false
+    else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
