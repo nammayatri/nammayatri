@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -48,6 +47,7 @@ data RiderConfig = RiderConfig
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

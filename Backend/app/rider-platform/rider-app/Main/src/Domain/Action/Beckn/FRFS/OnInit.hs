@@ -21,16 +21,18 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPaym
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
-import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import Lib.Payment.Storage.Beam.BeamFlow
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -51,7 +53,7 @@ data DOnInit = DOnInit
     bankCode :: Text
   }
 
-validateRequest :: DOnInit -> Flow (Merchant, FTBooking.FRFSTicketBooking)
+validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant, FTBooking.FRFSTicketBooking)
 validateRequest DOnInit {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QFRFSTicketBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
@@ -60,10 +62,16 @@ validateRequest DOnInit {..} = do
   return (merchant, booking)
 
 onInit ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
+  ) =>
   DOnInit ->
   Merchant ->
   FTBooking.FRFSTicketBooking ->
-  Flow ()
+  m ()
 onInit onInitReq merchant booking_ = do
   person <- QP.findById booking_.riderId >>= fromMaybeM (PersonNotFound booking_.riderId.getId)
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt

@@ -3,7 +3,6 @@
 module Lib.JourneyLeg.Metro where
 
 import qualified API.Types.UI.FRFSTicketService as API
-import qualified API.Types.UI.FRFSTicketService as DFRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.TicketBookingService as TBS
@@ -41,15 +40,16 @@ instance JT.JourneyLeg MetroLegRequest m where
     res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) Spec.METRO frfsSearchReq Nothing Nothing colorName routeColorCode frequency
     return $ JT.SearchResponse {id = res.searchId.getId}
     where
-      -- buildFRFSSearchReq :: Maybe JPT.JourneySearchData -> m DFRFSTypes.FRFSSearchAPIReq
       buildFRFSSearchReq journeySearchData = do
         fromStationCode <- journeyLeg.fromStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "From station code not found")
         toStationCode <- journeyLeg.toStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "To station code not found")
         let routeCode = Nothing
-        return $ DFRFSTypes.FRFSSearchAPIReq {..}
+        return $ API.FRFSSearchAPIReq {..}
   search _ = throwError (InternalError "Not supported")
 
-  confirm (MetroLegRequestConfirm _) = return ()
+  confirm (MetroLegRequestConfirm req) = do
+    unless req.skipBooking $ do
+      void $ FRFSTicketService.postFrfsQuoteConfirm (Just req.personId, req.merchantId) req.quoteId
   confirm _ = throwError (InternalError "Not supported")
 
   update (MetroLegRequestUpdate _) = return ()

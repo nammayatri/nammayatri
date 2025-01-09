@@ -169,3 +169,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_start_date timesta
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN threshold_cancellation_percentage_to_block integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_block integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN metro_booking_allowed boolean ;

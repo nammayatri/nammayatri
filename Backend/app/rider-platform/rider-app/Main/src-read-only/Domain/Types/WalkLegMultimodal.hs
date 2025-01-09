@@ -21,11 +21,11 @@ data WalkLegMultimodal = WalkLegMultimodal
     id :: Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.WalkLegMultimodal.WalkLegStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

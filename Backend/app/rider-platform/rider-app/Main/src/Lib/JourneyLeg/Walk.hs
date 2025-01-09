@@ -39,7 +39,7 @@ instance JT.JourneyLeg WalkLegRequest m where
               startTime = fromMaybe now journeyLegData.fromArrivalTime,
               merchantId = parentSearchReq.merchantId,
               status = DWalkLeg.InPlan,
-              merchantOperatingCityId = Just parentSearchReq.merchantOperatingCityId,
+              merchantOperatingCityId = parentSearchReq.merchantOperatingCityId,
               createdAt = now,
               updatedAt = now
             }

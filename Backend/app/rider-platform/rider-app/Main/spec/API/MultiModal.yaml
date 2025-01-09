@@ -22,8 +22,8 @@ types:
     originAddress: LocationAddress
     destinationAddress: LocationAddress  #regenerate the files to get proper 'destinationAddress' field
   JourneyInfoResp:
-    estimatedDuration: Seconds
-    estimatedFare: PriceAPIEntity
+    estimatedDuration: Maybe Seconds
+    estimatedFare: Maybe PriceAPIEntity
     estimatedDistance: Distance
     legs: [LegInfo]
 

@@ -65,7 +65,7 @@ init journeyReq = do
       return $ Just journey
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
-getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (InternalError "JourneyNotFound id.getId")
+getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs = QJourneyLeg.findAllByJourneyId

@@ -21,11 +21,13 @@ import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified ExternalBPP.Bus.Flow as BusFlow
 import qualified ExternalBPP.Metro.Flow as MetroFlow
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
@@ -40,6 +42,17 @@ type FRFSSearchFlow m r =
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
     EncFlow m r
+  )
+
+type FRFSConfirmFlow m r =
+  ( MonadFlow m,
+    BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   )
 
 search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> m ()
@@ -69,7 +82,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
 
-init :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
+init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
@@ -87,6 +100,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       processOnInit onInitReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
+    processOnInit :: FRFSConfirmFlow m r => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'

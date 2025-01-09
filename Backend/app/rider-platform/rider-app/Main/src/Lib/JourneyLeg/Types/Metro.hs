@@ -1,8 +1,10 @@
 module Lib.JourneyLeg.Types.Metro where
 
+import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
@@ -20,6 +22,12 @@ data MetroLegRequestSearchData = MetroLegRequestSearchData
 data MetroLegRequestUpdateData = MetroLegRequestUpdateData
 
 data MetroLegRequestConfirmData = MetroLegRequestConfirmData
+  { quoteId :: Id FRFSQuote,
+    skipBooking :: Bool,
+    personId :: Id DPerson.Person,
+    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData
 

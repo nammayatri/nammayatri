@@ -28,11 +28,11 @@ instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLe
             id = Kernel.Types.Id.Id id,
             journeyLegInfo = Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo agency convenienceCost journeyId journeyLegOrder pricingId skipBooking,
             merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             riderId = Kernel.Types.Id.Id riderId,
             startTime = startTime,
             status = status,
             toLocation = toLocation',
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -52,11 +52,11 @@ instance ToTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegM
         Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.startTime = startTime,
         Beam.status = status,
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -90,7 +90,7 @@ confirm JL.LegInfo {..} =
       let confirmReq :: BusLegRequest = BusLegRequestConfirm BusLegRequestConfirmData
       JL.confirm confirmReq
     DTrip.Metro -> do
-      let confirmReq :: MetroLegRequest = MetroLegRequestConfirm MetroLegRequestConfirmData
+      confirmReq :: MetroLegRequest <- mkMetroLegConfirmReq
       JL.confirm confirmReq
     DTrip.Walk -> do
       let confirmReq :: WalkLegRequest = WalkLegRequestConfirm WalkLegRequestConfirmData
@@ -107,6 +107,18 @@ confirm JL.LegInfo {..} =
               startTime,
               personId,
               merchantId
+            }
+    mkMetroLegConfirmReq :: JL.ConfirmFlow m r c => m MetroLegRequest
+    mkMetroLegConfirmReq = do
+      quoteIdText <- legId & fromMaybeM (InvalidRequest "You can't confirm before getting fare")
+      return $
+        MetroLegRequestConfirm $
+          MetroLegRequestConfirmData
+            { skipBooking,
+              quoteId = Id quoteIdText,
+              personId,
+              merchantId,
+              merchantOperatingCityId
             }
 
 -- -- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest

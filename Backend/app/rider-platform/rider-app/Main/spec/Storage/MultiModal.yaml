@@ -149,6 +149,7 @@ WalkLegMultimodal:
     estimatedDuration: Maybe Seconds
     status: WalkLegStatus
     merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
 

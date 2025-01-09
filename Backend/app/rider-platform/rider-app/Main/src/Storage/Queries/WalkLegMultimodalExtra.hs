@@ -32,9 +32,9 @@ create' walkLeg = do
 
 createWalkLeg :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => WalkLegMultimodal -> m ()
 createWalkLeg walkLeg = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping walkLeg.fromLocation.id walkLeg.id.getId DLM.WALK_LEG (Just walkLeg.merchantId) walkLeg.merchantOperatingCityId
+  fromLocationMap <- SLM.buildPickUpLocationMapping walkLeg.fromLocation.id walkLeg.id.getId DLM.WALK_LEG (Just walkLeg.merchantId) (Just walkLeg.merchantOperatingCityId)
   void $ QLM.create fromLocationMap
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id walkLeg.id.getId DLM.WALK_LEG (Just walkLeg.merchantId) walkLeg.merchantOperatingCityId) walkLeg.toLocation
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id walkLeg.id.getId DLM.WALK_LEG (Just walkLeg.merchantId) (Just walkLeg.merchantOperatingCityId)) walkLeg.toLocation
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create' walkLeg
 

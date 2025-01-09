@@ -18,6 +18,7 @@ import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -29,10 +30,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
+import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Search
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Metrics.BAPMetrics.Types
@@ -60,19 +63,20 @@ type SearchRequestFlow m r c =
   )
 
 type ConfirmFlow m r c =
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( BeamFlow m r,
     EsqDBReplicaFlow m r,
     EventStreamFlow m r,
     EncFlow m r,
     CoreMetrics m,
     HasCoreMetrics r,
     HasShortDurationRetryCfg r c,
+    HasBAPMetrics m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["version" ::: DeploymentVersion],
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   )
 
 type GetFareFlow m r =
@@ -161,6 +165,7 @@ data JourneyInitData = JourneyInitData
 
 data LegInfo = LegInfo
   { skipBooking :: Bool,
+    bookingAllowed :: Bool,
     legId :: Maybe Text,
     travelMode :: DTrip.TravelMode,
     startTime :: UTCTime,
@@ -171,6 +176,7 @@ data LegInfo = LegInfo
     estimatedDistance :: Maybe Distance,
     legExtraInfo :: LegExtraInfo,
     merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     personId :: Id DP.Person
   }
   deriving stock (Show, Generic)
@@ -249,6 +255,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
   return $
     LegInfo
       { skipBooking = False,
+        bookingAllowed = True,
         legId = Just booking.id.getId,
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
@@ -257,6 +264,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
         estimatedFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedDistance = booking.estimatedDistance,
         merchantId = booking.merchantId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
         status = getTexiLegStatusFromBooking booking mRide,
         legExtraInfo =
@@ -280,6 +288,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
   return $
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
+        bookingAllowed = True,
         legId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
@@ -288,6 +297,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         estimatedFare = mbEstimatedFare,
         estimatedDistance = distance,
         merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
         status = getTexiLegStatusFromSearch journeyLegInfo',
         legExtraInfo = Taxi $ TaxiLegExtraInfo {origin = fromLocation, destination = toLocation'}
@@ -306,12 +316,13 @@ getWalkLegStatusFromWalkLeg legData journeyLegInfo = do
 
 mkWalkLegInfoFromWalkLegData :: MonadFlow m => DWalkLeg.WalkLegMultimodal -> m LegInfo
 mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
-  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
+  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal walk search as no journeyLegInfo found")
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   return $
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
-        legId = journeyLegInfo'.pricingId,
+        bookingAllowed = False,
+        legId = Just id.getId,
         travelMode = DTrip.Walk,
         startTime = startTime,
         order = journeyLegInfo'.journeyLegOrder,
@@ -319,6 +330,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         estimatedFare = Nothing,
         estimatedDistance = Just estimatedDistance,
         merchantId = merchantId,
+        merchantOperatingCityId,
         personId = riderId,
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
@@ -336,9 +348,11 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
       Nothing -> return Nothing
   fromStation <- QStation.findById fromStationId >>= fromMaybeM (InternalError "From Station not found")
   toStation <- QStation.findById toStationId >>= fromMaybeM (InternalError "To Station not found")
+  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
   return $
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
+        bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)),
         legId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Metro,
         startTime = now,
@@ -347,6 +361,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
         estimatedFare = mbEstimatedFare,
         estimatedDistance = Nothing, -- check with hemant if we can store estimatedDistance in frfsSearch table --journeyLeg.distance,
         merchantId = merchantId,
+        merchantOperatingCityId,
         personId = riderId,
         status = InPlan,
         legExtraInfo =

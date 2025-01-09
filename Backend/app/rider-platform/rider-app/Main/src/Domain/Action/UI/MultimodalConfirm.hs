@@ -35,12 +35,10 @@ postMultimodalInfo (_personId, _merchantId) journeyId req = do
   addAllLegs journeyId req.legsReq
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "Duration of Nothing type")
-  estFare <- journey.estimatedFare & fromMaybeM (InternalError "Fare of Nothing type")
   return $
     ApiTypes.JourneyInfoResp
-      { estimatedDuration = estDuration,
-        estimatedFare = mkPriceAPIEntity estFare,
+      { estimatedDuration = journey.estimatedDuration,
+        estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
         estimatedDistance = journey.estimatedDistance,
         legs
       }
@@ -67,12 +65,10 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  estDuration <- journey.estimatedDuration & fromMaybeM (InternalError "Duration of Nothing type")
-  estFare <- journey.estimatedFare & fromMaybeM (InternalError "Fare of Nothing type")
   return $
     ApiTypes.JourneyInfoResp
-      { estimatedDuration = estDuration,
-        estimatedFare = mkPriceAPIEntity estFare,
+      { estimatedDuration = journey.estimatedDuration,
+        estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
         estimatedDistance = journey.estimatedDistance,
         legs
       }
