@@ -95,6 +95,7 @@ import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Services.Accessor as Acc
 import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
+import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
 import Data.Lens ((^.))
 
 --------------------------------- rideActionModalConfig -------------------------------------
