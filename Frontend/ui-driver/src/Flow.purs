@@ -150,7 +150,7 @@ import Screens.Benefits.LmsQuizScreen.Transformer (transformQuizRespToQuestions)
 import Screens.OnBoardingSubscriptionScreen.Transformer (transformReelsRespToReelsData)
 import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
-import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
 import AssetsProvider (renewFile)
@@ -3314,6 +3314,23 @@ homeScreenFlow = do
               let _ = spy " DECODED qrData" err 
               in pure unit
         ))
+    WMB_END_TRIP state -> do
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+          currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+          tripDetails = state.data.whereIsMyBusData.trip
+          tripTransactionId = case tripDetails of
+                                Just (ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)) -> tripDetails.tripTransactionId
+                                _ -> ""
+      (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
+      endTripRespOrError <- lift $ lift $ Remote.endTrip tripTransactionId (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lon)
+      case endTripRespOrError of
+        Left errPayload -> pure unit
+        Right (API.TripEndResp tripEndResp) ->
+          case tripEndResp.result of  
+            "SUCCESS" -> currentRideFlow Nothing Nothing Nothing Nothing
+            _ -> do 
+              setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
+              homeScreenFlow
   homeScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit

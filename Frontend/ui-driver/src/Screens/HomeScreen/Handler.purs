@@ -235,3 +235,5 @@ homeScreen = do
     GoToBusEducationScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_EDUCATION_SCREEN updatedState)
+    WMBEndTrip state -> 
+      App.BackT $ App.BackPoint <$> (pure $ WMB_END_TRIP state)
