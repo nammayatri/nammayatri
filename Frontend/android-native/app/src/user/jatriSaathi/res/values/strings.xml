@@ -6,4 +6,5 @@
     <string name="bodyText" translatable="false">This app collects location data to book a ride from your current location.</string>
     <string name="merchant_id" translatable="false">yatrisathi</string>
     <string name="app_type" translatable="false">consumer</string>
+    <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/common/common/images/ys_ic_icon_and_text.png</string>
 </resources>

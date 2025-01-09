@@ -4,7 +4,9 @@ import static android.app.Activity.RESULT_OK;
 
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
+import in.juspay.mobility.app.CleverTapSignedCall;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,6 +15,11 @@ import android.util.Log;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 
+import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
+import com.clevertap.android.signedcall.init.SignedCallAPI;
+import com.clevertap.android.signedcall.interfaces.SCNetworkQualityHandler;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import com.google.android.play.core.splitinstall.SplitInstallHelper;
 import com.google.android.play.core.splitinstall.SplitInstallManager;
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory;
@@ -29,6 +36,7 @@ import java.util.UUID;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.MissedCallActionsHandler;
 import in.juspay.services.HyperServices;
 
 public class Utils {
@@ -176,5 +184,30 @@ public class Utils {
                     SplitInstallHelper.loadLibrary(context, "reactnativejni");
                 })
                 .addOnFailureListener(exception -> FirebaseCrashlytics.getInstance().recordException(exception));
+    }
+    public static void initCTSignedCall(Context context, Activity activity, MobilityRemoteConfigs remoteConfigs){
+        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
+        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
+        CleverTapSignedCall cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
+        CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
+        if (BuildConfig.DEBUG) {
+            SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
+        }        
+        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
+        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
+            @Override
+            public boolean onNetworkQualityResponse(final int score) {
+                Log.d("SC", "Signed Call Network quality score: " + score);
+                JSONObject voipCallConfig = null;
+                int scoreThreshold = 70;
+                try {
+                    voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
+                    scoreThreshold = voipCallConfig.optInt("score",70);
+                } catch (JSONException e) {
+                    Log.d("SC","Failed to fetch voip call config");
+                }
+                return score >= scoreThreshold;
+            }
+        });  
     }
 }

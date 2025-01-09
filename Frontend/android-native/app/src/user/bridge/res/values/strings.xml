@@ -5,4 +5,5 @@
     <string name="dev_port" translatable="false">8084</string>
     <string name="bodyText" translatable="false">This app collects location data to book a ride from your current location.</string>
     <string name="merchant_id" translatable="false">nammayatri</string>
+    <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
 </resources>

@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig, profileCompletionReminder)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig, profileCompletionReminder,getDriverVoipConfig)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -259,6 +259,10 @@ screen initialState (GlobalState globalState) =
                                   _ <- launchAff $ EHC.flowRunner defaultGlobalState $ rideStatusPolling (getValueToLocalStore RIDE_STATUS_POLLING_ID) 20000.0 initialState push Notification
                                   pure unit
                                   else pure unit
+                                let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+                                if (voipConfig.driver.enableVoipFeature) then do
+                                  void $ pure $ JB.initSignedCall initialState.data.activeRide.id true
+                                else pure unit
                                 push GetMessages
             "RideStarted"    -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars "ride_started" initialState.data.activeRide.enableFrequentLocationUpdates

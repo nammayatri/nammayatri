@@ -764,6 +764,8 @@
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,
+      "round_corner": true,
+      "round_corner_button": true,
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
