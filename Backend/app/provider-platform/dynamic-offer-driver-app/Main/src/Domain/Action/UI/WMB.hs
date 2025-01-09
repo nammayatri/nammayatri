@@ -158,7 +158,6 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   QDI.updateOnRide True driverId
   let busTripInfo = buildBusTripInfo vehicleNumber req.routeCode destinationStopInfo.point
   void $ LF.rideDetails (cast tripTransactionId) DRide.NEW merchantId driverId req.location.lat req.location.lon Nothing (Just busTripInfo)
-  -- let tripAssignedEntityData = buildTripAssignedData tripTransactionId route vehicleRouteMapping vehicleNumber
   TN.notifyWmbOnRide driverId merchantOperatingCityId IN_PROGRESS "Ride Started" "You ride has started" Nothing
   pure $
     TripTransactionDetails
@@ -199,16 +198,6 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
           createdAt = now,
           updatedAt = now
         }
-
-    -- buildTripAssignedData tripTransactionId route vehicleRouteMapping vehicleNumber =
-    --   TN.WMBTripAssignedData
-    --     { tripTransactionId = tripTransactionId,
-    --       routeCode = req.routeCode,
-    --       routeShortname = route.shortName,
-    --       vehicleNumber = vehicleNumber,
-    --       vehicleServiceTierType = vehicleRouteMapping.vehicleServiceTierType,
-    --       roundRouteCode = route.roundRouteCode
-    --     }
 
     buildTripTransaction tripTransactionId driverId vehicleRouteMapping fleetConfig endStopCode vehicleNumber now closestStop =
       TripTransaction
