@@ -130,7 +130,6 @@ postDriverFleetRemoveVehicle = DDriver.fleetRemoveVehicle
 postDriverFleetAddVehicles ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
   Common.CreateVehiclesReq ->
   Flow APISuccess
 postDriverFleetAddVehicles = DDriver.addVehiclesInFleet
@@ -326,7 +325,6 @@ getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
 postDriverFleetAddDriverBusRouteMapping ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
   Common.CreateDriverBusRouteMappingReq ->
   Flow APISuccess
 postDriverFleetAddDriverBusRouteMapping = DDriver.postDriverFleetAddDriverBusRouteMapping
@@ -334,7 +332,6 @@ postDriverFleetAddDriverBusRouteMapping = DDriver.postDriverFleetAddDriverBusRou
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
   Common.CreateDriversReq ->
   Flow APISuccess
 postDriverFleetAddDrivers = DDriver.postDriverFleetAddDrivers

@@ -28,16 +28,6 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
-      helperApi:
-        - POST:
-            endpoint: /fleet/addVehicles/{fleetOwnerId}
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            request:
-              type: CreateVehiclesReq
-            response:
-              type: APISuccess
 
   - POST: # AddVehicleForFleetAPI
       endpoint: /{mobileNo}/fleet/addVehicle
@@ -624,16 +614,6 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
-      helperApi:
-        - POST:
-            endpoint: /fleet/addDrivers/{fleetOwnerId}
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            request:
-              type: CreateDriversReq
-            response:
-              type: APISuccess
 
   - POST: # Add Driver Bus Route Bulk Mapping
       endpoint: /fleet/addDriverBusRouteMapping
@@ -644,16 +624,6 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
-      helperApi:
-        - POST:
-            endpoint: /fleet/addDriverBusRouteMapping/{fleetOwnerId}
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            request:
-              type: CreateDriverBusRouteMappingReq
-            response:
-              type: APISuccess
 
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
@@ -849,12 +819,12 @@ types:
     - email: Maybe Text
     - derive: "'HideSecrets"
   CreateDriversReq:
-    - recordType: NewType
     - file: FilePath
+    - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
   CreateVehiclesReq:
-    - recordType: NewType
     - file: FilePath
+    - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
     - blocked: Bool
@@ -923,8 +893,8 @@ types:
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
   CreateDriverBusRouteMappingReq:
-    - recordType: NewType
     - file: FilePath
+    - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:
