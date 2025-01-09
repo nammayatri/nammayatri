@@ -18,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data TripTransaction = TripTransaction
   { allowEndingMidRoute :: Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
     deviationCount :: Kernel.Prelude.Int,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
@@ -34,15 +35,14 @@ data TripTransaction = TripTransaction
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Text.Text,
-    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType,
-    createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))

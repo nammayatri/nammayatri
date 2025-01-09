@@ -25,22 +25,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TripTransaction.TripTransaction] -> m ())
 createMany = traverse_ create
 
-findAllTripTransactionByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.TripTransaction.TripTransaction])
+findAllTripTransactionByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.TripTransaction.TripTransaction]))
 findAllTripTransactionByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-findAllTripTransactionByDriverIdAndStatuses ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> [Domain.Types.TripTransaction.TripStatus] -> m [Domain.Types.TripTransaction.TripTransaction])
-findAllTripTransactionByDriverIdAndStatuses limit offset driverId status = do
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.status $ Se.In status
-        ]
-    ]
-    (Se.Desc Beam.createdAt)
-    limit
-    offset
 
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m (Maybe Domain.Types.TripTransaction.TripTransaction))
 findByTransactionId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -80,6 +66,7 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviationCount deviationCount,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
@@ -97,9 +84,8 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.tripCode tripCode,
       Se.Set Beam.tripEndTime tripEndTime,
       Se.Set Beam.tripStartTime tripStartTime,
+      Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNumber vehicleNumber,
-      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

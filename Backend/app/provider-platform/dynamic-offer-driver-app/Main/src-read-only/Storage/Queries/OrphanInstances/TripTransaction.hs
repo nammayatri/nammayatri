@@ -20,6 +20,7 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
       Just
         Domain.Types.TripTransaction.TripTransaction
           { allowEndingMidRoute = allowEndingMidRoute,
+            createdAt = createdAt,
             deviationCount = deviationCount,
             driverId = Kernel.Types.Id.Id driverId,
             endLocation = Storage.Queries.Transformers.Ride.mkLatLong endLocationLat endLocationLon,
@@ -36,16 +37,16 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             tripCode = tripCode,
             tripEndTime = tripEndTime,
             tripStartTime = tripStartTime,
+            updatedAt = updatedAt,
             vehicleNumber = vehicleNumber,
-            vehicleServiceTierType = vehicleServiceTierType,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            vehicleServiceTierType = vehicleServiceTierType
           }
 
 instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransaction where
   toTType' (Domain.Types.TripTransaction.TripTransaction {..}) = do
     Beam.TripTransactionT
       { Beam.allowEndingMidRoute = allowEndingMidRoute,
+        Beam.createdAt = createdAt,
         Beam.deviationCount = deviationCount,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.endLocationLat = Kernel.Prelude.fmap (.lat) endLocation,
@@ -64,8 +65,7 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.tripCode = tripCode,
         Beam.tripEndTime = tripEndTime,
         Beam.tripStartTime = tripStartTime,
+        Beam.updatedAt = updatedAt,
         Beam.vehicleNumber = vehicleNumber,
-        Beam.vehicleServiceTierType = vehicleServiceTierType,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+        Beam.vehicleServiceTierType = vehicleServiceTierType
       }

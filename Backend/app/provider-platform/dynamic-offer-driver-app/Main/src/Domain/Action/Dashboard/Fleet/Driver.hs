@@ -290,6 +290,8 @@ getDriverFleetRoutes ::
   Text ->
   Maybe LatLong ->
   Maybe Text ->
+  Int ->
+  Int ->
   Flow Common.RouteAPIResp
 getDriverFleetRoutes = DDriver.getDriverFleetRoutes
 
@@ -297,15 +299,13 @@ getDriverFleetPossibleRoutes ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  LatLong ->
+  Text ->
   Flow Common.RouteAPIResp
 getDriverFleetPossibleRoutes = DDriver.getDriverFleetPossibleRoutes
 
 postDriverFleetTripPlanner ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
-  Id Common.Driver ->
   Text ->
   Common.TripPlannerReq ->
   Flow APISuccess
@@ -316,9 +316,10 @@ getDriverFleetTripTransactions ::
   Context.City ->
   Text ->
   Id Common.Driver ->
-  Text ->
-  Maybe Int ->
-  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Int ->
+  Int ->
   Flow Common.TripTransactionResp
 getDriverFleetTripTransactions = DDriver.getDriverFleetTripTransactions
 
