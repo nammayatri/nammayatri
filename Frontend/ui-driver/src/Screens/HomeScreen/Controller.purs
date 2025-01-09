@@ -506,6 +506,8 @@ data Action = NoAction
             | StartBusTrip PrimaryButtonController.Action
             | SelectBusRoute
             | ScanQrCode
+            | WMBTripActiveAction API.TripTransactionDetails
+            | WMBEndTripModalAC PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1275,6 +1277,10 @@ eval (RideStartRemainingTime seconds status timerId) state = do
     void $ pure $ TF.clearTimerWithId timerId
     updateAndExit state { props {rideStartRemainingTime = -1}} $ NotifyDriverArrived state { props {rideStartRemainingTime = -1}} 
   else continue state { props {rideStartRemainingTime = seconds}}
+
+eval (WMBEndTripModalAC action) state = continue state
+  -- case action of
+  --   PopUpModal.OnButton1Click 
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1852,6 +1858,10 @@ eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValue
 
 
 eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+
+eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
+  -- TODO@max-keviv - changes needs to be done
+  continue state
 
 eval _ state = update state 
 

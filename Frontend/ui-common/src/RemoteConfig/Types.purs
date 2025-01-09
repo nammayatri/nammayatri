@@ -292,3 +292,13 @@ type BundleLottieConfig = {
   lottieUrl :: String
 , enable :: Boolean
 }
+
+type WhereIsMyBusConfig = 
+  { pollingConfig :: PollingConfig
+  }
+
+type PollingConfig = 
+  { delayTimeInSeconds :: Number
+  , retryCount :: Number
+  -- , delayMultiplier :: Number -- Can be kept commented for easier understanding
+  }

@@ -167,6 +167,16 @@ screen initialState (GlobalState globalState) =
           -- Polling to get the active ride details
           if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
           
+          -- -- WMB Trip Active Status
+          -- (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
+          -- case tripTransactions.tripTransactionDetails of
+          --   Just (APITypes.TripTransactionDetails tripDetails) -> do
+          --     lift $ lift $ doAff $ liftEffect $ push $ WMBTripActiveAction (APITypes.TripTransactionDetails tripDetails)
+          --   Nothing -> pure unit
+
+          -- Polling to get the WMP Trip Details
+          if (getValueToLocalStore DRIVER_STATUS == "true") then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveWMBTripDetails push 3000.0 15 else pure unit
+          
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "false" "UPCOMING" "null"
@@ -371,6 +381,19 @@ getActiveRideDetails push delayTime retryCount = do
     setValueToLocalStore IS_RIDE_ACTIVE "false"
     pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
 
+getActiveWMBTripDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
+getActiveWMBTripDetails push delayTimeInMilliSeconds retryCount =
+  if (retryCount > 0) 
+    then do
+      (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
+      case tripTransactions.tripTransactionDetails of
+        Just (APITypes.TripTransactionDetails tripDetails) -> do
+          lift $ lift $ doAff $ liftEffect $ push $ WMBTripActiveAction (APITypes.TripTransactionDetails tripDetails)
+        Nothing -> do
+          void $ lift $ lift $ delay $ Milliseconds delayTimeInMilliSeconds
+          getActiveWMBTripDetails push (delayTimeInMilliSeconds) (retryCount - 1)
+    else pure unit
+    
 
 playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
 playRideAssignedAudio tripCategory rideId push = do 
@@ -2495,8 +2518,12 @@ endRidePopView push state =
   linearLayout
     [ width MATCH_PARENT,
       height MATCH_PARENT
-    ][ PopUpModal.view (push <<< PopUpModalAction) (endRidePopUp state )]
-    -- ][ PopUpModal.view (push <<<PopUpModalAction) (waitingForDepoRespPopUp state )] -- TODO@slow-codex: change as per endTrip Status
+    ][popUpView]
+  where
+    popUpView = 
+      if (not $ HU.specialVariantsForTracking FunctionCall) then PopUpModal.view (push <<< PopUpModalAction) $ endRidePopUp state 
+      else PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state -- TODO@slow-codex: After the dashboard integration will need to configure for govt buses
+      -- waitingForDepoRespPopUp state
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =

@@ -451,3 +451,10 @@ getConfigForVariant variant config =
     "DELIVERY_BIKE" -> config.deliveryBike
     _ -> config.default
       
+-- TODO @max-keviv: Complete this config saw some duplicate whereIsMyBusConfig decide which to keep and which to delete
+-- whereIsMyBusConfig :: String -> String -> Array Int
+-- whereIsMyBusConfig city variant = do
+--   let
+--     remoteConfig = fetchRemoteConfigString "where_is_my_bus_config"
+--     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
+--     decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultCityRemoteConfig []

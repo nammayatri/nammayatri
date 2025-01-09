@@ -418,7 +418,7 @@ specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list
 -- busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes"
 
 busAvailableRoutes :: String -> String 
-busAvailableRoutes _ = "https://ee2a-65-2-105-122.ngrok-free.app/ui/wmb/availableRoutes"
+busAvailableRoutes _ = (getBaseUrl "") <> "/wmb/availableRoutes"
 
 busTripLink :: String -> String
 busTripLink _ = (getBaseUrl "") <> "/wmb/trip/link"
