@@ -94,6 +94,7 @@ import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Services.Accessor as Acc
+import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
 import Data.Lens ((^.))
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -3178,6 +3179,8 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
 chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
 chooseBusRouteModalPopup state = 
   let 
+    (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
+    vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ availableRoutesList DA.!! 0
     config' = PopUpModal.config {
       padding = Padding 16 16 16 0,
       primaryText
@@ -3191,7 +3194,7 @@ chooseBusRouteModalPopup state =
     , backgroundClickable = false
     , secondaryText
       { 
-        text = "Route/Bus Number",
+        text = StringsV2.getStringV2 LT2.route_bus_number,
         color = Color.black800,
         padding = Padding 0 0 0 0,
         margin = Margin 0 0 0 12,
@@ -3202,10 +3205,10 @@ chooseBusRouteModalPopup state =
     , whereIsMyBusConfig {
         visibility = VISIBLE,
         selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
-        busNumber = primaryTextConfig "V1" "BUS NUMBER",
-        busType = primaryTextConfig "AC" "BUS Type",
+        busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
+        busType = primaryTextConfig (vehicleDetails ^. Acc._busType) (StringsV2.getStringV2 LT2.bus_type),
         selectRouteButton = routeButtonConfig state,
-        availableRouteList = transformAvailableRouteList state
+        availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
     }
     , option1 {
       background = Color.green900
@@ -3280,9 +3283,7 @@ chooseBusRouteModalPopup state =
         viewbackground = Color.black900, 
         stroke = "1," <> Color.grey900
       }
-    transformAvailableRouteList state = 
-      case state.data.whereIsMyBusData.availableRoutes of
-        Just (API.AvailableRoutesList availableRoutesList) ->
+    transformAvailableRouteList (API.AvailableRoutesList availableRoutesList) = 
           map (\(API.AvailableRoutes route) -> 
                 let (API.StopInfo destination) = route.destination
                     (API.StopInfo source) = route.source
@@ -3293,7 +3294,6 @@ chooseBusRouteModalPopup state =
                     destination : destination.name
                   }::PopUpModal.RouteInfo )
               ) availableRoutesList
-        Nothing -> []
 
 startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 startBusTripButtonConfig state = PrimaryButton.config

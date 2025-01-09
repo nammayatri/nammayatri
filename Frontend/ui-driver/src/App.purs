@@ -500,6 +500,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_SCAN_BUS_QR HomeScreenState
                           | LINK_BUS_TRIP HomeScreenState
                           | GO_START_BUS_RIDE HomeScreenState
+                          | LINK_AND_START_BUS_RIDE HomeScreenState
                           | GO_TO_EDUCATION_SCREEN HomeScreenState
                           | WMB_END_TRIP HomeScreenState
 

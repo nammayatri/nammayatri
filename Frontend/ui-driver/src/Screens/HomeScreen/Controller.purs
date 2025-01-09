@@ -334,6 +334,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToScanBusQR ST.HomeScreenState
                     | LinkBusTrip ST.HomeScreenState
                     | StartBusRide ST.HomeScreenState
+                    | LinkAndStartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
                     | WMBEndTrip ST.HomeScreenState
 

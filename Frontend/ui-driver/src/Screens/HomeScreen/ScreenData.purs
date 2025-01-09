@@ -16,7 +16,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..))
+import Services.API (DriverProfileStatsResp(..), Status(..), BookingTypes(..), TripTransactionDetails(..), StopInfo(..), BusTripStatus(..), RouteInfo(..), LatLong(..), AvailableRoutes(..), BusVehicleDetails(..), AvailableRoutesList(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -477,3 +477,21 @@ dummyRouteInfo = RouteInfo
     lon : 0.0
   })
   }
+
+dummyBusVehicleDetails :: BusVehicleDetails
+dummyBusVehicleDetails = BusVehicleDetails
+  {
+    number : "S102"
+  , _type : "BUS_AC"
+  }
+
+dummyAvailableRoutes :: AvailableRoutes
+dummyAvailableRoutes = AvailableRoutes
+  { routeInfo : dummyRouteInfo
+  , source : dummyStopInfo
+  , destination : dummyStopInfo
+  , vehicleDetails : dummyBusVehicleDetails
+  }
+
+dummyAvailableRoutesList :: AvailableRoutesList
+dummyAvailableRoutesList = AvailableRoutesList []

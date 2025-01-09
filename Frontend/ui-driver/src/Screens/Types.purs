@@ -1103,13 +1103,13 @@ type HomeScreenData =  {
 , bus_number :: String
 , whereIsMyBusData :: WhereIsMyBusData
 }
-
+-- | Represents the current state of bus-related data
 type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
   trip :: Maybe BusTrip,
   endTripStatus :: Maybe String
 }
-
+-- Represents either a current or assigned bus trip
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
 
 type FavouritePopUp = {
@@ -3384,5 +3384,5 @@ type QrCodeScannerState = {
 }
 
 type BusQrCodeData = {
-  busNumber :: String
+  vehicleNumber :: String
 }
