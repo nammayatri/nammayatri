@@ -795,6 +795,16 @@ public class LocationUpdateService extends Service {
                                     baseHeaders.put("vt", vVariant);
                                     updateStorage("VEHICLE_VARIANT", vVariant);
                                 }
+                                // if (resp.has("onboardingVehicleCategory"))
+                                // {
+                                //     System.out.println("DEBUG: OnboardingVehicleCategory - " + resp.getString("onboardingVehicleCategory"));
+                                //     String vt = resp.getString("onboardingVehicleCategory");
+                                //     if( vt == "BUS"){
+                                //         System.out.println("DEBUG: OnboardingVehicleCategory - " + resp.getString("onboardingVehicleCategory"));
+                                //         baseHeaders.put("vt", "BUS");
+                                //         updateStorage("VEHICLE_VARIANT", "BUS");
+                                //     }
+                                // }
                             } catch (JSONException e) {
                                 e.printStackTrace();
                                 Bundle params = new Bundle();
@@ -803,7 +813,7 @@ public class LocationUpdateService extends Service {
                             }
                         }
                         Log.d(LOG_TAG, "LocationPayload Size - " + locationPayload.length());
-
+                        // System.out.println("DEBUG: baseHeaders" + baseHeaders);
                         MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
 
                         Log.d(LOG_TAG, "DriverUpdateLoc API  RespCode - " + apiResponse.getStatusCode() + " RespBody - " + apiResponse.getResponseBody());
@@ -813,6 +823,7 @@ public class LocationUpdateService extends Service {
                             if (respCode >= 400 && respCode < 500)
                                 updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
+                            // System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + baseHeaders);
                             try {
                                 JSONObject errorPayload = new JSONObject(apiResponse.getResponseBody());
                                 String errorCode = errorPayload.optString("errorCode", "");

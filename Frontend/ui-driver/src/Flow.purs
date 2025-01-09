@@ -2465,6 +2465,8 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
       let _ = spy "activeBusRidePatch" mbTripTransactionDetails
       case mbTripTransactionDetails of
         Just (API.TripTransactionDetails tripDetails) -> do 
+          -- updateRecentBusRide
+          void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
           if tripDetails.status == API.TRIP_ASSIGNED then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
             response <- lift $ lift $ Remote.getAvailableRoutes tripDetails.vehicleNumber
@@ -3868,7 +3870,7 @@ updateDriverDataToStates = do
     Nothing -> pure unit
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
   let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
-      (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+      (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
       showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
       dbClientVersion = getDriverInfoResp.clientVersion
       dbBundleVersion = getDriverInfoResp.bundleVersion
@@ -4994,5 +4996,5 @@ logBusRideStart = do
 -- updateRecentBusRide :: HomeScreenState -> FlowBT String Unit
 -- updateRecentBusRide state = do
 --   case state.data.whereIsMyBusData.trip of
---     Just _ -> pure unit
---     Nothing -> getRecentBusRideFromCache 
+--     Just (ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)) -> updateRecentBusRideToCache tripDetails
+--     Nothing -> pure unit 

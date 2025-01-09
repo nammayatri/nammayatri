@@ -44,7 +44,10 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), split, take) as DS
+import Services.Accessor (_stopLat, _stopLong, _stopName, _routeEndPoint, _lon)
+import Services.API as API
 import Data.String as DS
+import Data.Lens ((^.))
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
@@ -1268,6 +1271,25 @@ getSrcDestConfig state =
       source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
       destination : fromMaybe "" state.data.activeRide.nextStopAddress
     }
+  else if state.props.currentStage == ST.RideTracking then
+    case state.data.whereIsMyBusData.trip of
+        Just (ST.CURRENT_TRIP (API.TripTransactionDetails trip)) -> do
+          {
+            srcLat : state.data.currentDriverLat,
+            srcLon : state.data.currentDriverLon,
+            destLat : (trip.routeInfo ^. _routeEndPoint) ^. _stopLat,
+            destLon : (trip.routeInfo ^. _routeEndPoint) ^. _lon,
+            source : trip.source ^. _stopName,
+            destination : trip.destination ^. _stopName
+          }
+        _ -> {
+          srcLat : 0.0,
+          srcLon : 0.0,
+          destLat : 0.0,
+          destLon : 0.0,
+          source : "",
+          destination : ""
+        }
   else {
       srcLat : state.data.activeRide.src_lat,
       srcLon : state.data.activeRide.src_lon,
