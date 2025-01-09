@@ -332,7 +332,6 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | GoToScanBusQR ST.HomeScreenState
-                    | LinkBusTrip ST.HomeScreenState
                     | StartBusRide ST.HomeScreenState
                     | LinkAndStartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
@@ -1845,11 +1844,11 @@ eval (ChooseBusRoute action) state =
     PopUpModal.SelectRoute index busRouteNumber ->
       let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
           newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
-      in updateAndExit newState $ LinkBusTrip newState
+      in continue newState
     PopUpModal.SelectRouteButton PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
     PopUpModal.OnButton1Click -> do
-      exit $ StartBusRide state
-    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = if state.props.whereIsMyBusConfig.selectRouteStage then true else false}}}
+      exit $ LinkAndStartBusRide state
+    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = state.props.whereIsMyBusConfig.selectRouteStage}}}
     PopUpModal.OnButton2Click -> do
       continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
     _ -> update state

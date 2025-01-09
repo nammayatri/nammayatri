@@ -3181,6 +3181,8 @@ chooseBusRouteModalPopup state =
   let 
     (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
     vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ availableRoutesList DA.!! 0
+    selectedRouteTitle = selectRouteNumberTitle state
+    selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
     config' = PopUpModal.config {
       padding = Padding 16 16 16 0,
       primaryText
@@ -3207,7 +3209,7 @@ chooseBusRouteModalPopup state =
         selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
         busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
         busType = primaryTextConfig (vehicleDetails ^. Acc._busType) (StringsV2.getStringV2 LT2.bus_type),
-        selectRouteButton = routeButtonConfig state,
+        selectRouteButton = routeButtonConfig selectedRouteTitle selectedRouteColor,
         availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
     }
     , option1 {
@@ -3261,11 +3263,11 @@ chooseBusRouteModalPopup state =
           margin = Margin 0 0 0 24,
           id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
       }
-    routeButtonConfig state = 
+    routeButtonConfig selectedRouteTitle selectedRouteColor = 
       PrimaryButton.config {
         textConfig {
-          textFromHtml = if isJust state.props.whereIsMyBusConfig.selectedRoute then Just $ "<span style='color:#000000;'><strong>S-102</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>Howrah Station → Airport</span>" else  Just "<b>Select Route Number</b>",
-          color = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900,
+          textFromHtml = selectedRouteTitle,
+          color = selectedRouteColor,
           textStyle = SubHeading3,
           gravity = CENTER_VERTICAL,
           width = V $ (EHC.screenWidth unit) - 100
@@ -3294,6 +3296,11 @@ chooseBusRouteModalPopup state =
                     destination : destination.name
                   }::PopUpModal.RouteInfo )
               ) availableRoutesList
+    selectRouteNumberTitle state = 
+        case state.props.whereIsMyBusConfig.selectedRoute of
+          Just (API.AvailableRoutes selectedRoute) -> Just $ 
+            "<span style='color:#000000;'><strong>" <> selectedRoute.routeInfo ^. Acc._routeCode <> "</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>" <> selectedRoute.source  ^. Acc._stopName <> "  →  " <> selectedRoute.destination ^. Acc._stopName <> "</span>"
+          Nothing -> Just $ "<b>" <> StringsV2.getStringV2 LT2.select_route_number <> "</b>"
 
 startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 startBusTripButtonConfig state = PrimaryButton.config

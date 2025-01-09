@@ -3585,7 +3585,6 @@ recentBusRideView push state =
           , cornerRadius 16.0
           , padding $ Padding 6 6 6 16
           , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
-          -- , visibility $ boolToVisibility $ (tripDetails.status == TRIP_COMPLETED && not HU.isGovtBusDriver) || (tripDetails.status == TRIP_ASSIGNED && HU.isGovtBusDriver)
           ][
             textView $
             [ text title
@@ -3678,21 +3677,15 @@ recentBusRideView push state =
               [
                 textView $
                 [ text $ sourceName
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy,
                 textView $
                 [ text $ "  →  "
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy,
                 textView $
                 [ text $ destinationName
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy
               ],
               imageView
@@ -3703,16 +3696,6 @@ recentBusRideView push state =
               ]
             ],
             PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
-            -- primaryButton
-            -- [ text "Start Ride"
-            -- , width MATCH_PARENT
-            -- , height $ V 56
-            -- , cornerRadius 28.0
-            -- , background Color.green500
-            -- , color Color.white900
-            -- , textSize FontSize.a_18
-            -- , fontStyle $ FontStyle.bold LanguageStyle
-            -- , onClick push $ const StartRide
-            -- ]
+
           ]
           

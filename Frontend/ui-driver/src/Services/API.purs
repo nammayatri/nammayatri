@@ -5438,19 +5438,20 @@ instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where enc
 
 --------------------------------------------------------- Where Is My BUS ---------------------------------------------------------
 
-newtype TripLinkReq = TripLinkReq
-  { vehicleNumber :: String
+newtype PrivateTripStartReq = PrivateTripStartReq
+  { vehicleNumberHash :: String
   , routeCode :: String
+  , location :: LatLong
   }
 
-derive instance genericTripLinkReq :: Generic TripLinkReq _
-instance standardEncodeTripLinkReq :: StandardEncode TripLinkReq where standardEncode (TripLinkReq req) = standardEncode req
-instance showTripLinkReq :: Show TripLinkReq where show = genericShow
-instance decodeTripLinkReq :: Decode TripLinkReq where decode = defaultDecode
-instance encodeTripLinkReq :: Encode TripLinkReq where encode = defaultEncode
+derive instance genericPrivateTripStartReq :: Generic PrivateTripStartReq _
+instance standardEncodePrivateTripStartReq :: StandardEncode PrivateTripStartReq where standardEncode (PrivateTripStartReq req) = standardEncode req
+instance showPrivateTripStartReq :: Show PrivateTripStartReq where show = genericShow
+instance decodePrivateTripStartReq :: Decode PrivateTripStartReq where decode = defaultDecode
+instance encodePrivateTripStartReq :: Encode PrivateTripStartReq where encode = defaultEncode
 
-instance makeTripLinkReq :: RestEndpoint TripLinkReq where
-  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.busTripLink "") headers reqBody Nothing
+instance makePrivateTripStartReq :: RestEndpoint PrivateTripStartReq where
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.busTripStart Nothing) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
                               ----------------------------------------------------
@@ -5594,7 +5595,7 @@ instance decodeTripStartReq :: Decode TripStartReq where decode = defaultDecode
 instance encodeTripStartReq :: Encode TripStartReq where encode = defaultEncode
 
 instance makeTripStartReq :: RestEndpoint TripStartReq where
-    makeRequest reqBody@(TripStartReq rideId (BusLocation rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.busTripStart rideId) headers reqBody Nothing
+    makeRequest reqBody@(TripStartReq tripId (BusLocation rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.busTripStart (Just tripId)) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 data TripEndReq = TripEndReq String BusLocation
