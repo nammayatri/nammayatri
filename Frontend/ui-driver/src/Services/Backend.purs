@@ -1938,15 +1938,17 @@ mkStartTripReq tripTransactionId lat lon =
     in TripStartReq tripTransactionId (BusLocation {location : latlong})
 
 -- End Trip
-endTrip :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
-endTrip tripTransactionId latlong = do
+endTrip :: String -> Number -> Number -> Flow GlobalState (Either ErrorResponse TripEndResp)
+endTrip tripTransactionId lat lon = do
+  let latlong = LatLong { lat : lat, lon : lon }
   headers <- getHeaders "" false
   withAPIResult (EP.busTripEnd tripTransactionId) unwrapResponse $ callAPI headers (mkEndTripReq tripTransactionId latlong)
   where
     unwrapResponse (x) = x
 
-endTripBT :: String -> LatLong -> FlowBT String ApiSuccessResult
-endTripBT tripTransactionId latlong = do
+endTripBT :: String -> Number -> Number -> FlowBT String TripEndResp
+endTripBT tripTransactionId lat lon = do
+  let latlong = LatLong { lat : lat, lon : lon }
   headers <- getHeaders' "" false
   withAPIResultBT (EP.busTripEnd tripTransactionId) identity errorHandler (lift $ lift $ callAPI headers (mkEndTripReq tripTransactionId latlong))
   where

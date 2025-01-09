@@ -335,6 +335,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | LinkBusTrip ST.HomeScreenState
                     | StartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
+                    | WMBEndTrip ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -1278,9 +1279,12 @@ eval (RideStartRemainingTime seconds status timerId) state = do
     updateAndExit state { props {rideStartRemainingTime = -1}} $ NotifyDriverArrived state { props {rideStartRemainingTime = -1}} 
   else continue state { props {rideStartRemainingTime = seconds}}
 
-eval (WMBEndTripModalAC action) state = continue state
-  -- case action of
-  --   PopUpModal.OnButton1Click 
+eval (WMBEndTripModalAC action) state = do
+  case action of
+    PopUpModal.OnButton1Click -> do
+      exit $ WMBEndTrip state
+    PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
+    _ -> continue state
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1858,6 +1862,8 @@ eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValue
 
 
 eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+
+eval (RideTrackingModalAction (RideTrackingModal.EndRide)) state = continue state {props{endRidePopUp = true}}
 
 eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
   -- TODO@max-keviv - changes needs to be done

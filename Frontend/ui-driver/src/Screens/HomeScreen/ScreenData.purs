@@ -205,7 +205,8 @@ initData =
       , bus_number : "" 
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
-          trip : Nothing
+          trip : Nothing, 
+          endTripStatus : Nothing
           }
     }
   , props:

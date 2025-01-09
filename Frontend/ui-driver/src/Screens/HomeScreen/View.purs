@@ -127,6 +127,7 @@ import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Screens.HomeScreen.ScreenData
+import LocalStorage.Cache (getValueFromCache)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -383,7 +384,7 @@ getActiveRideDetails push delayTime retryCount = do
 
 getActiveWMBTripDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
 getActiveWMBTripDetails push delayTimeInMilliSeconds retryCount =
-  if (retryCount > 0) 
+  if (retryCount > 0 && (getValueToLocalStore DRIVER_STATUS == "true")) 
     then do
       (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
       case tripTransactions.tripTransactionDetails of
@@ -2522,7 +2523,11 @@ endRidePopView push state =
   where
     popUpView = 
       if (not $ HU.specialVariantsForTracking FunctionCall) then PopUpModal.view (push <<< PopUpModalAction) $ endRidePopUp state 
-      else PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state -- TODO@slow-codex: After the dashboard integration will need to configure for govt buses
+      else do
+        case (getValueToLocalStore WMB_END_TRIP_STATUS) of 
+          "SUCCESS" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
+          "WAITING_FOR_ADMIN_APPROVAL" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
+          _ -> PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state
       -- waitingForDepoRespPopUp state
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w

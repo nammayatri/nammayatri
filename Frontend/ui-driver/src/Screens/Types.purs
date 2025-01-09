@@ -1106,7 +1106,8 @@ type HomeScreenData =  {
 
 type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
-  trip :: Maybe BusTrip
+  trip :: Maybe BusTrip,
+  endTripStatus :: Maybe String
 }
 
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
