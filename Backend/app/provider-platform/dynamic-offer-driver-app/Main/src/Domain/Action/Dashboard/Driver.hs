@@ -175,7 +175,6 @@ import Kernel.External.Encryption
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude hiding (toList)
-import Kernel.ServantMultipart
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -1166,19 +1165,13 @@ instance FromNamedRecord VehicleDetailsCSVRow where
       <*> r .: "vehicle_manufacturer"
       <*> r .: "date_of_registration"
 
-instance FromMultipart Tmp Common.CreateVehiclesReq where
-  fromMultipart form = do
-    Common.CreateVehiclesReq
-      <$> fmap fdPayload (lookupFile "file" form)
-
-instance ToMultipart Tmp Common.CreateVehiclesReq where
-  toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
-
-addVehiclesInFleet :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateVehiclesReq -> Flow APISuccess
-addVehiclesInFleet merchantShortId opCity fleetOwnerId req = do
+addVehiclesInFleet :: ShortId DM.Merchant -> Context.City -> Common.CreateVehiclesReq -> Flow APISuccess
+addVehiclesInFleet merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetOwnerId <- case req.fleetOwnerId of
+    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Just id -> pure id
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
   mapM_ (registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId) rcReq
@@ -1269,26 +1262,20 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> r .: "driver_mobile_number"
       <*> r .: "driver_onboarding_vehicle_category"
 
-instance FromMultipart Tmp Common.CreateDriversReq where
-  fromMultipart form = do
-    Common.CreateDriversReq
-      <$> fmap fdPayload (lookupFile "file" form)
-
-instance ToMultipart Tmp Common.CreateDriversReq where
-  toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
-
-postDriverFleetAddDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateDriversReq -> Flow APISuccess
-postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
+postDriverFleetAddDrivers :: ShortId DM.Merchant -> Context.City -> Common.CreateDriversReq -> Flow APISuccess
+postDriverFleetAddDrivers merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetOwnerId <- case req.fleetOwnerId of
+    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Just id -> pure id
   driverDetails <- readCsv req.file
   when (length driverDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go" -- TODO: Configure the limit
-  mapM_ (processDriver merchantOpCity) driverDetails
+  mapM_ (processDriver merchantOpCity fleetOwnerId) driverDetails
   pure Success
   where
-    processDriver :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    processDriver moc req_ = do
+    processDriver :: DMOC.MerchantOperatingCity -> Text -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver moc fleetOwnerId req_ = do
       let driverMobile = req_.driverMobileNumber
           authData =
             DReg.AuthReq
@@ -1577,19 +1564,13 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
       <*> r .: "route_code"
       <*> r .: "round_trip_freq"
 
-instance FromMultipart Tmp Common.CreateDriverBusRouteMappingReq where
-  fromMultipart form = do
-    Common.CreateDriverBusRouteMappingReq
-      <$> fmap fdPayload (lookupFile "file" form)
-
-instance ToMultipart Tmp Common.CreateDriverBusRouteMappingReq where
-  toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
-
-postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> Context.City -> Text -> Common.CreateDriverBusRouteMappingReq -> Flow APISuccess
-postDriverFleetAddDriverBusRouteMapping merchantShortId opCity fleetOwnerId req = do
+postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> Context.City -> Common.CreateDriverBusRouteMappingReq -> Flow APISuccess
+postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetOwnerId <- case req.fleetOwnerId of
+    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Just id -> pure id
   driverBusRouteDetails <- readCsv req.file
   when (length driverBusRouteDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go"
   let groupedDetails = groupBy (\a b -> a.driverId == b.driverId) $ sortOn (.driverId) driverBusRouteDetails
