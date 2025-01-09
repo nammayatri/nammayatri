@@ -234,6 +234,7 @@ import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.Status as QDocStatus
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -1294,11 +1295,12 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
       QDriverInfo.updateOnboardingVehicleCategory (Just req_.driverOnboardingVehicleCategory) person.id
-      void $ WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
-      fork "Sending Fleet Consent SMS to Driver" $ do
-        fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
-        FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
-        sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
+      WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
+        >>= \isAssociated -> unless isAssociated $ do
+          fork "Sending Fleet Consent SMS to Driver" $ do
+            fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
+            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
+            sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     readCsv csvFile = do
       csvData <- L.runIO $ BS.readFile csvFile
@@ -1344,16 +1346,14 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
 
-getDriverFleetRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Maybe LatLong -> Maybe Text -> Flow Common.RouteAPIResp
-getDriverFleetRoutes merchantShortId opCity _fleetOwnerId mbCurrentLocation mbSearchString = do
+getDriverFleetRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Maybe LatLong -> Maybe Text -> Int -> Int -> Flow Common.RouteAPIResp
+getDriverFleetRoutes merchantShortId opCity _fleetOwnerId mbCurrentLocation mbSearchString limit offset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  let mbLimit = Just 100
-      mbOffset = Just 0
-      vehicleType = DVC.BUS
+  let vehicleType = DVC.BUS
   allRoutes <- case mbSearchString of
-    Just searchString -> QRoute.findAllMatchingRoutes (Just searchString) (fmap toInteger mbLimit) (fmap toInteger mbOffset) merchantOpCity.id vehicleType
-    Nothing -> QRoute.findAllByMerchantOperatingCityAndVehicleType mbLimit mbOffset merchantOpCity.id vehicleType
+    Just searchString -> QRoute.findAllMatchingRoutes (Just searchString) (Just $ toInteger limit) (Just $ toInteger offset) merchantOpCity.id vehicleType
+    Nothing -> QRoute.findAllByMerchantOperatingCityAndVehicleType (Just limit) (Just offset) merchantOpCity.id vehicleType
   listItem <- case mbCurrentLocation of
     Nothing -> return $ map (\route -> createRouteRespItem route Nothing) allRoutes
     Just startLocation -> do
@@ -1362,16 +1362,21 @@ getDriverFleetRoutes merchantShortId opCity _fleetOwnerId mbCurrentLocation mbSe
   let summary = Common.Summary {totalCount = 10000, count = length listItem}
   pure $ Common.RouteAPIResp {listItem = listItem, summary = summary}
 
-getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> Context.City -> Text -> LatLong -> Flow Common.RouteAPIResp
-getDriverFleetPossibleRoutes merchantShortId opCity _fleetOwnerId startLocation = do
+getDriverFleetPossibleRoutes :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.RouteAPIResp
+getDriverFleetPossibleRoutes merchantShortId opCity _fleetOwnerId startStopCode = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  let mbLimit = Just 100
-      mbOffset = Just 0
-  allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType mbLimit mbOffset merchantOpCity.id DVC.BUS
-  sortedRoutesWithDistance <- getRoutesByLocation merchant.id merchantOpCity.id startLocation allRoutes
-  let listItem = map (\rData -> createRouteRespItem rData.route rData.distance) sortedRoutesWithDistance
-      summary = Common.Summary {totalCount = 10000, count = length listItem}
+  _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  now <- getCurrentTime
+  let day = dayOfWeek (utctDay now)
+  possibleRoutes <- QRTSM.findAllByStopCodeAndStopSequence startStopCode 1 1 day
+  listItem <-
+    mapM
+      ( \rtsmData -> do
+          route <- QRoute.findByRouteCode rtsmData.routeCode >>= fromMaybeM (InternalError "Route Code Not Found")
+          pure $ createRouteRespItem route Nothing
+      )
+      possibleRoutes
+  let summary = Common.Summary {totalCount = 10000, count = length listItem}
   pure $ Common.RouteAPIResp {listItem = listItem, summary = summary}
 
 data RouteData = RouteData
@@ -1434,11 +1439,11 @@ getRoutesByLocation merchantId merchantOpCityId origin routes_ = do
           route = route
         }
 
-getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Maybe Int -> Maybe Int -> Flow Common.TripTransactionResp
-getDriverFleetTripTransactions merchantShortId opCity _fleetOwnerId reqDriverId _vehilceNo mbLimit mbOffset = do
+getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe UTCTime -> Maybe UTCTime -> Int -> Int -> Flow Common.TripTransactionResp
+getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo limit offset = do
   merchant <- findMerchantByShortId merchantShortId
-  _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  tripTransactions <- QTT.findAllTripTransactionByDriverIdAndStatuses mbLimit mbOffset (cast reqDriverId) [IN_PROGRESS, TRIP_ASSIGNED]
+  _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Just limit) (Just offset) (cast driverId) mbFrom mbTo
   let trips = map buildTripTransactionDetails tripTransactions
       summary = Common.Summary {totalCount = 10000, count = length trips}
   pure Common.TripTransactionResp {trips = trips, totalTrips = length tripTransactions, summary = summary}
@@ -1470,12 +1475,12 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId veh
   QVehicle.upsert vehicle
   return vehicle
 
-postDriverFleetTripPlanner :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Text -> Common.TripPlannerReq -> Flow APISuccess
-postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId driverId vehicleNumber req = do
+postDriverFleetTripPlanner :: ShortId DM.Merchant -> Context.City -> Text -> Common.TripPlannerReq -> Flow APISuccess
+postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  vehicle <- linkVehicleToDriver driverId merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId driverId vehicle req.trips
+  vehicle <- linkVehicleToDriver req.driverId merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
+  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicle req.trips
   pure Success
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> DVeh.Vehicle -> [Common.TripDetails] -> Flow ()
@@ -1514,7 +1519,6 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
 
     mkTransaction :: Text -> Text -> Flow DTT.TripTransaction
     mkTransaction routeCode endStopCode = do
-      vehicleServiceTierType <- listToMaybe vehicle.selectedServiceTiers & fromMaybeM (InternalError "No Vehicle Service Tier Type Associated to Vehicle.")
       transactionId <- generateGUID
       now <- getCurrentTime
       return $
@@ -1533,7 +1537,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             routeCode = routeCode,
             tripCode = Nothing,
             vehicleNumber = vehicle.registrationNo,
-            vehicleServiceTierType = vehicleServiceTierType,
+            vehicleServiceTierType = DV.castVariantToServiceTier vehicle.variant,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,

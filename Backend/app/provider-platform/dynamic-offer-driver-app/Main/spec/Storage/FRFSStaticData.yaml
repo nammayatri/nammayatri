@@ -192,7 +192,11 @@ RouteTripStopMapping:
     findByRouteCode:
       kvFunction: findAllWithKV
       where: routeCode
-    findALLByRouteCodeForStops:
+    findAllByRouteCodeForStops:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, tripSequenceNum, scheduledDay]
+    findAllByStopCodeAndStopSequence:
+      kvFunction: findAllWithKV
+      where:
+        and: [stopCode, stopSequenceNum, tripSequenceNum, scheduledDay]

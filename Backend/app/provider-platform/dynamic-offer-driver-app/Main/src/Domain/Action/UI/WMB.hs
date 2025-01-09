@@ -11,7 +11,7 @@ module Domain.Action.UI.WMB
     postWmbTripEnd,
     getWmbTripList,
     postFleetConsent,
-    getWmbFleetconfig,
+    getFleetConfig,
     getWmbRouteDetails,
   )
 where
@@ -468,18 +468,17 @@ buildBusTripInfo vehicleNumber routeCode destinationLocation =
 buildRouteInfo :: Route -> RouteInfo
 buildRouteInfo Route {..} = RouteInfo {..}
 
-getWmbFleetconfig ::
+getFleetConfig ::
   ( ( Maybe (Id Person),
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Text ->
     Flow API.Types.UI.WMB.FleetConfigData
   )
-getWmbFleetconfig (mbDriverId, _, _) fleetOwnerId = do
+getFleetConfig (mbDriverId, _, _) = do
   driverId <- fromMaybeM (InternalError "Driver id not found") mbDriverId
-  WMB.checkFleetDriverAssociation driverId (Id fleetOwnerId) >>= \isAssociated -> unless isAssociated (throwError $ InternalError "Fleet-driver association not found")
-  fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet Config Info not found")
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (InvalidRequest "No Active Fleet Associated")
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet Config Info not found")
   pure $
     FleetConfigData
       { allowedEndingMidRoute = fleetConfig.allowEndingMidRoute,
@@ -500,9 +499,9 @@ getWmbRouteDetails (_, _, _) routeCode = do
   let waypoints = case route.polyline of
         Just polyline -> Just (KEPP.decode polyline)
         Nothing -> Nothing
-  time <- getCurrentTime
-  let day = dayOfWeek (utctDay time)
-  stops <- QRTSM.findALLByRouteCodeForStops routeCode 1 day
+  now <- getCurrentTime
+  let day = dayOfWeek (utctDay now)
+  stops <- QRTSM.findAllByRouteCodeForStops routeCode 1 day
   let stopInfos = map (\stop -> StopInfo (stop.stopName) (stop.stopCode) (stop.stopPoint)) (sortBy (EHS.comparing stopSequenceNum) stops)
   pure $
     RouteDetails

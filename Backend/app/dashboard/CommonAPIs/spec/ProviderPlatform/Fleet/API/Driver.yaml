@@ -87,7 +87,7 @@ apis:
               type: DriverRequestResp
 
   - POST: # RespondDriverRequestsAPI
-      endpoint: /fleet/respond/driverRequest/
+      endpoint: /fleet/respond/driverRequest
       auth: ApiAuthV2
       request:
         type: RequestRespondReq
@@ -517,6 +517,9 @@ apis:
       query:
         - mbCurrentLocation: LatLong
         - mbSearchString: Text
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
       response:
         type: RouteAPIResp
       migrate:
@@ -530,6 +533,9 @@ apis:
             query:
               - mbCurrentLocation: LatLong
               - mbSearchString: Text
+            mandatoryQuery:
+              - limit: Int
+              - offset: Int
             response:
               type: RouteAPIResp
 
@@ -537,7 +543,7 @@ apis:
       endpoint: /fleet/possibleRoutes
       auth: ApiAuthV2
       mandatoryQuery:
-        startLocation: LatLong
+        startStopCode: Text
       response:
         type: RouteAPIResp
       migrate:
@@ -549,16 +555,13 @@ apis:
             params:
               fleetOwnerId: Text
             mandatoryQuery:
-              startLocation: LatLong
+              startStopCode: Text
             response:
               type: RouteAPIResp
 
   - POST:
-      endpoint: /fleet/tripPlanner/{driverId}/{vehicleNo}
+      endpoint: /fleet/tripPlanner
       auth: ApiAuthV2
-      params:
-        driverId: Id Driver
-        vehicleNo: Text
       request:
         type: TripPlannerReq
       response:
@@ -567,41 +570,43 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_PLANNER_API
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/fleet/tripPlanner/{driverId}/{vehicleNo}
+            endpoint: /{fleetOwnerId}/fleet/tripPlanner
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
-              driverId: Id Driver
-              vehicleNo: Text
             request:
               type: TripPlannerReq
             response:
               type: APISuccess
 
   - GET:
-      endpoint: /fleet/trip/transactions/{driverId}/{vehicleNo}
+      endpoint: /fleet/trip/transactions/{driverId}
       auth: ApiAuthV2
       params:
         driverId: Id Driver
-        vehicleNo: Text
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
       query:
-        - mbLimit: Int
-        - mbOffset: Int
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
       response:
         type: TripTransactionResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}/{vehicleNo}
+            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
               driverId: Id Driver
-              vehicleNo: Text
+            mandatoryQuery:
+              - limit: Int
+              - offset: Int
             query:
-              - mbLimit: Int
-              - mbOffset: Int
+              - mbFrom: UTCTime
+              - mbTo: UTCTime
             response:
               type: TripTransactionResp
 

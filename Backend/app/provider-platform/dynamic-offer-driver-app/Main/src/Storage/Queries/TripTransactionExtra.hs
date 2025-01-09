@@ -61,3 +61,18 @@ findAllTripTransactionByDriverIdActiveStatus driverId = do
       (Just limitVal)
       (Just offsetVal)
   pure transactions
+
+findAllTripTransactionByDriverIdWithinCreationRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Int -> Kernel.Prelude.Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m ([Domain.Types.TripTransaction.TripTransaction]))
+findAllTripTransactionByDriverIdWithinCreationRange limit offset driverId mbFrom mbTo = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+        )
+    ]
+    (Se.Desc BeamT.createdAt)
+    limit
+    offset

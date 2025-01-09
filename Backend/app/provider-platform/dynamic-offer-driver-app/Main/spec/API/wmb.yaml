@@ -126,14 +126,6 @@ apis:
       response:
         type: ActiveTripTransaction
 
-  - GET: # Retrieve the fleet config information
-      endpoint: /wmb/fleetconfig/{fleetOwnerId}
-      auth: TokenAuth PROVIDER_TYPE
-      params:
-        fleetOwnerId: Text
-      response:
-        type: FleetConfigData
-
   - GET: # Retrieve the route details
       endpoint: /wmb/route/{routeCode}/details
       auth: TokenAuth PROVIDER_TYPE
@@ -195,3 +187,9 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: APISuccess
+
+  - GET: # Retrieve the fleet config information
+      endpoint: /fleet/config
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FleetConfigData
