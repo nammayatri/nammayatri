@@ -155,6 +155,9 @@ userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
 onCall :: String -> String
 onCall _ = (getBaseUrl "38") <> "/callEvent"
 
+voipCall :: String -> String
+voipCall _ = (getBaseUrl "55") <> "/call/voip"
+
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
 

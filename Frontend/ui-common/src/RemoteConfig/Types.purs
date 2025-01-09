@@ -326,3 +326,14 @@ type InvoiceConfig = {
 }
 
 type DriverInvoiceConfigVariantLevel = VariantLevelRemoteConfig (Maybe InvoiceConfig)
+
+type VoipConfig = {
+  customer :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  },
+  driver :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  }
+}

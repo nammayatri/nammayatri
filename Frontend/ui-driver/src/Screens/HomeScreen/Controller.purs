@@ -63,7 +63,7 @@ import Data.Functor
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5)
+import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
@@ -78,6 +78,8 @@ import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
 import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
 import JBridge as JB
+import Helpers.API as HelpersAPI
+import Debug (spy)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as LT
 import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
@@ -88,6 +90,7 @@ import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, 
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import RemoteConfig as RC
+import RemoteConfig.Utils (getDriverVoipConfig)
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
@@ -141,6 +144,7 @@ import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
+import Presto.Core.Types.API (ErrorResponse(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -496,6 +500,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | VOIPCallBack String String String Int Int String String String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1102,11 +1107,25 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
   else do
     let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails else state.data.activeRide.exoPhone
     let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
-    updateWithCmdAndExit state [ do
-      void $ pure $ showDialer exophoneNumber false
-      _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
-      pure NoAction
-      ] $ CallCustomer state exophoneNumber
+    let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+    if (voipConfig.driver.enableVoipCalling) then do
+      let customerCuid = state.data.activeRide.id
+      continueWithCmd state [ do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+          if (not (DS.null customerCuid)) then do
+            push <- liftFlow $ getPushFn Nothing "HomeScreen"
+            void $ liftFlow $ runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
+            pure unit
+          else pure unit
+        pure NoAction
+      ]
+
+    else do
+      updateWithCmdAndExit state [ do
+        void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
+        _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+        pure NoAction
+        ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
   let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}} 
@@ -1202,11 +1221,23 @@ eval ScrollToBottom state = do
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = (length (trim value)) >= 1}}
 
-eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
-  pure NoAction
-  ]
+eval (ChatViewActionController (ChatView.Call)) state = do
+  let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
+  let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  if (voipConfig.driver.enableVoipCalling) then do
+      let customerCuid = state.data.activeRide.id
+      continueWithCmd state [ do
+        when (not (DS.null customerCuid)) do
+          push <-  getPushFn Nothing "HomeScreen"
+          runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
+        pure NoAction
+      ]
+  else
+    continueWithCmd state [ do
+      _ <- pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
+      _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
+      pure NoAction
+    ]
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -1790,7 +1821,26 @@ eval HideBusOnline state = continue state { props { setBusOnline = false } }
 eval (BusNumber val) state = do
   let newState = state {data = state.data { bus_number = DS.toUpper val }}
   continue newState
- 
+
+eval (VOIPCallBack callId status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+  let req = {
+      callId : callId,
+      callStatus : status,
+      rideId : rideId,
+      errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,
+      userType : if (driverFlag == 1) then "DRIVER" else "RIDER",
+      networkType : networkType,
+      networkQuality : networkStrength,
+      merchantId : merchantId,
+      merchantOperatingCity : getValueToLocalStore DRIVER_LOCATION
+    }
+  continueWithCmd state [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+      resp :: (Either ErrorResponse API.ApiSuccessResult) <-  HelpersAPI.callApi $ API.VoipCallReq req
+      pure unit
+    pure NoAction
+  ]
+
 eval (ParcelIntroductionPopup action) state = do
   let newState = state { props { showParcelIntroductionPopup = false } }
       city = getValueToLocalStore DRIVER_LOCATION

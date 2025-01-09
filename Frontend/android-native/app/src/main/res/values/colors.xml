@@ -31,4 +31,5 @@
     <color name="turquoise">#42B8BA</color>
     <color name="turquoise10">#1a42b8ba</color>
     <color name="black">#111112</color>
+    <color name="colorVoipBackground">#14171F</color>
 </resources>
