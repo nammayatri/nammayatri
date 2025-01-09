@@ -206,7 +206,8 @@ initData =
       , whereIsMyBusData : { 
           availableRoutes : Nothing,
           trip : Nothing, 
-          endTripStatus : Nothing
+          endTripStatus : Nothing,
+          lastCompletedTrip : Nothing
           }
     }
   , props:
@@ -491,6 +492,7 @@ dummyAvailableRoutes = AvailableRoutes
   , source : dummyStopInfo
   , destination : dummyStopInfo
   , vehicleDetails : dummyBusVehicleDetails
+  , roundRouteCode : Nothing
   }
 
 dummyAvailableRoutesList :: AvailableRoutesList

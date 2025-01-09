@@ -3570,8 +3570,10 @@ recentBusRideView push state =
   let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
       Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> assignedTripView tripDetails
-      _ -> linearLayout[][]
-      -- Nothing -> 
+      Just _ -> linearLayout[][]
+      Nothing -> case state.data.whereIsMyBusData.lastCompletedTrip of
+        Just (TripTransactionDetails tripDetails) -> assignedTripView tripDetails
+        Nothing -> linearLayout[][]
   where
     assignedTripView tripDetails = 
       let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"

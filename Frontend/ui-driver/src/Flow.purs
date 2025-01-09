@@ -32,6 +32,7 @@ import Domain.Payments (PaymentStatus(..))
 import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
+import Control.Alt ((<|>))
 import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -2465,7 +2466,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
       let _ = spy "activeBusRidePatch" mbTripTransactionDetails
       case mbTripTransactionDetails of
         Just (API.TripTransactionDetails tripDetails) -> do 
-          -- updateRecentBusRide
+          void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
           void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
           if tripDetails.status == API.TRIP_ASSIGNED then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
@@ -2480,7 +2481,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
           else (pure unit)
-        Nothing -> pure unit
+        Nothing -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen}})
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -2582,8 +2583,10 @@ homeScreenFlow = do
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    when (not $ HU.specialVariantsForTracking FunctionCall) $ updateBannerAndPopupFlags  
-    -- updateRecentBusRide
+    if (not $ HU.specialVariantsForTracking FunctionCall) 
+      then updateBannerAndPopupFlags 
+      else updateRecentBusView globalState.homeScreen
+
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration" 
@@ -2934,6 +2937,8 @@ homeScreenFlow = do
         "USER_FAVOURITE_DRIVER" -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
           homeScreenFlow
+        "WMB_TRIP_ASSIGNED" -> currentRideFlow Nothing Nothing Nothing Nothing
+        "WMB_TRIP_FINISHED" -> currentRideFlow Nothing Nothing Nothing Nothing
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -4993,8 +4998,33 @@ logBusRideStart = do
   liftFlowBT $ logEvent logField_ "ny_driver_bus_ride_start"
   void $ lift $ lift $ toggleLoader false
 
--- updateRecentBusRide :: HomeScreenState -> FlowBT String Unit
--- updateRecentBusRide state = do
---   case state.data.whereIsMyBusData.trip of
---     Just (ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)) -> updateRecentBusRideToCache tripDetails
---     Nothing -> pure unit 
+updateRecentBusRide :: API.TripTransactionDetails -> FlowBT String Unit
+updateRecentBusRide tripDetails = lift $ lift $ liftFlow $ JB.saveRecentBusTrip (HU.tripDetailsToRecentTrip tripDetails)
+
+updateRecentBusView :: HomeScreenState -> FlowBT String Unit
+updateRecentBusView state = do
+  case state.data.whereIsMyBusData.trip of
+    Just _ -> pure unit
+    Nothing -> do
+      let recentBusTrip = JB.getRecentBusTrip
+      case recentBusTrip of
+        Just tripDetails -> do
+          let busVehicleNumberHash = getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
+          (AvailableRoutesList availableRoutesList) <- Remote.getAvailableRoutesBT busVehicleNumberHash
+          let selectedRoundRoute = find (\(AvailableRoutes route) -> maybe false (_ == tripDetails.routeCode) route.roundRouteCode) availableRoutesList
+          let sameSelectedRoute = find (\(AvailableRoutes route) -> (route.routeInfo) ^. _routeCode == tripDetails.routeCode) availableRoutesList
+          
+          modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
+            { data {
+                whereIsMyBusData { 
+                  availableRoutes = Just (AvailableRoutesList availableRoutesList),
+                  lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
+                  }
+              },
+              props {
+                whereIsMyBusConfig {
+                  selectedRoute = selectedRoundRoute <|> sameSelectedRoute
+                }
+              }
+            }
+        Nothing -> pure unit

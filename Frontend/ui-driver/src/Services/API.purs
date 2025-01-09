@@ -5553,6 +5553,7 @@ newtype AvailableRoutes = AvailableRoutes
   , source :: StopInfo
   , destination :: StopInfo
   , vehicleDetails :: BusVehicleDetails
+  , roundRouteCode :: Maybe String
   }
 
 derive instance genericRouteInfo :: Generic RouteInfo _

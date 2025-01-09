@@ -773,7 +773,7 @@ eval (Notification notificationType notificationBody) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
-  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER]) then do
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER, show ST.WMB_TRIP_ASSIGNED, show ST.WMB_TRIP_STARTED, show ST.WMB_TRIP_FINISHED]) then do
     exit $ FcmNotification notificationType notificationBody state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
     let city = getValueToLocalStore DRIVER_LOCATION
@@ -1855,7 +1855,7 @@ eval (ChooseBusRoute action) state =
     _ -> update state
 
 eval (StartBusTrip PrimaryButtonController.OnClick) state =
-      exit $ StartBusRide state
+      exit $ LinkAndStartBusRide state
 
 eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 

@@ -73,12 +73,12 @@ import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location, RecentBusTrip)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -1314,3 +1314,50 @@ getCategorySpecificSrcMarkerIcon _ = do
   case (getValueToLocalStore VEHICLE_CATEGORY) of
     "BusCategory" -> "ny_ic_bus_nav_on_map"
     _ -> "ny_ic_src_marker"
+
+tripDetailsToRecentTrip :: API.TripTransactionDetails -> RecentBusTrip
+tripDetailsToRecentTrip tripDetails = 
+  let unwrappedTrip = unwrap tripDetails
+      unwrappedSource = unwrap unwrappedTrip.source
+      unwrappedDest = unwrap unwrappedTrip.destination
+      unwrappedRoute = unwrap unwrappedTrip.routeInfo
+  in
+    { routeCode: unwrappedRoute.code
+    , sourceCode: unwrappedSource.code
+    , sourceName: unwrappedSource.name
+    , destCode: unwrappedDest.code
+    , destName: unwrappedDest.name
+    , vehicleType: unwrappedTrip.vehicleType
+    , vehicleNumber: unwrappedTrip.vehicleNumber
+    }
+
+recentTripToTripDetails :: RecentBusTrip -> API.TripTransactionDetails
+recentTripToTripDetails trip =
+  API.TripTransactionDetails
+    { tripTransactionId: ""
+    , vehicleNumber: trip.vehicleNumber
+    , vehicleType: trip.vehicleType
+    , source: wrap 
+        { name: trip.sourceName
+        , code: trip.sourceCode
+        , lat: Nothing
+        , long: Nothing
+        }
+    , destination: wrap 
+        { name: trip.destName
+        , code: trip.destCode
+        , lat: Nothing
+        , long: Nothing
+        }
+    , status:  API.TRIP_COMPLETED
+    , routeInfo: wrap
+        { code: trip.routeCode
+        , shortName: trip.routeCode
+        , longName: trip.sourceName <> " - " <> trip.destName
+        , startPoint: dummyLatLong
+        , endPoint: dummyLatLong
+        }
+    }
+  where
+    dummyLatLong :: API.LatLong
+    dummyLatLong = wrap { lat: 0.0, lon: 0.0 }
