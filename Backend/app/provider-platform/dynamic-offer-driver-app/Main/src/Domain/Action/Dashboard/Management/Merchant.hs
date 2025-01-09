@@ -1573,7 +1573,23 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       let geom = request.geom <|> mbGeometry
       id <- maybe generateGUID (return . (.id)) mbExistingSpLoc
       now <- getCurrentTime
-      merchantOperatingCity <- maybe (return Nothing) (CQMOC.findByMerchantShortIdAndCity merchantShortId) request.city
+      (merchantOperatingCityId, merchantId) <- case request.city of
+        Just opCity -> do
+          merchantOperatingCity <-
+            CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantShortId: " <> merchantShortId.getShortId <> ", opCity: " <> show opCity)
+          let merchantOperatingCityId = cast @DMOC.MerchantOperatingCity @SL.MerchantOperatingCity merchantOperatingCity.id
+              merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+          pure (merchantOperatingCityId, merchantId)
+        Nothing -> case (mbExistingSpLoc >>= (.merchantOperatingCityId), mbExistingSpLoc >>= (.merchantId)) of
+          (Just merchantOperatingCityId, Just merchantId) -> pure (merchantOperatingCityId, merchantId)
+          (Just merchantOperatingCityId, Nothing) -> do
+            merchantOperatingCity <-
+              CQMOC.findById (cast @SL.MerchantOperatingCity @DMOC.MerchantOperatingCity merchantOperatingCityId)
+                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId-" <> merchantOperatingCityId.getId)
+            let merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+            pure (merchantOperatingCityId, merchantId)
+          (Nothing, _) -> throwError (InvalidRequest "Valid city should be provided")
       locationName <-
         fromMaybeM (InvalidRequest "Location Name cannot be empty for a new special location") $
           request.locationName <|> (mbExistingSpLoc <&> (.locationName))
@@ -1583,10 +1599,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
-            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
+            merchantId = Just merchantId,
             ..
           }
 
