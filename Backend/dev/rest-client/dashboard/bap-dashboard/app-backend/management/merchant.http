@@ -177,3 +177,34 @@ content-type: application/json
 
 { "smsProvidersPriorityList" : ["ExotelSms","MyValueFirst"]
 }
+
+###
+
+# @name postMerchantSpecialLocationUpsert
+
+POST {{bap-dashboard-host}}/bap/YATRI/merchant/specialLocation/upsert?specialLocationId=12175690-5356-c62e-ee91-8dfa8c520b39
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&locationName="NewLocation"
+&category="NewCategory"
+&city=Kochi
+
+###
+
+# @name postMerchantSpecialLocationGatesUpsert
+
+POST {{bap-dashboard-host}}/bap/YATRI/merchant/specialLocation/12175690-5356-c62e-ee91-8dfa8c520b39/gates/upsert
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&name="Brigade Road Gate"
+&latitude=0.0
+&longitude=0.0
+&defaultDriverExtra=null
+&address="Address"
+&canQueueUpOnGate=null
