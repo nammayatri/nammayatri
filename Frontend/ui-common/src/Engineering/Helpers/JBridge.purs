@@ -244,6 +244,10 @@ foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
+foreign import voipDialer :: forall action. EffectFn6 String Boolean String Boolean (action -> Effect Unit) (String -> String -> String -> Int -> Int -> String -> String -> String -> action) Unit
+foreign import initSignedCall :: String -> Boolean -> Unit
+foreign import isSignedCallInitialized :: Effect Boolean
+foreign import destroySignedCall :: Unit -> Effect Unit
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit

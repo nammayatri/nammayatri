@@ -524,3 +524,15 @@ defaultInvoiceVariantConfig =
   , heritageCab: Nothing
   , default: Nothing
   }
+
+defaultVoipConfig :: Types.VoipConfig
+defaultVoipConfig = {
+  customer : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  },
+  driver : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  }
+}

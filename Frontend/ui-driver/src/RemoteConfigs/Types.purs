@@ -160,3 +160,4 @@ type RideEndAudioConfig = {
   enableRideEndAudio :: Boolean
 , rideEndAudioUrl :: Maybe String
 }
+

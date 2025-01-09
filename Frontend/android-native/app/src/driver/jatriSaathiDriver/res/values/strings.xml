@@ -6,4 +6,5 @@
     <string name="dev_port" translatable="false">8083</string>
     <string name="merchant_id" translatable="false">yatrisathi</string>
     <string name="app_type" translatable="false">driver</string>
+    <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/common/common/images/ys_ic_icon_and_text.png</string>
 </resources>
