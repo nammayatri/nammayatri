@@ -2,6 +2,7 @@ module SharedLogic.WMB where
 
 import API.Types.UI.WMB
 import Data.Time hiding (getCurrentTime)
+import Domain.Types.Common
 import Domain.Types.Person
 import Domain.Types.Route
 import Domain.Types.TripTransaction
@@ -15,6 +16,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
 import qualified Storage.Queries.TripTransaction as QTT
 import Tools.Error
+import qualified Tools.Notifications as TN
 
 checkFleetDriverAssociation :: Id Person -> Id Person -> Flow Bool
 checkFleetDriverAssociation driverId fleetOwnerId = do
@@ -54,3 +56,14 @@ findNextEligibleTripTransactionByDriverIdStatus driverId status = do
 
 isNonTerminalTripStatus :: TripStatus -> Bool
 isNonTerminalTripStatus status = any (\status' -> status' == status) [TRIP_ASSIGNED, IN_PROGRESS]
+
+buildTripAssignedData :: Id TripTransaction -> ServiceTierType -> Text -> Text -> Text -> (Maybe Text) -> TN.WMBTripAssignedData
+buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCode shortName roundRouteCode =
+  TN.WMBTripAssignedData
+    { tripTransactionId = tripTransactionId,
+      routeCode = routeCode,
+      routeShortname = shortName,
+      vehicleNumber = vehicleNumber,
+      vehicleServiceTierType = vehicleServiceTier,
+      roundRouteCode = roundRouteCode
+    }
