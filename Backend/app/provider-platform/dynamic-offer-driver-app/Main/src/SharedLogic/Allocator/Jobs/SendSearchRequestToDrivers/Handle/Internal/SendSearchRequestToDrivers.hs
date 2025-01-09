@@ -163,6 +163,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               actualRideDuration = Nothing,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedCongestionCharge = Nothing,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,

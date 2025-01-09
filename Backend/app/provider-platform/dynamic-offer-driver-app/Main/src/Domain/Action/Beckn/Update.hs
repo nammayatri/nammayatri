@@ -271,6 +271,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
+                    estimatedCongestionCharge = booking.estimatedCongestionCharge,
                     merchantOperatingCityId = Just booking.merchantOperatingCityId
                   }
             QFP.create fareParameters

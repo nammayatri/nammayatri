@@ -265,6 +265,7 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
             nightShiftOverlapChecking = False, ---------considered only for one way
             estimatedDistance = mbDistance,
             estimatedRideDuration = mbDuration,
+            estimatedCongestionCharge = Nothing,
             timeDiffFromUtc = Nothing,
             tollCharges = Nothing, ------fix it in future
             noOfStops = 0, ------fix it in future
