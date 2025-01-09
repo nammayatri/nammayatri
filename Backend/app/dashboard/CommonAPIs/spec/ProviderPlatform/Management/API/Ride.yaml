@@ -225,6 +225,7 @@ types:
     - rideStatus: RideStatus
     - roundTrip: Maybe Bool
     - deliveryParcelImageId: Maybe Text
+    - estimatedReservedDuration: Maybe Minutes
   LocationAPIEntity:
     - lat: Double
     - lon: Double
