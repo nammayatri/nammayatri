@@ -1252,12 +1252,14 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
 
 data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
-    driverMobileNumber :: Text
+    driverMobileNumber :: Text,
+    driverOnboardingVehicleCategory :: Text
   }
 
 data DriverDetails = DriverDetails
   { driverName :: Text,
-    driverMobileNumber :: Text
+    driverMobileNumber :: Text,
+    driverOnboardingVehicleCategory :: DVC.VehicleCategory
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -1265,6 +1267,7 @@ instance FromNamedRecord CreateDriversCSVRow where
     CreateDriversCSVRow
       <$> r .: "driver_name"
       <*> r .: "driver_mobile_number"
+      <*> r .: "driver_onboarding_vehicle_category"
 
 instance FromMultipart Tmp Common.CreateDriversReq where
   fromMultipart form = do
@@ -1303,9 +1306,8 @@ postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
-      mbFleetDriverAssociation <- FDV.findByDriverId person.id True
-      whenJust mbFleetDriverAssociation $ \fleetDriverAssociation -> do
-        when (fleetDriverAssociation.fleetOwnerId /= fleetOwnerId) $ throwError (InvalidRequest "Driver is actively associated to another fleet.")
+      QDriverInfo.updateOnboardingVehicleCategory (Just req_.driverOnboardingVehicleCategory) person.id
+      void $ WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
       fork "Sending Fleet Consent SMS to Driver" $ do
         fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
         FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
@@ -1321,7 +1323,8 @@ postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
     parseDriverInfo idx row = do
       driverName <- cleanCSVField idx row.driverName "Driver name"
       driverMobileNumber <- cleanCSVField idx row.driverMobileNumber "Mobile number"
-      pure $ DriverDetails driverName driverMobileNumber
+      driverOnboardingVehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
+      pure $ DriverDetails driverName driverMobileNumber driverOnboardingVehicleCategory
 
     cleanField = replaceEmpty . T.strip
 
@@ -1331,6 +1334,10 @@ postDriverFleetAddDrivers merchantShortId opCity fleetOwnerId req = do
       "no constraint" -> Nothing
       "no_constraint" -> Nothing
       x -> Just x
+
+    readCSVField :: Read a => Int -> Text -> Text -> Flow a
+    readCSVField idx fieldValue fieldName =
+      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =
