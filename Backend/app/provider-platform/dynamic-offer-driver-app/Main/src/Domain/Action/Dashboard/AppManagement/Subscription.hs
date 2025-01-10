@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.AppManagement.Subscription
   ( getSubscriptionListPlan,
     putSubscriptionSelectPlan,
@@ -19,27 +17,31 @@ module Domain.Action.Dashboard.AppManagement.Subscription
 where
 
 import qualified API.Types.Dashboard.AppManagement.Subscription
+import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified API.Types.ProviderPlatform.Fleet.Driver
-import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.UI.Driver
+import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Payment
 import qualified "this" Domain.Action.UI.Plan
 import qualified Domain.Types.DriverPlan as DDPlan
 import qualified Domain.Types.Invoice
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantMessage as DMM
-import qualified Domain.Types.Plan
-import qualified Environment
+import qualified Domain.Types.Person as DP
+import Domain.Types.Plan
+import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Error (PersonError (PersonNotFound))
-import qualified Kernel.Types.Id
-import Kernel.Utils.Error.Throwing (fromMaybeM)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DI
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error
 
 getSubscriptionListPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -188,8 +190,13 @@ getSubscriptionDriverPaymentHistoryAPIV2 ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow Domain.Action.UI.Driver.HistoryEntityV2
-getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset =
-  DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset serviceName
+getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  Driver.getDriverPaymentsHistoryV2 (personId, merchant.id, merchantOpCityId) invoicePaymentMode limit offset serviceName
 
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -198,8 +205,13 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Domain.Types.Plan.ServiceNames ->
   Kernel.Types.Id.Id Domain.Types.Invoice.Invoice ->
   Environment.Flow Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
-getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId =
-  DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
+getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id, merchantOpCityId) invoiceId.getId serviceName
 
 postSubscriptionCollectManualPayments ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

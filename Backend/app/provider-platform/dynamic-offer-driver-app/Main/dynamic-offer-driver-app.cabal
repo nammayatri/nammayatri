@@ -137,7 +137,7 @@ library
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.Overlay
       Domain.Action.Dashboard.AppManagement.Subscription
-      Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
