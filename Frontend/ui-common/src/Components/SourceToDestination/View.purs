@@ -36,35 +36,37 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation (scaleYAnimWithDelay)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view  = viewWithStops
-  -- frameLayout
-  -- [ height WRAP_CONTENT
-  -- , width config.width
-  -- , gravity CENTER_VERTICAL
-  -- , margin config.margin
-  -- , afterRender push $ const AfterRender
-  -- ][ relativeLayout
-  --     ([ height WRAP_CONTENT
-  --     , width MATCH_PARENT
-  --     -- , orientation VERTICAL
-  --     ] <> case config.id of
-  --       Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
-  --       Nothing -> [])((if config.destinationTextConfig.text /= "" then [ 
-  --       linearLayout
-  --       [ height WRAP_CONTENT
-  --       , orientation VERTICAL
-  --       , width MATCH_PARENT
-  --       , margin $ MarginTop config.separatorMargin
-  --       , visibility $ boolToVisibility config.showDestination
-  --       ][SeparatorView.view $ separatorConfig config
-  --       , destinationLayout config push]
-  --     ]
-  --      else []) <>
-  --     [
-  --     sourceLayout push config
-  --     ])
-  --   , distanceLayout config
-  --   ]
+view push config = 
+  if config.showSourceDestWithStops then viewWithStops push config
+  else
+  frameLayout
+  [ height WRAP_CONTENT
+  , width config.width
+  , gravity CENTER_VERTICAL
+  , margin config.margin
+  , afterRender push $ const AfterRender
+  ][ relativeLayout
+      ([ height WRAP_CONTENT
+      , width MATCH_PARENT
+      -- , orientation VERTICAL
+      ] <> case config.id of
+        Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
+        Nothing -> [])((if config.destinationTextConfig.text /= "" then [ 
+        linearLayout
+        [ height WRAP_CONTENT
+        , orientation VERTICAL
+        , width MATCH_PARENT
+        , margin $ MarginTop config.separatorMargin
+        , visibility $ boolToVisibility config.showDestination
+        ][SeparatorView.view $ separatorConfig config
+        , destinationLayout config push]
+      ]
+       else []) <>
+      [
+      sourceLayout push config
+      ])
+    , distanceLayout config
+    ]
 
 
 viewWithStops :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
