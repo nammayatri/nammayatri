@@ -251,7 +251,10 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
+    lineColor : Maybe Text
+    frequency : Maybe Int
     journeyLegOrder : Maybe Int
+    startTime: Maybe UTCTime
 
   default:
     customerCancelled: "false"
