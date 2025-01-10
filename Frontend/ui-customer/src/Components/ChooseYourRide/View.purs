@@ -95,9 +95,29 @@ view push config =
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
       in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if EHC.os /= "IOS" && config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
+bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w
+bottomLayoutView push config visibility' id' =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , id $ EHC.getNewIDWithTag id'
+  , visibility visibility'
+  , alignParentBottom "true,-1"
+  , clickable true
+  , afterRender push $ const $ NoAction config
+  , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
+  , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5
+  ][
+    deliveryPaymentAtReceivingEndLayout push config
+   , addTipView push config
+   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm")
+   ]
+   
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
-  linearLayout
+  Keyed.linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , background Color.ivory
@@ -121,83 +141,57 @@ addTipView push state =
     selectedEstimate = case state.quoteList !! state.activeIndex of
                         Just selectedItem -> selectedItem
                         Nothing -> ChooseVehicle.config
-
-bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w
-bottomLayoutView push config visibility' id' =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , background Color.white900
-  , id $ EHC.getNewIDWithTag id'
-  , visibility visibility'
-  , alignParentBottom "true,-1"
-  , clickable true
-  , afterRender push $ const $ NoAction config
-  , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
-  , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5
-  ][
-    deliveryPaymentAtReceivingEndLayout push config
-   , addTipView push config
-   , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm")
-   ]
-
-defaultTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-defaultTipView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , onClick push $ const $ AddTip state.tipViewProps
-  , gravity CENTER
-  , clickable true
-  ][textView $
-    [ textFromHtml $ (getString A_TIP_HELPS_FIND_A_RIDE_QUICKER) <> " " <> "<span style='color:#0066FF'>" <> (getString ADD_NOW) <> "</span>"
-    , width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.black900
-    , singleLine false
-    , maxLines 2
-    ] <> FontStyle.body1 LanguageStyle
-  ]
-
-tipSelectedView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-tipSelectedView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER
-  , clickable true
-  , onClick push $ const $ ChangeTip state.tipViewProps
-  ][ textView $
-    [ text $ "₹" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
-    , color Color.black900
-    , width WRAP_CONTENT
-    , height WRAP_CONTENT
-    ] <> FontStyle.body4 LanguageStyle
-  , textView $
-    [ text $ getString CHANGE
-    , width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.blue900
-    , margin $ MarginLeft 4
-    ] <> FontStyle.body1 LanguageStyle
-  ]
-
-selectTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-selectTipView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER
-  , orientation VERTICAL
-  ][ textView $
-    [ text state.tipViewProps.primaryText
-    , color Color.black900
-    , gravity CENTER
-    , margin $ MarginBottom 6
-    ] <> FontStyle.body1 LanguageStyle
-  , tipsHorizontalView push state
-  ]
+    defaultTipView push state =
+      Tuple "default" $ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , onClick push $ const $ AddTip state.tipViewProps
+      , gravity CENTER
+      , clickable true
+      ][textView $
+        [ textFromHtml $ (getString A_TIP_HELPS_FIND_A_RIDE_QUICKER) <> " " <> "<span style='color:#0066FF'>" <> (getString ADD_NOW) <> "</span>"
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , color Color.black900
+        , singleLine false
+        , maxLines 2
+        ] <> FontStyle.body1 LanguageStyle
+      ]
+    tipSelectedView push state =
+      Tuple "tipSelectedView" $ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , clickable true
+      , onClick push $ const $ ChangeTip state.tipViewProps
+      ][ textView $
+        [ text $ "₹" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
+        , color Color.black900
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        ] <> FontStyle.body4 LanguageStyle
+      , textView $
+        [ text $ getString CHANGE
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , color Color.blue900
+        , margin $ MarginLeft 4
+        ] <> FontStyle.body1 LanguageStyle
+      ]
+    selectTipView push state =
+      Tuple "selectTipView" $ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ][ textView $
+        [ text state.tipViewProps.primaryText
+        , color Color.black900
+        , gravity CENTER
+        , margin $ MarginBottom 6
+        ] <> FontStyle.body1 LanguageStyle
+      , tipsHorizontalView push state
+      ]
 
 tipsHorizontalView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 tipsHorizontalView push state =
