@@ -23,6 +23,7 @@ import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Data.Function.Uncurried (runFn2)
+import Control.Alt ((<|>))
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -3181,7 +3182,7 @@ chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
 chooseBusRouteModalPopup state = 
   let 
     (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
-    vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ availableRoutesList DA.!! 0
+    vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ state.props.whereIsMyBusConfig.selectedRoute <|> (availableRoutesList DA.!! 0)
     selectedRouteTitle = selectRouteNumberTitle state
     selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
     config' = PopUpModal.config {
@@ -3197,7 +3198,7 @@ chooseBusRouteModalPopup state =
     , backgroundClickable = false
     , secondaryText
       { 
-        text = StringsV2.getStringV2 LT2.route_bus_number,
+        text = StringsV2.getStringV2 LT2.route_number,
         color = Color.black800,
         padding = Padding 0 0 0 0,
         margin = Margin 0 0 0 12,
@@ -3247,7 +3248,7 @@ chooseBusRouteModalPopup state =
             color = Color.black800,
             singleLine = true,
             placeholder = "",
-            text = text,
+            text = if text == "BUS_AC" then "AC" else "Non-AC",
             padding = Padding 0 16 20 16,
             enabled = false,
             textStyle = FontStyle.SubHeading3
@@ -3269,7 +3270,7 @@ chooseBusRouteModalPopup state =
         textConfig {
           textFromHtml = selectedRouteTitle,
           color = selectedRouteColor,
-          textStyle = SubHeading3,
+          textStyle = Body16,
           gravity = CENTER_VERTICAL,
           width = V $ (EHC.screenWidth unit) - 100
         },

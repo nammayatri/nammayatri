@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude 
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView, singleLine)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig, RouteInfo(..), dummyDeliveryPrimaryText)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -994,30 +994,28 @@ routeItem push route index len =
                 [
                     text route.sourceText,
                     color Color.black700
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , maxLines 2
-                    , ellipsize true
+                    , ellipsize true      -- Added ellipsize
+                    , singleLine true    -- Ensure single line
+                    , weight 1.0  
 
-                ] <> FontStyle.body20 TypoGraphy,
+                ] <> FontStyle.body16 TypoGraphy,
                 textView $
                 [
                     text "  →  ",
                     color Color.black700
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , ellipsize true
+                    , ellipsize true      -- Added ellipsize
+                    , singleLine true    -- Ensure single line
+                    , weight 1.0  
 
-                ] <> FontStyle.body20 TypoGraphy,
+                ] <> FontStyle.body16 TypoGraphy,
                 textView $
                 [
                     text route.destination,
                     color Color.black700
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , maxLines 2
-                    , ellipsize true
+                    , ellipsize true      -- Added ellipsize
+                    , singleLine true    -- Ensure single line
+                    , weight 1.0  
 
-                ] <> FontStyle.body20 TypoGraphy
+                ] <> FontStyle.body16 TypoGraphy
             ]
   ]]

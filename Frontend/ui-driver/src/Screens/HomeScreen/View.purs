@@ -3661,7 +3661,7 @@ recentBusRideView push state =
                 , margin $ MarginBottom 8
                 ] <> FontStyle.body3 TypoGraphy,
                 textView $
-                [ text busType
+                [ text $ if busType == "BUS_AC" then "AC" else "Non-AC"
                 , color Color.black800
                 ] <> FontStyle.subHeading3 TypoGraphy
               ]
@@ -3708,15 +3708,24 @@ recentBusRideView push state =
                 textView $
                 [ text $ sourceName
                 , color Color.black700
-                ] <> FontStyle.body20 TypoGraphy,
+                , ellipsize true      -- Added ellipsize
+                , singleLine true    -- Ensure single line
+                , weight 1.0  
+                ] <> FontStyle.body16 TypoGraphy,
                 textView $
-                [ text $ "  →  "
+                [ text $ " → "
                 , color Color.black700
-                ] <> FontStyle.body20 TypoGraphy,
+                , ellipsize true      -- Added ellipsize
+                , singleLine true    -- Ensure single line
+                , weight 1.0
+                ] <> FontStyle.body16 TypoGraphy,
                 textView $
                 [ text $ destinationName
                 , color Color.black700
-                ] <> FontStyle.body20 TypoGraphy
+                , ellipsize true      -- Added ellipsize
+                , singleLine true    -- Ensure single line
+                , weight 1.0
+                ] <> FontStyle.body16 TypoGraphy
               ],
               imageView
               [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"

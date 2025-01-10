@@ -189,7 +189,7 @@ normalRideInfoView push config =
         , separator true
         , infoView "Route No." config.routeNumber
         , separator true
-        , infoView "Bus Type" config.busType
+        , infoView "Bus Type" $ if config.busType == "BUS_AC" then "AC" else "Non-AC"
       ] 
 
 infoView :: forall w . String -> String -> PrestoDOM (Effect Unit) w

@@ -2374,7 +2374,8 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           let _ = spy "currentRideFlow: response - TripTransactionDetails tripTransactionDetails" response
           case response of
             (Right (API.ActiveTripTransaction activeTrip)) -> activeBusRidePatch activeTrip.tripTransactionDetails
-            _ -> pure unit
+            _ -> do 
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen, endRidePopUp = false}})
     _, Just false -> do
       noActiveRidePatch allState onBoardingSubscriptionViewCount
     _, _ -> do
@@ -2472,7 +2473,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
           void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
           if tripDetails.status == API.TRIP_ASSIGNED then do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
+            -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
             response <- lift $ lift $ Remote.getAvailableRoutes tripDetails.vehicleNumber
             let _ = spy "activeBusRidePatch - getAvailableRoutes" response
             case response of
@@ -2484,7 +2485,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
           else (pure unit)
-        Nothing -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen}})
+        Nothing -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen, endRidePopUp = false}})
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -2940,8 +2941,14 @@ homeScreenFlow = do
         "USER_FAVOURITE_DRIVER" -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
           homeScreenFlow
-        "WMB_TRIP_ASSIGNED" -> currentRideFlow Nothing Nothing Nothing Nothing
-        "WMB_TRIP_FINISHED" -> currentRideFlow Nothing Nothing Nothing Nothing
+        "WMB_TRIP_ASSIGNED" -> do
+          void $ pure $ removeAllPolylines ""
+          void $ pure $ JB.exitLocateOnMap ""   
+          currentRideFlow Nothing Nothing Nothing Nothing
+        "WMB_TRIP_FINISHED" -> do
+          void $ pure $ removeAllPolylines ""
+          void $ pure $ JB.exitLocateOnMap ""   
+          currentRideFlow Nothing Nothing Nothing Nothing
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -5017,21 +5024,24 @@ updateRecentBusView state = do
       case recentBusTrip of
         Just tripDetails -> do
           let busVehicleNumberHash = getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
-          (AvailableRoutesList availableRoutesList) <- Remote.getAvailableRoutesBT busVehicleNumberHash
-          let selectedRoundRoute = find (\(AvailableRoutes route) -> maybe false (_ == tripDetails.routeCode) route.roundRouteCode) availableRoutesList
-          let sameSelectedRoute = find (\(AvailableRoutes route) -> (route.routeInfo) ^. _routeCode == tripDetails.routeCode) availableRoutesList
-          
-          modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
-            { data {
-                whereIsMyBusData { 
-                  availableRoutes = Just (AvailableRoutesList availableRoutesList),
-                  lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
+          response <- lift $ lift $ Remote.getAvailableRoutes busVehicleNumberHash
+          case response of
+            Right (API.AvailableRoutesList availableRoutesList) -> do
+              let selectedRoundRoute = find (\(AvailableRoutes route) -> maybe false (_ == tripDetails.routeCode) route.roundRouteCode) availableRoutesList
+              let sameSelectedRoute = find (\(AvailableRoutes route) -> (route.routeInfo) ^. _routeCode == tripDetails.routeCode) availableRoutesList
+              
+              modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
+                { data {
+                    whereIsMyBusData { 
+                      availableRoutes = Just (AvailableRoutesList availableRoutesList),
+                      lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
+                      }
+                  },
+                  props {
+                    whereIsMyBusConfig {
+                      selectedRoute = selectedRoundRoute <|> sameSelectedRoute
+                    }
                   }
-              },
-              props {
-                whereIsMyBusConfig {
-                  selectedRoute = selectedRoundRoute <|> sameSelectedRoute
                 }
-              }
-            }
+            Left _ -> pure unit
         Nothing -> pure unit
