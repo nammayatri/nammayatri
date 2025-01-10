@@ -1103,13 +1103,14 @@ type HomeScreenData =  {
 , bus_number :: String
 , whereIsMyBusData :: WhereIsMyBusData
 }
-
+-- | Represents the current state of bus-related data
 type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
   trip :: Maybe BusTrip,
-  endTripStatus :: Maybe String
+  endTripStatus :: Maybe String,
+  lastCompletedTrip :: Maybe API.TripTransactionDetails
 }
-
+-- Represents either a current or assigned bus trip
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails
 
 type FavouritePopUp = {
@@ -1996,6 +1997,9 @@ data NotificationType =  DRIVER_REACHED
                       | DRIVER_REACHED_DESTINATION
                       | TO_METRO_COINS
                       | FROM_METRO_COINS
+                      | WMB_TRIP_ASSIGNED
+                      | WMB_TRIP_STARTED
+                      | WMB_TRIP_FINISHED
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -3384,5 +3388,5 @@ type QrCodeScannerState = {
 }
 
 type BusQrCodeData = {
-  busNumber :: String
+  vehicleNumber :: String
 }

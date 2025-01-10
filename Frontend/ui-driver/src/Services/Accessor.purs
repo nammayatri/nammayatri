@@ -139,3 +139,15 @@ _stopLat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) { la
 
 _stopLong :: forall a b c. Newtype a { long :: b | c } => Lens' a b
 _stopLong = lens (unwrap >>> _.long) (\oldRec newVal -> wrap ((unwrap oldRec) { long = newVal }))
+
+_routeInfo :: forall a b c. Newtype a { routeInfo :: b | c } => Lens' a b
+_routeInfo = lens (unwrap >>> _.routeInfo) (\oldRec newVal -> wrap ((unwrap oldRec) { routeInfo = newVal }))
+
+_source :: forall a b c. Newtype a { source :: b | c } => Lens' a b
+_source = lens (unwrap >>> _.source) (\oldRec newVal -> wrap ((unwrap oldRec) { source = newVal }))
+
+_destination :: forall a b c. Newtype a { destination :: b | c } => Lens' a b
+_destination = lens (unwrap >>> _.destination) (\oldRec newVal -> wrap ((unwrap oldRec) { destination = newVal }))
+
+_vehicleDetails :: forall a b c. Newtype a { vehicleDetails :: b | c } => Lens' a b
+_vehicleDetails = lens (unwrap >>> _.vehicleDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleDetails = newVal }))

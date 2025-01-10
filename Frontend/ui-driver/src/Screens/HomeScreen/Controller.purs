@@ -332,8 +332,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | GoToScanBusQR ST.HomeScreenState
-                    | LinkBusTrip ST.HomeScreenState
                     | StartBusRide ST.HomeScreenState
+                    | LinkAndStartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
                     | WMBEndTrip ST.HomeScreenState
 
@@ -773,7 +773,7 @@ eval (Notification notificationType notificationBody) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION && state.props.currentStage == ST.RideStarted && (not state.data.activeRide.notifiedReachedDestination)) then do
     continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
-  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER]) then do
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION, show ST.USER_FAVOURITE_DRIVER, show ST.WMB_TRIP_ASSIGNED, show ST.WMB_TRIP_STARTED, show ST.WMB_TRIP_FINISHED]) then do
     exit $ FcmNotification notificationType notificationBody state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else if (Array.any (checkNotificationType notificationType) [ST.FROM_METRO_COINS, ST.TO_METRO_COINS] && state.props.currentStage == ST.RideCompleted) then do
     let city = getValueToLocalStore DRIVER_LOCATION
@@ -1338,7 +1338,8 @@ eval (CurrentLocation lat lng) state = do
   let newState = state{data{ currentDriverLat = getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng }}
   exit $ UpdatedState newState
 eval (ModifyRoute lat lon) state = do
-  let newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
+  let _ = spy "DEBUG: modifyRoute" (lat <> " " <> lon)
+      newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
   continueWithCmd newState [ do
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRoute newState
     pure NoAction
@@ -1844,17 +1845,17 @@ eval (ChooseBusRoute action) state =
     PopUpModal.SelectRoute index busRouteNumber ->
       let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
           newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
-      in updateAndExit newState $ LinkBusTrip newState
+      in continue newState
     PopUpModal.SelectRouteButton PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
     PopUpModal.OnButton1Click -> do
-      exit $ StartBusRide state
-    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = if state.props.whereIsMyBusConfig.selectRouteStage then true else false}}}
+      exit $ LinkAndStartBusRide state
+    PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = state.props.whereIsMyBusConfig.selectRouteStage}}}
     PopUpModal.OnButton2Click -> do
       continue state { props { whereIsMyBusConfig { selectRouteStage = false } }}  
     _ -> update state
 
 eval (StartBusTrip PrimaryButtonController.OnClick) state =
-      exit $ StartBusRide state
+      exit $ LinkAndStartBusRide state
 
 eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 
@@ -2230,12 +2231,14 @@ updateRoute state = do
         pure unit
       Nothing -> pure unit
   else if state.props.showDottedRoute then do
+    let _ = spy "DEBUG: Dotted Route" state.props.showDottedRoute
     let coors = (Remote.walkCoordinate srcLon srcLat destLon destLat)
     liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
     let _ = removeAllPolylines ""
         normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig Nothing "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
     liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
   else if not Array.null state.data.route then do
+    let _ = spy "DEBUG: Short Route" state.data.route
     let shortRoute = (state.data.route Array.!! 0)
     case shortRoute of
       Just (Route route) -> do
@@ -2248,12 +2251,16 @@ updateRoute state = do
         pure unit
       Nothing -> pure unit
   else do
+    let _ = spy "DEBUG: Long Route"
     eRouteAPIResponse <- Remote.getRoute (Remote.makeGetRouteReq srcLat srcLon destLat destLon) routeType
+    let _ = spy "DEBUG: Long Route Response" eRouteAPIResponse
     case eRouteAPIResponse of
       Right (GetRouteResp routeApiResponse) -> do
         let shortRoute = (routeApiResponse Array.!! 0)
+            _ = spy "DEBUG: Long Route Response" shortRoute
         case shortRoute of
           Just (Route route) -> do
+            let _ = spy "DEBUG: Long Route Response" route
             let coor = Remote.walkCoordinates route.points
             liftFlow $ push $ UpdateState state { data { activeRide { actualRideDistance = if state.props.currentStage == ST.RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } }
             void $ pure $ JB.removeMarker "ny_ic_auto"
@@ -2261,6 +2268,8 @@ updateRoute state = do
             let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
             liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
-          Nothing -> pure unit   
+          Nothing ->
+            let _ = spy "DEBUG: Long Route Nothing" ""
+            in pure unit   
       Left err -> pure unit
   pure unit

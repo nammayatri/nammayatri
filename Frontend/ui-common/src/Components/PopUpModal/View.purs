@@ -966,7 +966,7 @@ routeItem push route index len =
           ]
           [
             textView $ [
-                textFromHtml $ "<span><strong>S-102</strong></span>"
+                textFromHtml $ "<span><strong>" <> route.busRouteNumber <> "</strong></span>"
                 , color Color.black900
                 , height WRAP_CONTENT
                 , width WRAP_CONTENT
@@ -982,14 +982,42 @@ routeItem push route index len =
                 height $ V 6,
                 cornerRadius 32.0 
             ] [],
-            textView $
+            linearLayout
             [
-                text "Howrah Station → Airport",
-                color Color.black700
-                , height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , maxLines 2
-                , ellipsize true
+                height WRAP_CONTENT,
+                width WRAP_CONTENT,
+                orientation HORIZONTAL,
+                gravity CENTER_VERTICAL,
+                weight 1.0
+            ][
+                textView $
+                [
+                    text route.sourceText,
+                    color Color.black700
+                    , height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , maxLines 2
+                    , ellipsize true
 
-            ] <> FontStyle.body20 TypoGraphy
+                ] <> FontStyle.body20 TypoGraphy,
+                textView $
+                [
+                    text "  →  ",
+                    color Color.black700
+                    , height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , ellipsize true
+
+                ] <> FontStyle.body20 TypoGraphy,
+                textView $
+                [
+                    text route.destination,
+                    color Color.black700
+                    , height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , maxLines 2
+                    , ellipsize true
+
+                ] <> FontStyle.body20 TypoGraphy
+            ]
   ]]

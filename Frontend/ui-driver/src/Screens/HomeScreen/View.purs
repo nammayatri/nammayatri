@@ -95,7 +95,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
-import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode)
+import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _stopName)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -321,16 +321,19 @@ screen initialState (GlobalState globalState) =
                                   else pure unit
             "RideTracking"   -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars "ride_tracking" true-- Hardcoded: enableFrequentLocationUpdates as true
-                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
-                                _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
-                                _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
-
+                                case initialState.data.whereIsMyBusData.trip of
+                                  Just (ST.CURRENT_TRIP (TripTransactionDetails trip)) -> do
+                                    void $ pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON $ trip.source ^. _stopLat)
+                                    void $ pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON $ trip.source ^. _stopLong)
+                                    void $ pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON $ trip.destination ^. _stopLat)
+                                    void $ pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON $ trip.destination ^. _stopLong)
+                                    void $ pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
+                                    void $ pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
+                                  _ -> pure unit
+                                
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideTrackingModalAction (RideTrackingModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
-                                  _ <- JB.getCurrentPosition push $ ModifyRoute
+                                  void $ JB.getCurrentPosition push $ ModifyRoute
                                   pure $ JB.removeMarker "ic_vehicle_side"
                                   pure unit
                                   else pure unit
@@ -718,7 +721,7 @@ driverMapsHeaderView push state =
                 onRideScreenBannerView state push 
                 ]
             <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            <> if state.props.driverStatusSet == ST.Online && state.props.currentStage == ST.TripAssigned && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then [ recentBusRideView push state ] else []
+            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then [ recentBusRideView push state ] else []
         , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
@@ -3567,7 +3570,10 @@ recentBusRideView push state =
   let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
       Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> assignedTripView tripDetails
-      _ -> linearLayout[][]
+      Just _ -> linearLayout[][]
+      Nothing -> case state.data.whereIsMyBusData.lastCompletedTrip of
+        Just (TripTransactionDetails tripDetails) -> assignedTripView tripDetails
+        Nothing -> linearLayout[][]
   where
     assignedTripView tripDetails = 
       let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
@@ -3585,7 +3591,6 @@ recentBusRideView push state =
           , cornerRadius 16.0
           , padding $ Padding 6 6 6 16
           , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
-          -- , visibility $ boolToVisibility $ (tripDetails.status == TRIP_COMPLETED && not HU.isGovtBusDriver) || (tripDetails.status == TRIP_ASSIGNED && HU.isGovtBusDriver)
           ][
             textView $
             [ text title
@@ -3678,21 +3683,15 @@ recentBusRideView push state =
               [
                 textView $
                 [ text $ sourceName
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy,
                 textView $
                 [ text $ "  →  "
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy,
                 textView $
                 [ text $ destinationName
-                -- , textSize FontSize.a_16
                 , color Color.black700
-                -- , weight 1.0
                 ] <> FontStyle.body20 TypoGraphy
               ],
               imageView
@@ -3703,16 +3702,6 @@ recentBusRideView push state =
               ]
             ],
             PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
-            -- primaryButton
-            -- [ text "Start Ride"
-            -- , width MATCH_PARENT
-            -- , height $ V 56
-            -- , cornerRadius 28.0
-            -- , background Color.green500
-            -- , color Color.white900
-            -- , textSize FontSize.a_18
-            -- , fontStyle $ FontStyle.bold LanguageStyle
-            -- , onClick push $ const StartRide
-            -- ]
+
           ]
           

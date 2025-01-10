@@ -631,7 +631,6 @@ export const startQRScanner =
         {
           try {
             const cb = callbackMapper.map(function (data) {
-              console.log("scanQrCode", data);
               const parsedQrData = JSON.parse(data);
               console.log(parsedQrData,parsedQrData.error,parsedQrData.data)
               callback(action(parsedQrData.error)(parsedQrData.data))();

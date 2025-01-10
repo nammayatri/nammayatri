@@ -30,7 +30,7 @@ eval GoBack state = do
     exit $ GoToHomeScreen
 
 eval (StartQRScanner isError qrData) state = do
-    if isError == "False" then
+    if isError == "true" then
         continue state
     else
         exit $ ExecuteCallback qrData

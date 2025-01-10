@@ -418,7 +418,7 @@ specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list
 -- busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes"
 
 busAvailableRoutes :: String -> String 
-busAvailableRoutes _ = (getBaseUrl "") <> "/wmb/availableRoutes"
+busAvailableRoutes _ = (getBaseUrl "") <>  "/wmb/availableRoutes"
 
 busTripLink :: String -> String
 busTripLink _ = (getBaseUrl "") <> "/wmb/trip/link"
@@ -426,8 +426,10 @@ busTripLink _ = (getBaseUrl "") <> "/wmb/trip/link"
 busActiveTrip :: String -> String
 busActiveTrip _ = (getBaseUrl "") <> "/wmb/trip/active"
 
-busTripStart :: String -> String
-busTripStart tripTransactionId = (getBaseUrl "") <> "/wmb/trip/" <> tripTransactionId <> "/start"
+busTripStart :: Maybe String -> String
+busTripStart transactionId' = case transactionId' of
+  Just transactionId -> (getBaseUrl "") <> "/wmb/trip/" <> transactionId <> "/start"
+  Nothing -> (getBaseUrl "") <> "/wmb/qr/start"
 
 busTripEnd :: String -> String
 busTripEnd tripTransactionId = (getBaseUrl "") <> "/wmb/trip/" <> tripTransactionId <> "/end"
