@@ -12,6 +12,7 @@ import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.WMB as Domain.Action.UI.WMB
 import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.FleetConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -132,7 +133,7 @@ type API =
       :> "config"
       :> Get
            '[JSON]
-           API.Types.UI.WMB.FleetConfigData
+           Domain.Types.FleetConfig.FleetConfig
   )
 
 handler :: Environment.FlowServer API
@@ -246,6 +247,6 @@ getFleetConfig ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Environment.FlowHandler API.Types.UI.WMB.FleetConfigData
+    Environment.FlowHandler Domain.Types.FleetConfig.FleetConfig
   )
 getFleetConfig a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getFleetConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

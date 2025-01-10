@@ -25,7 +25,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TripTransaction.TripTransaction] -> m ())
 createMany = traverse_ create
 
-findAllTripTransactionByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.TripTransaction.TripTransaction]))
+findAllTripTransactionByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.TripTransaction.TripTransaction])
 findAllTripTransactionByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m (Maybe Domain.Types.TripTransaction.TripTransaction))
@@ -76,6 +76,7 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.isCurrentlyDeviated isCurrentlyDeviated,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.roundRouteCode roundRouteCode,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
       Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),

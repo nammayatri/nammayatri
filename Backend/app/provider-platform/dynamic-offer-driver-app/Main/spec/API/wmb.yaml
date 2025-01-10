@@ -11,6 +11,7 @@ imports:
   ApprovalRequest: Domain.Types.ApprovalRequest
   TimeBound: Kernel.Types.TimeBound
   HighPrecMeters: Kernel.Types.Distance
+  FleetConfig: Domain.Types.FleetConfig
 
 module: WMB
 
@@ -79,11 +80,6 @@ types:
 
   AvailableRouteReq:
     vehicleNumber: Text
-
-  FleetConfigData:
-    allowedEndingMidRoute: Bool
-    rideEndApproval: Bool
-    endRideDistanceThreshold: HighPrecMeters
 
   RouteDetails:
     code: Text
@@ -192,4 +188,4 @@ apis:
       endpoint: /fleet/config
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: FleetConfigData
+        type: FleetConfig

@@ -28,6 +28,7 @@ data TripTransaction = TripTransaction
     isCurrentlyDeviated :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text,
     routeCode :: Data.Text.Text,
     startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     startedNearStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -41,8 +42,8 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
