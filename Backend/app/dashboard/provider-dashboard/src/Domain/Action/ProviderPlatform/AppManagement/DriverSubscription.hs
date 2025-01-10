@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
   ( postDriverSubscriptionSendSms,
     postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo,
@@ -9,7 +7,7 @@ where
 import qualified API.Client.ProviderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified Dashboard.Common
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver
+import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -22,6 +20,19 @@ import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+
+data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
+  { volunteerId :: Text,
+    driverId :: Text,
+    messageKey :: Text,
+    channel :: Text,
+    overlayKey :: Text,
+    messageId :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Kernel.Prelude.ToSchema)
+
+instance HideSecrets VolunteerTransactionStorageReq where
+  hideSecrets = Kernel.Prelude.identity
 
 postDriverSubscriptionSendSms ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -40,7 +51,7 @@ postDriverSubscriptionSendSms merchantShortId opCity apiTokenInfo driverId req =
       (Kernel.Prelude.Just driverId)
       Kernel.Prelude.Nothing
       ( Kernel.Prelude.Just $
-          Domain.Action.Dashboard.Driver.VolunteerTransactionStorageReq
+          VolunteerTransactionStorageReq
             apiTokenInfo.personId.getId
             driverId.getId
             (show req.messageKey)
