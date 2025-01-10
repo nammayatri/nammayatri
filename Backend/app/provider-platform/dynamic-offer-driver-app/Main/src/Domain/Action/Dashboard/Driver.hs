@@ -223,6 +223,7 @@ import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
@@ -1059,7 +1060,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
 
 ------------------------------------------------------------------------------------------------------------------------------------------
 respondDriverRequest :: ShortId DM.Merchant -> Context.City -> Text -> Common.RequestRespondReq -> Flow APISuccess
-respondDriverRequest merchantShortId opCity _ req = do
+respondDriverRequest merchantShortId opCity fleetOwnerId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -1073,13 +1074,9 @@ respondDriverRequest merchantShortId opCity _ req = do
       DC.ACCEPTED -> do
         case driverRequest.requestData of
           DTR.EndRide DTR.EndRideData {..} -> do
+            fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config not found")
             tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (InternalError "no trip transaction found")
-            advancedTripTransaction <- WMB.findNextEligibleTripTransactionByDriverIdStatus driver.id TRIP_ASSIGNED
-            void $ LF.rideEnd (cast tripTransaction.id) lat lon tripTransaction.merchantId driver.id (advancedTripTransaction <&> (cast . (.id)))
-            QDriverInfo.updateOnRide False driver.id
-            QTT.updateStatus COMPLETED (Just $ LatLong lat lon) tripTransactionId
-            QVehicle.deleteByDriverid driver.id
-            Notification.notifyWmbOnRide driver.id tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" Nothing
+            void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon)
           _ -> pure ()
       _ -> pure ()
   pure Success
@@ -1494,6 +1491,10 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       []
       trips
   QTT.createMany allTransactions
+  whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
+    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> tripTransaction.routeCode))
+    (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+    WMB.assignTripTransaction tripTransaction route routeSourceStopInfo.point routeDestinationStopInfo.point
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
@@ -1507,18 +1508,18 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (_, roundRouteDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo roundRoute roundRouteCode
           foldM
             ( \accTransactions freqIdx -> do
-                let (routeCode, endStopCode) = bool (roundRouteCode, roundRouteDestinationStopInfo.code) (route.code, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode endStopCode
+                let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code routeDestinationStopInfo.code
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode endStopCode = do
+    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode = do
       transactionId <- generateGUID
       now <- getCurrentTime
       return $
@@ -1535,6 +1536,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             startedNearStopCode = Nothing,
             status = DTT.TRIP_ASSIGNED,
             routeCode = routeCode,
+            roundRouteCode = roundRouteCode,
             tripCode = Nothing,
             vehicleNumber = vehicle.registrationNo,
             vehicleServiceTierType = DV.castVariantToServiceTier vehicle.variant,

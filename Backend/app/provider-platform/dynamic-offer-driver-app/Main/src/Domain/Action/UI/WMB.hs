@@ -28,6 +28,7 @@ import Domain.Types.ApprovalRequest
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
 import Domain.Types.Extra.TransporterConfig
+import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -56,7 +57,6 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -137,31 +137,21 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash req.routeCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
   route <- QR.findByRouteCode req.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
   fleetConfig <- QFC.findByPrimaryKey vehicleRouteMapping.fleetOwnerId >>= fromMaybeM (InvalidRequest "Fleet Config Info not found")
-  (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route req.routeCode
   vehicleNumber <- decrypt vehicleRouteMapping.vehicleNumber
   curVehicleDetails <- QV.findByRegistrationNo vehicleNumber
   case curVehicleDetails of
     Just x | x.driverId /= driverId -> throwError (InvalidRequest "Already Linked")
     _ -> pure ()
+  (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
   tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus driverId
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidRequest "Could not link")
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId True
-  tripTransactionId <- generateGUID
-  now <- getCurrentTime
-  allStops <- QRTSM.findByRouteCode req.routeCode
-  let stops = map (\stop -> StopData stop.tripCode stop.routeCode stop.stopCode stop.stopPoint) allStops
-  closestStop <- findClosestStop req.location stops & fromMaybeM (InternalError "No closest stop found")
-  QV.create $ buildVehicle driverId vehicleRouteMapping vehicleNumber now
-  QTT.create $ buildTripTransaction tripTransactionId driverId vehicleRouteMapping fleetConfig destinationStopInfo.code vehicleNumber now closestStop
-  QDI.updateOnRide True driverId
-  let busTripInfo = buildBusTripInfo vehicleNumber req.routeCode destinationStopInfo.point
-  void $ LF.rideDetails (cast tripTransactionId) DRide.NEW merchantId driverId req.location.lat req.location.lon Nothing (Just busTripInfo)
-  TN.notifyWmbOnRide driverId merchantOperatingCityId IN_PROGRESS "Ride Started" "You ride has started" Nothing
+  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo req.location
   pure $
     TripTransactionDetails
-      { tripTransactionId = tripTransactionId,
+      { tripTransactionId = tripTransaction.id,
         vehicleNumber = vehicleNumber,
         vehicleType = vehicleRouteMapping.vehicleServiceTierType,
         source = sourceStopInfo,
@@ -169,60 +159,6 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         status = IN_PROGRESS,
         routeInfo = buildRouteInfo route
       }
-  where
-    buildVehicle driverId vehicleRouteMapping vehicleNumber now =
-      Vehicle
-        { airConditioned = Nothing,
-          capacity = Nothing,
-          category = Nothing,
-          color = vehicleRouteMapping.vehicleColor,
-          downgradeReason = Nothing,
-          driverId = driverId,
-          energyType = Nothing,
-          luggageCapacity = Nothing,
-          mYManufacturing = Nothing,
-          make = Nothing,
-          merchantId = merchantId,
-          model = vehicleRouteMapping.vehicleModel,
-          oxygen = Nothing,
-          registrationCategory = Nothing,
-          registrationNo = vehicleNumber,
-          selectedServiceTiers = vehicleRouteMapping.vehicleServiceTierType : [],
-          size = Nothing,
-          variant = castServiceTierToVariant vehicleRouteMapping.vehicleServiceTierType,
-          vehicleClass = vehicleRouteMapping.vehicleClass,
-          vehicleName = Nothing,
-          vehicleRating = Nothing,
-          ventilator = Nothing,
-          merchantOperatingCityId = Just merchantOperatingCityId,
-          createdAt = now,
-          updatedAt = now
-        }
-
-    buildTripTransaction tripTransactionId driverId vehicleRouteMapping fleetConfig endStopCode vehicleNumber now closestStop =
-      TripTransaction
-        { allowEndingMidRoute = fleetConfig.allowEndingMidRoute,
-          deviationCount = 0,
-          driverId = driverId,
-          endLocation = Nothing,
-          fleetOwnerId = vehicleRouteMapping.fleetOwnerId,
-          id = tripTransactionId,
-          isCurrentlyDeviated = False,
-          routeCode = req.routeCode,
-          status = IN_PROGRESS,
-          vehicleNumber = vehicleNumber,
-          startLocation = (Just closestStop.stopLocation),
-          startedNearStopCode = (Just closestStop.stopCode),
-          tripCode = (Just closestStop.tripCode),
-          vehicleServiceTierType = vehicleRouteMapping.vehicleServiceTierType,
-          merchantId = merchantId,
-          merchantOperatingCityId = merchantOperatingCityId,
-          createdAt = now,
-          updatedAt = now,
-          tripStartTime = Nothing,
-          tripEndTime = Nothing,
-          ..
-        }
 
 getTripTransactionDetails ::
   Domain.Types.TripTransaction.TripTransaction ->
@@ -258,19 +194,6 @@ getWmbTripActive (mbDriverId, _, _) = do
           tripTransactionDetails <- getTripTransactionDetails tripTransaction
           pure $ API.Types.UI.WMB.ActiveTripTransaction (Just tripTransactionDetails)
 
-data StopData = StopData
-  { tripCode :: Text,
-    routeCode :: Text,
-    stopCode :: Text,
-    stopLocation :: LatLong
-  }
-
-findClosestStop :: LatLong -> [StopData] -> Maybe StopData
-findClosestStop loc stops =
-  if null stops
-    then Nothing
-    else Just $ minimumBy (EHS.comparing (KU.distanceBetweenInMeters loc . stopLocation)) stops
-
 postWmbTripStart ::
   ( ( Maybe (Id Person),
       Id Merchant,
@@ -284,14 +207,14 @@ postWmbTripStart (_, _, _) tripTransactionId req = do
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ InternalError "Fleet-driver association not found")
   allStops <- QRTSM.findByRouteCode tripTransaction.routeCode
-  let stops = map (\stop -> StopData stop.tripCode stop.routeCode stop.stopCode stop.stopPoint) allStops
-  let closestStopTripCode = case findClosestStop req.location stops of
+  let stops = map (\stop -> WMB.StopData stop.tripCode stop.routeCode stop.stopCode stop.stopPoint) allStops
+  let closestStopTripCode = case WMB.findClosestStop req.location stops of
         Just stop -> (Just stop.tripCode)
         Nothing -> Nothing
   case closestStopTripCode of
     Just tripCode -> do
       tripEndStop <- (listToMaybe $ sortBy (EHS.comparing (.stopSequenceNum)) $ filter (\stop -> stop.tripCode == tripCode) allStops) & fromMaybeM (InternalError "End Stop Not Found.")
-      let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode tripEndStop.stopPoint
+      let busTripInfo = WMB.buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode tripEndStop.stopPoint
       void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
       QTT.updateOnStart (Just tripCode) (Just req.location) IN_PROGRESS tripTransactionId
       TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" Nothing
@@ -307,20 +230,20 @@ postWmbTripEnd ::
     API.Types.UI.WMB.TripEndReq ->
     Flow API.Types.UI.WMB.TripEndResp
   )
-postWmbTripEnd (person, _, merchantOpCityId) tripTransactionId req = do
+postWmbTripEnd (person, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (InternalError "Driver ID not found") person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (InternalError "Fleet Association not found")
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
   when (tripTransaction.status == COMPLETED) $ throwError (InvalidRequest "Trip already ended.")
   awaitingRequests <- QDR.findByStatus driverId AWAITING_APPROVAL
-  when (any (\ar -> case ar.requestData of EndRide _ -> True; _ -> False) awaitingRequests) $ throwError (InvalidRequest "EndRide request already present.")
-  routeInfo <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InternalError "Route not found")
-  fleetConfigInfo <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config Info not found")
-  let distanceLeft = KU.distanceBetweenInMeters req.location routeInfo.endPoint
-      rideEndEligibility = fleetConfigInfo.allowEndingMidRoute || distanceLeft <= fleetConfigInfo.endRideDistanceThreshold
+  when (any (\ar -> case ar.requestData of EndRide endRideData -> endRideData.tripTransactionId == tripTransactionId; _ -> False) awaitingRequests) $ throwError (InvalidRequest "EndRide request already present.")
+  route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InternalError "Route not found")
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config Info not found")
+  let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
+      rideEndEligibility = fleetConfig.allowEndingMidRoute || distanceLeft <= fleetConfig.endRideDistanceThreshold
   unless rideEndEligibility $
     throwError $ InvalidRequest "Ride Not Eligible For Ending"
-  if fleetConfigInfo.rideEndApproval
+  if fleetConfig.rideEndApproval
     then do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       driverMobileNumber <- mapM decrypt driver.mobileNumber
@@ -340,12 +263,7 @@ postWmbTripEnd (person, _, merchantOpCityId) tripTransactionId req = do
       driverReq <- createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
       pure $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
     else do
-      advancedTripTransaction <- WMB.findNextEligibleTripTransactionByDriverIdStatus driverId TRIP_ASSIGNED
-      void $ LF.rideEnd (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId driverId (advancedTripTransaction <&> (cast . (.id)))
-      QDI.updateOnRide False driverId
-      QTT.updateStatus COMPLETED (Just routeInfo.endPoint) tripTransactionId
-      QV.deleteByDriverid driverId
-      TN.notifyWmbOnRide driverId merchantOpCityId COMPLETED "Ride Ended" "Your ride has ended" Nothing
+      void $ endTripTransaction fleetConfig tripTransaction req.location
       pure $ TripEndResp {requestId = Nothing, result = SUCCESS}
 
 getWmbTripList ::
@@ -457,14 +375,6 @@ createDriverRequest driverId requesteeId title body requestData tripTransaction 
   TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
   pure driverReq
 
-buildBusTripInfo :: Text -> Text -> LatLong -> LT.RideInfo
-buildBusTripInfo vehicleNumber routeCode destinationLocation =
-  LT.Bus
-    { busNumber = vehicleNumber,
-      destination = destinationLocation,
-      ..
-    }
-
 buildRouteInfo :: Route -> RouteInfo
 buildRouteInfo Route {..} = RouteInfo {..}
 
@@ -473,18 +383,13 @@ getFleetConfig ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Flow API.Types.UI.WMB.FleetConfigData
+    Flow FleetConfig
   )
 getFleetConfig (mbDriverId, _, _) = do
   driverId <- fromMaybeM (InternalError "Driver id not found") mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (InvalidRequest "No Active Fleet Associated")
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet Config Info not found")
-  pure $
-    FleetConfigData
-      { allowedEndingMidRoute = fleetConfig.allowEndingMidRoute,
-        rideEndApproval = fleetConfig.rideEndApproval,
-        endRideDistanceThreshold = fleetConfig.endRideDistanceThreshold
-      }
+  pure $ fleetConfig
 
 getWmbRouteDetails ::
   ( ( Maybe (Id Person),
@@ -502,7 +407,7 @@ getWmbRouteDetails (_, _, _) routeCode = do
   now <- getCurrentTime
   let day = dayOfWeek (utctDay now)
   stops <- QRTSM.findAllByRouteCodeForStops routeCode 1 day
-  let stopInfos = map (\stop -> StopInfo (stop.stopName) (stop.stopCode) (stop.stopPoint)) (sortBy (EHS.comparing stopSequenceNum) stops)
+  let stopInfos = map (\stop -> StopInfo (stop.stopCode) (stop.stopName) (stop.stopPoint)) (sortBy (EHS.comparing stopSequenceNum) stops)
   pure $
     RouteDetails
       { code = routeCode,

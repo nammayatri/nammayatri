@@ -43,6 +43,7 @@ TripTransaction:
     tripCode: Maybe Text
     driverId: Id Person
     routeCode: Text
+    roundRouteCode: Maybe Text
     status: TripStatus
     isCurrentlyDeviated: Bool
     vehicleServiceTierType: ServiceTierType
@@ -169,6 +170,8 @@ FleetConfig:
     allowEndingMidRoute: Bool
     fleetOwnerId: Id Person
     endRideDistanceThreshold: HighPrecMeters
+    allowStartRideFromQR: Bool
+    allowAutomaticRoundTripAssignment: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
   toTType:
