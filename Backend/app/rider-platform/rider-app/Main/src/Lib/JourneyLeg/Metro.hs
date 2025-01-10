@@ -64,9 +64,13 @@ instance JT.JourneyLeg MetroLegRequest m where
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = do
-    -- TODO: No booking for metro, we can handle for bookings once booking is there
-    searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-    JT.mkLegInfoFromFrfsSearchRequest searchReq
+    mbBooking <- QTBooking.findBySearchId req.searchId
+    case mbBooking of
+      Just booking -> do
+        JT.mkLegInfoFromFrfsBooking booking
+      Nothing -> do
+        searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        JT.mkLegInfoFromFrfsSearchRequest searchReq
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (MetroLegRequestGetFare _) = do

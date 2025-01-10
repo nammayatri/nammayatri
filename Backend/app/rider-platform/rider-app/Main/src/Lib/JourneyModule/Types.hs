@@ -5,7 +5,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.FRFSSearch as FRFSSR
-import qualified Domain.Types.FRFSTicketBooking as DTicketBooking
+import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Location
@@ -36,6 +36,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Search
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -184,7 +185,7 @@ data LegInfo = LegInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroLegExtraInfo
+data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroLegExtraInfo | Bus BusLegExtraInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -206,7 +207,18 @@ data MetroLegExtraInfo = MetroLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
     lineColor :: Maybe Text,
+    tickets :: Maybe [Text],
+    providerName :: Maybe Text,
     frequency :: Maybe Int -- make it Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BusLegExtraInfo = BusLegExtraInfo
+  { originStop :: FRFSStationAPI,
+    destinationStop :: FRFSStationAPI,
+    tickets :: Maybe [Text],
+    providerName :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -220,6 +232,23 @@ data UpdateJourneyReq = UpdateJourneyReq
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BookingData = BookingData
+  { bookingId :: Text,
+    isRoundTrip :: Bool,
+    ticketData :: [Text]
+  }
+
+data UnifiedTicketQR = UnifiedTicketQR
+  { version :: Text,
+    txnId :: Text,
+    createdAt :: UTCTime,
+    cmrl :: [BookingData],
+    mtc :: [BookingData]
+  }
+
+data Provider = CMRL | MTC
+  deriving (Eq, Show)
 
 mapTaxiRideStatusToJourneyLegStatus :: DRide.RideStatus -> JourneyLegStatus
 mapTaxiRideStatusToJourneyLegStatus status = case status of
@@ -338,18 +367,64 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
       }
 
-getMetroLegStatusFromBooking :: DTicketBooking.FRFSTicketBooking -> JourneyLegStatus
+getMetroLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
 getMetroLegStatusFromBooking booking = case booking.status of
-  DTicketBooking.NEW -> Assigning
-  DTicketBooking.APPROVED -> Booked
-  DTicketBooking.PAYMENT_PENDING -> InPlan
-  DTicketBooking.CONFIRMING -> Assigning
-  DTicketBooking.FAILED -> InPlan
-  DTicketBooking.CONFIRMED -> Booked
-  DTicketBooking.CANCELLED -> Cancelled
-  DTicketBooking.COUNTER_CANCELLED -> Cancelled
-  DTicketBooking.CANCEL_INITIATED -> Cancelled
-  DTicketBooking.TECHNICAL_CANCEL_REJECTED -> Cancelled
+  DFRFSBooking.NEW -> Assigning
+  DFRFSBooking.APPROVED -> Booked
+  DFRFSBooking.PAYMENT_PENDING -> InPlan
+  DFRFSBooking.CONFIRMING -> Assigning
+  DFRFSBooking.FAILED -> InPlan
+  DFRFSBooking.CONFIRMED -> Booked
+  DFRFSBooking.CANCELLED -> Cancelled
+  DFRFSBooking.COUNTER_CANCELLED -> Cancelled
+  DFRFSBooking.CANCEL_INITIATED -> Cancelled
+  DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> Cancelled
+
+mkLegInfoFromFrfsBooking ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSBooking.FRFSTicketBooking -> m LegInfo
+mkLegInfoFromFrfsBooking booking = do
+  fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "From Station not found")
+  toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To Station not found")
+  ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
+  let qrDataList = ticketsData <&> (.qrData)
+  now <- getCurrentTime
+  legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
+  let startTime = fromMaybe now booking.startTime
+  return $
+    LegInfo
+      { skipBooking = False,
+        bookingAllowed = True,
+        pricingId = Just booking.id.getId,
+        travelMode = DTrip.Metro,
+        startTime = startTime,
+        order = legOrder,
+        estimatedDuration = Nothing, -------------- TODO : Should be changed
+        estimatedFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedDistance = Nothing, --------------- TODO : Should be changed
+        merchantId = booking.merchantId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
+        personId = booking.riderId,
+        status = getMetroLegStatusFromBooking booking,
+        legExtraInfo =
+          Metro $
+            MetroLegExtraInfo
+              { originStop = stationToStationAPI fromStation,
+                destinationStop = stationToStationAPI toStation,
+                lineColor = booking.lineColor,
+                tickets = Just qrDataList,
+                providerName = Just booking.providerName,
+                frequency = booking.frequency
+              }
+      }
+  where
+    stationToStationAPI station =
+      FRFSStationAPI
+        { name = station.name,
+          code = station.code,
+          lat = station.lat,
+          lon = station.lon,
+          address = station.address
+        }
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
@@ -385,6 +460,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = lineColor,
+                tickets = Nothing,
+                providerName = Nothing,
                 frequency = frequency
               }
       }
