@@ -25,7 +25,7 @@ data JourneyLeg = JourneyLeg
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
     id :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
-    legId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Domain.Types.Common.TravelMode,
     routeDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails,
     sequenceNumber :: Kernel.Prelude.Int,

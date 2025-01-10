@@ -138,12 +138,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
         let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = booking.journeyLegOrder}
+        journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegOrder}
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = searchReq.journeyLegInfo <&> (.journeyLegOrder)}
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder}
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do

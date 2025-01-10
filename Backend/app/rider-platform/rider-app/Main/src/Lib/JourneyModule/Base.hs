@@ -86,13 +86,13 @@ getAllLegsInfo journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   allLegsInfo <-
     allLegsRawData `forM` \leg -> do
-      case leg.legId of
-        Just legIdText -> do
-          let legId = Id legIdText
+      case leg.legSearchId of
+        Just legSearchIdText -> do
+          let legSearchId = Id legSearchIdText
           case leg.mode of
-            DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legId}
-            DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legId}
-            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legId}
+            DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
+            DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
+            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId}
             _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ sortBy (comparing (.order)) allLegsInfo
@@ -113,13 +113,13 @@ getAllLegsStatus journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   allLegsState <-
     allLegsRawData `forM` \leg -> do
-      case leg.legId of
-        Just legIdText -> do
-          let legId = Id legIdText
+      case leg.legSearchId of
+        Just legSearchIdText -> do
+          let legSearchId = Id legSearchIdText
           case leg.mode of
-            DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legId}
-            DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legId}
-            DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legId}
+            DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId}
+            DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId}
+            DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId}
             _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ sortBy (comparing (.legOrder)) allLegsState
@@ -152,18 +152,20 @@ addAllLegs journeyId legsReq = do
   journeyLegs <- getJourneyLegs journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   forM_ journeyLegs $ \journeyLeg -> do
-    searchResp <-
-      case journeyLeg.mode of
-        DTrip.Taxi -> do
-          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
-          addTaxiLeg parentSearchReq journeyLeg currentLegReq
-        DTrip.Metro -> do
-          addMetroLeg parentSearchReq journeyLeg
-        DTrip.Walk -> do
-          currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
-          addWalkLeg parentSearchReq journeyLeg currentLegReq
-        _ -> throwError $ InvalidRequest ("Mode not supported: " <> show journeyLeg.mode)
-    QJourneyLeg.updateLegId (Just searchResp.id) journeyLeg.id
+    when (isNothing journeyLeg.legSearchId) $ do
+      -- In case of retry of this function, if search has already triggered then it will not do it again
+      searchResp <-
+        case journeyLeg.mode of
+          DTrip.Taxi -> do
+            currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
+            addTaxiLeg parentSearchReq journeyLeg currentLegReq
+          DTrip.Metro -> do
+            addMetroLeg parentSearchReq journeyLeg
+          DTrip.Walk -> do
+            currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
+            addWalkLeg parentSearchReq journeyLeg currentLegReq
+          _ -> throwError $ InvalidRequest ("Mode not supported: " <> show journeyLeg.mode)
+      QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
 
 addTaxiLeg ::
   ( JL.SearchRequestFlow m r c,

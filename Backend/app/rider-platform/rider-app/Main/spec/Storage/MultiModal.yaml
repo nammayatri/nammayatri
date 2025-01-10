@@ -222,7 +222,7 @@ JourneyLeg:
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
     sequenceNumber: Int
-    legId: Maybe Text
+    legSearchId: Maybe Text
 
   beamFields:
     distance:
@@ -252,14 +252,16 @@ JourneyLeg:
     endLocation:
       endLocationLat: Double
       endLocationLon: Double
+    legSearchId:
+      legId: Maybe Text
 
   queries:
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
-    updateLegId:
+    updateLegSearchId:
       kvFunction: updateOneWithKV
-      params: [legId]
+      params: [legSearchId]
       where: id
 
   fromTType:
@@ -270,6 +272,7 @@ JourneyLeg:
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
+    legSearchId: legId|E
 
   toTType:
     distance: ((.value))|I
@@ -292,6 +295,7 @@ JourneyLeg:
     startLocationLon: (startLocation & (.longitude))|E
     endLocationLat: (endLocation & (.latitude))|E
     endLocationLon: (endLocation & (.longitude))|E
+    legId: legSearchId|E
 
   constraints:
     id: PrimaryKey

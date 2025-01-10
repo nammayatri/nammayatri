@@ -5,7 +5,6 @@ module Lib.JourneyLeg.Metro where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import qualified Domain.Types.TicketBookingService as TBS
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -15,14 +14,6 @@ import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
-
-mapServiceStatusToJourneyLegStatus :: TBS.ServiceStatus -> JT.JourneyLegStatus
-mapServiceStatusToJourneyLegStatus status = case status of
-  TBS.Pending -> JT.InPlan -- Indicates the service is yet to start planning.
-  TBS.Failed -> JT.Cancelled -- Indicates a failure in the service.
-  TBS.Confirmed -> JT.Booked -- Indicates the service has been confirmed/booked.
-  TBS.Verified -> JT.Assigning -- Indicates the service is verified and assigning resources.
-  TBS.Cancelled -> JT.Cancelled -- Indicates the service has been cancelled.
 
 instance JT.JourneyLeg MetroLegRequest m where
   search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = do
@@ -50,7 +41,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm req) = do
-    unless req.skipBooking $ do
+    when (not req.skipBooking && req.bookingAllowed) $ do
       void $ FRFSTicketService.postFrfsQuoteConfirm (Just req.personId, req.merchantId) req.quoteId
   confirm _ = throwError (InternalError "Not supported")
 
@@ -64,11 +55,12 @@ instance JT.JourneyLeg MetroLegRequest m where
     mbMetroBooking <- B.runInReplica $ QTBooking.findBySearchId req.searchId
     case mbMetroBooking of
       Just metroBooking -> do
-        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = metroBooking.journeyLegOrder}
+        journeyLegOrder <- metroBooking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+        return $ JT.JourneyLegState {status = JT.getMetroLegStatusFromBooking metroBooking, currentPosition = Nothing, legOrder = journeyLegOrder}
       Nothing -> do
-        -- search <- QFRFSSearch.findById req.searchId >>= fromMaybeM (InvalidRequest "Invalid search id")
-        -- return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = fromMaybe 0 search.journeyLegInfo.journeyLegOrder}
-        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = Nothing}
+        searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
+        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder}
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = do

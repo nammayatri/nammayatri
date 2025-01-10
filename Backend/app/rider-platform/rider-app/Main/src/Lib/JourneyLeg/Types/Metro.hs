@@ -24,6 +24,7 @@ data MetroLegRequestUpdateData = MetroLegRequestUpdateData
 data MetroLegRequestConfirmData = MetroLegRequestConfirmData
   { quoteId :: Id FRFSQuote,
     skipBooking :: Bool,
+    bookingAllowed :: Bool,
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity

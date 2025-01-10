@@ -13,6 +13,7 @@ import Domain.Types.SearchRequest
 import Environment
 import EulerHS.Prelude hiding (find, forM_, id, map)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -33,16 +34,19 @@ postMultimodalInfo ::
     Environment.Flow ApiTypes.JourneyInfoResp
   )
 postMultimodalInfo (_personId, _merchantId) journeyId req = do
-  addAllLegs journeyId req.legsReq
-  journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
-  return $
-    ApiTypes.JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration,
-        estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
-        estimatedDistance = journey.estimatedDistance,
-        legs
-      }
+  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    addAllLegs journeyId req.legsReq
+    journey <- JM.getJourney journeyId
+    legs <- JM.getAllLegsInfo journeyId
+    return $
+      ApiTypes.JourneyInfoResp
+        { estimatedDuration = journey.estimatedDuration,
+          estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
+          estimatedDistance = journey.estimatedDistance,
+          legs
+        }
+  where
+    lockKey = "infoLock-" <> journeyId.getId
 
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -123,14 +127,6 @@ postMultimodalSwitch ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalSwitch = do error "Logic yet to be decided"
 
-getMultimodalJourneyDetails ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow ApiTypes.JourneyDetails
-getMultimodalJourneyDetails = do error "Logic yet to be decided"
-
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -180,6 +176,6 @@ getMultimodalJourneyStatus (_, _) journeyId = do
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =
       ApiTypes.LegStatus
-        { legOrder = fromMaybe 0 legState.legOrder,
+        { legOrder = legState.legOrder,
           status = legState.status
         }

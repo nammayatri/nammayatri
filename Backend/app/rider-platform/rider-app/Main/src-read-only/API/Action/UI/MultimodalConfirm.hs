@@ -124,16 +124,6 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
-      :> "journey"
-      :> Capture
-           "journeyId"
-           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
-      :> "details"
-      :> Get
-           '[JSON]
-           API.Types.UI.MultimodalConfirm.JourneyDetails
-      :<|> TokenAuth
-      :> "multimodal"
       :> Capture
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
@@ -148,7 +138,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInfo :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> postMultimodalSwitchVariant :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalExtendLeg :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> getMultimodalJourneyDetails :<|> postMultimodalRiderLocation
+handler = postMultimodalInfo :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> postMultimodalSwitchVariant :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalExtendLeg :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation
 
 postMultimodalInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -235,15 +225,6 @@ postMultimodalJourneyCancel ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
-
-getMultimodalJourneyDetails ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyDetails
-  )
-getMultimodalJourneyDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalJourneyDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalRiderLocation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

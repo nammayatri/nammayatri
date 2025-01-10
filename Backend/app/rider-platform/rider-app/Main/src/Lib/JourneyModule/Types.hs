@@ -5,6 +5,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.FRFSSearch as FRFSSR
+import qualified Domain.Types.FRFSTicketBooking as DTicketBooking
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Location
@@ -120,7 +121,7 @@ newtype SearchResponse = SearchResponse
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
     currentPosition :: Maybe LatLong,
-    legOrder :: Maybe Int
+    legOrder :: Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -167,7 +168,7 @@ data JourneyInitData = JourneyInitData
 data LegInfo = LegInfo
   { skipBooking :: Bool,
     bookingAllowed :: Bool,
-    legId :: Maybe Text,
+    pricingId :: Maybe Text,
     travelMode :: DTrip.TravelMode,
     startTime :: UTCTime,
     order :: Int,
@@ -257,7 +258,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
     LegInfo
       { skipBooking = False,
         bookingAllowed = True,
-        legId = Just booking.id.getId,
+        pricingId = Just booking.id.getId,
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
         order = 0, -- booking.journeyLegOrder, FIX THIS @hkmangla
@@ -290,7 +291,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed = True,
-        legId = journeyLegInfo'.pricingId,
+        pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
         order = journeyLegInfo'.journeyLegOrder,
@@ -323,7 +324,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed = False,
-        legId = Just id.getId,
+        pricingId = Just id.getId,
         travelMode = DTrip.Walk,
         startTime = startTime,
         order = journeyLegInfo'.journeyLegOrder,
@@ -336,6 +337,19 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
       }
+
+getMetroLegStatusFromBooking :: DTicketBooking.FRFSTicketBooking -> JourneyLegStatus
+getMetroLegStatusFromBooking booking = case booking.status of
+  DTicketBooking.NEW -> Assigning
+  DTicketBooking.APPROVED -> Booked
+  DTicketBooking.PAYMENT_PENDING -> InPlan
+  DTicketBooking.CONFIRMING -> Assigning
+  DTicketBooking.FAILED -> InPlan
+  DTicketBooking.CONFIRMED -> Booked
+  DTicketBooking.CANCELLED -> Cancelled
+  DTicketBooking.COUNTER_CANCELLED -> Cancelled
+  DTicketBooking.CANCEL_INITIATED -> Cancelled
+  DTicketBooking.TECHNICAL_CANCEL_REJECTED -> Cancelled
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
@@ -354,7 +368,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)),
-        legId = journeyLegInfo'.pricingId,
+        pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Metro,
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
@@ -445,7 +459,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance =
         merchantOperatingCityId = Just merchantOpCityId,
         createdAt = now,
         updatedAt = now,
-        legId = Nothing
+        legSearchId = Nothing
       }
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney

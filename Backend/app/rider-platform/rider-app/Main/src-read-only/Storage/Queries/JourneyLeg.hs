@@ -28,8 +28,8 @@ createMany = traverse_ create
 findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLeg.JourneyLeg])
 findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
-updateLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
-updateLegId legId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -51,7 +51,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.fromStopGtfsId (fromStopDetails >>= (.gtfsId)),
       Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
-      Se.Set Beam.legId legId,
+      Se.Set Beam.legId legSearchId,
       Se.Set Beam.mode mode,
       Se.Set Beam.frequency Nothing,
       Se.Set Beam.routeColorCode (routeDetails >>= (.color)),
@@ -88,7 +88,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId,
             id = Kernel.Types.Id.Id id,
             journeyId = Kernel.Types.Id.Id journeyId,
-            legId = legId,
+            legSearchId = legId,
             mode = mode,
             routeDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode,
             sequenceNumber = sequenceNumber,
@@ -119,7 +119,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.fromStopName = fromStopDetails >>= (.name),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
-        Beam.legId = legId,
+        Beam.legId = legSearchId,
         Beam.mode = mode,
         Beam.frequency = Nothing,
         Beam.routeColorCode = routeDetails >>= (.color),

@@ -18,54 +18,21 @@ module: MultimodalConfirm
 types:
   JourneyInfoReq:
     legsReq: [JourneyLegsReq]
+
   JourneyLegsReq:
     legNumber: Int
     originAddress: LocationAddress
     destinationAddress: LocationAddress  #regenerate the files to get proper 'destinationAddress' field
+
   JourneyInfoResp:
     estimatedDuration: Maybe Seconds
     estimatedFare: Maybe PriceAPIEntity
     estimatedDistance: Distance
     legs: [LegInfo]
 
-  JourneyLegInfo:
-    enum: "Walk JourneyLegWalkInfo, Taxi JourneyLegTaxiInfo, Bus JourneyLegBusInfo, Metro JourneyLegMetroInfo"
-  JourneyLegWalkInfo:
-    origin: Location
-    destination: Location
-
-  JourneyLegTaxiInfo:
-    origin: Location
-    stops: [Location]
-    providerName: Text
-    providerLogo: Maybe Text
-
-  JourneyLegMetroInfo:
-    originStop: FRFSStationAPI
-    destinationStop: FRFSStationAPI
-    lineColor: Text
-    lineColorCode : Text
-    frequency: Seconds
-
-  JourneyLegBusInfo:
-    originStation: FRFSStationAPI
-    destinationStation: FRFSStationAPI
-    busCategory: Text
-    routeNumber: Text
-    frequency: Maybe Seconds
-    startTime: Maybe TimeOfDay
-
   LegStatus:
     legOrder: Int
     status: JourneyLegStatus
-
-  JourneyDetails:
-    legDetails: [LegDetails]
-    totalFare: Price
-
-  LegDetails:
-    legOrder: Int
-    legFare: Price
 
   ExtendLegReq:
     legId: Id JourneyLeg
@@ -79,7 +46,6 @@ types:
   SwitchLegReq:
     newMode: TravelMode
     currLocation: LatLong
-
 
 apis:
   - POST:
@@ -151,13 +117,6 @@ apis:
         journeyId: Id Journey
       response:
         type: Kernel.Types.APISuccess.APISuccess
-
-  - GET:
-      endpoint: multimodal/journey/{journeyId}/details
-      params:
-        journeyId: Id Journey
-      response:
-        type: JourneyDetails
 
   - POST:
       endpoint: multimodal/{journeyId}/rider/location

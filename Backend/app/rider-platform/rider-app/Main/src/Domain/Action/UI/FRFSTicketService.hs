@@ -460,6 +460,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
     buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} selectedDiscounts = do
       uuid <- generateGUID
       now <- getCurrentTime
+      mbSearch <- QFRFSSearch.findById searchId
       let appliedDiscountsJson = encodeToText selectedDiscounts
           totalDiscount =
             foldr
@@ -491,7 +492,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
-                journeyLegOrder = Nothing,
+                journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
                 ..
               }
       QFRFSTicketBooking.create booking

@@ -60,7 +60,7 @@ instance JT.JourneyLeg WalkLegRequest m where
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
-    return $ JT.JourneyLegState {status = status, currentPosition = Nothing, legOrder = Just journeyLegInfo.journeyLegOrder}
+    return $ JT.JourneyLegState {status = status, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder}
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (WalkLegRequestGetInfo req) = do
