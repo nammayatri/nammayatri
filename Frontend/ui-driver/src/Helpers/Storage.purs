@@ -169,6 +169,7 @@ data KeyStore = USER_NAME
                 | BUS_EDUCATION_SCREEN_VISTED
                 | WMB_END_TRIP_STATUS
                 | BUS_VEHICLE_NUMBER_HASH
+                | WMB_END_TRIP_STATUS_POLLING
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
