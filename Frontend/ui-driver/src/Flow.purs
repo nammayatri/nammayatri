@@ -2358,6 +2358,9 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   (GlobalState allState) <- getState
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+
+  -- Will need to have more optimised WMB flow for bus driver instead of polling like this
+  setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
   
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let isBusVariant = getDriverInfoResp.onboardingVehicleCategory == Just "BUS" || HU.specialVariantsForTracking FunctionCall
@@ -3284,10 +3287,14 @@ homeScreenFlow = do
         Left errPayload -> pure unit
         Right (API.TripEndResp tripEndResp) ->
           case tripEndResp.result of  
-            "SUCCESS" -> currentRideFlow Nothing Nothing Nothing Nothing
-            _ -> do 
+            "SUCCESS" -> do
+              deleteValueFromLocalStore WMB_END_TRIP_STATUS
+              currentRideFlow Nothing Nothing Nothing Nothing
+            "WAITING_FOR_ADMIN_APPROVAL" -> do 
               setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
+              setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
               homeScreenFlow
+            _ -> homeScreenFlow
   homeScreenFlow
 
 

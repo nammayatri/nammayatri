@@ -128,6 +128,7 @@ import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Screens.HomeScreen.ScreenData
 import LocalStorage.Cache (getValueFromCache)
+import Services.API as API
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -176,7 +177,13 @@ screen initialState (GlobalState globalState) =
           --   Nothing -> pure unit
 
           -- Polling to get the WMP Trip Details
-          if (getValueToLocalStore DRIVER_STATUS == "true") then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveWMBTripDetails push 3000.0 15 else pure unit
+          if (getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isJust initialState.data.whereIsMyBusData.trip) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "WAITING_FOR_ADMIN_APPROVAL")) then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveWMBTripDetails push 3000.0 15 else pure unit
+
+          -- Polling for endTripStatus CHange
+          if(getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL" && (getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "false")) then do
+            void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "true"
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getEndTripStatusChange push 3000.0 
+            else pure unit
           
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -398,6 +405,23 @@ getActiveWMBTripDetails push delayTimeInMilliSeconds retryCount =
           getActiveWMBTripDetails push (delayTimeInMilliSeconds) (retryCount - 1)
     else pure unit
     
+-- May look duplicate kept it for better code readability
+getEndTripStatusChange :: (Action -> Effect Unit) -> Number -> FlowBT String Unit
+getEndTripStatusChange push delayTimeInMilliSeconds =
+  if (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL" && getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "true")
+    then do
+      let _ = spy "Coming here-codex" ""
+      (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
+      case tripTransactions.tripTransactionDetails of
+        Just (APITypes.TripTransactionDetails tripDetails) -> do
+          if (not $ tripDetails.status `DA.elem` [API.PAUSED, API.IN_PROGRESS]) 
+            then lift $ lift $ doAff $ liftEffect $ push $ WMBEndTripAC
+            else do
+              void $ lift $ lift $ delay $ Milliseconds delayTimeInMilliSeconds
+              getEndTripStatusChange push (delayTimeInMilliSeconds)
+        Nothing -> do
+          lift $ lift $ doAff $ liftEffect $ push $ WMBEndTripAC
+    else pure unit
 
 playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
 playRideAssignedAudio tripCategory rideId push = do 
@@ -481,7 +505,6 @@ view push state =
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
       , if showEnterOdometerReadingModalView then enterOdometerReadingModal push state else dummyTextView
-      , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
@@ -530,6 +553,7 @@ view push state =
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
       , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
+      , if (state.props.endRidePopUp) then endRidePopView push state else dummyTextView
   ]
   where 
     currentDate = HU.getCurrentUTC "" 

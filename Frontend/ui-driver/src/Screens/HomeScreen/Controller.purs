@@ -509,6 +509,7 @@ data Action = NoAction
             | ScanQrCode
             | WMBTripActiveAction API.TripTransactionDetails
             | WMBEndTripModalAC PopUpModal.Action
+            | WMBEndTripAC
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1285,6 +1286,8 @@ eval (WMBEndTripModalAC action) state = do
       exit $ WMBEndTrip state
     PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
     _ -> continue state
+
+eval WMBEndTripAC state = exit $ WMBEndTrip state
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
