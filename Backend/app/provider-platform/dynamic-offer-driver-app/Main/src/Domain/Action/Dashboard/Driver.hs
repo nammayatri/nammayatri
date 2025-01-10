@@ -168,7 +168,6 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
-import EulerHS.KVConnector.Helper.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -1039,7 +1038,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
   case mbNewRC of
     Just newRC -> do
-      when (newRC.verificationStatus == Documents.INVALID && not shouldLogLocalLatency) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+      when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do
