@@ -1305,7 +1305,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O1 -j4
 
 executable dynamic-offer-driver-app-exe
   main-is: Main.hs
@@ -1435,4 +1435,4 @@ executable dynamic-offer-driver-app-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O1 -j4

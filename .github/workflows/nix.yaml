@@ -43,44 +43,31 @@ jobs:
           fi
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
           echo "Label check result: ${has_backend}"
+
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-darwin]
+        include:
+          # Direct builds
+          - system: x86_64-linux
+            build-for: x86_64-linux
+          - system: aarch64-darwin
+            build-for: aarch64-darwin
+          # Cross compilation
+          - system: aarch64-darwin
+            build-for: aarch64-linux
     needs: [process-labels]
+    timeout-minutes: 1440
     runs-on: ${{ matrix.system }}
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
-    outputs:
-      docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
       - name: Build all flake outputs
         run: |
-          om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
+          om ci run --systems "${{ matrix.build-for }}" --no-out-link -- -v
 
-      - name: Docker tasks
-        id: docker
-        if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
-        run: |
-          nix build .#dockerImage -o docker-image.tgz
-          echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
-      
-      - name: Upload Docker image tarball
-        if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: docker-image.tgz
 
   # The previous job would have already built for macOS but we must do it again
   # from NixOS host (via remote builder protocol) so as to populate its local
@@ -99,23 +86,109 @@ jobs:
         run: |
           om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
-  push-docker:
-    needs: [build, process-labels]
-    runs-on: ubuntu-latest
-    if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
-      needs.process-labels.outputs.has-backend == 'true'
+  docker-build-amd64:
+    needs: [build]
+    runs-on: x86_64-linux
+    outputs:
+      image-name: ${{ steps.image-info.outputs.name }}
+      image-tag: ${{ steps.image-info.outputs.tag }}
     steps:
-      - name: Download Docker image tarball
+      - uses: actions/checkout@v4
+      
+      - name: Get image info
+        id: image-info
+        run: |
+          echo "name=$(nix eval --raw .#dockerImage.imageName)" >> $GITHUB_OUTPUT
+          echo "tag=$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
+
+      - name: Build x86_64 Docker image
+        run: |
+          nix build .#dockerImage -o docker-image-amd64.tgz
+          # Set the architecture explicitly in the image config
+          tar xf docker-image-amd64.tgz
+          docker load < docker-image-amd64.tgz
+          IMAGE_NAME=$(nix eval --raw .#dockerImage.imageName)
+          TAG=$(nix eval --raw .#dockerImage.imageTag)
+          docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}-amd64:${TAG}
+          # Save with explicit architecture
+          docker save ${IMAGE_NAME}-amd64:${TAG} | gzip > docker-image-amd64.tgz
+
+      - name: Upload x86_64 Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-amd64
+          path: docker-image-amd64.tgz
+
+  docker-build-arm64:
+    needs: [build]
+    runs-on: aarch64-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ARM64 Docker image
+        run: |
+          nix build .#dockerImage -o docker-image-arm64.tgz
+          # Set the architecture explicitly in the image config
+          tar xf docker-image-arm64.tgz
+          docker load < docker-image-arm64.tgz
+          IMAGE_NAME=$(nix eval --raw .#dockerImage.imageName)
+          TAG=$(nix eval --raw .#dockerImage.imageTag)
+          docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}-arm64:${TAG}
+          # Save with explicit architecture
+          docker save ${IMAGE_NAME}-arm64:${TAG} | gzip > docker-image-arm64.tgz
+
+      - name: Upload ARM64 Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-arm64
+          path: docker-image-arm64.tgz
+
+  push-docker:
+    needs: [docker-build-amd64, docker-build-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download x86_64 Docker image
         uses: actions/download-artifact@v4
         with:
-          name: docker-image
-      
-      - name: Load and push Docker image
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: docker-image-amd64
+          path: amd64
+
+      - name: Download ARM64 Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-arm64
+          path: arm64
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push images and create manifest
         run: |
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker load < docker-image.tgz
-          docker push ${{ needs.build.outputs.docker-image-name }}
+          # Load both images
+          docker load < amd64/docker-image-amd64.tgz
+          docker load < arm64/docker-image-arm64.tgz
+          
+          IMAGE_NAME="${{ needs.docker-build-amd64.outputs.image-name }}"
+          TAG="${{ needs.docker-build-amd64.outputs.image-tag }}"
+          
+          # Push individual architecture images
+          docker push ${IMAGE_NAME}-amd64:${TAG}
+          docker push ${IMAGE_NAME}-arm64:${TAG}
+          
+          # Create and push the manifest list with explicit architecture annotations
+          docker manifest create ${IMAGE_NAME}:${TAG} \
+            --amend ${IMAGE_NAME}-amd64:${TAG} --arch amd64 --os linux \
+            --amend ${IMAGE_NAME}-arm64:${TAG} --arch arm64 --os linux
+          
+          # Verify the manifest
+          docker manifest inspect ${IMAGE_NAME}:${TAG}
+          
+          # Push the manifest
+          docker manifest push --purge ${IMAGE_NAME}:${TAG}
+          
+          # Clean up
           docker logout ghcr.io

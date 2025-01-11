@@ -109,7 +109,7 @@ library:
           - -j4
       else:
         ghc-options:
-          - -O2
+          - -O1
           - -j4
   dependencies:
     - mobility-core
@@ -134,7 +134,7 @@ executables:
           - -j4
       else:
         ghc-options:
-          - -O2
+          - -O1
           - -j4
     dependencies:
       - mobility-core

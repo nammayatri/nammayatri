@@ -103,7 +103,7 @@ library:
           - -j4
       else:
         ghc-options:
-          - -O2
+          - -O1
           - -j4
 
 executables:
@@ -127,7 +127,7 @@ executables:
           - -j4
       else:
         ghc-options:
-          - -O2
+          - -O1
           - -j4
     dependencies:
       - public-transport-search-consumer
