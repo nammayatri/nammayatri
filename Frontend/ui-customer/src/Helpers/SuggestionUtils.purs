@@ -392,21 +392,23 @@ correctServiceTierName serviceTierName =
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
 removeDuplicateTrips trips precision = 
-  let 
-    grouped = DA.groupBy 
-      (\trip1 trip2 -> 
-        (getGeoHash trip1.destLat trip1.destLong precision) 
-        == 
-        (getGeoHash trip2.destLat trip2.destLong precision)
-        && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
-      ) 
-      trips
+  let validTrips = filter (\trip -> 
+          (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong) && (getDistanceBwCordinates trip.sourceLat trip.sourceLong trip.destLat trip.destLong /= 0.0)
+        ) trips
+      grouped = DA.groupBy 
+        (\trip1 trip2 -> 
+          (getGeoHash trip1.destLat trip1.destLong precision) 
+          == 
+          (getGeoHash trip2.destLat trip2.destLong precision)
+          && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
+        ) 
+        validTrips
 
-    maxScoreTrips = map 
-      (maximumBy (comparing (\trip -> trip.locationScore))) 
-      grouped
-  in 
-    catMaybes maxScoreTrips
+      maxScoreTrips = map 
+        (maximumBy (comparing (\trip -> trip.locationScore))) 
+        grouped
+    in 
+      catMaybes maxScoreTrips
 
 isPointWithinXDist :: Trip -> Number -> Number -> Number -> Boolean
 isPointWithinXDist item lat lon thresholdDist =
