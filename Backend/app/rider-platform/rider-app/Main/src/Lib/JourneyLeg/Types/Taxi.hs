@@ -26,7 +26,7 @@ data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
     startTime :: UTCTime,
     personId :: Id DP.Person,
     merchantId :: Id DM.Merchant,
-    estimateId :: Id DE.Estimate
+    estimateId :: Maybe (Id DE.Estimate)
   }
 
 data ChangeServiceTierData = ChangeServiceTierData

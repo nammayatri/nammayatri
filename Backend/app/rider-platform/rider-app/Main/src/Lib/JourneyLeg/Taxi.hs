@@ -89,6 +89,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
     now <- getCurrentTime
     let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 -- 5 minutes buffer
     unless shouldSkipBooking $ do
+      estimateId <- req.estimateId & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")
       let selectReq =
             DSelect.DSelectReq
               { customerExtraFee = Nothing,
@@ -101,7 +102,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 deliveryDetails = Nothing,
                 disabilityDisable = Nothing
               }
-      void $ DSelect.select2' (req.personId, req.merchantId) req.estimateId selectReq
+      void $ DSelect.select2' (req.personId, req.merchantId) estimateId selectReq
   confirm _ = throwError (InternalError "Not Supported")
 
   update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()

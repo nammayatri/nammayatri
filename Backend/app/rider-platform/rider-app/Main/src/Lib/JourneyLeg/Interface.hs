@@ -98,25 +98,23 @@ confirm JL.LegInfo {..} =
   where
     mkTaxiLegConfirmReq :: JL.ConfirmFlow m r c => m TaxiLegRequest
     mkTaxiLegConfirmReq = do
-      estimateIdText <- pricingId & fromMaybeM (InvalidRequest "You can't confirm before getting fare")
       return $
         TaxiLegRequestConfirm $
           TaxiLegRequestConfirmData
             { skipBooking = skipBooking,
-              estimateId = Id estimateIdText,
+              estimateId = Id <$> pricingId,
               startTime,
               personId,
               merchantId
             }
     mkMetroLegConfirmReq :: JL.ConfirmFlow m r c => m MetroLegRequest
     mkMetroLegConfirmReq = do
-      quoteIdText <- pricingId & fromMaybeM (InvalidRequest "You can't confirm before getting fare")
       return $
         MetroLegRequestConfirm $
           MetroLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
-              quoteId = Id quoteIdText,
+              quoteId = Id <$> pricingId,
               personId,
               merchantId,
               merchantOperatingCityId

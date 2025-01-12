@@ -42,7 +42,8 @@ instance JT.JourneyLeg MetroLegRequest m where
 
   confirm (MetroLegRequestConfirm req) = do
     when (not req.skipBooking && req.bookingAllowed) $ do
-      void $ FRFSTicketService.postFrfsQuoteConfirm (Just req.personId, req.merchantId) req.quoteId
+      quoteId <- req.quoteId & fromMaybeM (InvalidRequest "You can't confrim metro before getting the fare")
+      void $ FRFSTicketService.postFrfsQuoteConfirm (Just req.personId, req.merchantId) quoteId
   confirm _ = throwError (InternalError "Not supported")
 
   update (MetroLegRequestUpdate _) = return ()
