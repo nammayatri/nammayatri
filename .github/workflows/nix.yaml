@@ -58,11 +58,10 @@ jobs:
             host: aarch64-darwin
     # needs: [process-labels]
     runs-on: ${{ matrix.host }}
+    # needs.process-labels.outputs.has-backend == 'true' && 
     if: |
-      # needs.process-labels.outputs.has-backend == 'true' && 
-      # (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
-      # ((system == "aarch64-linux" && github.ref == 'refs/heads/main') || system != "aarch64-linux")
-      true
+      github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
+      ((system == "aarch64-linux" && github.ref == 'refs/heads/main') || system != "aarch64-linux"
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
