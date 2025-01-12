@@ -60,8 +60,7 @@ jobs:
     runs-on: ${{ matrix.host }}
     # needs.process-labels.outputs.has-backend == 'true' && 
     if: |
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
-      ((matrix.system == "aarch64-linux" && github.ref == 'refs/heads/main') || matrix.system != "aarch64-linux"
+      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
