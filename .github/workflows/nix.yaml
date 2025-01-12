@@ -3,7 +3,7 @@ on:
   push:
     branches: ["main", "prodHotPush-Common"]
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    # types: [opened, synchronize, reopened, closed]
     branches: ["main", "prodHotPush-Common"]
   workflow_dispatch:
 
