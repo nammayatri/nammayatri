@@ -3248,7 +3248,7 @@ chooseBusRouteModalPopup state =
             color = Color.black800,
             singleLine = true,
             placeholder = "",
-            text = if text == "BUS_AC" then "AC" else "Non-AC",
+            text = text,
             padding = Padding 0 16 20 16,
             enabled = false,
             textStyle = FontStyle.SubHeading3
