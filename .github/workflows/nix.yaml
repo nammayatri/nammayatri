@@ -59,8 +59,8 @@ jobs:
     # needs: [process-labels]
     runs-on: ${{ matrix.host }}
     # needs.process-labels.outputs.has-backend == 'true' && 
-    if: |
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
+    #if: |
+    #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
