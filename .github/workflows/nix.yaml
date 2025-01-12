@@ -51,20 +51,17 @@ jobs:
           # Direct builds
           - system: x86_64-linux
             host: x86_64-linux
-            run-condition: true
           - system: aarch64-darwin
             host: aarch64-darwin
-            run-condition: true
           # Cross compilation
           - system: aarch64-linux
             host: aarch64-darwin
-            run-condition: github.ref == 'refs/heads/main'
     needs: [process-labels]
     runs-on: ${{ matrix.host }}
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
-      matrix.run-condition
+      ((system == "aarch64-linux" && github.ref == 'refs/heads/main') || system != "aarch64-linux")
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
