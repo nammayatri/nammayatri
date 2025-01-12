@@ -9,7 +9,7 @@ To build or develop the project, you need to install the following.
 
 #### Nix
 
-[Nix](https://nixos.asia/en/nix) is central to building and developing the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
+We use [Nix](https://nixos.asia/en/nix) to build and develop the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
 1. [Install **Nix**](https://nixos.asia/en/install)
 1. [Install **direnv**](https://github.com/juspay/nixos-unified-template).[^direnv]
