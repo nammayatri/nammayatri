@@ -1,10 +1,15 @@
 name: Nix CI
+
 on:
   push:
-    branches: ["main", "prodHotPush-Common"]
+    branches: 
+      - "main"
+      - "prodHotPush-Common"
   pull_request:
-    # types: [opened, synchronize, reopened, closed]
-    branches: ["main", "prodHotPush-Common"]
+    types: [opened, synchronize, reopened, closed]
+    branches: 
+      - "main"
+      - "prodHotPush-Common"
   workflow_dispatch:
 
 permissions:
@@ -14,20 +19,42 @@ permissions:
   packages: write
 
 jobs:
-  process-labels:
+  check-conditions:
     runs-on: ubuntu-latest
-    # Skip this job for PR close events without merge
-    if: github.event.pull_request.merged == true || github.event_name != 'pull_request' || github.event.action != 'closed'
     outputs:
+      should-build: ${{ steps.evaluate.outputs.should_build }}
+      should-push-docker: ${{ steps.evaluate.outputs.should_push_docker }}
       has-backend: ${{ steps.check-labels.outputs.has_backend }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
       - name: Apply labels
-        uses: actions/labeler@v4
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      
+      - name: Check conditions
+        id: evaluate
+        run: |
+          # Check if we should build
+          if [[ "${{ github.event.pull_request.merged }}" == "true" || 
+                "${{ github.event_name }}" != "pull_request" || 
+                "${{ github.event.action }}" != "closed" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check if we should push docker
+          if [[ "${{ github.ref }}" == "refs/heads/main" || 
+                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+                "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+          fi
       
       - name: Check for backend label
         id: check-labels
@@ -45,47 +72,44 @@ jobs:
           echo "Label check result: ${has_backend}"
 
   build:
+    needs: [check-conditions]
+    if: needs.check-conditions.outputs.should-build == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     strategy:
       matrix:
         include:
-          # Direct builds
           - system: x86_64-linux
             host: x86_64-linux
           - system: aarch64-darwin
             host: aarch64-darwin
-          # Cross compilation
           - system: aarch64-linux
             host: aarch64-darwin
-    # needs: [process-labels]
     runs-on: ${{ matrix.host }}
-    # needs.process-labels.outputs.has-backend == 'true' && 
-    #if: |
-    #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Build all flake outputs
+        if: steps.check-conditions.outputs.should_build == 'true'
         run: |
           om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
-      - name: Docker tasks
+      - name: Build Docker image
         id: docker
         if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
+          steps.check-conditions.outputs.should_build == 'true' &&
+          matrix.system == 'x86_64-linux' && 
+          needs.check-conditions.outputs.should-push-docker == 'true'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
-      - name: Upload Docker image tarball
+      - name: Upload Docker image
         if: |
-          matrix.system == 'x86_64-linux' && (
-          github.ref == 'refs/heads/main' || 
-          github.ref == 'refs/heads/prodHotPush-Common' || 
-          github.event.pull_request.merged == true)
+          matrix.system == 'x86_64-linux' && 
+          needs.check-conditions.outputs.should-push-docker == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -95,31 +119,30 @@ jobs:
   # Nix store, and thus provide macOS binaries as part of our Nix cache.
   macos-build-for-cache:
     runs-on: ${{ matrix.host }}
-    needs: [build, process-labels]
+    needs: [build, check-conditions]
     if: github.ref == 'refs/heads/main'
     strategy:
       matrix:
         system: [aarch64-darwin]
         host: [x86_64-linux]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Build all flake outputs
         run: |
           om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
   push-docker:
-    needs: [build, process-labels]
+    needs: [build, check-conditions]
     runs-on: ubuntu-latest
-    # needs.process-labels.outputs.has-backend == 'true'
-    if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true)
+    if: needs.check-conditions.outputs.should-push-docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     steps:
-      - name: Download Docker image tarball
+      - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: docker-image
       
-      - name: Load and push Docker image
+      - name: Push Docker image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
