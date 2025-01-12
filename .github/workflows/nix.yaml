@@ -22,38 +22,25 @@ jobs:
   check-conditions:
     runs-on: ubuntu-latest
     outputs:
-      should-build: ${{ steps.evaluate.outputs.should_build }}
-      should-push-docker: ${{ steps.evaluate.outputs.should_push_docker }}
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
       has-backend: ${{ steps.check-labels.outputs.has_backend }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
       - name: Apply labels
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
       
-      - name: Check conditions
+      - name: Check global conditions
         id: evaluate
         run: |
-          # Check if we should build
+          # Check if workflow should proceed (non-matrix conditions)
           if [[ "${{ github.event.pull_request.merged }}" == "true" || 
                 "${{ github.event_name }}" != "pull_request" || 
                 "${{ github.event.action }}" != "closed" ]]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
           else
-            echo "should_build=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Check if we should push docker
-          if [[ "${{ github.ref }}" == "refs/heads/main" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
-                "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "should_push_docker=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
       
       - name: Check for backend label
@@ -73,7 +60,7 @@ jobs:
 
   build:
     needs: [check-conditions]
-    if: needs.check-conditions.outputs.should-build == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     strategy:
       matrix:
         include:
@@ -86,9 +73,30 @@ jobs:
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
-    
+      should_push_docker: ${{ steps.check-conditions.outputs.should_push_docker }}
     steps:
+      - name: Check matrix conditions
+        id: check-conditions
+        run: |
+          # Should build check (skip aarch64-linux on non-main)
+          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Should push docker check
+          if [[ ("${{ github.ref }}" == "refs/heads/main" || 
+                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+                "${{ github.event.pull_request.merged }}" == "true") && 
+                "${{ matrix.system }}" == "x86_64-linux" ]]; then
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
+        if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
       - name: Build all flake outputs
@@ -98,18 +106,13 @@ jobs:
 
       - name: Build Docker image
         id: docker
-        if: |
-          steps.check-conditions.outputs.should_build == 'true' &&
-          matrix.system == 'x86_64-linux' && 
-          needs.check-conditions.outputs.should-push-docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && steps.check-conditions.outputs.should_push_docker == 'true'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image
-        if: |
-          matrix.system == 'x86_64-linux' && 
-          needs.check-conditions.outputs.should-push-docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && steps.check-conditions.outputs.should_push_docker == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -117,6 +120,7 @@ jobs:
   # The previous job would have already built for macOS but we must do it again
   # from NixOS host (via remote builder protocol) so as to populate its local
   # Nix store, and thus provide macOS binaries as part of our Nix cache.
+
   macos-build-for-cache:
     runs-on: ${{ matrix.host }}
     needs: [build, check-conditions]
@@ -135,13 +139,13 @@ jobs:
   push-docker:
     needs: [build, check-conditions]
     runs-on: ubuntu-latest
-    if: needs.check-conditions.outputs.should-push-docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    if: needs.build.outputs.should_push_docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: docker-image
-      
+
       - name: Push Docker image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
