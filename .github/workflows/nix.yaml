@@ -3,7 +3,7 @@ on:
   push:
     branches: ["main", "prodHotPush-Common"]
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    # types: [opened, synchronize, reopened, closed]
     branches: ["main", "prodHotPush-Common"]
   workflow_dispatch:
 
@@ -56,12 +56,11 @@ jobs:
           # Cross compilation
           - system: aarch64-linux
             host: aarch64-darwin
-    needs: [process-labels]
+    # needs: [process-labels]
     runs-on: ${{ matrix.host }}
-    if: |
-      needs.process-labels.outputs.has-backend == 'true' && 
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
-      ((system == "aarch64-linux" && github.ref == 'refs/heads/main') || system != "aarch64-linux")
+    # needs.process-labels.outputs.has-backend == 'true' && 
+    #if: |
+    #  (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
@@ -111,9 +110,9 @@ jobs:
   push-docker:
     needs: [build, process-labels]
     runs-on: ubuntu-latest
+    # needs.process-labels.outputs.has-backend == 'true'
     if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
-      needs.process-labels.outputs.has-backend == 'true'
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true)
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4
