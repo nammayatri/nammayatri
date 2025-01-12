@@ -42,6 +42,14 @@
           inherit (self'.packages)
             arion;
         };
+        # NOTE: aarch64-linux builds are currently experiencing an assembly error:
+        # "/build/ghc612_0/ghc_329.s:160652:0: error: conditional branch out of range"
+        # This is a known issue with GHC's code generation on ARM architectures.
+        # Temporary fix: Optimization level has been reduced for ARM Linux builds.
+        # TODO: Monitor does this optimization cause any perf issue
+        defaults.settings.defined = {
+          extraConfigureFlags = lib.mkIf (system == "aarch64-linux") [ "--ghc-options=-O1" ];
+        };
         packages = {
           amazonka.source = inputs.amazonka-git + /lib/amazonka;
           amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;

@@ -43,15 +43,28 @@ jobs:
           fi
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
           echo "Label check result: ${has_backend}"
+
   build:
     strategy:
       matrix:
-        system: [x86_64-linux, aarch64-darwin]
+        include:
+          # Direct builds
+          - system: x86_64-linux
+            host: x86_64-linux
+            run-condition: true
+          - system: aarch64-darwin
+            host: aarch64-darwin
+            run-condition: true
+          # Cross compilation
+          - system: aarch64-linux
+            host: aarch64-darwin
+            run-condition: github.ref == 'refs/heads/main'
     needs: [process-labels]
-    runs-on: ${{ matrix.system }}
+    runs-on: ${{ matrix.host }}
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
-      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
+      (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
+      matrix.run-condition
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
@@ -81,7 +94,6 @@ jobs:
         with:
           name: docker-image
           path: docker-image.tgz
-
   # The previous job would have already built for macOS but we must do it again
   # from NixOS host (via remote builder protocol) so as to populate its local
   # Nix store, and thus provide macOS binaries as part of our Nix cache.
