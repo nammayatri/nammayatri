@@ -61,7 +61,7 @@ jobs:
     # needs.process-labels.outputs.has-backend == 'true' && 
     if: |
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed') &&
-      ((system == "aarch64-linux" && github.ref == 'refs/heads/main') || system != "aarch64-linux"
+      ((matrix.system == "aarch64-linux" && github.ref == 'refs/heads/main') || matrix.system != "aarch64-linux"
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
