@@ -18,7 +18,8 @@ instance FromTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
     pure $
       Just
         Domain.Types.PersonStats.PersonStats
-          { completedRides = completedRides,
+          { backfilledFromCkhTill = backfilledFromCkhTill,
+            completedRides = completedRides,
             createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
             driverCancelledRides = driverCancelledRides,
             eveningPeakRides = eveningPeakRides,
@@ -37,7 +38,8 @@ instance FromTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
 instance ToTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
   toTType' (Domain.Types.PersonStats.PersonStats {..}) = do
     Beam.PersonStatsT
-      { Beam.completedRides = completedRides,
+      { Beam.backfilledFromCkhTill = backfilledFromCkhTill,
+        Beam.completedRides = completedRides,
         Beam.createdAt = Kernel.Prelude.Just createdAt,
         Beam.driverCancelledRides = driverCancelledRides,
         Beam.eveningPeakRides = eveningPeakRides,

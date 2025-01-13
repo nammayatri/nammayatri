@@ -19,7 +19,7 @@ incrementOrSetPersonStats personStats = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamPS.personId (Se.Eq (getId personStats.personId))]
   case res of
-    Nothing -> pure ()
+    Nothing -> createWithKV personStats
     Just ps ->
       updateOneWithKV
         [ Se.Set BeamPS.updatedAt now,
@@ -31,7 +31,8 @@ incrementOrSetPersonStats personStats = do
           Se.Set BeamPS.offPeakRides (ps.offPeakRides + personStats.offPeakRides),
           Se.Set BeamPS.morningPeakRides (ps.morningPeakRides + personStats.morningPeakRides),
           Se.Set BeamPS.eveningPeakRides (ps.eveningPeakRides + personStats.eveningPeakRides),
-          Se.Set BeamPS.weekendPeakRides (ps.weekendPeakRides + personStats.weekendPeakRides)
+          Se.Set BeamPS.weekendPeakRides (ps.weekendPeakRides + personStats.weekendPeakRides),
+          Se.Set BeamPS.backfilledFromCkhTill personStats.backfilledFromCkhTill
         ]
         [Se.Is BeamPS.personId (Se.Eq $ getId personStats.personId)]
 

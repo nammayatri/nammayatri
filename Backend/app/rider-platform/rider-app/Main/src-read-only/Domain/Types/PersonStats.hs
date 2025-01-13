@@ -11,7 +11,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PersonStats = PersonStats
-  { completedRides :: Kernel.Prelude.Int,
+  { backfilledFromCkhTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    completedRides :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     driverCancelledRides :: Kernel.Prelude.Int,
     eveningPeakRides :: Kernel.Prelude.Int,
