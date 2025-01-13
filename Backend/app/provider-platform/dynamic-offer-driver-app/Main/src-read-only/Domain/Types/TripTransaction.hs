@@ -42,8 +42,8 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))

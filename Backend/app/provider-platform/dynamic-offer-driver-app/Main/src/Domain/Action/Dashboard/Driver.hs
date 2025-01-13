@@ -165,6 +165,7 @@ import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -241,6 +242,7 @@ import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
+import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Tools.Auth as Auth
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -1145,7 +1147,8 @@ data VehicleDetailsCSVRow = VehicleDetailsCSVRow
     vehicleDoors :: Text,
     vehicleSeatBelts :: Text,
     vehicleManufacturer :: Text,
-    dateOfRegistration :: Text
+    dateOfRegistration :: Text,
+    route_codes :: Text
   }
   deriving (Show)
 
@@ -1162,6 +1165,7 @@ instance FromNamedRecord VehicleDetailsCSVRow where
       <*> r .: "vehicle_seat_belts"
       <*> r .: "vehicle_manufacturer"
       <*> r .: "date_of_registration"
+      <*> r .: "route_codes"
 
 addVehiclesInFleet :: ShortId DM.Merchant -> Context.City -> Common.CreateVehiclesReq -> Flow APISuccess
 addVehiclesInFleet merchantShortId opCity req = do
@@ -1172,7 +1176,12 @@ addVehiclesInFleet merchantShortId opCity req = do
     Just id -> pure id
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
-  mapM_ (registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId) rcReq
+  forM_ rcReq $ \(registerRcReq, routes) -> do
+    void $ registerRCForFleetWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq
+    when (not $ null routes) $ do
+      vehicleNumberHash <- getDbHash registerRcReq.vehicleRegistrationCertNumber
+      VRM.updateBlockedByVehicleNumberHash fleetOwnerId vehicleNumberHash True
+      forM_ routes (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber)
   pure Success
   where
     readCsv csvFile merchantOpCity = do
@@ -1181,7 +1190,7 @@ addVehiclesInFleet merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (parseVehicleInfo merchantOpCity) v >>= (pure . V.toList)
 
-    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow Common.RegisterRCReq
+    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, [DRoute.Route])
     parseVehicleInfo moc idx row = do
       vehicleColour <- cleanCSVField idx row.color "Color"
       vehicleModel <- cleanCSVField idx row.model "Model"
@@ -1195,8 +1204,27 @@ addVehiclesInFleet merchantShortId opCity req = do
           oxygen :: Maybe Bool = readMaybeCSVField idx row.oxygen "Oxygen"
           ventilator :: Maybe Bool = readMaybeCSVField idx row.ventilator "Ventilator"
           vehicleSeatBelts :: Maybe Int = readMaybeCSVField idx row.vehicleSeatBelts "Seat Belts"
-          vehicleDoors :: Maybe Int = readMaybeCSVField idx row.vehicleDoors "Vehicle Doors "
-      pure Common.RegisterRCReq {vehicleDetails = Just Common.DriverVehicleDetails {..}, ..}
+          vehicleDoors :: Maybe Int = readMaybeCSVField idx row.vehicleDoors "Vehicle Doors"
+          mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.vehicleDoors "Route Codes"
+      routes <-
+        case mbRouteCodes of
+          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route Not Found.")) routeCodes
+          Nothing -> pure []
+      pure (Common.RegisterRCReq {vehicleDetails = Just Common.DriverVehicleDetails {..}, ..}, routes)
+
+    buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
+      now <- getCurrentTime
+      vehicleNumber <- encrypt vehicleRegistrationNumber
+      vehicleNumberHash <- getDbHash vehicleRegistrationNumber
+      let vehicleRouteMapping =
+            DVRM.VehicleRouteMapping
+              { blocked = False,
+                routeCode = route.code,
+                createdAt = now,
+                updatedAt = now,
+                ..
+              }
+      VRM.upsert vehicleRouteMapping vehicleNumberHash
 
     cleanField = replaceEmpty . T.strip
 
@@ -1460,28 +1488,16 @@ getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo lim
       COMPLETED -> Common.COMPLETED
       CANCELLED -> Common.CANCELLED
 
-linkVehicleToDriver :: Id Common.Driver -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Flow DVeh.Vehicle
-linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-  driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-  driver <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-  unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
-  now <- getCurrentTime
-  let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInformation driver merchantId vehicleNumber vehicleRC merchantOperatingCityId now
-  QVehicle.upsert vehicle
-  return vehicle
-
 postDriverFleetTripPlanner :: ShortId DM.Merchant -> Context.City -> Text -> Common.TripPlannerReq -> Flow APISuccess
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  vehicle <- linkVehicleToDriver req.driverId merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicle req.trips
+  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
+  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
   pure Success
 
-createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> DVeh.Vehicle -> [Common.TripDetails] -> Flow ()
-createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle trips = do
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
+createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
@@ -1522,6 +1538,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
     mkTransaction routeCode roundRouteCode endStopCode = do
       transactionId <- generateGUID
       now <- getCurrentTime
+      vehicleNumber <- decrypt vehicleRC.certificateNumber
       return $
         DTT.TripTransaction
           { allowEndingMidRoute = False,
@@ -1538,8 +1555,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             routeCode = routeCode,
             roundRouteCode = roundRouteCode,
             tripCode = Nothing,
-            vehicleNumber = vehicle.registrationNo,
-            vehicleServiceTierType = DV.castVariantToServiceTier vehicle.variant,
+            vehicleNumber = vehicleNumber,
+            vehicleServiceTierType = maybe DrInfo.BUS_NON_AC DV.castVariantToServiceTier vehicleRC.vehicleVariant,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,
@@ -1587,8 +1604,8 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       let driverId = Id driverGroup.driverId
           vehicleNumber = driverGroup.vehicleNumber
           tripsReq = map makeTripPlannerReq ([driverGroup] <> driverGroups)
-      vehicle <- linkVehicleToDriver driverId merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
-      createTripTransactions merchant.id merchantOpCity.id fleetOwnerId driverId vehicle tripsReq
+      vehicleRC <- WMB.linkVehicleToDriver driverId merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
+      createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driverId) vehicleRC tripsReq
   pure Success
   where
     readCsv csvFile = do

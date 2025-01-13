@@ -280,7 +280,7 @@ putDriverDashboardFleetWmbTripDelete ::
   Text ->
   Flow APISuccess
 putDriverDashboardFleetWmbTripDelete _ _ tripTransactionId _ = do
-  QTT.updateStatus CANCELLED Nothing (cast @Common.TripTransaction @TripTransaction tripTransactionId)
+  QTT.updateStatus CANCELLED (cast @Common.TripTransaction @TripTransaction tripTransactionId)
   -- TODO : add notification to driver
   pure Success
 

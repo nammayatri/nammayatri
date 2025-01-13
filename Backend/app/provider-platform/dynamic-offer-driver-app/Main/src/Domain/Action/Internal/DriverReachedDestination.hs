@@ -11,14 +11,10 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.WMB as WMB
-import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.Route as QR
+import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.TripTransaction as QTT
-import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
-import qualified Tools.Notifications as TN
 
 data DriverReachedDestinationReq = DriverReachedDestinationReq
   { rideId :: Id DRide.Ride,
@@ -35,15 +31,7 @@ driverReachedDestination req = do
     BUS -> do
       let tripTransactionId = cast @DRide.Ride @TripTransaction req.rideId
       tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
-      route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
-      advancedTripTransaction <- WMB.findNextEligibleTripTransactionByDriverIdStatus req.driverId TRIP_ASSIGNED
-      void $ LF.rideEnd (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId req.driverId (advancedTripTransaction <&> (cast . (.id)))
-      QDI.updateOnRide False req.driverId
-      QTT.updateStatus COMPLETED (Just req.location) tripTransactionId
-      QV.deleteByDriverid req.driverId
-      TN.notifyWmbOnRide req.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" Nothing
-      whenJust advancedTripTransaction $ \_ -> do
-        let tripAssignedEntityData = WMB.buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode route.shortName route.roundRouteCode
-        TN.notifyWmbOnRide req.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" (Just tripAssignedEntityData)
+      fleetConfig <- QFC.findByPrimaryKey tripTransaction.fleetOwnerId >>= fromMaybeM (InternalError "Fleet Config not found")
+      WMB.endTripTransaction fleetConfig tripTransaction req.location
     category -> throwError $ InvalidRequest ("Unsupported vehicle category, " <> show category)
   pure Success

@@ -36,7 +36,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType
 import Domain.Types.Trip as Trip
-import Domain.Types.TripTransaction
+import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
@@ -1092,7 +1092,7 @@ notifyOnRideStarted ride = do
   notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
 
 data WMBTripAssignedData = WMBTripAssignedData
-  { tripTransactionId :: Id TripTransaction,
+  { tripTransactionId :: Id DTT.TripTransaction,
     routeCode :: Text,
     routeShortname :: Text,
     vehicleNumber :: Text,
@@ -1104,21 +1104,22 @@ data WMBTripAssignedData = WMBTripAssignedData
 notifyWmbOnRide ::
   ( ServiceFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
   ) =>
   Id Person ->
   Id DMOC.MerchantOperatingCity ->
-  TripStatus ->
+  DTT.TripStatus ->
   Text ->
   Text ->
-  Maybe WMBTripAssignedData ->
+  a ->
   m ()
-notifyWmbOnRide driverId merchantOperatingCityId status title body dataSend = do
+notifyWmbOnRide driverId merchantOperatingCityId status title body entityData = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   case status of
-    TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken dataSend
-    Domain.Types.TripTransaction.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken EmptyDynamicParam
-    IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
+    DTT.TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken entityData
+    DTT.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken entityData
+    DTT.IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken entityData
     _ -> pure ()
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
