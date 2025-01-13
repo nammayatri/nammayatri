@@ -159,7 +159,7 @@ data SearchDetails = SearchDetails
   deriving (Generic, Show)
 
 data JourneyPlannerLeg = JourneyPlannerLeg
-  { mode :: DTrip.TravelMode,
+  { mode :: DTrip.MultimodalTravelMode,
     agency :: Text,
     originGps :: LatLong,
     destinationGps :: LatLong,

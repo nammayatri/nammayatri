@@ -207,7 +207,7 @@ data JourneyData = JourneyData
     totalMaxFare :: Maybe HighPrecMoney,
     duration :: Maybe Seconds,
     distance :: Distance,
-    modes :: [DTrip.TravelMode],
+    modes :: [DTrip.MultimodalTravelMode],
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
     journeyId :: Id DJ.Journey,
@@ -217,7 +217,7 @@ data JourneyData = JourneyData
 
 data JourneyLeg = JourneyLeg
   { journeyLegOrder :: Int,
-    journeyMode :: DTrip.TravelMode,
+    journeyMode :: DTrip.MultimodalTravelMode,
     journeyLegId :: Id DJL.JourneyLeg,
     fromLatLong :: LatLong,
     toLatLong :: LatLong,

@@ -170,7 +170,7 @@ data LegInfo = LegInfo
   { skipBooking :: Bool,
     bookingAllowed :: Bool,
     pricingId :: Maybe Text,
-    travelMode :: DTrip.TravelMode,
+    travelMode :: DTrip.MultimodalTravelMode,
     startTime :: UTCTime,
     order :: Int,
     status :: JourneyLegStatus,
@@ -226,7 +226,7 @@ data BusLegExtraInfo = BusLegExtraInfo
 data UpdateJourneyReq = UpdateJourneyReq
   { fare :: Maybe Price,
     legsDone :: Maybe Int,
-    modes :: Maybe [DTrip.TravelMode],
+    modes :: Maybe [DTrip.MultimodalTravelMode],
     totalLegs :: Maybe Int,
     updatedAt :: UTCTime
   }

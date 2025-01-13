@@ -12,7 +12,7 @@ import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
 import Tools.Beam.UtilsTH
 
-$(mkBeamInstancesForEnumAndList ''TravelMode)
+$(mkBeamInstancesForEnumAndList ''MultimodalTravelMode)
 $(mkBeamInstancesForEnum ''FareProductType)
 $(mkBeamInstancesForEnumAndList ''ServiceTierType)
 $(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)
