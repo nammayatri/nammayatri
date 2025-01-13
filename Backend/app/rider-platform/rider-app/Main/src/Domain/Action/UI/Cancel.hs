@@ -22,6 +22,7 @@ module Domain.Action.UI.Cancel
     mkDomainCancelSearch,
     cancelSearch,
     getCancellationDuesDetails,
+    makeCustomerBlockingKey,
   )
 where
 
@@ -46,6 +47,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -68,7 +70,8 @@ data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
     reasonStage :: SCR.CancellationStage,
     additionalInfo :: Maybe Text,
-    reallocate :: Maybe Bool
+    reallocate :: Maybe Bool,
+    blockOnCancellationRate :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -172,6 +175,8 @@ cancel booking mRide req cancellationSource = do
             buildBookingCancellationReason Nothing Nothing (Just ride.id)
       Nothing -> buildBookingCancellationReason Nothing Nothing Nothing
   QBCR.upsert cancellationReason
+  when (req.blockOnCancellationRate == Just True) $ do
+    Redis.setExp (makeCustomerBlockingKey booking.id.getId) True 60
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $
     CancelRes
@@ -319,3 +324,6 @@ getCancellationDuesDetails mbBookingId (personId, merchantId) = do
           res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
           return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
         _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+
+makeCustomerBlockingKey :: Text -> Text
+makeCustomerBlockingKey bid = "CCRBlock:" <> bid

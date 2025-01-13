@@ -89,7 +89,8 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
         { reasonCode = CancellationReasonCode cancellationReason,
           reasonStage,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
 
 onInitLockKey :: Text -> Text

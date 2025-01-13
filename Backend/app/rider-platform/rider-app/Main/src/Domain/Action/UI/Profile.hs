@@ -125,7 +125,8 @@ data ProfileRes = ProfileRes
     payoutVpa :: Maybe Text,
     referralEarnings :: Maybe HighPrecMoney,
     referredByEarnings :: Maybe HighPrecMoney,
-    referralAmountPaid :: Maybe HighPrecMoney
+    referralAmountPaid :: Maybe HighPrecMoney,
+    cancellationRate :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -208,7 +209,12 @@ getPersonDetails ::
 getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
+      totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
+      rate = (personStats.userCancelledRides * 100) `div` max 1 totalRides
+      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate)
+  let cancellationPerc = if sendCancellationRate then Just rate else Nothing
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
@@ -241,9 +247,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -267,6 +273,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralEarnings = Just personStats.referralEarnings,
           referredByEarnings = Just personStats.referredByEarnings,
           referralAmountPaid = Just personStats.referralAmountPaid,
+          cancellationRate = cancellationPerc,
           ..
         }
 

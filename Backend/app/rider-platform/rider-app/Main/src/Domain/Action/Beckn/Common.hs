@@ -24,6 +24,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
+import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
 import qualified Domain.Types.Booking as BT
@@ -811,14 +812,17 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   fork "Checking lifetime blocking condition for customer based on cancellation rate" $ do
-    personStats <- QPersonStats.findByPersonId booking.riderId
-    case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
-      (Just stats, Just minRides, Just threshold) -> do
-        let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
-        let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
-        when (totalRides > minRides && rate > threshold) $ do
-          SMC.blockCustomer booking.riderId Nothing
-      _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
+    val :: Maybe Bool <- Redis.safeGet $ makeCustomerBlockingKey booking.id.getId
+    when (val == Just True) $ do
+      Redis.del $ makeCustomerBlockingKey booking.id.getId
+      personStats <- QPersonStats.findByPersonId booking.riderId
+      case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
+        (Just stats, Just minRides, Just threshold) -> do
+          let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
+          let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
+          when (totalRides > minRides && rate > threshold) $ do
+            SMC.blockCustomer booking.riderId Nothing
+        _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
