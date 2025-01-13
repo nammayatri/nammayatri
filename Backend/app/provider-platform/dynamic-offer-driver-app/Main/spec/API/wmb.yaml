@@ -12,6 +12,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   HighPrecMeters: Kernel.Types.Distance
   FleetConfig: Domain.Types.FleetConfig
+  RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 
 module: WMB
 
@@ -81,16 +82,6 @@ types:
   AvailableRouteReq:
     vehicleNumber: Text
 
-  RouteDetails:
-    code: Text
-    shortName: Text
-    longName: Text
-    startPoint: LatLong
-    endPoint: LatLong
-    stops: [StopInfo]
-    waypoints: Maybe [LatLong]
-    timeBounds: Maybe TimeBound
-    derive: "Show"
 
 apis:
   - POST: # Fetch available routes for a driver of private fleet.
