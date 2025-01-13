@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Booking where
@@ -31,7 +29,8 @@ data BookingT f = BookingT
     distanceToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dynamicPricingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimateId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    estimatedCongestionCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
@@ -53,14 +52,14 @@ data BookingT f = BookingT
     primaryExophone :: B.C f Kernel.Prelude.Text,
     providerId :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
-    receiverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    receiverId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     receiverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    senderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    senderId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     senderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

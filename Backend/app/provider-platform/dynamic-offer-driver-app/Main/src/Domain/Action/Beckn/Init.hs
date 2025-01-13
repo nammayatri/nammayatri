@@ -191,6 +191,7 @@ handler merchantId req validatedReq = do
             bapCity = Just req.bapCity,
             bapCountry = Just req.bapCountry,
             riderId = Nothing,
+            estimatedCongestionCharge = driverQuote.fareParams.congestionCharge,
             vehicleServiceTier = driverQuote.vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierItem.name,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierItem.seatingCapacity,
