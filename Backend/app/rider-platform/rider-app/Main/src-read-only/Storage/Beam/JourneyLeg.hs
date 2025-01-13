@@ -28,7 +28,7 @@ data JourneyLegT f = JourneyLegT
     id :: B.C f Kernel.Prelude.Text,
     journeyId :: B.C f Kernel.Prelude.Text,
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    mode :: B.C f Domain.Types.Common.TravelMode,
+    mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
     frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     routeColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

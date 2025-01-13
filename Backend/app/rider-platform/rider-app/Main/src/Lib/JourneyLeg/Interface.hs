@@ -26,7 +26,7 @@ getFare ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
-  DTrip.TravelMode ->
+  DTrip.MultimodalTravelMode ->
   m (Maybe JL.GetFareResponse)
 getFare merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do

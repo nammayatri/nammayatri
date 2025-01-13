@@ -24,7 +24,7 @@ data Journey = Journey
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legsDone :: Kernel.Prelude.Int,
-    modes :: [Domain.Types.Common.TravelMode],
+    modes :: [Domain.Types.Common.MultimodalTravelMode],
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     totalLegs :: Kernel.Prelude.Int,

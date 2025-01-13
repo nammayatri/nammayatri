@@ -28,11 +28,15 @@ module Domain.Action.UI.Select
 where
 
 import Control.Applicative ((<|>))
+import qualified Control.Lens as L
 import Control.Monad.Extra (anyM)
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.HashMap.Strict as HMS
+import qualified Data.HashMap.Strict.InsOrd as HMSIO
+import Data.OpenApi hiding (name)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
@@ -175,8 +179,10 @@ newtype SelectListRes = SelectListRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CancelAPIResponse = BookingAlreadyCreated | FailedToCancel | Success
-  deriving stock (Generic, Show)
-  deriving anyclass (ToSchema)
+  deriving stock (Generic, Show, Enum, Bounded)
+
+allCancelAPIResponse :: [CancelAPIResponse]
+allCancelAPIResponse = [minBound .. maxBound]
 
 instance ToJSON CancelAPIResponse where
   toJSON Success = A.object ["result" .= ("Success" :: Text)]
@@ -192,6 +198,22 @@ instance FromJSON CancelAPIResponse where
       "Success" -> pure Success
       _ -> parseFail "Expected \"Success\" in \"result\" field."
   parseJSON err = typeMismatch "Object APISuccess" err
+
+instance ToSchema CancelAPIResponse where
+  declareNamedSchema _ = do
+    return $
+      NamedSchema (Just "CancelAPIResponse") $
+        mempty
+          & type_ L.?~ OpenApiObject
+          & properties
+            L..~ HMSIO.singleton "result" enumsSchema
+          & required L..~ ["result"]
+    where
+      enumsSchema =
+        (mempty :: Schema)
+          & type_ L.?~ OpenApiString
+          & enum_ L.?~ map (A.String . T.pack . show) allCancelAPIResponse
+          & Inline
 
 select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select personId estimateId req = do

@@ -59,6 +59,6 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SwitchLegReq = SwitchLegReq {currLocation :: Kernel.External.Maps.Types.LatLong, newMode :: Domain.Types.Trip.TravelMode}
+data SwitchLegReq = SwitchLegReq {currLocation :: Kernel.External.Maps.Types.LatLong, newMode :: Domain.Types.Trip.MultimodalTravelMode}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -133,6 +133,7 @@ dependencies:
   - scientific
   - resource-pool
   - jwt
+  - insert-ordered-containers
 
 ghc-options:
   - -fwrite-ide-info

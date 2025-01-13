@@ -23,7 +23,7 @@ data JourneyBooking = JourneyBooking
     id :: Kernel.Types.Id.Id Domain.Types.JourneyBooking.JourneyBooking,
     isBookingCancellable :: Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
-    modes :: [Domain.Types.Common.TravelMode],
+    modes :: [Domain.Types.Common.MultimodalTravelMode],
     numberOfPassengers :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

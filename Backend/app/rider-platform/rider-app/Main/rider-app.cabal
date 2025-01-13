@@ -204,7 +204,6 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
-      Domain.Action.UI.MultiModal
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
@@ -514,7 +513,6 @@ library
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
-      API.Action.UI.MultiModal
       API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -555,7 +553,6 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
-      API.Types.UI.MultiModal
       API.Types.UI.MultimodalConfirm
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
@@ -1012,6 +1009,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
     , json-logic-hs
     , jwt
     , lens
@@ -1144,6 +1142,7 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
     , json-logic-hs
     , jwt
     , lens

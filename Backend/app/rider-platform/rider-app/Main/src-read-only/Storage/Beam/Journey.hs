@@ -25,7 +25,7 @@ data JourneyT f = JourneyT
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     id :: B.C f Kernel.Prelude.Text,
     legsDone :: B.C f Kernel.Prelude.Int,
-    modes :: B.C f [Domain.Types.Common.TravelMode],
+    modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
     searchRequestId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalLegs :: B.C f Kernel.Prelude.Int,

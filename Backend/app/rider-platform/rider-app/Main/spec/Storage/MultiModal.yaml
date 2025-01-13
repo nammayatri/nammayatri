@@ -1,6 +1,6 @@
 imports:
   SearchRequest: Domain.Types.SearchRequest
-  TravelMode: Domain.Types.Common
+  MultimodalTravelMode: Domain.Types.Common
   Price: Kernel.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
@@ -28,7 +28,7 @@ Journey:
     estimatedFare: Maybe Price
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
-    modes: "[TravelMode]"
+    modes: "[MultimodalTravelMode]"
     convenienceCost: Int
     totalLegs: Int
     legsDone: Int
@@ -87,7 +87,7 @@ JourneyBooking:
     estimatedFare: Maybe Price
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
-    modes: "[TravelMode]"
+    modes: "[MultimodalTravelMode]"
     numberOfPassengers: Int
     convenienceCost: Int
     isBookingCancellable: Bool
@@ -210,7 +210,7 @@ JourneyLeg:
     journeyId: Id Journey
     duration: Seconds
     # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
-    mode: TravelMode
+    mode: MultimodalTravelMode
     startLocation: LatLngV2 #LocationV2     #Location.latLng
     endLocation: LatLngV2 #LocationV2
     fromStopDetails: Maybe MultiModalStopDetails

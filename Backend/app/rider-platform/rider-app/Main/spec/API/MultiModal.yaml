@@ -5,7 +5,7 @@ imports:
   LocationAddress: Domain.Types.LocationAddress
   PriceAPIEntity : Kernel.Types.Common
   FRFSStationAPI : API.Types.UI.FRFSTicketService
-  TravelMode : Domain.Types.Trip
+  MultimodalTravelMode : Domain.Types.Trip
   Location : Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
@@ -46,7 +46,7 @@ types:
     currTime: UTCTime
 
   SwitchLegReq:
-    newMode: TravelMode
+    newMode: MultimodalTravelMode
     currLocation: LatLong
 
   JourneyBookingPaymentStatus:
