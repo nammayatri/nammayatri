@@ -887,7 +887,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
   void $ (processTicketConfigGroup . groupTicketEntities) flatTicketConfigs
   return $
     Common.UpsertTicketConfigResp
-      { unprocessedTicketConfig = [], -- handle race condition and errors later if needed
+      { unprocessedTicketConfigs = [], -- handle race condition and errors later if needed
         success = "Ticket configs updated successfully"
       }
   where
