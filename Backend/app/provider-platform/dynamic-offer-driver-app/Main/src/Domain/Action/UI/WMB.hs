@@ -16,6 +16,7 @@ module Domain.Action.UI.WMB
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
@@ -395,25 +396,7 @@ getWmbRouteDetails ::
       Id MerchantOperatingCity
     ) ->
     Text ->
-    Flow API.Types.UI.WMB.RouteDetails
+    Flow Common.RouteDetails
   )
 getWmbRouteDetails (_, _, _) routeCode = do
-  route <- QR.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route not found")
-  let waypoints = case route.polyline of
-        Just polyline -> Just (KEPP.decode polyline)
-        Nothing -> Nothing
-  now <- getCurrentTime
-  let day = dayOfWeek (utctDay now)
-  stops <- QRTSM.findAllByRouteCodeForStops routeCode 1 day
-  let stopInfos = map (\stop -> StopInfo (stop.stopCode) (stop.stopName) (stop.stopPoint)) (sortBy (EHS.comparing stopSequenceNum) stops)
-  pure $
-    RouteDetails
-      { code = routeCode,
-        shortName = route.shortName,
-        longName = route.longName,
-        startPoint = route.startPoint,
-        endPoint = route.endPoint,
-        stops = stopInfos,
-        waypoints = waypoints,
-        timeBounds = (Just route.timeBounds)
-      }
+  getRouteDetails routeCode

@@ -1,6 +1,8 @@
 module SharedLogic.WMB where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
+import Data.List (sortBy)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Common
@@ -19,6 +21,7 @@ import Environment
 import qualified EulerHS.Prelude as EHS
 import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps
+import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.Prelude
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
@@ -222,3 +225,27 @@ unlinkVehicleToDriver fleetConfig driverId merchantId merchantOperatingCityId ve
           }
   void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
   when (not fleetConfig.allowStartRideFromQR) $ QDI.updateEnabledVerifiedState driverId False (Just False)
+
+getRouteDetails :: Text -> Flow Common.RouteDetails
+getRouteDetails routeCode = do
+  route <- QR.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route not found")
+  let waypoints = case route.polyline of
+        Just polyline -> Just (KEPP.decode polyline)
+        Nothing -> Nothing
+  now <- getCurrentTime
+  let day = dayOfWeek (utctDay now)
+  stops <- QRTSM.findAllByRouteCodeForStops routeCode 1 day
+  let stopInfos = map (\stop -> StopInfo (stop.stopCode) (stop.stopName) (stop.stopPoint)) (sortBy (EHS.comparing (.stopSequenceNum)) stops)
+  pure $
+    Common.RouteDetails
+      { code = routeCode,
+        shortName = route.shortName,
+        longName = route.longName,
+        startPoint = route.startPoint,
+        endPoint = route.endPoint,
+        stops = map castStops stopInfos,
+        waypoints = waypoints,
+        timeBounds = Just route.timeBounds
+      }
+  where
+    castStops stop = Common.StopInfo stop.name stop.code stop.point

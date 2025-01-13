@@ -43,6 +43,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetTripTransactions,
     postDriverFleetAddDriverBusRouteMapping,
     getDriverDashboardFleetTrackDriver,
+    getDriverFleetWmbRouteDetails,
   )
 where
 
@@ -1566,3 +1567,6 @@ getDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
           point = LatLong {..},
           lastUpdatedAt = coordinatesCalculatedAt
         }
+
+getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.RouteDetails
+getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode

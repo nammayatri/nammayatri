@@ -666,6 +666,24 @@ apis:
               fleetOwnerId: Text
             response:
               type: APISuccess
+
+  - GET: # Retrieve the route details
+      endpoint: /fleet/wmb/route/{routeCode}/details
+      auth: ApiAuthV2
+      params:
+        routeCode: Text
+      response:
+        type: RouteDetails
+      helperApi:
+        - GET:
+            endpoint: /fleet/{fleetOwnerId}/wmb/route/{routeCode}/details
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              routeCode: Text
+            response:
+              type: RouteDetails
+
   - GET:
       endpoint: /dashboard/fleet/track/driver
       auth: ApiAuthV2
@@ -900,6 +918,21 @@ types:
   CreateDriverBusRouteMappingReq:
     - file: FilePath
     - fleetOwnerId: Maybe Text
+    - derive: "'HideSecrets"
+  StopInfo:
+    name: Text
+    code: Text
+    point: LatLong
+    derive: "'HideSecrets"
+  RouteDetails:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - stops: [StopInfo]
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
 
 extraOperations:

@@ -7,6 +7,7 @@ module API.Action.UI.WMB
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import qualified API.Types.UI.WMB
 import qualified Control.Lens
 import qualified Data.Text
@@ -56,7 +57,7 @@ type API =
       :> "details"
       :> Get
            '[JSON]
-           API.Types.UI.WMB.RouteDetails
+           API.Types.ProviderPlatform.Fleet.Endpoints.Driver.RouteDetails
       :<|> TokenAuth
       :> "wmb"
       :> "trip"
@@ -174,7 +175,7 @@ getWmbRouteDetails ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Data.Text.Text ->
-    Environment.FlowHandler API.Types.UI.WMB.RouteDetails
+    Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Endpoints.Driver.RouteDetails
   )
 getWmbRouteDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbRouteDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

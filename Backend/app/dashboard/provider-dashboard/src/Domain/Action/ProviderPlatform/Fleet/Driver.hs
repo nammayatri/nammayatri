@@ -43,6 +43,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetTripTransactions,
     postDriverFleetAddDriverBusRouteMapping,
     getDriverDashboardFleetTrackDriver,
+    getDriverFleetWmbRouteDetails,
   )
 where
 
@@ -294,3 +295,9 @@ getDriverDashboardFleetTrackDriver merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverDashboardFleetTrackDriver) fleetOwnerId req
+
+getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Flow Common.RouteDetails
+getDriverFleetWmbRouteDetails merchantShortId opCity apiTokenInfo routeCode = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetWmbRouteDetails) fleetOwnerId routeCode

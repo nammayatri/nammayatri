@@ -11,7 +11,6 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.TimeBound
 import Servant
 import Tools.Auth
 
@@ -39,19 +38,6 @@ data EndTripStatus
 
 data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData, title :: Data.Text.Text}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data RouteDetails = RouteDetails
-  { code :: Data.Text.Text,
-    endPoint :: Kernel.External.Maps.Types.LatLong,
-    longName :: Data.Text.Text,
-    shortName :: Data.Text.Text,
-    startPoint :: Kernel.External.Maps.Types.LatLong,
-    stops :: [StopInfo],
-    timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
-    waypoints :: Kernel.Prelude.Maybe [Kernel.External.Maps.Types.LatLong]
-  }
-  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.Maps.Types.LatLong, longName :: Data.Text.Text, shortName :: Data.Text.Text, startPoint :: Kernel.External.Maps.Types.LatLong}
