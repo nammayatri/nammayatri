@@ -87,7 +87,7 @@ confirm JL.LegInfo {..} =
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
       JL.confirm confirmReq
     DTrip.Bus -> do
-      let confirmReq :: BusLegRequest = BusLegRequestConfirm BusLegRequestConfirmData
+      confirmReq :: BusLegRequest <- mkBusLegConfirmReq
       JL.confirm confirmReq
     DTrip.Metro -> do
       confirmReq :: MetroLegRequest <- mkMetroLegConfirmReq
@@ -112,6 +112,18 @@ confirm JL.LegInfo {..} =
       return $
         MetroLegRequestConfirm $
           MetroLegRequestConfirmData
+            { skipBooking,
+              bookingAllowed,
+              quoteId = Id <$> pricingId,
+              personId,
+              merchantId,
+              merchantOperatingCityId
+            }
+    mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
+    mkBusLegConfirmReq = do
+      return $
+        BusLegRequestConfirm $
+          BusLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
               quoteId = Id <$> pricingId,
