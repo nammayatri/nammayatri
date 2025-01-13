@@ -108,7 +108,7 @@ jobs:
 
       - name: Build Docker image
         id: docker
-        if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && needs.check-conditions.outputs.should-push-docker == 'true'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
