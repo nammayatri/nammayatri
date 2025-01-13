@@ -79,10 +79,10 @@ jobs:
         include:
           - system: x86_64-linux
             host: x86_64-linux
-          # - system: aarch64-darwin
-          #   host: aarch64-darwin
-          # - system: aarch64-linux
-          #   host: aarch64-darwin
+          - system: aarch64-darwin
+            host: aarch64-darwin
+          - system: aarch64-linux
+            host: aarch64-darwin
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
@@ -123,20 +123,20 @@ jobs:
   # from NixOS host (via remote builder protocol) so as to populate its local
   # Nix store, and thus provide macOS binaries as part of our Nix cache.
 
-  # macos-build-for-cache:
-  #   runs-on: ${{ matrix.host }}
-  #   needs: [build, check-conditions]
-  #   if: github.ref == 'refs/heads/main'
-  #   strategy:
-  #     matrix:
-  #       system: [aarch64-darwin]
-  #       host: [x86_64-linux]
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #     - name: Build all flake outputs
-  #       run: |
-  #         om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
+  macos-build-for-cache:
+    runs-on: ${{ matrix.host }}
+    needs: [build, check-conditions]
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        system: [aarch64-darwin]
+        host: [x86_64-linux]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build all flake outputs
+        run: |
+          om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
 
   push-docker:
     needs: [build, check-conditions]
