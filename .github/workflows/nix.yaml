@@ -2,12 +2,12 @@ name: Nix CI
 
 on:
   push:
-    branches: 
+    branches:
       - "main"
       - "prodHotPush-Common"
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches: 
+    branches:
       - "main"
       - "prodHotPush-Common"
   workflow_dispatch:
@@ -31,7 +31,7 @@ jobs:
         uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-      
+
       - name: Check global conditions
         id: evaluate
         run: |
@@ -43,7 +43,7 @@ jobs:
           else
             echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Check for backend label
         id: check-labels
         run: |
@@ -81,8 +81,8 @@ jobs:
             host: x86_64-linux
           - system: aarch64-darwin
             host: aarch64-darwin
-          - system: aarch64-linux
-            host: aarch64-darwin
+          # - system: aarch64-linux
+          #   host: aarch64-darwin
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
@@ -112,7 +112,7 @@ jobs:
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
-      
+
       - name: Upload Docker image
         if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
         uses: actions/upload-artifact@v4
