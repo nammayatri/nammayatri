@@ -2467,21 +2467,12 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
       else pure unit
     
     activeBusRidePatch mbTripTransactionDetails = do
-      let _ = spy "activeBusRidePatch" mbTripTransactionDetails
       case mbTripTransactionDetails of
         Just (API.TripTransactionDetails tripDetails) -> do 
           void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
           void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
           if tripDetails.status == API.TRIP_ASSIGNED then do
-            -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}}) -- TODO:vivek TEMPORARY TILL AVAILABLE ROUTE IS NOT FIXED
-            response <- lift $ lift $ Remote.getAvailableRoutes tripDetails.vehicleNumber
-            let _ = spy "activeBusRidePatch - getAvailableRoutes" response
-            case response of
-              Right availableRoutes -> do 
-                let _ = spy "activeBusRidePatch - getAvailableRoutes - Right" availableRoutes
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails), availableRoutes = Just availableRoutes}}, props { currentStage = ST.TripAssigned}})
-                pure unit
-              _ -> pure unit
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
           else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
           else (pure unit)
@@ -2946,8 +2937,7 @@ homeScreenFlow = do
           void $ pure $ JB.exitLocateOnMap ""   
           currentRideFlow Nothing Nothing Nothing Nothing
         "WMB_TRIP_FINISHED" -> do
-          void $ pure $ removeAllPolylines ""
-          void $ pure $ JB.exitLocateOnMap ""   
+          void $ updateStage $ HomeScreenStage HomeScreen   
           currentRideFlow Nothing Nothing Nothing Nothing
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do

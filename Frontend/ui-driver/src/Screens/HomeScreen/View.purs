@@ -3593,14 +3593,14 @@ recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Pre
 recentBusRideView push state =
   let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
-      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> assignedTripView tripDetails
+      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> startBusTripView tripDetails true
       Just _ -> linearLayout[][]
       Nothing -> case state.data.whereIsMyBusData.lastCompletedTrip of
-        Just (TripTransactionDetails tripDetails) -> assignedTripView tripDetails
+        Just (TripTransactionDetails tripDetails) -> startBusTripView tripDetails false
         Nothing -> linearLayout[][]
   where
-    assignedTripView tripDetails = 
-      let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
+    startBusTripView tripDetails isAssigned = 
+      let title = if isAssigned then "Assigned Ride" else "Recent Ride"
           busNumber = tripDetails.vehicleNumber
           busType = tripDetails.vehicleType
           routeNumber = tripDetails.routeInfo ^. _routeCode
@@ -3680,7 +3680,7 @@ recentBusRideView push state =
             , margin $ Margin 10 0 10 24
             , stroke $ "1," <> Color.grey900
             , gravity CENTER_VERTICAL
-            , onClick push $ const $ SelectBusRoute
+            , onClick push $ const $ if isAssigned then NoAction else SelectBusRoute
             ][
               textView $
               [ text routeNumber
@@ -3708,33 +3708,33 @@ recentBusRideView push state =
                 textView $
                 [ text $ sourceName
                 , color Color.black700
-                , ellipsize true      -- Added ellipsize
-                , singleLine true    -- Ensure single line
+                , ellipsize true
+                , singleLine true    
                 , weight 1.0  
                 ] <> FontStyle.body16 TypoGraphy,
                 textView $
                 [ text $ " → "
                 , color Color.black700
-                , ellipsize true      -- Added ellipsize
-                , singleLine true    -- Ensure single line
+                , ellipsize true      
+                , singleLine true    
                 , weight 1.0
                 ] <> FontStyle.body16 TypoGraphy,
                 textView $
                 [ text $ destinationName
                 , color Color.black700
-                , ellipsize true      -- Added ellipsize
-                , singleLine true    -- Ensure single line
+                , ellipsize true      
+                , singleLine true    
                 , weight 1.0
                 ] <> FontStyle.body16 TypoGraphy
               ],
               imageView
               [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
               , width $ V 8
+              , visibility $ boolToVisibility $ not isAssigned
               , margin $ MarginHorizontal 8 0
               , height $ V 12
               ]
             ],
             PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
-
           ]
           
