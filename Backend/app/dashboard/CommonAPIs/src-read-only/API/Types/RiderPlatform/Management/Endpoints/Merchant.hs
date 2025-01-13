@@ -8,11 +8,13 @@ import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
+import qualified EulerHS.Prelude
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation
 import Servant
@@ -25,6 +27,17 @@ data MerchantUpdateReq = MerchantUpdateReq
     gatewayUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     registryUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype UpsertTicketConfigReq = UpsertTicketConfigReq {file :: EulerHS.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpsertTicketConfigReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data UpsertTicketConfigResp = UpsertTicketConfigResp {unprocessedTicketConfigs :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -151,11 +164,10 @@ type PostMerchantConfigFailover =
   )
 
 type PostMerchantTicketConfigUpsert =
-  ( "ticket" :> "config" :> "upsert"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.UpsertTicketConfigReq
-      :> Post '[JSON] Dashboard.Common.Merchant.UpsertTicketConfigResp
+  ( "ticket" :> "config" :> "upsert" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UpsertTicketConfigReq
+      :> Post
+           '[JSON]
+           UpsertTicketConfigResp
   )
 
 data MerchantAPIs = MerchantAPIs
@@ -171,7 +183,7 @@ data MerchantAPIs = MerchantAPIs
     postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigFailover :: Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMerchantTicketConfigUpsert :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpsertTicketConfigReq) -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.UpsertTicketConfigResp
+    postMerchantTicketConfigUpsert :: (Data.ByteString.Lazy.ByteString, UpsertTicketConfigReq) -> EulerHS.Types.EulerClient UpsertTicketConfigResp
   }
 
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)

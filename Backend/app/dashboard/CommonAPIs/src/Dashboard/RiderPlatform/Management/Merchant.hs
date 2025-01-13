@@ -21,7 +21,9 @@ where
 
 import API.Types.RiderPlatform.Management.Endpoints.Merchant
 import Dashboard.Common.Merchant as Reexport
+import Data.Text as T
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -60,3 +62,14 @@ instance HideSecrets MerchantUpdateReq where
       { fcmConfig = hideSecrets <$> fcmConfig,
         ..
       }
+
+---- UpsertTicketConfig ----------------------------------
+
+instance FromMultipart Tmp UpsertTicketConfigReq where
+  fromMultipart form = do
+    UpsertTicketConfigReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertTicketConfigReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
