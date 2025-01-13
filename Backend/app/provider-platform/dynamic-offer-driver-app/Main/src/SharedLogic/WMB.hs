@@ -24,9 +24,11 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
+import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
@@ -189,14 +191,27 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId veh
   QV.findByRegistrationNo vehicleNumber >>= \case
     Just vehicle -> when (vehicle.driverId /= driverId) $ throwError (InvalidRequest "Vehicle is linked to some other driver, first unlink then try")
     Nothing -> pure ()
-  let rcStatusReq =
-        DomainRC.RCStatusReq
-          { rcNo = vehicleNumber,
-            isActivate = True
-          }
-  void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
+  tryLinkinRC vehicleRC
   QDI.updateEnabledVerifiedState driverId True (Just True)
   return vehicleRC
+  where
+    tryLinkinRC vehicleRC = do
+      now <- getCurrentTime
+      mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id driverId
+      case mRCAssociation of
+        Just assoc -> do
+          when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
+            createRCAssociation vehicleRC
+        Nothing -> createRCAssociation vehicleRC
+      let rcStatusReq =
+            DomainRC.RCStatusReq
+              { rcNo = vehicleNumber,
+                isActivate = True
+              }
+      void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
+    createRCAssociation vehicleRC = do
+      driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      DAQuery.create driverRCAssoc
 
 unlinkVehicleToDriver :: FleetConfig -> Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
 unlinkVehicleToDriver fleetConfig driverId merchantId merchantOperatingCityId vehicleNumber = do
