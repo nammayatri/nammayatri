@@ -24,6 +24,7 @@ jobs:
     outputs:
       should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
       has-backend: ${{ steps.check-labels.outputs.has_backend }}
+      should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
     steps:
       - name: Apply labels
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
@@ -58,6 +59,18 @@ jobs:
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
           echo "Label check result: ${has_backend}"
 
+      - name: Check docker push conditions
+        id: check-docker-push
+        run: |
+          # Moving the docker push conditions here from the build job
+          if [[ "${{ github.ref }}" == "refs/heads/main" || 
+                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+                "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
     needs: [check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
@@ -73,7 +86,6 @@ jobs:
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
-      should_push_docker: ${{ steps.check-conditions.outputs.should_push_docker }}
     steps:
       - name: Check matrix conditions
         id: check-conditions
@@ -83,16 +95,6 @@ jobs:
             echo "should_build=false" >> $GITHUB_OUTPUT
           else
             echo "should_build=true" >> $GITHUB_OUTPUT
-          fi
-          
-          # Should push docker check
-          if [[ ("${{ github.ref }}" == "refs/heads/main" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
-                "${{ github.event.pull_request.merged }}" == "true") && 
-                "${{ matrix.system }}" == "x86_64-linux" ]]; then
-            echo "should_push_docker=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout repository
@@ -106,13 +108,13 @@ jobs:
 
       - name: Build Docker image
         id: docker
-        if: steps.check-conditions.outputs.should_build == 'true' && steps.check-conditions.outputs.should_push_docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image
-        if: steps.check-conditions.outputs.should_build == 'true' && steps.check-conditions.outputs.should_push_docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -139,7 +141,7 @@ jobs:
   push-docker:
     needs: [build, check-conditions]
     runs-on: ubuntu-latest
-    if: needs.build.outputs.should_push_docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    if: needs.check-conditions.outputs.should-push-docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image
         uses: actions/download-artifact@v4
