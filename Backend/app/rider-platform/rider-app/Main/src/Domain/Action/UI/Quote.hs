@@ -58,6 +58,7 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.Trip as DTrip
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
@@ -218,6 +219,8 @@ data JourneyLeg = JourneyLeg
   { journeyLegOrder :: Int,
     journeyMode :: DTrip.TravelMode,
     journeyLegId :: Id DJL.JourneyLeg,
+    fromLatLong :: LatLong,
+    toLatLong :: LatLong,
     color :: Maybe Text,
     colorCode :: Maybe Text,
     duration :: Seconds,
@@ -366,6 +369,8 @@ getJourneys searchRequest = do
                   { journeyLegOrder = journeyLeg.sequenceNumber,
                     journeyMode = journeyLeg.mode,
                     journeyLegId = journeyLeg.id,
+                    fromLatLong = LatLong {lat = journeyLeg.startLocation.latitude, lon = journeyLeg.startLocation.longitude},
+                    toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
                     color = journeyLeg.routeDetails >>= (.shortName),
                     colorCode = journeyLeg.routeDetails >>= (.color),
                     duration = journeyLeg.duration,
