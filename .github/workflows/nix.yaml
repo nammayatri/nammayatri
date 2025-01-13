@@ -100,7 +100,10 @@ jobs:
       - name: Checkout repository
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
-
+      - uses: actions/cache@preview
+        with:
+          path: ~/.cache/nix
+          key: nixcache-${{ matrix.host }} 
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
