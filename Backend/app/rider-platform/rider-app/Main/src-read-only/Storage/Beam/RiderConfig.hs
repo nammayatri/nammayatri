@@ -48,6 +48,7 @@ data RiderConfigT f = RiderConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     metroBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     minRidesToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minRidesToShowCancellationRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

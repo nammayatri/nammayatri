@@ -65,6 +65,7 @@ RiderConfig:
     payoutReferralStartDate: UTCTime
     thresholdCancellationPercentageToBlock: Maybe Int
     minRidesToBlock: Maybe Int
+    minRidesToShowCancellationRate: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

@@ -290,7 +290,8 @@ processActiveBooking booking cancellationStage = do
                   { reasonCode = CancellationReasonCode "Active booking",
                     reasonStage = cancellationStage,
                     additionalInfo = Nothing,
-                    reallocate = Nothing
+                    reallocate = Nothing,
+                    blockOnCancellationRate = Nothing
                   }
           fork "active booking processing" $ do
             dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication

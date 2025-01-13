@@ -49,6 +49,7 @@ data RiderConfig = RiderConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,

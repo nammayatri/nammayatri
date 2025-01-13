@@ -120,7 +120,8 @@ handleConfirmTtlExpiry booking = do
         { reasonCode = CancellationReasonCode "External/Beckn API failure",
           reasonStage = OnConfirm,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
 
 callOnStatus :: SRB.Booking -> Flow ()
