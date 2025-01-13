@@ -442,3 +442,6 @@ getBusRideHistory limit offset status' =
 
 getBusFleetConfig :: String -> String
 getBusFleetConfig _ = getBaseUrl "" <> "/fleet/config"
+
+postFleetConsent :: String -> String
+postFleetConsent _ = getBaseUrl "" <> "/fleet/consent"

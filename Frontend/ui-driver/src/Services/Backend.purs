@@ -1990,3 +1990,18 @@ getFleetConfigBT _ = do
   withAPIResultBT (EP.getBusFleetConfig "") identity errorHandler (lift $ lift $ callAPI headers (BusFleetConfigReq ""))
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+postFleetConsent :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+postFleetConsent _ = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.postFleetConsent "") unwrapResponse $ callAPI headers (FleetConsentReq "")
+    where
+        unwrapResponse (x) = x
+
+postFleetConsentBT :: String -> FlowBT String ApiSuccessResult
+postFleetConsentBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.postFleetConsent "") identity errorHandler (lift $ lift $ callAPI headers (FleetConsentReq ""))
+    where
+        errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+

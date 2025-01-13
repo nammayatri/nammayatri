@@ -5717,3 +5717,15 @@ instance showBusFleetConfigResp :: Show BusFleetConfigResp where show = genericS
 instance decodeBusFleetConfigResp :: Decode BusFleetConfigResp where decode = defaultDecode
 instance encodeBusFleetConfigResp :: Encode BusFleetConfigResp where encode = defaultEncode
 
+data FleetConsentReq = FleetConsentReq String
+
+derive instance genericFleetConsentReq :: Generic FleetConsentReq _
+instance showFleetConsentReq :: Show FleetConsentReq where show = genericShow
+instance standardEncodeFleetConsentReq :: StandardEncode FleetConsentReq where standardEncode _ = standardEncode {}
+instance decodeFleetConsentReq :: Decode FleetConsentReq where decode = defaultDecode
+instance encodeFleetConsentReq :: Encode FleetConsentReq where encode = defaultEncode
+
+instance makeFleetConsentReq :: RestEndpoint FleetConsentReq where
+  makeRequest reqBody@(FleetConsentReq _) headers = defaultMakeRequestWithoutLogs POST (EP.postFleetConsent "") headers reqBody Nothing 
+  encodeRequest req = standardEncode req
+

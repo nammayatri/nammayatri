@@ -683,6 +683,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
+            "fleet_consent" -> void $ pure $ giveFleetConsent
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
@@ -5055,3 +5056,9 @@ updateBusFleetConfig state = do
             }
           }
       Left _ -> pure unit
+
+giveFleetConsent :: FlowBT String Unit
+giveFleetConsent = do
+  _ <- lift $ lift $ Remote.postFleetConsent ""
+  pure unit
+  
