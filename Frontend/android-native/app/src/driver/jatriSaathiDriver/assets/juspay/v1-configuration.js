@@ -333,6 +333,8 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : true
   }
+  , "showBusEducationVideo" : true
+  , "whereIsMyBusEducationVideo" : "https://www.youtube.com/watch?v=TJmTHuuYx3k"
   , "cityConfig" : getAllCityConfig()
   })
 }

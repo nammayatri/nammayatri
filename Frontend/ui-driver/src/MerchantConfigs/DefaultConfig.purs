@@ -115,6 +115,8 @@ config =
     diffBtwTwoHeartBeats : 10,
     straightLineDist : 0.015
   }
+  , showBusEducationVideo : true
+  , whereIsMyBusEducationVideo : ""
   , bottomNavConfig : {
       home : 
         { isVisible : true,

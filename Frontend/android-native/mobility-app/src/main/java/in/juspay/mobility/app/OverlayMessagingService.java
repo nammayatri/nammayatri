@@ -172,6 +172,12 @@ public class OverlayMessagingService extends Service {
             TextView buttonCancel = messageView.findViewById(R.id.button_cancel);
             ImageView cancelButtonImage = messageView.findViewById(R.id.cancel_button_image);
             TextView buttonCancelRight = messageView.findViewById(R.id.button_cancel_right);
+            LinearLayout busDetailsLayout = messageView.findViewById(R.id.bus_details_layout);
+            LinearLayout originalOverlayContent = messageView.findViewById(R.id.original_overlay_content);
+            TextView busNumber = messageView.findViewById(R.id.bus_number);
+            TextView busType = messageView.findViewById(R.id.bus_type);
+            TextView routeNumber = messageView.findViewById(R.id.route_number);
+            TextView routeSourceDestination = messageView.findViewById(R.id.route_source_destination);
             title.setText(data.has("title") ? data.getString("title") : "");
             buttonOk.setText(data.has("okButtonText") ? data.getString("okButtonText") : "Cancel");
             buttonCancel.setText(data.has("cancelButtonText") ? data.getString("cancelButtonText") : "Ok");
@@ -210,6 +216,17 @@ public class OverlayMessagingService extends Service {
             buttonOk.setVisibility(buttonOkVisibility ? View.VISIBLE : View.GONE);
             buttonCancel.setVisibility(buttonCancelVisibility ? View.VISIBLE : View.GONE);
             imageView.setVisibility(imageVisibility ? View.VISIBLE : View.GONE);
+            if(data.has("busTripAssignedBody") && data.getJSONObject("busTripAssignedBody") != null )
+            {
+                JSONObject busTripAssignedBody = data.getJSONObject("busTripAssignedBody");
+                busDetailsLayout.setVisibility(View.VISIBLE);
+                originalOverlayContent.setVisibility(View.GONE);
+                busNumber.setText(busTripAssignedBody.has("busNumber") ? busTripAssignedBody.getString("busNumber") : "");
+                busType.setText(busTripAssignedBody.has("busType") ? busTripAssignedBody.getString("busType") : "");
+                routeNumber.setText(busTripAssignedBody.has("routeNumber") ? busTripAssignedBody.getString("routeNumber") : "");
+                String sourceDestination = (busTripAssignedBody.has("source") ? busTripAssignedBody.getString("source") : "") + (" -> ") + (busTripAssignedBody.has("destination") ? busTripAssignedBody.getString("destination") : "" );
+                routeSourceDestination.setText(sourceDestination);
+            }
             try {
                 setDataToMediaView(data);
             } catch (Exception e){
@@ -480,6 +497,26 @@ public class OverlayMessagingService extends Service {
             }
             stopSelf();
         });
+
+        MaterialButton startBusRide = messageView.findViewById(R.id.start_bus_ride_button);
+        if (startBusRide != null){
+            startBusRide.setOnClickListener(view -> {
+            try {
+                if (actions2.length() == 0) {
+                    for (int i = 0; i < actions.length(); i++) {
+                        String action = String.valueOf(actions.get(i));
+                        performAction(action, intentMessage);
+                    }
+                }
+                if(countDownTimer != null){
+                countDownTimer.cancel();
+            }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            stopSelf();
+        });
+    }
     }
 
     public void openNavigation(double lat, double lon) {
@@ -564,6 +601,46 @@ public class OverlayMessagingService extends Service {
                         openNavigation(latitude, longitude);
                 } catch (Exception e) {
                     System.out.println(e.toString());
+                }
+                break;
+            case "START_BUS_RIDE":
+                try {
+                    new Thread(() -> {
+                        try {
+                            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
+                            
+                            JSONObject data = new JSONObject(intentMessage);
+                            double latitude = Double.parseDouble(data.optString("lat", "0.0"));
+                            double longitude = Double.parseDouble(data.optString("lon", "0.0"));
+                            String tripTransactionId = data.optString("tripTransactionId");
+                            if (!tripTransactionId.isEmpty()) {
+                                String startRideEndpoint = "http://127.0.0.1:5000/ui/wmb/trip/" + tripTransactionId + "/start";
+                                JSONObject startRidePayload = new JSONObject();
+                                JSONObject location = new JSONObject();
+                                
+                                location.put("lat",latitude);
+                                location.put("lon",longitude);
+                                startRidePayload.put("location",location);
+                                MobilityAPIResponse startRideResponse = mobilityApiHandler.callAPI(startRideEndpoint, baseHeaders, startRidePayload.toString(), "POST");
+
+                                if (startRideResponse.getStatusCode() == 200) {
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        RideRequestUtils.openApplication(OverlayMessagingService.this);
+                                        Toast.makeText(OverlayMessagingService.this, "Bus ride started successfully", Toast.LENGTH_SHORT).show();
+                                    });
+                                } else {
+                                    throw new Exception("Failed to start bus ride: " + startRideResponse.getResponseBody());
+                                }
+                            } else {
+                                throw new Exception("tripTransactionId is empty in tripLink response");
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error in START_BUS_RIDE: " + e.getMessage());
+                        }
+                    }).start();
+                } catch (Exception e) {
+                    System.out.println("Error in START_BUS_RIDE: " + e.getMessage());
                 }
                 break;
         }

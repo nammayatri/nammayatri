@@ -33,6 +33,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.RideCompletedCard.Controller (Theme(..))
 import Components.SelectListModal as SelectListModal
@@ -91,6 +92,7 @@ import Components.PopUpModal.Controller as PopUpModal
 import Control.Apply as CA
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -193,10 +195,76 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text = (getString GO_BACK), enableRipple = true},
-    option2 {text = (getString END_RIDE), enableRipple = true}
+    optionButtonOrientation = "VERTICAL",
+    option1 {text = "Send Request", enableRipple = true, width = MATCH_PARENT, margin = MarginHorizontal 16 16},
+    option2 {text = "Cancel", enableRipple = true, width = MATCH_PARENT,  margin = MarginHorizontal 16 16}
   }
 in popUpConfig'
+
+---------------------------------------- endTripPopUp -----------------------------------------
+endTripPopUp :: ST.HomeScreenState -> PopUpModal.Config
+endTripPopUp state =
+  let config' = PopUpModal.config
+      endTripPopUp' = 
+        config' {
+            primaryText {text = (getString END_RIDE)},
+            secondaryText {text = "Send end ride request to your depot" <> "\n" <> "manager to be approved"},
+            optionButtonOrientation = "VERTICAL",
+            option1 {
+              text = "Send Request", 
+              enableRipple = true, 
+              width = MATCH_PARENT, 
+              margin = Margin 16 0 16 4,
+              background = Color.red,
+              color = Color.white900,
+              strokeColor = Color.red
+            },
+            option2 {
+              text = "Cancel", 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = Color.white900
+            }
+          }
+  in endTripPopUp'
+
+---------------------------------------- waitingForDepoRespPopUp -----------------------------------------
+waitingForDepoRespPopUp :: ST.HomeScreenState -> PopUpModal.Config
+waitingForDepoRespPopUp state =
+  let config' = PopUpModal.config
+      waitingForDepoRespPopUp' = 
+        config' {
+            primaryText {text = "Waiting for depot response!"},
+            secondaryText {text = "Waiting for the depot manager's response to end your ride"},
+            optionButtonOrientation = "VERTICAL",
+            option1 {
+              text = "Cancel Request", 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = MarginHorizontal 16 16,
+              background = Color.white900,
+              color = Color.black650,
+              strokeColor = Color.white900,
+              layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clock_unfilled_blue" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 24 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in waitingForDepoRespPopUp'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config
@@ -951,6 +1019,23 @@ driverStatusIndicators = [
         textColor : Color.white900
     }
 ]
+
+busDriverStatusIndicators :: Array ST.PillButtonState
+busDriverStatusIndicators = [
+    {
+      status : ST.Offline,
+      background : Color.red,
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
+      textColor : Color.white900
+    },
+    {
+      status : ST.Online,
+      background : Color.darkMint,
+      imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
+      textColor : Color.white900
+    }
+]
+
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
@@ -3087,3 +3172,147 @@ disableMetroWarriorWarningPopup _ = PopUpModal.config {
       width = MATCH_PARENT
     }
   }
+
+chooseBusRouteModalPopup :: ST.HomeScreenState -> PopUpModal.Config
+chooseBusRouteModalPopup state = 
+  let 
+    config' = PopUpModal.config {
+      padding = Padding 16 16 16 0,
+      primaryText
+      {
+        visibility = GONE
+      }
+    , headerInfo
+      {
+        visibility = GONE
+      }
+    , backgroundClickable = false
+    , secondaryText
+      { 
+        text = "Route/Bus Number",
+        color = Color.black800,
+        padding = Padding 0 0 0 0,
+        margin = Margin 0 0 0 12,
+        gravity = LEFT,
+        textStyle = FontStyle.Body1,
+        visibility = boolToVisibility $ state.props.whereIsMyBusConfig.selectRouteStage
+      }
+    , whereIsMyBusConfig {
+        visibility = VISIBLE,
+        selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
+        busNumber = primaryTextConfig "V1" "BUS NUMBER",
+        busType = primaryTextConfig "AC" "BUS Type",
+        selectRouteButton = routeButtonConfig state,
+        availableRouteList = transformAvailableRouteList state
+    }
+    , option1 {
+      background = Color.green900
+      , strokeColor = Color.white900
+      , color = Color.white900
+      , text = getString START_RIDE
+      , isClickable = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , enableRipple = isJust state.props.whereIsMyBusConfig.selectedRoute 
+      , width = MATCH_PARENT
+      , visibility = not state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , option2 { 
+      background = Color.grey900
+      , strokeColor = Color.white900
+      , color = Color.black700
+      , text = getString CLOSE
+      , isClickable = true
+      , enableRipple = true
+      , width = MATCH_PARENT
+      , margin = Margin 0 0 0 0
+      , padding = Padding 0 0 0 0
+      , visibility = state.props.whereIsMyBusConfig.selectRouteStage
+    }
+    , dismissPopup = state.props.whereIsMyBusConfig.selectRouteStage
+    , dismissPopupConfig { visibility = VISIBLE, height = V 20, width = V 20, margin = (Margin 0 16 16 0), padding = (Padding 0 0 0 0) }
+    }
+  in config'
+  where
+    primaryTextConfig text topLabel =
+      PrimaryEditTextController.config {
+          editText 
+          {
+            color = Color.black800,
+            singleLine = true,
+            placeholder = "",
+            text = text,
+            padding = Padding 0 16 20 16,
+            enabled = false,
+            textStyle = FontStyle.SubHeading3
+          },
+          topLabel { 
+            text = topLabel,
+            color = Color.black800,
+            textStyle = FontStyle.Body3
+            }, 
+          width = MATCH_PARENT,
+          background = Color.grey700,
+          cornerRadius = 8.0,
+          margin = Margin 0 0 0 24,
+          id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
+      }
+    routeButtonConfig state = 
+      PrimaryButton.config {
+        textConfig {
+          textFromHtml = if isJust state.props.whereIsMyBusConfig.selectedRoute then Just $ "<span style='color:#000000;'><strong>S-102</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>Howrah Station → Airport</span>" else  Just "<b>Select Route Number</b>",
+          color = Color.black700,
+          textStyle = SubHeading3,
+          gravity = LEFT,
+          width = V $ (EHC.screenWidth unit) - 100
+        },
+        isSuffixImage = true,
+        suffixImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_drop_down",
+          gravity = RIGHT
+        },
+        gravity = CENTER_VERTICAL,
+        background = Color.white900,
+        margin = Margin 0 0 0 24,
+        padding = Padding 20 16 20 16,
+        height = V 54,
+        viewbackground = Color.black900, 
+        stroke = "1," <> Color.grey900
+      }
+    transformAvailableRouteList state = 
+      case state.data.whereIsMyBusData.availableRoutes of
+        Just (API.AvailableRoutesList availableRoutesList) ->
+          map (\(API.AvailableRoutes route) -> 
+                let (API.StopInfo destination) = route.destination
+                    (API.StopInfo source) = route.source
+                    (API.RouteInfo routeInfo) = route.routeInfo
+                in ({
+                    busRouteNumber : routeInfo.code,
+                    sourceText : source.name,
+                    destination : destination.name
+                  }::PopUpModal.RouteInfo )
+              ) availableRoutesList
+        Nothing -> []
+
+startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+startBusTripButtonConfig state = PrimaryButton.config
+  { textConfig
+    { text = getString START_RIDE
+    , height = WRAP_CONTENT
+    , textStyle = SubHeading3
+    , weight = Just 1.0
+    , color = Color.white900
+    }
+  , height = WRAP_CONTENT
+  , gravity = CENTER
+  , cornerRadius = 8.0
+  , stroke = "1," <> Color.white900
+  , background = Color.green900
+  , margin = Margin 10 0 10 16
+  , padding = Padding 16 14 16 14
+  }
+
+-------------------------- RideTrackingModal --------------------
+
+rideTrackingModalConfig :: ST.HomeScreenState -> RideTrackingModal.Config
+rideTrackingModalConfig state = 
+  let config = RideTrackingModal.config
+  in config

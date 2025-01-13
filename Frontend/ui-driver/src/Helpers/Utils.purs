@@ -167,6 +167,10 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
 
+foreign import startQRScanner :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> String -> Effect Unit
+
+foreign import stopScanning :: Unit -> Effect Unit
+
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
   case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
@@ -1272,3 +1276,13 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+  
+-- Don't Worry this is done for special variants like BUS drivers, only for tracking
+specialVariantsForTracking :: LazyCheck -> Boolean
+specialVariantsForTracking _ = do
+  case (getValueToLocalStore VEHICLE_CATEGORY) of
+    "BusCategory" -> true
+    _ -> false
+
+isGovtBusDriver :: Boolean
+isGovtBusDriver = false

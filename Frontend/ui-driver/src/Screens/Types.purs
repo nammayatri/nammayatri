@@ -1101,6 +1101,13 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
+, whereIsMyBusData :: WhereIsMyBusData
+}
+
+type WhereIsMyBusData = {
+  availableRoutes :: Maybe API.AvailableRoutesList,
+  currentActiveTrip :: Maybe API.TripTransactionDetails,
+  previousCompletedTrip :: Maybe API.TripTransactionDetails
 }
 
 type FavouritePopUp = {
@@ -1425,8 +1432,19 @@ type HomeScreenProps =  {
   showParcelIntroductionPopup :: Boolean,
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
-  bus_input_data :: String
+  bus_input_data :: String,
+  showRecentBusTripModal :: Boolean,
+  whereIsMyBusConfig :: WhereIsMyBusConfig
  }
+
+type WhereIsMyBusConfig = {
+  showSelectAvailableBusRoutes :: Boolean,
+  selectRouteStage :: Boolean,
+  selectedRoute :: Maybe API.AvailableRoutes,
+  tripTransactionId :: Maybe String,
+  selectedIndex :: Int,
+  showStartBusTripModal :: Boolean
+}
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,
@@ -1957,6 +1975,7 @@ data HomeScreenStage =  HomeScreen
                       | RideCompleted
                       | ChatWithCustomer
                       | NotAssigned
+                      | RideTracking
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
 instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow
@@ -3347,4 +3366,20 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type EducationScreenState = {
+  videoUrl :: String,
+  headerText :: String,
+  instructionText :: String,
+  buttonText :: String,
+  infoList :: Array {title :: String, image :: String}
+}
+
+type QrCodeScannerState = {
+  headerText :: String
+}
+
+type BusQrCodeData = {
+  busNumber :: String
 }

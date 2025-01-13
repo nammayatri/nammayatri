@@ -28,6 +28,7 @@ import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
+import Components.PrimaryButton as PrimaryButton
 import JBridge
 import Effect (Effect)
 
@@ -48,6 +49,10 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | BusNumber PrimaryEditTextController.Action
+            | BusType PrimaryEditTextController.Action
+            | SelectRouteButton PrimaryButton.Action
+            | SelectRoute Int String
 
 type Config = {
     primaryText :: TextConfig,
@@ -101,7 +106,23 @@ type Config = {
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    whereIsMyBusConfig :: WhereIsMyBusConfig
+}
+
+type WhereIsMyBusConfig = {
+  visibility :: Visibility,
+  selectRouteStage :: Boolean,
+  busNumber :: PrimaryEditTextController.Config,
+  busType :: PrimaryEditTextController.Config,
+  selectRouteButton :: PrimaryButton.Config,
+  availableRouteList :: Array RouteInfo
+}
+
+type RouteInfo = {
+  busRouteNumber :: String,
+  sourceText :: String,
+  destination :: String
 }
 
 type DeliveryDetailsConfig = {
@@ -183,7 +204,8 @@ type ButtonConfig = {
   showShimmer :: Boolean,
   gravity :: Gravity,
   enableRipple :: Boolean,
-  rippleColor :: String
+  rippleColor :: String,
+  layoutGravity :: Mb.Maybe String
 }
 
 type DismissPopupConfig =
@@ -270,6 +292,10 @@ type PopUpHeaderConfig = {
   , imageConfig :: ImageConfig
   , gravity :: Gravity
   }
+
+
+
+data BusStage = BUS_INFO | ROUTE_INFO
 
 config :: Config
 config = {
@@ -407,6 +433,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
   } 
   , option1 : {
       background : Color.white900
@@ -435,6 +462,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , option2 : {
       background : Color.black900
@@ -463,6 +491,7 @@ config = {
     , showShimmer : false
     , enableRipple : false
     , rippleColor : Color.rippleShade
+    , layoutGravity : Mb.Nothing
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -659,7 +688,7 @@ config = {
       gravity : CENTER,
       padding : (Padding 0 0 0 0),
       margin : (Margin 0 0 0 0),
-      visibility : VISIBLE,
+      visibility : GONE,
       textStyle : Heading2,
       accessibilityHint : "", 
       suffixImage : {
@@ -686,7 +715,7 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       isClickable : false,
-      visibility : VISIBLE,
+      visibility : GONE,
       textStyle : Tags,
       accessibilityHint : "", 
       suffixImage : {
@@ -732,6 +761,14 @@ config = {
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
   , completeProfileLayout : Mb.Nothing
+  , whereIsMyBusConfig : {
+    visibility : GONE,
+    selectRouteStage : false,
+    busNumber : PrimaryEditTextController.config,
+    busType : PrimaryEditTextController.config,
+    selectRouteButton : PrimaryButton.config,
+    availableRouteList : []
+  }
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

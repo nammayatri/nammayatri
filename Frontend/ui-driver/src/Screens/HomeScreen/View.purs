@@ -41,6 +41,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideTrackingModal as RideTrackingModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Constants (defaultDensity)
@@ -93,8 +94,8 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..)) 
-import Services.Accessor (_lat, _lon)
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
+import Services.Accessor (_lat, _lon, _stopName, _stopCode, _routeCode)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -125,6 +126,7 @@ import Components.PopUpModal.View as PopUpModal
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
+import Screens.HomeScreen.ScreenData
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -141,13 +143,14 @@ screen initialState (GlobalState globalState) =
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-          void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-            driverProfileResp <- Remote.fetchDriverProfile false
-            case driverProfileResp of
-                Right resp -> do
-                  liftFlow $ push $ ProfileDataAPIResponseAction resp
-                Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-            pure unit
+          when (not $ HU.specialVariantsForTracking FunctionCall) $ do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+              driverProfileResp <- Remote.fetchDriverProfile false
+              case driverProfileResp of
+                  Right resp -> do
+                    liftFlow $ push $ ProfileDataAPIResponseAction resp
+                  Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              pure unit
 
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -305,6 +308,21 @@ screen initialState (GlobalState globalState) =
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
+            "RideTracking"   -> do
+                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_tracking" true-- Hardcoded: enableFrequentLocationUpdates as true
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
+                                _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
+                                _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
+
+                                if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideTrackingModalAction (RideTrackingModal.NoAction) else pure unit
+                                if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
+                                  _ <- JB.getCurrentPosition push $ ModifyRoute
+                                  pure $ JB.removeMarker "ic_vehicle_side"
+                                  pure unit
+                                  else pure unit
             _                -> do
                                 void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
                                 when (initialState.props.currentStage == RideCompleted) $ do
@@ -428,6 +446,7 @@ view push state =
       ][ Anim.screenAnimationFadeInOut $
           driverMapsHeaderView push state
         , rideActionModelView push state
+        , rideTrackingModalView push state
         -- , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
         ]
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
@@ -483,6 +502,7 @@ view push state =
           completeYourProfile push state 
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
+      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
   ]
   where 
     currentDate = HU.getCurrentUTC "" 
@@ -625,69 +645,74 @@ driverMapsHeaderView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  ][ linearLayout
+  ]
+  [ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , weight 1.0
+    , orientation VERTICAL
+    , background Color.white900
+    , cornerRadius 50.0
+    ]
+    [ linearLayout
       [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , weight 1.0
-      , orientation VERTICAL
-      , background Color.white900
-      ,cornerRadius 50.0
-      ][ linearLayout
+      , height $ V 2
+      , background Color.greyTextColor
+      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking]) then GONE else VISIBLE
+      , alpha 0.1
+      ][]
+    , frameLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ]$[  googleMap state
+        , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
+        , linearLayout
           [ width MATCH_PARENT
-          , height $ V 2
-          , background Color.greyTextColor
-          , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-          , alpha 0.1
-          ][]
-        , frameLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          ]$[  googleMap state
-            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
-            , linearLayout
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          ]$ [ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ]$ [ linearLayout
+              , background $ Color.white900
+              , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking]) then "0," else "1,") <> "#E5E7EB"
+              , PP.cornerRadii $ PTD.Corners 40.0 false false true true -- @TODO: @arnab Check if need for all or just bus
+              ][  driverDetail push state
+                , relativeLayout 
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
-                  , orientation VERTICAL
-                  , background $ Color.white900
-                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
-                  ][  driverDetail push state
-                    , relativeLayout 
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                      , padding $ PaddingBottom 12
-                      ][ statsModel push state
-                       , expandedStatsModel push state
-                      ]
+                  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking]) then GONE else VISIBLE
+                  , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                  , padding $ PaddingBottom 12
+                  ][ statsModel push state
+                    , expandedStatsModel push state
                   ]
-                , offlineNavigationLinks push state
-              ] <> [gotoRecenterAndSupport state push,
-                    scheduledRideBannerView state push,
-                    onRideScreenBannerView state push 
-                   ]
-                <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            , linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , orientation VERTICAL
-              , background Color.transparent
-              , gravity BOTTOM
-              ] $ [addAadhaarOrOTPView state push]
-                <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
-                <> [specialPickupZone push state]
-                <> (if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true) --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
-            ]
+              ]
+            , offlineNavigationLinks push state
+          ] <> [gotoRecenterAndSupport state push,
+                scheduledRideBannerView state push,
+                onRideScreenBannerView state push 
+                ]
+            <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+            <> if state.props.driverStatusSet == ST.Online && state.props.currentStage == ST.HomeScreen && state.props.whereIsMyBusConfig.showStartBusTripModal then [ recentBusRideView push state ] else []
+        , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.transparent
+          , gravity BOTTOM
+          ] $ [addAadhaarOrOTPView state push]
+            <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
+            <> [specialPickupZone push state]
+            <> (if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline || (HU.specialVariantsForTracking FunctionCall)) true) --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+            <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] && (not $ HU.specialVariantsForTracking FunctionCall) then [bookingPreferenceNavView push state] else []
+            <> [qrScannerView push state]
         ]
-        , bottomNavBar push state
+      ]
+  , if (not $ HU.specialVariantsForTracking FunctionCall) then bottomNavBar push state else textView [text "", visibility GONE]
   ]
   where
-    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideTracking] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
 
 bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bookingPreferenceNavView push state =
@@ -845,7 +870,7 @@ gotoRecenterAndSupport state push =
     , margin $ Margin 12 4 12 0
     , padding $ PaddingRight 30
     , gravity if centerView then CENTER_HORIZONTAL else RIGHT
-    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+    , visibility $ boolToVisibility $ (not $ (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)) && (not $ HU.specialVariantsForTracking FunctionCall)
     ][ linearLayout
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
@@ -929,7 +954,7 @@ otpButtonView state push =
     , stroke $ "1," <> Color.blue900
     , cornerRadius 32.0
     , background Color.white900
-    , visibility if state.props.statusOnline then VISIBLE else GONE
+    , visibility if (state.props.statusOnline && (not $ HU.specialVariantsForTracking FunctionCall)) then VISIBLE else GONE
     , padding $ Padding 16 14 16 14
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
@@ -1063,7 +1088,7 @@ recenterBtnView state push =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , stroke $ "1," <> Color.grey900
-  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+  , visibility $ boolToVisibility $ not (checkOnRideStage state || not state.props.statusOnline)
   , cornerRadius 24.0
   , margin $ MarginLeft 12
   , rippleColor Color.rippleShade
@@ -1142,6 +1167,7 @@ offlineView push state =
                                  else if state.data.paymentState.driverBlocked then GO_ONLINE_PROMPT_SUBSCRIBE
                                  else GO_ONLINE_PROMPT
               , margin $ MarginBottom if isBookingPreferenceVisible then 0 else 10
+              , padding $ PaddingBottom $ if (HU.specialVariantsForTracking FunctionCall) then 24 else 0
               ] <> FontStyle.paragraphText TypoGraphy
               , if isBookingPreferenceVisible then bookingPreferenceNavView push state else dummyTextView
             ]
@@ -1169,8 +1195,8 @@ offlineView push state =
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , gravity CENTER
-                    , text $ getString GO_ONLINE
-                    , textSize FontSize.a_32
+                    , text $ if (HU.specialVariantsForTracking FunctionCall) then "Start \n Duty" else getString GO_ONLINE
+                    , textSize $ if (HU.specialVariantsForTracking FunctionCall) then FontSize.a_22 else FontSize.a_32
                     , fontStyle $ FontStyle.bold LanguageStyle
                     , color Color.white900
                     ]
@@ -1182,7 +1208,7 @@ offlineView push state =
   where
     isBookingPreferenceVisible = 
       not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR", "DELIVERY_LIGHT_GOODS_VEHICLE"])
-      && state.props.driverStatusSet == ST.Offline
+      && state.props.driverStatusSet == ST.Offline && not (HU.specialVariantsForTracking FunctionCall)
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1203,17 +1229,20 @@ driverDetail push state =
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
+  , PP.cornerRadii $ PTD.Corners 40.0 false false true true
   ] 
   [ driverProfile push state
   , tripStageTopBar push state
   , accessibilityHeaderView push state (getAccessibilityHeaderText state)
   , defaultTopBar
-    ]
+  , merchantLogoView
+  ]
 
   where
     defaultTopBar = 
       linearLayout[ 
-        width MATCH_PARENT
+        width WRAP_CONTENT
+      , weight 1.0
       , height MATCH_PARENT
       , orientation HORIZONTAL
       , gravity CENTER_HORIZONTAL
@@ -1227,10 +1256,23 @@ driverDetail push state =
       , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag && rideAccStage && state.data.cityConfig.enableAdvancedBooking || state.data.activeRide.bookingFromOtherPlatform
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
-        ) driverStatusIndicators
+        ) $ if (HU.specialVariantsForTracking FunctionCall) then busDriverStatusIndicators else driverStatusIndicators
       ) 
+
+    merchantLogoView =
+      linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , padding $ Padding 4 20 12 16
+      ]
+      [ imageView
+        [ width $ V 42
+        , height $ V 42
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_logo_without_text"
+        ]
+      ]
     
-    rideAccStage =  DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]
+    rideAccStage =  checkOnRideStage state || state.props.currentStage == RideTracking
     rideStartedStage = DA.any (_ == state.props.currentStage) [RideStarted, ChatWithCustomer]
     disabiltiyRide = isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag
 
@@ -1280,13 +1322,11 @@ tripStageTopBar push state =
       width MATCH_PARENT,
       height WRAP_CONTENT,
       scrollBarX false,
-      background Color.white900,
-      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag))
+      visibility $ boolToVisibility $ checkOnRideStage state && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag))
     ][
       linearLayout[
         width MATCH_PARENT,
         height WRAP_CONTENT,
-        background Color.white900,
         margin $ MarginRight 16,
         gravity CENTER_VERTICAL
       ] $ [ advanceBookingSwitch] 
@@ -1405,7 +1445,8 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
 
 driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =
-  let isStatusBtnClickable = not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
+  let isStatusBtnClickable = not (checkOnRideStage state ||  state.props.currentStage == RideTracking)
+      isSepcialTrackingVariants = HU.specialVariantsForTracking FunctionCall
   in
   linearLayout
   [ weight 1.0
@@ -1426,6 +1467,7 @@ driverStatusPill pillConfig push state index =
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
       , clickable isStatusBtnClickable
       , cornerRadius 20.0
+      , alpha $ if ((not isStatusBtnClickable) && (HU.specialVariantsForTracking FunctionCall)) then 0.5 else 1.0
       ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
       [ imageView
         [ width $ V 15
@@ -1445,8 +1487,8 @@ driverStatusPill pillConfig push state index =
           , height WRAP_CONTENT
           , padding (Padding 0 0 4 0)
           , text $ case pillConfig.status of
-              Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
-              Offline -> (getString OFFLINE)
+              Online -> if isSepcialTrackingVariants then "On Duty" else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
+              Offline -> if isSepcialTrackingVariants then "End Duty" else (getString OFFLINE)
               Silent -> (getString SILENT)
           , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.textColor
@@ -1465,7 +1507,7 @@ statsModel push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility showStatsModel
+    , visibility $ boolToVisibility $ showStatsModel && (not $ HU.specialVariantsForTracking FunctionCall)
     , gravity CENTER
     , padding $ Padding 16 2 16 6
     ][  linearLayout
@@ -1544,7 +1586,7 @@ statsModel push state =
         ]
     ]
     where 
-      showStatsModel = not ((DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) && not state.props.isStatsModelExpanded)
+      showStatsModel = not (checkOnRideStage state && not state.props.isStatsModelExpanded)
       coinsEnabled = state.data.config.feature.enableYatriCoins && state.data.cityConfig.enableYatriCoins
 
 expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1699,7 +1741,7 @@ gotoButton push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation VERTICAL
-  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+  , visibility $ boolToVisibility $ not (checkOnRideStage state || not state.props.statusOnline)
   , margin $ MarginTop 3
   ] [ linearLayout
       [ width WRAP_CONTENT
@@ -2013,7 +2055,7 @@ driverStatus push state =
   , height MATCH_PARENT
   , gravity RIGHT
   , margin (Margin 0 0 16 0)
-  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer ) then GONE else VISIBLE
+  , visibility if (checkOnRideStage state || state.props.currentStage == RideTracking) then GONE else VISIBLE
   ][ linearLayout
      [ width WRAP_CONTENT
      , height MATCH_PARENT
@@ -2267,7 +2309,7 @@ offlineNavigationLinks push state =
   , width MATCH_PARENT
   , scrollBarX false
   , margin $ MarginHorizontal 16 16
-  , visibility if state.props.driverStatusSet == ST.Offline then VISIBLE else GONE
+  , visibility if state.props.driverStatusSet == ST.Offline && (not HU.specialVariantsForTracking FunctionCall) then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -2404,6 +2446,28 @@ rideActionModelView push state =
       ]
     ]
 
+rideTrackingModalView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideTrackingModalView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , alignParentBottom "true,-1"
+  , visibility $ boolToVisibility $ state.props.currentStage == RideTracking
+  ][  coordinatorLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ][  bottomSheetLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , PP.sheetState COLLAPSED
+          , peakHeight $ if (DA.elem state.data.peekHeight [518,470,0]) || state.data.peekHeight < 450 then getPeekHeight state else state.data.peekHeight
+          , topShift 0.0
+          ][ if state.props.currentStage == RideTracking then
+                RideTrackingModal.view (push <<< RideTrackingModalAction) (rideTrackingModalConfig state)
+                else linearLayout[][]
+        ]
+      ]
+    ]
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
@@ -2430,6 +2494,7 @@ endRidePopView push state =
     [ width MATCH_PARENT,
       height MATCH_PARENT
     ][ PopUpModal.view (push <<< PopUpModalAction) (endRidePopUp state )]
+    -- ][ PopUpModal.view (push <<<PopUpModalAction) (waitingForDepoRespPopUp state )] -- TODO@slow-codex: change as per endTrip Status
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
@@ -2516,7 +2581,7 @@ popupModals push state =
           ST.MetroWarriorWarning -> MetroWarriorPopupAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
-enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
+enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, RideTracking]) then false else true
 
 
 rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Flow GlobalState Unit
@@ -2944,7 +3009,7 @@ getScheduledRidecount  push action state = do
             pure unit
           Left (err) -> pure unit
 
-checkOnRideStage ::  HomeScreenState -> Boolean
+checkOnRideStage ::  HomeScreenState -> Boolean -- check if the current stage is on ride stage, don't add any business logic 
 checkOnRideStage state = DA.elem state.props.currentStage [RideAccepted , RideStarted ,ChatWithCustomer ]
 
 triggerOnRideBannerTimer :: forall w . (Action -> Effect Unit) -> HomeScreenState ->  Effect Unit
@@ -3375,3 +3440,218 @@ busOnline push state =
       ]
     ]
   ]
+  
+chooseBusRouteModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chooseBusRouteModal push state =
+  linearLayout
+  [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  ][
+    PopUpModal.view (push <<< ChooseBusRoute) (chooseBusRouteModalPopup state)
+  ]
+
+qrScannerView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+qrScannerView push state =
+  let showGoInYellow =  (state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked) || 
+                        (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
+                        (not state.data.isVehicleSupported) ||
+                        state.data.plansState.cityOrVehicleChanged
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , gravity BOTTOM
+    , visibility $ boolToVisibility $ state.props.driverStatusSet == ST.Online && (HU.specialVariantsForTracking FunctionCall)
+    ]
+    [ frameLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]
+        [ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , gravity BOTTOM
+          ][ linearLayout
+              [ height $ V 160
+              , width MATCH_PARENT
+              , gravity BOTTOM
+              , orientation VERTICAL
+              , background Color.white900
+              , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+              ][
+                textView $
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER_HORIZONTAL
+                , text "Scan the QR pasted in the \n bus to start a new ride"
+                , margin $ Margin 16 0 16 0
+                , padding $ PaddingBottom 42
+                ] <> FontStyle.body2 TypoGraphy
+              ]
+          ]
+      , linearLayout
+          [ height $ V 245
+          , width MATCH_PARENT
+          , gravity CENTER_HORIZONTAL
+          -- , visibility $ boolToVisibility false
+          , onClick push $ const NoAction
+          ][ linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              ][ frameLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , margin $ MarginTop 24
+                  ][ linearLayout
+                      [ height $ V 132
+                      , width $ V 132
+                      , cornerRadius 75.0
+                      , background Color.black900
+                      , onClick push $ const $ NoAction
+                      , rippleColor Color.rippleShade
+                      , onClick push $ const ScanQrCode
+                      ][]
+                    , imageView
+                      [ gravity CENTER
+                      , layoutGravity "center"
+                      , height $ V 84
+                      , width $ V 84
+                      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_qr_scan_yellow_transparent"
+                      ]
+                ]
+            ]
+        ]
+      ]
+    ]
+    where
+      metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+
+
+recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+recentBusRideView push state =
+  let tripDetails = if HU.isGovtBusDriver then state.data.whereIsMyBusData.currentActiveTrip else state.data.whereIsMyBusData.previousCompletedTrip
+  in case tripDetails of
+      Nothing -> linearLayout[][]
+      Just (TripTransactionDetails tripDetails) ->
+        let title = if HU.isGovtBusDriver then "Assigned Ride" else "Recent Ride"
+            busNumber = tripDetails.vehicleNum
+            busType = tripDetails.vehicleType
+            routeNumber = "dummy"
+            sourceName = tripDetails.source ^. _stopName
+            destinationName = tripDetails.destination ^. _stopName
+        in linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , margin $ Margin 16 16 16 16
+            , background Color.white900
+            , cornerRadius 16.0
+            , padding $ Padding 6 6 6 16
+            , shadow $ Shadow 0.1 2.0 4.0 4.0 Color.black900 0.1
+            , visibility $ boolToVisibility $ (tripDetails.status == TRIP_COMPLETED && not HU.isGovtBusDriver) || (tripDetails.status == TRIP_ASSIGNED && HU.isGovtBusDriver)
+            ][
+              textView $
+              [ text title
+              , width MATCH_PARENT
+              , height WRAP_CONTENT
+              , background Color.grey700
+              , color Color.black700
+              , gravity CENTER
+              , margin $ MarginBottom 20
+              , padding $ Padding 0 6 0 6
+              , cornerRadius 14.0
+              ] <> FontStyle.subHeading3 TypoGraphy,
+              linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , margin $ Margin 10 0 10 24
+              ][
+                linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , weight 1.0
+                ][
+                  textView $ 
+                  [ text "Bus Number"
+                  , color Color.black800
+                  , margin $ MarginBottom 8
+                  ] <> FontStyle.body3 TypoGraphy,
+                  textView $ 
+                  [ text busNumber
+                  , color Color.black800
+                  ] <> FontStyle.subHeading3 TypoGraphy
+                ],
+                linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , margin $ Margin 0 0 64 0
+                ][
+                  textView $
+                  [ text "Bus Type"
+                  , color Color.black800
+                  , margin $ MarginBottom 8
+                  ] <> FontStyle.body3 TypoGraphy,
+                  textView $
+                  [ text busType
+                  , color Color.black800
+                  ] <> FontStyle.subHeading3 TypoGraphy
+                ]
+              ],
+              textView $
+              [ text "Route Number"
+              , color Color.black800
+              , margin $ Margin 10 0 10 8
+              ] <> FontStyle.body3 TypoGraphy,
+              linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , padding $ Padding 16 16 16 16
+              , cornerRadius 12.0
+              , margin $ Margin 10 0 10 24
+              , stroke $ "1," <> Color.grey900
+              , gravity CENTER_VERTICAL
+              , onClick push $ const $ SelectBusRoute
+              ][
+                textView
+                [ text routeNumber
+                , textSize FontSize.a_20
+                , fontStyle $ FontStyle.bold LanguageStyle
+                , margin $ MarginRight 8
+                ],
+                textView
+                [ text "•"
+                , textSize FontSize.a_20
+                , color Color.black600
+                , margin $ MarginHorizontal 8 8
+                ],
+                textView
+                [ text $ sourceName <> " → " <> destinationName
+                , textSize FontSize.a_16
+                , color Color.black700
+                , weight 1.0
+                ],
+                imageView
+                [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_chevron_down"
+                , width $ V 20
+                , height $ V 20
+                ]
+              ],
+              PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
+              -- primaryButton
+              -- [ text "Start Ride"
+              -- , width MATCH_PARENT
+              -- , height $ V 56
+              -- , cornerRadius 28.0
+              -- , background Color.green500
+              -- , color Color.white900
+              -- , textSize FontSize.a_18
+              -- , fontStyle $ FontStyle.bold LanguageStyle
+              -- , onClick push $ const StartRide
+              -- ]
+            ]
+          
