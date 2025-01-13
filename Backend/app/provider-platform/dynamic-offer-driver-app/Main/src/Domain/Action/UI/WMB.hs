@@ -27,6 +27,7 @@ import qualified Domain.Action.UI.Call as Call
 import Domain.Types.ApprovalRequest
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Extra.TransporterConfig
 import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
@@ -38,7 +39,7 @@ import Domain.Types.Route
 import Domain.Types.RouteTripStopMapping
 import Domain.Types.TripTransaction
 import Domain.Types.Vehicle
-import Domain.Types.VehicleVariant
+import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
 import qualified EulerHS.Prelude as EHS
 import Kernel.Beam.Functions as B
@@ -68,12 +69,12 @@ import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
-import qualified Storage.Queries.RouteTripStopMapping as QRTS
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Tools.Call as Call
 import Tools.Error
@@ -115,7 +116,8 @@ postWmbAvailableRoutes (_, _, _) req = do
     mapM
       ( \mapping -> do
           vehicleNumber <- decrypt mapping.vehicleNumber
-          availableRoutes (mapping.routeCode, mapping.vehicleServiceTierType) vehicleNumber
+          vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+          availableRoutes (mapping.routeCode, maybe BUS_NON_AC DVehVariant.castVariantToServiceTier vehicleRC.vehicleVariant) vehicleNumber
       )
       =<< VRM.findAllRouteMappings vehicleNumberHash
   pure result
@@ -153,7 +155,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
         vehicleNumber = vehicleNumber,
-        vehicleType = vehicleRouteMapping.vehicleServiceTierType,
+        vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
         destination = destinationStopInfo,
         status = IN_PROGRESS,
@@ -208,18 +210,14 @@ postWmbTripStart (_, _, _) tripTransactionId req = do
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ InternalError "Fleet-driver association not found")
   allStops <- QRTSM.findByRouteCode tripTransaction.routeCode
   let stops = map (\stop -> WMB.StopData stop.tripCode stop.routeCode stop.stopCode stop.stopPoint) allStops
-  let closestStopTripCode = case WMB.findClosestStop req.location stops of
-        Just stop -> (Just stop.tripCode)
-        Nothing -> Nothing
-  case closestStopTripCode of
-    Just tripCode -> do
-      tripEndStop <- (listToMaybe $ sortBy (EHS.comparing (.stopSequenceNum)) $ filter (\stop -> stop.tripCode == tripCode) allStops) & fromMaybeM (InternalError "End Stop Not Found.")
-      let busTripInfo = WMB.buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode tripEndStop.stopPoint
-      void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
-      QTT.updateOnStart (Just tripCode) (Just req.location) IN_PROGRESS tripTransactionId
-      TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" Nothing
-      pure Success
-    Nothing -> throwError (InvalidRequest "Could not start trip")
+  closestStop <- WMB.findClosestStop req.location stops & fromMaybeM (InternalError "No closest stop found")
+  tripEndStop <- (listToMaybe $ sortBy (EHS.comparing (.stopSequenceNum)) $ filter (\stop -> stop.tripCode == closestStop.tripCode) allStops) & fromMaybeM (InternalError "End Stop Not Found.")
+  let busTripInfo = WMB.buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode tripEndStop.stopPoint
+  void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
+  now <- getCurrentTime
+  QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just req.location) IN_PROGRESS (Just now) tripTransactionId
+  TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+  pure Success
 
 postWmbTripEnd ::
   ( ( Maybe (Id Person),

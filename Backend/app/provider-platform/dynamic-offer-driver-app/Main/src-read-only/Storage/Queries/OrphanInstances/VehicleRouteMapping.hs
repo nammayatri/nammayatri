@@ -19,14 +19,10 @@ instance FromTType' Beam.VehicleRouteMapping Domain.Types.VehicleRouteMapping.Ve
         Domain.Types.VehicleRouteMapping.VehicleRouteMapping
           { blocked = blocked,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
-            vehicleClass = vehicleClass,
-            vehicleColor = vehicleColor,
-            vehicleModel = vehicleModel,
             vehicleNumber = EncryptedHashed (Encrypted vehicleNumberEncrypted) vehicleNumberHash,
-            vehicleServiceTierType = vehicleServiceTierType,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -36,15 +32,11 @@ instance ToTType' Beam.VehicleRouteMapping Domain.Types.VehicleRouteMapping.Vehi
     Beam.VehicleRouteMappingT
       { Beam.blocked = blocked,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
-        Beam.vehicleClass = vehicleClass,
-        Beam.vehicleColor = vehicleColor,
-        Beam.vehicleModel = vehicleModel,
         Beam.vehicleNumberEncrypted = ((vehicleNumber & unEncrypted . encrypted)),
         Beam.vehicleNumberHash = (vehicleNumber & hash),
-        Beam.vehicleServiceTierType = vehicleServiceTierType,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

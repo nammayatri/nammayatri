@@ -15,11 +15,9 @@ VehicleRouteMapping:
     fleetOwnerId: Id Person
     vehicleNumber: EncryptedHashedField e Text
     routeCode: Text
-    vehicleColor: Text
-    vehicleModel: Text
-    vehicleClass: Text
-    vehicleServiceTierType: ServiceTierType
     blocked: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     vehicleNumberHash: PrimaryKey
@@ -90,14 +88,19 @@ TripTransaction:
       where: id
     updateOnStart:
       kvFunction: updateOneWithKV
-      params: [tripCode, startLocation, status]
+      params:
+        [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
       where: id
     findAllTripTransactionByDriverId:
       kvFunction: findAllWithKV
       where: driverId
+    updateOnEnd:
+      kvFunction: updateOneWithKV
+      params: [status, endLocation, tripEndTime]
+      where: id
     updateStatus:
       kvFunction: updateOneWithKV
-      params: [status, endLocation]
+      params: [status]
       where: id
 
   extraOperations:

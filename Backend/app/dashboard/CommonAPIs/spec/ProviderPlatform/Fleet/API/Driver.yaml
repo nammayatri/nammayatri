@@ -19,7 +19,7 @@ imports:
 module: Driver
 
 apis:
-  - POST: # BulkUploadVehicleForFleetAPI
+  - POST: # BulkUploadVehiclesForFleetAPI
       endpoint: /fleet/addVehicles
       auth: ApiAuthV2
       multipart:
