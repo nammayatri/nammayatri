@@ -91,7 +91,7 @@ jobs:
         id: check-conditions
         run: |
           # Should build check (skip aarch64-linux on non-main)
-          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" = "refs/heads/main" ]]; then
             echo "should_build=false" >> $GITHUB_OUTPUT
           else
             echo "should_build=true" >> $GITHUB_OUTPUT
@@ -108,7 +108,6 @@ jobs:
 
       - name: Build Docker image
         id: docker
-        if: steps.check-conditions.outputs.should_build == 'true' && needs.check-conditions.outputs.should-push-docker == 'true'
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
