@@ -367,8 +367,8 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
       }
 
-getMetroLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
-getMetroLegStatusFromBooking booking = case booking.status of
+getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
+getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.NEW -> Assigning
   DFRFSBooking.APPROVED -> Booked
   DFRFSBooking.PAYMENT_PENDING -> InPlan
@@ -404,7 +404,7 @@ mkLegInfoFromFrfsBooking booking = do
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
-        status = getMetroLegStatusFromBooking booking,
+        status = getFRFSLegStatusFromBooking booking,
         legExtraInfo =
           Metro $
             MetroLegExtraInfo

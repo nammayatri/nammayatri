@@ -57,7 +57,7 @@ instance JT.JourneyLeg MetroLegRequest m where
     case mbMetroBooking of
       Just metroBooking -> do
         journeyLegOrder <- metroBooking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        return $ JT.JourneyLegState {status = JT.getMetroLegStatusFromBooking metroBooking, currentPosition = Nothing, legOrder = journeyLegOrder}
+        return $ JT.JourneyLegState {status = JT.getFRFSLegStatusFromBooking metroBooking, currentPosition = Nothing, legOrder = journeyLegOrder}
       Nothing -> do
         searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")

@@ -164,7 +164,8 @@ addAllLegs journeyId legsReq = do
           DTrip.Walk -> do
             currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
             addWalkLeg parentSearchReq journeyLeg currentLegReq
-          _ -> throwError $ InvalidRequest ("Mode not supported: " <> show journeyLeg.mode)
+          DTrip.Bus -> do
+            addBusLeg parentSearchReq journeyLeg
       QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
 
 addTaxiLeg ::
@@ -235,6 +236,31 @@ addMetroLeg parentSearchReq journeyLeg = do
     mkMetroLegReq city = do
       MetroLegRequestSearch $
         MetroLegRequestSearchData
+          { quantity = 1,
+            personId = parentSearchReq.riderId,
+            merchantId = parentSearchReq.merchantId,
+            city,
+            journeyLeg
+          }
+
+addBusLeg ::
+  ( JL.SearchRequestFlow m r c,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  SearchRequest.SearchRequest ->
+  DJourneyLeg.JourneyLeg ->
+  m JL.SearchResponse
+addBusLeg parentSearchReq journeyLeg = do
+  merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+  let busSearchReq = mkBusLegReq merchantOperatingCity.city
+  JL.search busSearchReq
+  where
+    mkBusLegReq city = do
+      BusLegRequestSearch $
+        BusLegRequestSearchData
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
