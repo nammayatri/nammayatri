@@ -439,3 +439,6 @@ getBusRideHistory limit offset status' =
   case status' of
     Just status -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset<>"&status=" <> status
     Nothing -> (getBaseUrl "") <> "/wmb/trip/list?limit="<>limit<>"&offset="<>offset
+
+getBusFleetConfig :: String -> String
+getBusFleetConfig _ = getBaseUrl "" <> "/fleet/config"

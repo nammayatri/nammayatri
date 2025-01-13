@@ -1108,7 +1108,8 @@ type WhereIsMyBusData = {
   availableRoutes :: Maybe API.AvailableRoutesList,
   trip :: Maybe BusTrip,
   endTripStatus :: Maybe String,
-  lastCompletedTrip :: Maybe API.TripTransactionDetails
+  lastCompletedTrip :: Maybe API.TripTransactionDetails,
+  fleetConfig :: Maybe API.BusFleetConfigResp
 }
 -- Represents either a current or assigned bus trip
 data BusTrip = CURRENT_TRIP API.TripTransactionDetails | ASSIGNED_TRIP API.TripTransactionDetails

@@ -1976,3 +1976,17 @@ getBusRideHistoryBT limit offset status = do
   withAPIResultBT (EP.getBusRideHistory limit offset (show <$> status)) identity errorHandler (lift $ lift $ callAPI headers (BusRideHistoryReq limit offset status))
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+getBusFleetConfig :: String -> Flow GlobalState (Either ErrorResponse BusFleetConfigResp)
+getBusFleetConfig _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getBusFleetConfig "") unwrapResponse $ callAPI headers (BusFleetConfigReq "")
+  where
+    unwrapResponse (x) = x
+
+getFleetConfigBT :: String -> FlowBT String BusFleetConfigResp
+getFleetConfigBT _ = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.getBusFleetConfig "") identity errorHandler (lift $ lift $ callAPI headers (BusFleetConfigReq ""))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack

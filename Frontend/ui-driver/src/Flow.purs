@@ -2579,8 +2579,10 @@ homeScreenFlow = do
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     if (not $ HU.specialVariantsForTracking FunctionCall) 
-      then updateBannerAndPopupFlags 
-      else updateRecentBusView globalState.homeScreen
+      then do 
+        void $ pure $ updateBusFleetConfig globalState.homeScreen
+        void $ pure $ updateRecentBusView globalState.homeScreen 
+      else updateBannerAndPopupFlags
 
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
@@ -5038,3 +5040,18 @@ updateRecentBusView state = do
                 }
             Left _ -> pure unit
         Nothing -> pure unit
+
+updateBusFleetConfig :: HomeScreenState -> FlowBT String Unit
+updateBusFleetConfig state = do
+  when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
+    response <- lift $ lift $ Remote.getBusFleetConfig ""
+    case response of
+      Right config -> do
+        modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
+          { data {
+              whereIsMyBusData {
+                fleetConfig = Just config
+              }
+            }
+          }
+      Left _ -> pure unit

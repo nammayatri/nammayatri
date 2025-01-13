@@ -5682,3 +5682,38 @@ instance standardEncodeTripEndResp :: StandardEncode TripEndResp where standardE
 instance showTripEndResp :: Show TripEndResp where show = genericShow
 instance decodeTripEndResp :: Decode TripEndResp where decode = defaultDecode
 instance encodeTripEndResp :: Encode TripEndResp where encode = defaultEncode
+
+------------------------------------------------------ Bus Fleet Config ------------------------------------------------------
+
+data BusFleetConfigReq = BusFleetConfigReq String
+
+derive instance genericFleetConfigReq :: Generic BusFleetConfigReq _
+instance showFleetConfigReq :: Show BusFleetConfigReq where show = genericShow
+instance standardEncodeFleetConfigReq :: StandardEncode BusFleetConfigReq where standardEncode _ = standardEncode {}
+instance decodeFleetConfigReq :: Decode BusFleetConfigReq where decode = defaultDecode
+instance encodeFleetConfigReq :: Encode BusFleetConfigReq where encode = defaultEncode
+
+instance makeFleetConfigReq :: RestEndpoint BusFleetConfigReq where
+    makeRequest reqBody@(BusFleetConfigReq _) headers = defaultMakeRequestWithoutLogs GET (EP.getBusFleetConfig "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+newtype BusFleetConfigResp = BusFleetConfigResp
+  { allowAutomaticRoundTripAssignment :: Boolean
+  , allowEndingMidRoute :: Boolean
+  , allowStartRideFromQR :: Boolean
+  -- , endRideDistanceThreshold :: Maybe Number
+  , fleetOwnerId :: String
+  , rideEndApproval :: Boolean
+  -- , merchantId :: Maybe Text
+  -- , merchantOperatingCityId :: Maybe Text
+  -- , createdAt :: UTCTime
+  -- , updatedAt :: UTCTime
+  }
+
+derive instance genericBusFleetConfigResp :: Generic BusFleetConfigResp _
+derive instance newtypeBusFleetConfigResp :: Newtype BusFleetConfigResp _
+instance standardEncodeBusFleetConfigResp :: StandardEncode BusFleetConfigResp where standardEncode (BusFleetConfigResp res) = standardEncode res
+instance showBusFleetConfigResp :: Show BusFleetConfigResp where show = genericShow
+instance decodeBusFleetConfigResp :: Decode BusFleetConfigResp where decode = defaultDecode
+instance encodeBusFleetConfigResp :: Encode BusFleetConfigResp where encode = defaultEncode
+

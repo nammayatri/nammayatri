@@ -760,13 +760,15 @@ public class LocationUpdateService extends Service {
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
-
-                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed")) {
+                    String vehicleCategory = getValueFromStorage("VEHICLE_CATEGORY");
+                    Boolean isBusVariantPresent = vehicleCategory != "BusCategory" || (getValueFromStorage("VEHICLE_VARIANT") != "__failed");
+                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && isBusVariantPresent) {
                         Log.d(LOG_TAG, "DriverUpdateLoc TOKEN | ValidTime Passed");
                         baseHeaders.put("source", log);
                         String merchantId = getValueFromStorage("MERCHANT_ID");
                         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
+
                         if (merchantId != null && vehicleVariant != null && driverMode != null) {
                             baseHeaders.put("mId", merchantId);
                             baseHeaders.put("vt", vehicleVariant);
@@ -775,7 +777,8 @@ public class LocationUpdateService extends Service {
                             baseHeaders.put("mId", merchantID);
                             baseHeaders.put("vt", vVariant);
                             baseHeaders.put("dm", drMode);
-                        } else {
+                        } 
+                        else {
                             MobilityAPIResponse apiResponse = callAPIHandler.callAPI(baseUrl+"/driver/profile", baseHeaders, "{}","GET");
                             try {
                                 JSONObject resp = new JSONObject(apiResponse.getResponseBody());
@@ -795,16 +798,9 @@ public class LocationUpdateService extends Service {
                                     baseHeaders.put("vt", vVariant);
                                     updateStorage("VEHICLE_VARIANT", vVariant);
                                 }
-                                // if (resp.has("onboardingVehicleCategory"))
-                                // {
-                                //     System.out.println("DEBUG: OnboardingVehicleCategory - " + resp.getString("onboardingVehicleCategory"));
-                                //     String vt = resp.getString("onboardingVehicleCategory");
-                                //     if( vt == "BUS"){
-                                //         System.out.println("DEBUG: OnboardingVehicleCategory - " + resp.getString("onboardingVehicleCategory"));
-                                //         baseHeaders.put("vt", "BUS");
-                                //         updateStorage("VEHICLE_VARIANT", "BUS");
-                                //     }
-                                // }
+                                if ( resp.has("vehicleCategory") && resp.getString("vehicleCategory").equals("BUS") ) {
+                                    updateStorage("VEHICLE_CATEGORY", "BusCategory");
+                                }
                             } catch (JSONException e) {
                                 e.printStackTrace();
                                 Bundle params = new Bundle();

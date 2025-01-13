@@ -207,7 +207,8 @@ initData =
           availableRoutes : Nothing,
           trip : Nothing, 
           endTripStatus : Nothing,
-          lastCompletedTrip : Nothing
+          lastCompletedTrip : Nothing,
+          fleetConfig : Nothing
           }
     }
   , props:
