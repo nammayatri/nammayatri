@@ -9,7 +9,7 @@ in
 {
   config = {
     perSystem = { self', pkgs, lib, ... }: {
-      packages = (lib.optionalAttrs pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) {
+      packages = lib.optionalAttrs (pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin) {
         dockerImage = (pkgs.dockerTools.buildImage {
           name = imageName;
           created = "now";
