@@ -3,8 +3,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalConfirm,
     getMultimodalBookingInfo,
     getMultimodalSwitchTaxi,
-    postMultimodalSwitchToAuto,
-    postMultimodalSwitchVariant,
+    getMultimodalBookingPaymentStatus,
     postMultimodalSwitch,
     postMultimodalRiderLocation,
     postMultimodalJourneyCancel,
@@ -16,6 +15,7 @@ where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
 import Environment
-import EulerHS.Prelude hiding (find, forM_, id, map)
+import EulerHS.Prelude hiding (all, find, forM_, id, map)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -33,6 +33,7 @@ import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
 import Storage.Queries.Estimate as QEstimate
+import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -90,6 +91,35 @@ getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
         legs
       }
 
+getMultimodalBookingPaymentStatus ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.Flow ApiTypes.JourneyBookingPaymentStatus
+  )
+getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
+  -- handle if onit doesn't come for all bookings once ui designs are there
+  if allLegsOnInitDone
+    then do
+      frfsBookingStatusArr <- FRFSTicketService.frfsBookingStatus (personId, merchantId) `mapM` allJourneyFrfsBookings
+      let anyFirstBooking = listToMaybe frfsBookingStatusArr -- take any first booking as payment is same for all
+          paymentOrder = anyFirstBooking >>= (.payment) <&> (\p -> ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status})
+      return $
+        ApiTypes.JourneyBookingPaymentStatus
+          { journeyId,
+            paymentOrder
+          }
+    else do
+      return $
+        ApiTypes.JourneyBookingPaymentStatus
+          { journeyId,
+            paymentOrder = Nothing
+          }
+
 getMultimodalSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -112,23 +142,6 @@ getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
   newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
   pure Kernel.Types.APISuccess.Success
-
-postMultimodalSwitchToAuto ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Prelude.Text ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitchToAuto _ _ = throwError $ InternalError "Not Implemented"
-
-postMultimodalSwitchVariant ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
-  Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitchVariant = do error "Logic yet to be decided"
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

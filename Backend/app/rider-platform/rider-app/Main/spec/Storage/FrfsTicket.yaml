@@ -28,6 +28,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
+  Journey: Domain.Types.Journey
   StationType: Domain.Types.StationType
 
 FRFSSearch:
@@ -72,7 +73,6 @@ FRFSSearch:
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
-    # journeyId: "!SecondaryKey"
 
   queries:
     getTicketPlaces:
@@ -254,6 +254,8 @@ FRFSTicketBooking:
     lineColor : Maybe Text
     frequency : Maybe Int
     journeyLegOrder : Maybe Int
+    journeyId: Maybe (Id Journey)
+    journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
 
   default:
@@ -291,6 +293,7 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
+    journeyId: "!SecondaryKey"
 
   queries:
     findById:
@@ -356,6 +359,13 @@ FRFSTicketBooking:
     updatePayoutOrderId:
       kvFunction: updateOneWithKV
       params: [cashbackPayoutOrderId]
+      where: id
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    updateOnInitDone:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
       where: id
     updateInterestDelayedByQuoteId:
       kvFunction: updateOneWithKV

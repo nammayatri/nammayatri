@@ -50,6 +50,8 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.BusPaymentService Payment.Stripe -> Domain.BusPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.BbpsPaymentService Payment.Juspay -> Domain.BbpsPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.BbpsPaymentService Payment.Stripe -> Domain.BbpsPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.MultiModalPaymentService Payment.Juspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.MultiModalPaymentService Payment.Stripe -> Domain.MultiModalPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -94,6 +96,9 @@ getServiceNameConfigJson = \case
   Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+  Domain.MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

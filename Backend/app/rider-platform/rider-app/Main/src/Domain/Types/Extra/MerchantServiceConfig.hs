@@ -35,6 +35,7 @@ data ServiceName
   | MetroPaymentService Payment.PaymentService
   | BusPaymentService Payment.PaymentService
   | BbpsPaymentService Payment.PaymentService
+  | MultiModalPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
@@ -56,6 +57,7 @@ instance Show ServiceName where
   show (MetroPaymentService s) = "MetroPayment_" <> show s
   show (BusPaymentService s) = "BusPayment_" <> show s
   show (BbpsPaymentService s) = "BbpsPayment_" <> show s
+  show (MultiModalPaymentService s) = "MultiModalPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
@@ -107,6 +109,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "BbpsPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MultiModalPaymentService v1, r2)
+                 | r1 <- stripPrefix "MultiModalPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -143,6 +149,7 @@ data ServiceConfigD (s :: UsageSafety)
   | MetroPaymentServiceConfig !PaymentServiceConfig
   | BusPaymentServiceConfig !PaymentServiceConfig
   | BbpsPaymentServiceConfig !PaymentServiceConfig
+  | MultiModalPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig

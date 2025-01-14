@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -39,7 +40,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

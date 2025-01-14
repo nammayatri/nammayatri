@@ -142,6 +142,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
 
 runWithServiceConfig1 ::
   ServiceFlow m r =>
@@ -197,7 +198,7 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 r
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS
+data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)

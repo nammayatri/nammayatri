@@ -296,8 +296,8 @@ getRemainingLegs journeyId = do
 getUnifiedQR :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [JL.LegInfo] -> m JL.UnifiedTicketQR
 getUnifiedQR legs = do
   bookings <- mapM getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus]) legs)
-  let cmrlBookings = [b | (provider, b) <- bookings, provider == "Chennai Metro Rail Limited"]
-  let mtcBookings = [b | (provider, b) <- bookings, provider == "Buses"]
+  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
+  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
   now <- getCurrentTime
   return
     JL.UnifiedTicketQR

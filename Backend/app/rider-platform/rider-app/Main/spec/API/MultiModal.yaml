@@ -12,6 +12,8 @@ imports:
   LatLong: Kernel.External.Maps.Types
   Price: Kernel.Types.Common
   JourneyLegStatus : Lib.JourneyModule.Types
+  FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types
 
 module: MultimodalConfirm
 
@@ -47,6 +49,14 @@ types:
     newMode: TravelMode
     currLocation: LatLong
 
+  JourneyBookingPaymentStatus:
+    journeyId: Id Journey
+    paymentOrder: Maybe PaymentOrder
+
+  PaymentOrder:
+    sdkPayload: Maybe CreateOrderResp
+    status: FRFSBookingPaymentStatusAPI
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/info
@@ -68,14 +78,12 @@ apis:
         journeyId: Id Journey
       response:
         type: JourneyInfoResp
-
-  - POST:
-      endpoint: /multimodal/{searchRequestId}/switchVariant/{estimateId}     # switch variant
+  - GET:
+      endpoint: /multimodal/{journeyId}/booking/paymentStatus
       params:
-        searchRequestId: Id SearchRequest
-        estimateId: Id Estimate
+        journeyId: Id Journey
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyBookingPaymentStatus
 
   - POST:
       endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match

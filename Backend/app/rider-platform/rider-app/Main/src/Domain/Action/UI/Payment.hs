@@ -192,6 +192,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just Payment.BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)

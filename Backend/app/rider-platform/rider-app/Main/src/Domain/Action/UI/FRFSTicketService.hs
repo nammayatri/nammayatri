@@ -491,6 +491,8 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
                 journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
+                journeyId = Id <$> (mbSearch >>= (.journeyLegInfo) <&> (.journeyId)),
+                journeyOnInitDone = Nothing,
                 frequency = mbSearch >>= (.frequency),
                 lineColor = mbSearch >>= (.lineColor),
                 startTime = Just now, -- TODO

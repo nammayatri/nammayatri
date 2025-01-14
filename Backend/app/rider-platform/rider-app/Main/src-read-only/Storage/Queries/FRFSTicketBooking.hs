@@ -7,6 +7,7 @@ module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooki
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.Journey
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,6 +25,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
+
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)]
 
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
@@ -75,6 +79,11 @@ updateIsBookingCancellableByBookingId ::
 updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateOnInitDone journeyOnInitDone id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.journeyOnInitDone journeyOnInitDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePayoutOrderId cashbackPayoutOrderId id = do
@@ -148,7 +157,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
+      Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
+      Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.lineColor lineColor,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

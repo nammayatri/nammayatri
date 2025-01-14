@@ -132,3 +132,17 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frequency integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN start_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolean ;
+
+
+------- SQL updates -------
+

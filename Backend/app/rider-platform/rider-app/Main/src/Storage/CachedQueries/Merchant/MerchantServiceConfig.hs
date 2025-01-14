@@ -112,6 +112,9 @@ cacheMerchantServiceConfig merchantServiceConfig = do
       BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
         Payment.StripeConfig _ -> BbpsPaymentService Payment.Stripe
+      MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+        Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
+        Payment.StripeConfig _ -> MultiModalPaymentService Payment.Stripe
       IssueTicketServiceConfig ticketCfg -> case ticketCfg of
         Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
       IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
