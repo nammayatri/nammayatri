@@ -105,7 +105,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/nix
-          key: nixcache-${{ matrix.system }}
+          key: nixcache-${{ matrix.host }}-${{ matrix.system }}
 
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
