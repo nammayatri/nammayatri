@@ -19,6 +19,7 @@ FullFarePolicyProgressiveDetailsPerMinRateSection:
   constraints:
     farePolicyId: PrimaryKey
     rideDurationInMin: PrimaryKey
+  disableKVQueryConstraints: True
 
   excludedFields:
     - merchantOperatingCityId

@@ -49,6 +49,7 @@ RiderDetails:
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+  disableKVQueryConstraints: True  
 
   queries:
     findById:

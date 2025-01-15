@@ -82,6 +82,8 @@ ReelsData:
     bottomButtonConfig: "'{}'"
     sideButtonConfig: "'{}'"
 
+  disableKVQueryConstraints: True
+  
   queries:
     findAllByMerchantOpCityIdLanguageAndKey:
       kvFunction: findAllWithKV

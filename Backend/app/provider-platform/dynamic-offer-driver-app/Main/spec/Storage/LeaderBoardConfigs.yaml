@@ -27,6 +27,7 @@ LeaderBoardConfigs:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findAllByMerchantOpCityId:

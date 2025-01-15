@@ -27,6 +27,7 @@ Exophone:
     id: PrimaryKey
     primaryPhone: "!SecondaryKey" # forcing to be a secondary key
     backupPhone: "!SecondaryKey" # forcing to be a secondary key
+  disableKVQueryConstraints: True
 
   queries:
     findAllByMerchantOpCityId:

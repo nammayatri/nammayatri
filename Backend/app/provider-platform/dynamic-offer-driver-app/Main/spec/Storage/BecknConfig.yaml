@@ -40,6 +40,8 @@ BecknConfig:
   default:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
+  
+  disableKVQueryConstraints: True
 
   queries:
     findByMerchantIdDomainAndVehicle:

@@ -73,6 +73,7 @@ Plan:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findByIdAndPaymentModeWithServiceName:

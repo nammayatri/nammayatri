@@ -83,6 +83,7 @@ DriverPoolConfig:
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
 
   sqlType:
     distanceBasedBatchSplit: text[]
@@ -143,6 +144,7 @@ ValueAddNP:
 
   constraints:
     subscriberId: PrimaryKey
+  disableKVQueryConstraints: True  
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -170,6 +172,7 @@ SurgePricing:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
 
   beamInstance:
     - MakeTableInstances

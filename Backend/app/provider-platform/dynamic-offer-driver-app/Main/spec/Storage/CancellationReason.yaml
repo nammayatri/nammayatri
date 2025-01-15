@@ -23,6 +23,7 @@ CancellationReason:
 
   constraints:
     reasonCode: PrimaryKey
+  disableKVQueryConstraints: True  
 
 
   toTType:

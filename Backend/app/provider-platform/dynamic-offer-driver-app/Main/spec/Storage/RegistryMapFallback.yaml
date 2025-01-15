@@ -20,6 +20,7 @@ RegistryMapFallback:
   constraints:
     subscriberId: PrimaryKey
     uniqueId: PrimaryKey
+  disableKVQueryConstraints: True  
 
 
   fromTType:

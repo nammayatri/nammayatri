@@ -20,6 +20,7 @@ WhiteListOrg:
   constraints:
     id: PrimaryKey
     subscriberId: !SecondaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:

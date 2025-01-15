@@ -32,6 +32,7 @@ Notification:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
 
   beamType:
     merchantOperatingCityId: Maybe Text

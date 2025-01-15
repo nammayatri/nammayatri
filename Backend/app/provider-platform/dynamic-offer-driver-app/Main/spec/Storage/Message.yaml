@@ -141,6 +141,7 @@ MessageReport:
   constraints:
     driverId: PrimaryKey
     messageId: PrimaryKey
+  disableKVQueryConstraints: True  
 
   fromTType:
     messageDynamicFields: getMessageDynamicFields
