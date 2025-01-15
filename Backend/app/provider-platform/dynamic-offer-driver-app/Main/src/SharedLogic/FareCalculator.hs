@@ -632,6 +632,8 @@ calculateFareParameters params = do
             AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
             AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
             SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
+            HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
+            EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
             DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
             BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
             BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers

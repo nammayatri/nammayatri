@@ -770,6 +770,8 @@ TransporterConfig:
       black: Kilometers
       blackxl: Kilometers
       suvplus: Kilometers
+      heritagecab: Kilometers
+      evautorickshaw: Kilometers
       deliveryLightGoodsVehicle: Kilometers
       busAc: Kilometers
       busNonAc: Kilometers
@@ -794,6 +796,8 @@ TransporterConfig:
       black: Maybe Seconds
       blackxl: Maybe Seconds
       suvplus: Maybe Seconds
+      heritagecab: Maybe Seconds
+      evautorickshaw: Maybe Seconds
       deliveryLightGoodsVehicle: Maybe Seconds
       busNonAc: Maybe Seconds
       busAc: Maybe Seconds
