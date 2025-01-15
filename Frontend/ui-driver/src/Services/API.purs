@@ -5729,3 +5729,17 @@ instance makeFleetConsentReq :: RestEndpoint FleetConsentReq where
   makeRequest reqBody@(FleetConsentReq _) headers = defaultMakeRequestWithoutLogs POST (EP.postFleetConsent "") headers reqBody Nothing 
   encodeRequest req = standardEncode req
 
+
+------------------------------------------------------ Bus End Trip Cancel Request ------------------------------------------------------
+
+data PostWmbRequestsCancelReq = PostWmbRequestsCancelReq String
+
+derive instance genericPostWmbRequestsCancelReq :: Generic PostWmbRequestsCancelReq _
+instance showPostWmbRequestsCancelReq :: Show PostWmbRequestsCancelReq where show = genericShow
+instance standardEncodePostWmbRequestsCancelReq :: StandardEncode PostWmbRequestsCancelReq where standardEncode _ = standardEncode {}
+instance decodePostWmbRequestsCancelReq :: Decode PostWmbRequestsCancelReq where decode = defaultDecode
+instance encodePostWmbRequestsCancelReq :: Encode PostWmbRequestsCancelReq where encode = defaultEncode
+
+instance makePostWmbRequestsCancelReq :: RestEndpoint PostWmbRequestsCancelReq where
+    makeRequest reqBody@(PostWmbRequestsCancelReq approvalRequestId) headers = defaultMakeRequestWithoutLogs POST (EP.postWmbRequestsCancel approvalRequestId) headers reqBody Nothing
+    encodeRequest req = standardEncode req

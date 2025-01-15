@@ -336,6 +336,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | LinkAndStartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
                     | WMBEndTrip ST.HomeScreenState
+                    | WMBCancelEndTrip ST.HomeScreenState
                     | GoToWMBActiveRide ST.HomeScreenState API.TripTransactionDetails
 
 data Action = NoAction
@@ -1284,7 +1285,9 @@ eval (RideStartRemainingTime seconds status timerId) state = do
 eval (WMBEndTripModalAC action) state = do
   case action of
     PopUpModal.OnButton1Click -> do
-      exit $ WMBEndTrip state
+      if (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL") 
+        then exit $ WMBCancelEndTrip state
+        else exit $ WMBEndTrip state
     PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
     _ -> continue state
 
