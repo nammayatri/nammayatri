@@ -39,13 +39,15 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName = do
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.planType $ Se.Eq planType,
-          Se.Is Beam.serviceName $ Se.Eq serviceName
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleCategory $ Se.Eq (Kernel.Prelude.Just vehicleCategory),
+          Se.Is Beam.isDeprecated $ Se.Eq isDeprecated
         ]
     ]
 
