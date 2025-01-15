@@ -683,7 +683,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide isBusRideActive = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
-            "fleet_consent" -> void $ pure $ giveFleetConsent
+            "wb_fleet_consent" -> void $ pure $ giveFleetConsent
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
