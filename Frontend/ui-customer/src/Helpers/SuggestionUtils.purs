@@ -181,9 +181,12 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
                   }
           updatedTrips = DA.mapMaybe (\item -> transformTrip locationsToExclude $ updateExisting item) trips
+          validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) updatedTrips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
-          sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
+          sortedTrips = sortTripsByScore $ updateVariantInfo validTrips
         in
           if tripExists
           then sortedTrips
