@@ -485,8 +485,10 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
                 (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ DA.reverse 
                 (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
-      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) sortedTripList
+      validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) sortedTripList 
+      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) validTrips
       filteredDestinations = DA.mapMaybe (\item -> transformSuggestion locationsToExclude item) suggestedDestinations
   in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations : filteredDestinations}
 
