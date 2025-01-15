@@ -137,7 +137,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 merchant,
                 searchReq,
                 tripQuoteDetails = tripQuoteDetails,
-                customerExtraFee = Nothing,
+                customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False
@@ -161,7 +161,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 merchant,
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],
-                customerExtraFee = Nothing,
+                customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch,
                 isAllocatorBatch = False
