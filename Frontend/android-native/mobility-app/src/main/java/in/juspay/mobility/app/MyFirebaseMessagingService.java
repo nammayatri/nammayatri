@@ -293,18 +293,18 @@ public  class MyFirebaseMessagingService {
                         } else
                             NotificationUtils.showRR(context, entity_payload, payload, NotificationUtils.RequestSource.FCM);
                         break;
-                    case NotificationTypes.BUS_TRIP_ASSIGNED:
+                    case NotificationTypes.WMB_TRIP_ASSIGNED:
                         String jsonData = remoteMessage.getData().get("entity_data");
                         if (jsonData != null) {
                             JSONObject notificationPayload = new JSONObject(jsonData);
                             busTripAssignedOverlay(context,notificationPayload);
                         }
+                        break;
                     case NotificationTypes.CLEARED_FARE:
                         sharedPref.edit().putString(context.getString(R.string.CLEAR_FARE), String.valueOf(payload.get(context.getString(R.string.entity_ids)))).apply();
                         NotificationUtils.showAllocationNotification(context, payload, entity_payload, NotificationUtils.RequestSource.FCM);
                         NotificationUtils.startWidgetService(context, "CLEAR_FARE", payload, entity_payload, NotificationUtils.RequestSource.FCM);
                         break;
-
                     case NotificationTypes.CANCELLED_PRODUCT:
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             NotificationUtils.showNotification(context, title, body, payload, imageUrl);
@@ -614,13 +614,14 @@ public  class MyFirebaseMessagingService {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             JSONObject busTripAssignedBody = new JSONObject();
             double lat = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LAT","0.0"));
-            double lon = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LAT","0.0"));
+            double lon = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LON","0.0"));
             JSONArray arr = new JSONArray();
             arr.put("START_BUS_RIDE");
-            busTripAssignedBody.put("actions",arr);
+            dataModel.put("actions",arr);
             busTripAssignedBody.put("lat", lat);
             busTripAssignedBody.put("lon", lon);
-            showOverlayMessage(context,busTripAssignedBody);
+            dataModel.put("busTripAssignedBody",busTripAssignedBody);
+            showOverlayMessage(context,dataModel);
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("MyFirebaseMessagingService", "Error in busTripAssignedOverlay " + e);
@@ -877,6 +878,6 @@ public  class MyFirebaseMessagingService {
         public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
         public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
-        public static final String BUS_TRIP_ASSIGNED = "BUS_TRIP_ASSIGNED";
+        public static final String WMB_TRIP_ASSIGNED = "WMB_TRIP_ASSIGNED";
     }
 }
