@@ -318,3 +318,16 @@ defaultMetroWarriorConfigEntity =
     defaultSecondaryStations : [],
     defaultPrimaryStation : ""
   }
+
+defaultRideEndAudioConfig :: RideEndAudioConfig
+defaultRideEndAudioConfig = {
+  enableRideEndAudio : false
+, rideEndAudioUrl : Nothing
+}
+
+getRideEndAudioConfig :: String -> RideEndAudioConfig
+getRideEndAudioConfig city = do
+    let config = fetchRemoteConfigString "ride_end_audio_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideEndAudioConfig
+        cityValue = getCityBasedConfig value $ toLower city
+    getCityBasedConfig value $ toLower city

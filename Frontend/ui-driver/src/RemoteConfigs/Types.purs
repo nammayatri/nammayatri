@@ -151,3 +151,8 @@ type MetroWarriorConfigEntity = {
   defaultSecondaryStations :: Array String,
   defaultPrimaryStation :: String
 }
+
+type RideEndAudioConfig = {
+  enableRideEndAudio :: Boolean
+, rideEndAudioUrl :: Maybe String
+}

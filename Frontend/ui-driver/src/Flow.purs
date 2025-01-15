@@ -2713,6 +2713,7 @@ homeScreenFlow = do
             void $ updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
             updateDriverDataToStates
+            void $ pure $ runFn2  EHC.updatePushInIdMap "PlayEndRideAudio" true
             homeScreenFlow
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
