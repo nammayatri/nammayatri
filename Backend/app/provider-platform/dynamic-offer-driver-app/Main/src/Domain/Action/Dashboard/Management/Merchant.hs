@@ -44,6 +44,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantSchedulerTrigger,
     postMerchantConfigClearCacheSubscription,
     postMerchantConfigFailover,
+    postMerchantPayoutConfigUpdate,
   )
 where
 
@@ -164,6 +165,7 @@ import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePol
 import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import Tools.Error
@@ -2377,3 +2379,12 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+
+postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.PayoutConfigReq -> Flow APISuccess
+postMerchantPayoutConfigUpdate merchantShortId city req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
+  QPC.updateConfigValues req payoutConfig merchantOpCity.id
+  CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
+  pure Success

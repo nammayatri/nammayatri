@@ -555,6 +555,7 @@ library
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
       Storage.Queries.NotificationExtra
+      Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
       Storage.Queries.Person.GetNearestGoHomeDrivers
@@ -1104,6 +1105,7 @@ library
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
       Storage.Queries.OrphanInstances.Notification
+      Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
