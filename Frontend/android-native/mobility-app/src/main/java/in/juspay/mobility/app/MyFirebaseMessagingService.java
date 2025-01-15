@@ -57,6 +57,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.common.services.TLSSocketFactory;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public  class MyFirebaseMessagingService {
 
@@ -297,6 +299,8 @@ public  class MyFirebaseMessagingService {
                         String jsonData = remoteMessage.getData().get("entity_data");
                         if (jsonData != null) {
                             JSONObject notificationPayload = new JSONObject(jsonData);
+                            String notificationType_ =remoteMessage.getData().get("notification_type"); 
+                            if(notificationType_ != null) notificationPayload.put("notification_type", notificationType_);
                             busTripAssignedOverlay(context,notificationPayload);
                         }
                         break;
@@ -612,15 +616,22 @@ public  class MyFirebaseMessagingService {
     {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            JSONObject busTripAssignedBody = new JSONObject();
+            String baseUrl = sharedPref.getString("BASE_URL", "null");
+            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
+            String routeCode = dataModel.optString("routeCode","null");
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(baseUrl + "/wmb/route/" + routeCode + "/details", baseHeaders,null, "GET", false);
+            if (apiResponse.getStatusCode() == 200){
+                JSONObject routeDetails = new JSONObject(apiResponse.getResponseBody());
+                dataModel.put("longName", routeDetails.optString("longName","").replace(" TO "," -> "));
+            }
             double lat = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LAT","0.0"));
             double lon = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LON","0.0"));
             JSONArray arr = new JSONArray();
             arr.put("START_BUS_RIDE");
             dataModel.put("actions",arr);
-            busTripAssignedBody.put("lat", lat);
-            busTripAssignedBody.put("lon", lon);
-            dataModel.put("busTripAssignedBody",busTripAssignedBody);
+            dataModel.put("lat", lat);
+            dataModel.put("lon", lon);
             showOverlayMessage(context,dataModel);
         } catch (Exception e) {
             e.printStackTrace();

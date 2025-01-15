@@ -207,16 +207,15 @@ public class OverlayMessagingService extends Service {
                     lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
                     editor.putString("CALL_REFRESH", "true").apply(); 
                 }
-                if(data.has("busTripAssignedBody") && data.getJSONObject("busTripAssignedBody") != null )
+                if(data.has("notification_type") && data.getString("notification_type").equals("WMB_TRIP_ASSIGNED"))
                 {
-                    JSONObject busTripAssignedBody = data.getJSONObject("busTripAssignedBody");
                     busDetailsLayout.setVisibility(View.VISIBLE);
                     originalOverlayContent.setVisibility(View.GONE);
                     busNumber.setText(data.has("vehicleNumber") ? data.getString("vehicleNumber") : "");
                     busType.setText(data.has("vehicleServiceTierType") ? (data.getString("vehicleServiceTierType").equals("BUS_NON_AC") ? "Non-Ac" : "Ac") : "");
                     routeNumber.setText(data.has("routeShortname") ? data.getString("routeShortname") : "");
-                    // String sourceDestination = (busTripAssignedBody.has("source") ? busTripAssignedBody.getString("source") : "") + (" -> ") + (busTripAssignedBody.has("destination") ? busTripAssignedBody.getString("destination") : "" );
-                    // routeSourceDestination.setText(sourceDestination);
+                    String sourceDestination = (data.has("longName") ? data.getString("longName") : "");
+                    routeSourceDestination.setText(sourceDestination);
                 } 
                 else {
                 boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
