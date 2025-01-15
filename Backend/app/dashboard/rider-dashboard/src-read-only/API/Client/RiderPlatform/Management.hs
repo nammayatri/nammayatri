@@ -7,6 +7,7 @@ import qualified "rider-app" API.Dashboard
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
+import qualified API.Types.RiderPlatform.Management.InsertPartnerOrgStation
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
@@ -24,6 +25,7 @@ data ManagementAPIs = ManagementAPIs
   { bookingDSL :: API.Types.RiderPlatform.Management.Booking.BookingAPIs,
     customerDSL :: API.Types.RiderPlatform.Management.Customer.CustomerAPIs,
     fRFSTicketDSL :: API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketAPIs,
+    insertPartnerOrgStationDSL :: API.Types.RiderPlatform.Management.InsertPartnerOrgStation.InsertPartnerOrgStationAPIs,
     invoiceDSL :: API.Types.RiderPlatform.Management.Invoice.InvoiceAPIs,
     merchantDSL :: API.Types.RiderPlatform.Management.Merchant.MerchantAPIs,
     nammaTagDSL :: API.Types.RiderPlatform.Management.NammaTag.NammaTagAPIs,
@@ -36,6 +38,7 @@ mkManagementAPIs merchantId city token = do
   let bookingDSL = API.Types.RiderPlatform.Management.Booking.mkBookingAPIs bookingClientDSL
   let customerDSL = API.Types.RiderPlatform.Management.Customer.mkCustomerAPIs customerClientDSL
   let fRFSTicketDSL = API.Types.RiderPlatform.Management.FRFSTicket.mkFRFSTicketAPIs fRFSTicketClientDSL
+  let insertPartnerOrgStationDSL = API.Types.RiderPlatform.Management.InsertPartnerOrgStation.mkInsertPartnerOrgStationAPIs insertPartnerOrgStationClientDSL
   let invoiceDSL = API.Types.RiderPlatform.Management.Invoice.mkInvoiceAPIs invoiceClientDSL
   let merchantDSL = API.Types.RiderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
   let nammaTagDSL = API.Types.RiderPlatform.Management.NammaTag.mkNammaTagAPIs nammaTagClientDSL
@@ -43,7 +46,7 @@ mkManagementAPIs merchantId city token = do
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> insertPartnerOrgStationClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

@@ -6,6 +6,7 @@ module API.Types.RiderPlatform.Management where
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
+import qualified API.Types.RiderPlatform.Management.InsertPartnerOrgStation
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
@@ -22,6 +23,7 @@ data ManagementUserActionType
   = BOOKING API.Types.RiderPlatform.Management.Booking.BookingUserActionType
   | CUSTOMER API.Types.RiderPlatform.Management.Customer.CustomerUserActionType
   | FRFS_TICKET API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketUserActionType
+  | INSERT_PARTNER_ORG_STATION API.Types.RiderPlatform.Management.InsertPartnerOrgStation.InsertPartnerOrgStationUserActionType
   | INVOICE API.Types.RiderPlatform.Management.Invoice.InvoiceUserActionType
   | MERCHANT API.Types.RiderPlatform.Management.Merchant.MerchantUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
@@ -35,6 +37,7 @@ instance Text.Show.Show ManagementUserActionType where
     BOOKING e -> "BOOKING/" <> show e
     CUSTOMER e -> "CUSTOMER/" <> show e
     FRFS_TICKET e -> "FRFS_TICKET/" <> show e
+    INSERT_PARTNER_ORG_STATION e -> "INSERT_PARTNER_ORG_STATION/" <> show e
     INVOICE e -> "INVOICE/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
@@ -57,6 +60,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "FRFS_TICKET/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( INSERT_PARTNER_ORG_STATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "INSERT_PARTNER_ORG_STATION/" r,
                    ( v1,
                      r2
                      ) <-
