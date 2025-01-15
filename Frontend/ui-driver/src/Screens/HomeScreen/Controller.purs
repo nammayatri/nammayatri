@@ -336,6 +336,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | LinkAndStartBusRide ST.HomeScreenState
                     | GoToBusEducationScreen ST.HomeScreenState
                     | WMBEndTrip ST.HomeScreenState
+                    | GoToWMBActiveRide ST.HomeScreenState API.TripTransactionDetails
 
 data Action = NoAction
             | BackPressed
@@ -1872,8 +1873,9 @@ eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue sta
 eval (RideTrackingModalAction (RideTrackingModal.EndRide)) state = continue state {props{endRidePopUp = true}}
 
 eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
-  -- TODO@max-keviv - changes needs to be done
-  continue state
+  if state.props.currentStage /= ST.RideTracking && state.props.currentStage /= ST.TripAssigned then
+    exit $ GoToWMBActiveRide state (API.TripTransactionDetails tripDetails)
+  else continue state
 
 eval _ state = update state 
 
