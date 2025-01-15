@@ -215,6 +215,7 @@ endTripPopUp state =
             primaryText {text = (getString END_RIDE)},
             secondaryText {text = "Send end ride request to your depot" <> "\n" <> "manager to be approved"},
             optionButtonOrientation = "VERTICAL",
+            backgroundClickable = false,
             option1 {
               text = "Send Request", 
               enableRipple = true, 
@@ -245,6 +246,7 @@ waitingForDepoRespPopUp state =
             primaryText {text = "Waiting for depot response!"},
             secondaryText {text = "Waiting for the depot manager's response to end your ride"},
             optionButtonOrientation = "VERTICAL",
+            backgroundClickable = false,
             option1 {
               text = "Cancel Request", 
               enableRipple = true, 

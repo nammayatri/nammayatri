@@ -2005,3 +2005,11 @@ postFleetConsentBT _ = do
     where
         errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
+--------------------------------- Bus End Trip Cancel Request ---------------------------------------------------------------------------------------------------------------------------------
+
+postWmbRequestsCancel :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+postWmbRequestsCancel approvalRequestId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.postWmbRequestsCancel approvalRequestId) unwrapResponse $ callAPI headers ((PostWmbRequestsCancelReq approvalRequestId))
+    where
+        unwrapResponse (x) = x

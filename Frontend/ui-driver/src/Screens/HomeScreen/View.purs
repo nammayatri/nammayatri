@@ -410,7 +410,6 @@ getEndTripStatusChange :: (Action -> Effect Unit) -> Number -> FlowBT String Uni
 getEndTripStatusChange push delayTimeInMilliSeconds =
   if (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL" && getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "true")
     then do
-      let _ = spy "Coming here-codex" ""
       (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
       case tripTransactions.tripTransactionDetails of
         Just (APITypes.TripTransactionDetails tripDetails) -> do
@@ -3518,6 +3517,7 @@ qrScannerView push state =
                         (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
                         (not state.data.isVehicleSupported) ||
                         state.data.plansState.cityOrVehicleChanged
+      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig)
   in
     linearLayout
     [ width MATCH_PARENT
@@ -3534,7 +3534,7 @@ qrScannerView push state =
           , width MATCH_PARENT
           , gravity BOTTOM
           ][ linearLayout
-              [ height $ V 160
+              [ height $ V $ if showQR then 160 else 120
               , width MATCH_PARENT
               , gravity BOTTOM
               , orientation VERTICAL
@@ -3545,7 +3545,7 @@ qrScannerView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER_HORIZONTAL
-                , text "Scan the QR pasted in the \n bus to start a new ride"
+                , text if showQR then "Scan the QR pasted in the \n bus to start a new ride" else "Your duty has started. Depot Manager will \n assign you a ride soon"
                 , margin $ Margin 16 0 16 0
                 , padding $ PaddingBottom 42
                 ] <> FontStyle.body2 TypoGraphy
@@ -3555,7 +3555,7 @@ qrScannerView push state =
           [ height $ V 245
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
-          -- , visibility $ boolToVisibility false
+          , visibility $ boolToVisibility showQR
           , onClick push $ const NoAction
           ][ linearLayout
               [ height WRAP_CONTENT

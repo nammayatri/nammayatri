@@ -237,5 +237,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_EDUCATION_SCREEN updatedState)
     WMBEndTrip state -> 
       App.BackT $ App.BackPoint <$> (pure $ WMB_END_TRIP state)
+    WMBCancelEndTrip state -> 
+      App.BackT $ App.BackPoint <$> (pure $ WMB_CANCEL_END_TRIP state)
     GoToWMBActiveRide state tripDetails -> 
       App.BackT $ App.BackPoint <$> (pure $ WMB_ACTIVE_RIDE state tripDetails)

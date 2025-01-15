@@ -2477,10 +2477,11 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
         else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
           updateStage $ HomeScreenStage ST.RideTracking
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
+          when (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL") do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{endRidePopUp = true}})
         else (pure unit)
     noActiveBusRidePatch = do
-      deleteValueFromLocalStore WMB_END_TRIP_STATUS
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen, endRidePopUp = false}})
+      -- deleteValueFromLocalStore WMB_END_TRIP_STATUS -- TODO@max-keviv: this is creating issue at app reload
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen}})
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -3290,20 +3291,46 @@ homeScreenFlow = do
       (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
       endTripRespOrError <- lift $ lift $ Remote.endTrip tripTransactionId (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lon)
       case endTripRespOrError of
-        Left errPayload -> pure unit
+        Left errorPayload ->
+          if(DS.contains (DS.Pattern "already present") errorPayload.response.errorMessage) 
+            then do
+              setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = true}})
+              homeScreenFlow
+          else do
+            deleteValueFromLocalStore WMB_END_TRIP_STATUS
+            deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+            deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
+            pure unit
         Right (API.TripEndResp tripEndResp) ->
           case tripEndResp.result of  
             "SUCCESS" -> do
               deleteValueFromLocalStore WMB_END_TRIP_STATUS
+              deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
               -- void $ pure $ removeMarker "ny_ic_bus_nav_on_map"
               void $ pure $ removeAllMarkers ""
               void $ pure $ removeAllPolylines ""
               currentRideFlow Nothing Nothing Nothing Nothing
             "WAITING_FOR_ADMIN_APPROVAL" -> do 
               setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
-              setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+              -- setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+              setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripEndResp.requestId
+              modifyScreenState $ HomeScreenStateType (\state -> state{props{endRidePopUp = true}})
               homeScreenFlow
             _ -> homeScreenFlow
+    WMB_CANCEL_END_TRIP state -> do
+      cancelTripRespOrError <- lift $ lift $ Remote.postWmbRequestsCancel $ getValueToLocalStore WMB_END_TRIP_REQUEST_ID
+      let _ = spy "codex-coming-here" cancelTripRespOrError
+      case cancelTripRespOrError of
+        Left errorPayload -> do
+          pure $ toast $ "Something Went Wrong"
+          pure unit
+        Right _ -> do
+          deleteValueFromLocalStore WMB_END_TRIP_STATUS
+          deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+          deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = false}})
+          homeScreenFlow
     WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> do
         void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
         void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
@@ -5060,19 +5087,18 @@ updateRecentBusView state = do
 
 updateBusFleetConfig :: HomeScreenState -> FlowBT String Unit
 updateBusFleetConfig state = do
-  -- when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
-    _ <- lift $ lift $ Remote.getBusFleetConfig ""
-    -- case response of
-    --   Right config -> do
-    --     modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
-    --       { data {
-    --           whereIsMyBusData {
-    --             fleetConfig = Just config
-    --           }
-    --         }
-    --       }
-    --   Left _ -> 
-    pure unit
+  when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
+    response <- lift $ lift $ Remote.getBusFleetConfig ""
+    case response of
+      Right config -> do
+        modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
+          { data {
+              whereIsMyBusData {
+                fleetConfig = Just config
+              }
+            }
+          }
+      Left _ -> pure unit
 
 giveFleetConsent :: FlowBT String Unit
 giveFleetConsent = do

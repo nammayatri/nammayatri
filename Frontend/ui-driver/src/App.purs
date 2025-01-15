@@ -502,6 +502,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | LINK_AND_START_BUS_RIDE HomeScreenState
                           | GO_TO_EDUCATION_SCREEN HomeScreenState
                           | WMB_END_TRIP HomeScreenState
+                          | WMB_CANCEL_END_TRIP HomeScreenState
                           | WMB_ACTIVE_RIDE HomeScreenState TripTransactionDetails
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
