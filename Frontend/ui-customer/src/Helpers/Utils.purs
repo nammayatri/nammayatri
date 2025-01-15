@@ -231,6 +231,8 @@ foreign import getAndRemoveLatestNotificationType :: Unit -> String
 
 foreign import decodeErrorCode :: String -> String
 
+foreign import releaseBackpress :: Unit -> Unit
+
 data TimeUnit
   = HOUR
   | MINUTE
@@ -579,7 +581,9 @@ terminateApp :: Stage -> Boolean -> Unit
 terminateApp stage exitApp = emitTerminateApp (Just $ getScreenFromStage stage) exitApp
 
 emitTerminateApp :: Maybe String -> Boolean -> Unit
-emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+emitTerminateApp screen exitApp = do
+  let _ = releaseBackpress unit
+  runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "process_result"
   , payload : Just {
     action : "terminate"
