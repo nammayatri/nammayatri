@@ -1560,3 +1560,6 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
