@@ -69,7 +69,6 @@ module Domain.Action.Dashboard.Driver
     sendSmsToDriver,
     SendSmsReq (..),
     VolunteerTransactionStorageReq (..),
-    setServiceChargeEligibleFlagInDriverPlan,
     changeOperatingCity,
     getOperatingCity,
     updateRCInvalidStatus,
@@ -88,6 +87,8 @@ module Domain.Action.Dashboard.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    notifyYatriRentalEventsToDriver,
+    mapServiceName,
   )
 where
 
@@ -119,7 +120,6 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
@@ -129,7 +129,6 @@ import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
-import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
@@ -176,7 +175,6 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -193,7 +191,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
@@ -206,7 +203,6 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverPanCard as QPanCard
-import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -1434,54 +1430,6 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
   pure Success
 
-toggleDriverSubscriptionByService ::
-  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  ServiceNames ->
-  Maybe (Id Plan) ->
-  Bool ->
-  Maybe Text ->
-  Flow ()
-toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo = do
-  (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
-  transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
-  if toToggle
-    then do
-      planToAssign <- getPlanId mbPlanToAssign
-      case autoPayStatus of
-        Just DrInfo.ACTIVE -> pure ()
-        _ -> callSubscribeFlowForDriver planToAssign
-      whenJust mbVehicleNo $ \vehicleNo -> do
-        QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
-      QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
-      fork "notify rental event" $ do
-        notifyYatriRentalEventsToDriver mbVehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
-    else do
-      when (isJust driverPlan) $ do
-        QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
-        fork "track service toggle" $ do
-          case driverPlan of
-            Just dp -> SEVT.trackServiceUsageChargeToggle dp Nothing
-            Nothing -> pure ()
-        fork "notify rental event" $ do
-          notifyYatriRentalEventsToDriver mbVehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
-  where
-    getPlanId :: Maybe (Id Plan) -> Flow (Id Plan)
-    getPlanId mbPlanId = do
-      case mbPlanId of
-        Nothing -> do
-          plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName mOpCityId DEFAULT serviceName
-          case plans of
-            [] -> throwError $ InternalError "No default plans found"
-            [pl] -> pure pl.id
-            _ -> throwError $ InternalError "Multiple default plans found"
-        Just planId -> pure planId
-    callSubscribeFlowForDriver :: Id Plan -> Flow ()
-    callSubscribeFlowForDriver planId = do
-      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-      let serviceSpecificData = maybe DDPlan.NoData DDPlan.RentedVehicleNumber mbVehicleNo
-      _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
-      pure ()
-
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
 runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
   let imageId = maybe "" cast req.imageId
@@ -2197,41 +2145,6 @@ getOperatingCity merchantShortId _ mbMobileCountryCode mbMobileNumber mbRideId =
       city <- CQMOC.findById operatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
     _ -> throwError $ InvalidRequest "Either rideId or mobileNumber is required"
-
-setServiceChargeEligibleFlagInDriverPlan :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.PauseOrResumeServiceChargesReq -> Flow APISuccess
-setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let personId = cast @Common.Driver @DP.Person driverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  let serviceName = mapServiceName req.serviceName
-  driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
-  case (driverPlan, req.planId) of
-    (Just dp, Just planId) -> do
-      if dp.planId == Id planId
-        then do
-          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
-        else do
-          void $ DTPlan.planSwitch serviceName (Id planId) (driver.id, driver.merchantId, driver.merchantOperatingCityId)
-          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
-    (Nothing, Just _) -> do
-      void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
-    (Just dp, Nothing) -> do
-      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let enableServiceUsageCharge = dp.enableServiceUsageCharge
-      when (enableServiceUsageCharge /= req.serviceChargeEligibility) $ do
-        QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
-        fork "track service toggle" $ do
-          SEVT.trackServiceUsageChargeToggle dp (show <$> req.reason)
-        when (serviceName == YATRI_RENTAL) $ do
-          fork "notify rental event" $ do
-            notifyYatriRentalEventsToDriver req.vehicleId (getMkeyForEvent req.serviceChargeEligibility) personId transporterConfig (show <$> req.reason) WHATSAPP
-    (Nothing, Nothing) -> throwError $ InvalidRequest "pls provide a plan Id to enable subscription"
-  pure Success
-  where
-    getMkeyForEvent serviceChargeEligiblity = if serviceChargeEligiblity then YATRI_RENTAL_RESUME else YATRI_RENTAL_PAUSE
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do
