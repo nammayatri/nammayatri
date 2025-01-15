@@ -1972,7 +1972,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
             Just
               AutoPayInvoiceHistory
                 { invoiceId = autoInvoice.invoiceShortId,
-                  amount = sum $ mapToAmount [dfee],
+                  amount = sum $ mapToAmount $ filter ((DDF.CLEARED_BY_YATRI_COINS /=) . (.status)) [dfee],
                   amountWithCurrency = PriceAPIEntity (sum $ mapToAmount [dfee]) dfee.currency,
                   executionAt = executionTime,
                   autoPayStage = dfee.autopayPaymentStage,
@@ -2623,7 +2623,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     mkPayoutReq driverFeeToPayout person vpa uid phoneNo =
       Juspay.CreatePayoutOrderReq
         { orderId = uid,
-          amount = foldl (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout,
+          amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout,
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
           customerId = personId.getId,
