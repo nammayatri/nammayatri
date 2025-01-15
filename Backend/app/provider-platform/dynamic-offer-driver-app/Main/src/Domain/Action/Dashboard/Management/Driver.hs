@@ -666,16 +666,18 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = DCommon.mapServiceName req.serviceName
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
+  mVehicle <- QVehicle.findById personId
+  let vehicleCategory = mVehicle >>= (.category)
   case (driverPlan, req.planId) of
     (Just dp, Just planId) -> do
       if dp.planId == Id planId
         then do
-          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId vehicleCategory
         else do
           void $ DTPlan.planSwitch serviceName (Id planId) (driver.id, driver.merchantId, driver.merchantOperatingCityId)
-          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId vehicleCategory
     (Nothing, Just _) -> do
-      void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+      void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId vehicleCategory
     (Just dp, Nothing) -> do
       transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let enableServiceUsageCharge = dp.enableServiceUsageCharge
@@ -697,8 +699,9 @@ toggleDriverSubscriptionByService ::
   Maybe (Id Plan) ->
   Bool ->
   Maybe Text ->
+  Maybe DVC.VehicleCategory ->
   Flow ()
-toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo = do
+toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo mbVehicleCategory = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
   transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
@@ -726,7 +729,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
     getPlanId mbPlanId = do
       case mbPlanId of
         Nothing -> do
-          plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName mOpCityId DEFAULT serviceName
+          plans <- maybe (pure []) (\vc -> CQP.findByMerchantOpCityIdAndTypeWithServiceName mOpCityId DEFAULT serviceName vc False) mbVehicleCategory
           case plans of
             [] -> throwError $ InternalError "No default plans found"
             [pl] -> pure pl.id
