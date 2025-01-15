@@ -47,3 +47,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN pricing_id text ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN line_color_code text ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN line_color text ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN frequency integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN is_on_search_received boolean ;

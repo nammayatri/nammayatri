@@ -20,6 +20,7 @@ data FRFSSearch = FRFSSearch
   { frequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

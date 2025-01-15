@@ -16,9 +16,13 @@ module Storage.CachedQueries.PartnerOrgStation
   ( findByPOrgIdAndPOrgStationId,
     findByStationIdAndPOrgId,
     findStationWithPOrgName,
+    cacheByFromToProviderIdAndQuoteType,
+    findCachedQuoteByFromToProviderIdAndQuoteType,
   )
 where
 
+import Domain.Types.Extra.CachedQuote
+import Domain.Types.FRFSQuote as Quote
 import Domain.Types.PartnerOrgStation
 import Domain.Types.PartnerOrganization
 import Domain.Types.Station as DStation
@@ -74,3 +78,19 @@ findStationWithPOrgName partnerOrgId partnerOrgStationId = do
   station <- CQS.findById stationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| stationId.getId ||+ "")
   let stationWithPOrgName = station {DStation.name = partnerOrgStation.name}
   return stationWithPOrgName
+
+findCachedQuoteByFromToProviderIdAndQuoteType :: (CacheFlow m r, EsqDBFlow m r) => Id Station -> Id Station -> Text -> Quote.FRFSQuoteType -> m (Maybe CachedQuoteD)
+findCachedQuoteByFromToProviderIdAndQuoteType fromStationId toStationId providerId quoteType = do
+  let key = makeFromToProviderIdAndQuoteTypeKey fromStationId toStationId providerId quoteType
+  Hedis.safeGet key >>= \case
+    Just a -> return $ Just a
+    Nothing -> return Nothing
+
+makeFromToProviderIdAndQuoteTypeKey :: Id Station -> Id Station -> Text -> Quote.FRFSQuoteType -> Text
+makeFromToProviderIdAndQuoteTypeKey fromStationId toStationId providerId quoteType = "FromStationId:" <> fromStationId.getId <> ":ToStationId:" <> toStationId.getId <> ":ProviderId:" <> providerId <> ":QuoteType:" <> show quoteType
+
+cacheByFromToProviderIdAndQuoteType :: (CacheFlow m r) => Id Station -> Id Station -> Text -> Quote.FRFSQuoteType -> CachedQuoteD -> m ()
+cacheByFromToProviderIdAndQuoteType fromStationId toStationId providerId quoteType cachedQuote = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let key = makeFromToProviderIdAndQuoteTypeKey fromStationId toStationId providerId quoteType
+  Hedis.setExp key cachedQuote expTime

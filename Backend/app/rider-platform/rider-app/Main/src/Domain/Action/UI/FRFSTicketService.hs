@@ -371,6 +371,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             lineColor = mbColor,
             lineColorCode = mbColorCode,
             frequency = mbFrequency,
+            isOnSearchReceived = Nothing,
             ..
           }
   QFRFSSearch.create searchReq
@@ -493,6 +494,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
                 journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
+                isFareChanged = Just False,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -515,6 +517,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
           tickets = [],
           discountedTickets = booking.discountedTickets,
           eventDiscountAmount = booking.eventDiscountAmount,
+          isFareChanged = Just False,
           ..
         }
 
@@ -784,6 +787,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        isFareChanged = Just False,
         ..
       }
 

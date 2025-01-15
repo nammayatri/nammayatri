@@ -235,6 +235,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.Extra.Booking
+      Domain.Types.Extra.CachedQuote
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
       Domain.Types.Extra.IntegratedBPPConfig
@@ -397,6 +398,7 @@ library
       Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra

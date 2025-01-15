@@ -739,3 +739,22 @@ instance IsHTTPError DiscountError where
     DiscountsIneligible -> E400
 
 instance IsAPIError DiscountError
+
+data FRFSQuoteError
+  = FRFSQuoteMismatch Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSQuoteError
+
+instance IsBaseError FRFSQuoteError where
+  toMessage = \case
+    FRFSQuoteMismatch quotesCreatedByCache quotesCreatedByOnSearch -> Just $ "Quotes created by cache and quotes from on_search does not match. Quotes created by Cache- " <> quotesCreatedByCache <> " Quotes created by on_search- " <> quotesCreatedByOnSearch
+
+instance IsHTTPError FRFSQuoteError where
+  toErrorCode = \case
+    FRFSQuoteMismatch _ _ -> "FRFS_QUOTE_MISMATCH"
+
+  toHttpCode = \case
+    FRFSQuoteMismatch _ _ -> E500
+
+instance IsAPIError FRFSQuoteError

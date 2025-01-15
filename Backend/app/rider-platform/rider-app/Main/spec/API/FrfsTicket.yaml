@@ -84,6 +84,7 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    isFareChanged: Maybe Bool
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType

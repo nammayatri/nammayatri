@@ -49,6 +49,7 @@ FRFSSearch:
     lineColor : Maybe Text
     lineColorCode : Maybe Text
     frequency : Maybe Int
+    isOnSearchReceived: Maybe Bool
 
   beamFields:
     journeyLegInfo:
@@ -81,7 +82,14 @@ FRFSSearch:
     findById:
       kvFunction: findOneWithKV
       where: id
-
+    updateisOnSearchReceivedById:
+      kvFunction: updateWithKV
+      params: [isOnSearchReceived]
+      where: id
+    updateRiderIdById:
+      kvFunction: updateWithKV
+      params: [riderId]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -169,6 +177,7 @@ FRFSQuote:
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
     bppDelayedInterest : Maybe Int
+    oldCacheDump: Maybe Text
 
   beamFields:
     price:
@@ -205,6 +214,10 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+    updateoldCacheDumpById:
+      kvFunction: updateWithKV
+      params: [oldCacheDump]
+      where: id
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -252,9 +265,11 @@ FRFSTicketBooking:
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
     journeyLegOrder : Maybe Int
+    isFareChanged: Maybe Bool
 
   default:
     customerCancelled: "false"
+    isFareChanged: "false"
 
   beamFields:
     price:
@@ -358,7 +373,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
-
+    updateisFareChangedByQuoteId:
+      kvFunction: updateWithKV
+      params: [isFareChanged]
+      where: quoteId
   extraOperations:
     - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
@@ -552,6 +570,8 @@ FRFSConfig:
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
     radius: Meters
+    providerId: Maybe Text
+    providerName: Maybe Text
 
   beamType:
     isCancellationAllowed: Maybe Bool

@@ -16,11 +16,14 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (sortBy)
 import qualified Data.Text as T
+import Domain.Types.Extra.CachedQuote
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
+import EulerHS.Prelude (comparing)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -31,10 +34,12 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.PartnerOrgStation as CQPO
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Station as QStation
+import Tools.Error
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -130,14 +135,19 @@ onSearch ::
   ValidatedDOnSearch ->
   m ()
 onSearch onSearchReq validatedReq = do
+  quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
-  QQuote.createMany quotes
-
+  if null quotesCreatedByCache
+    then QQuote.createMany quotes
+    else do
+      zippedQuotes <- verifyAndZipQuotes quotesCreatedByCache quotes
+      let updatedQuotes = map updateQuotes zippedQuotes
+      for_ updatedQuotes \quote -> QQuote.updateByPrimaryKey quote
   let search = validatedReq.search
       mbRequiredQuote = filterQuotes quotes
   whenJust mbRequiredQuote $ \requiredQuote -> do
     SLCF.createFares search.journeyLegInfo requiredQuote.price (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
-
+  QSearch.updateisOnSearchReceivedById (Just True) validatedReq.search.id
   return ()
 
 filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
@@ -166,6 +176,12 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         return (Just discountedTickets, Just eventDiscountAmount)
       else return (Nothing, Nothing)
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
+  let cachedQuoteData =
+        CachedQuoteD
+          { price,
+            stationsJson = stationsJSON
+          }
+  CQPO.cacheByFromToProviderIdAndQuoteType startStation.id endStation.id dOnSearch.providerId _type cachedQuoteData
   return
     Quote.FRFSQuote
       { Quote._type = _type,
@@ -194,6 +210,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.createdAt = now,
         Quote.updatedAt = now,
         bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
+        oldCacheDump = Nothing,
         ..
       }
 
@@ -254,3 +271,64 @@ castDiscountToAPI DDiscount {..} =
       API.tnc = tnc,
       API.eligibility = eligibility
     }
+
+matchQuotes :: (Quote.FRFSQuote, Quote.FRFSQuote) -> Bool
+matchQuotes (q1, q2) = Quote.price q1 == Quote.price q2 && Quote.stationsJson q1 == Quote.stationsJson q2
+
+updateQuotes :: (Quote.FRFSQuote, Quote.FRFSQuote) -> Quote.FRFSQuote
+updateQuotes (q1, q2) = do
+  let oldCacheDump =
+        if not (matchQuotes (q1, q2))
+          then Just (show CachedQuoteD {price = q1.price, stationsJson = q1.stationsJson})
+          else Nothing
+
+  Quote.FRFSQuote
+    { Quote._type = q1._type,
+      Quote.bppItemId = q2.bppItemId,
+      Quote.bppSubscriberId = q2.bppSubscriberId,
+      Quote.bppSubscriberUrl = q2.bppSubscriberUrl,
+      Quote.fromStationId = q1.fromStationId,
+      Quote.id = q1.id,
+      Quote.price = q2.price,
+      Quote.providerDescription = q2.providerDescription,
+      Quote.providerId = q1.providerId,
+      Quote.providerName = q1.providerName,
+      Quote.quantity = q2.quantity,
+      Quote.riderId = q2.riderId,
+      Quote.searchId = q1.searchId,
+      Quote.stationsJson = q1.stationsJson,
+      Quote.routeStationsJson = q2.routeStationsJson,
+      Quote.discountsJson = q2.discountsJson,
+      Quote.toStationId = q1.toStationId,
+      Quote.validTill = q2.validTill,
+      Quote.vehicleType = q1.vehicleType,
+      Quote.merchantId = q1.merchantId,
+      Quote.merchantOperatingCityId = q1.merchantOperatingCityId,
+      Quote.partnerOrgId = q2.partnerOrgId,
+      Quote.partnerOrgTransactionId = q2.partnerOrgTransactionId,
+      Quote.createdAt = q1.createdAt,
+      Quote.updatedAt = q1.updatedAt,
+      Quote.bppDelayedInterest = q2.bppDelayedInterest,
+      Quote.oldCacheDump,
+      Quote.eventDiscountAmount = q2.eventDiscountAmount,
+      Quote.discountedTickets = q2.discountedTickets
+    }
+
+verifyAndZipQuotes :: (MonadFlow m) => [Quote.FRFSQuote] -> [Quote.FRFSQuote] -> m [(Quote.FRFSQuote, Quote.FRFSQuote)]
+verifyAndZipQuotes q1 q2 = do
+  if length q1 == length q2
+    then do
+      if (length q1 == 1)
+        then do
+          if (Quote._type (head q1) == Quote._type (head q2)) then return (zip q1 q2) else throwError $ FRFSQuoteMismatch (show q1) (show q2)
+        else do
+          let isBothQuotesValid = verifyQuote q1 && verifyQuote q2
+          if isBothQuotesValid
+            then do
+              let sortedQ1 = sortBy (flip $ comparing (\x -> Quote._type x)) q1
+              let sortedQ2 = sortBy (flip $ comparing (\x -> Quote._type x)) q2
+              return (zip sortedQ1 sortedQ2)
+            else throwError $ FRFSQuoteMismatch (show q1) (show q2)
+    else throwError $ FRFSQuoteMismatch (show q1) (show q2)
+  where
+    verifyQuote quote = (length quote == 2) && (any (\q -> Quote._type q == Quote.SingleJourney) quote) && (any (\q -> Quote._type q == Quote.ReturnJourney) quote)

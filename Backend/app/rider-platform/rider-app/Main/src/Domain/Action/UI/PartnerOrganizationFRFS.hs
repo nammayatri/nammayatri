@@ -20,9 +20,17 @@ module Domain.Action.UI.PartnerOrganizationFRFS
     GetFareResp (..),
     GetConfigResp (..),
     ShareTicketInfoResp (..),
+    UpsertPersonResp (..),
+    GetFareReqV2 (..),
+    PartnerQuoteConfirmReq (..),
+    PartnerQuoteConfirmRes (..),
+    GetFareRespV2 (..),
+    PartnerQuoteConfirmResBody (..),
+    OnSearchStatus (..),
   )
 where
 
+import API.Types.UI.FRFSTicketService as FRFSAPI
 import qualified API.Types.UI.FRFSTicketService as FRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
@@ -84,6 +92,15 @@ data GetFareReq = GetFareReq
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data GetFareReqV2 = GetFareReqV2
+  { fromStationCode :: Text,
+    toStationCode :: Text,
+    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
+    routeCode :: Maybe Text,
+    cityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 validateGetFareReq :: Validate GetFareReq
 validateGetFareReq GetFareReq {..} =
   sequenceA_
@@ -95,6 +112,41 @@ data GetFareResp = GetFareResp
   { searchId :: Id DFRFSSearch.FRFSSearch,
     personId :: Id SP.Person,
     token :: RegToken
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data GetFareRespV2 = GetFareRespV2
+  { searchId :: Id DFRFSSearch.FRFSSearch,
+    quotes :: [FRFSAPI.FRFSQuoteAPIRes]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data UpsertPersonResp = UpsertPersonResp
+  { personId :: Id SP.Person,
+    token :: RegToken
+  }
+
+data PartnerQuoteConfirmReq = PartnerQuoteConfirmReq
+  { searchId :: Id DFRFSSearch.FRFSSearch,
+    quoteId :: Id DFRFSQuote.FRFSQuote,
+    numberOfPassengers :: Int,
+    mobileCountryCode :: Text,
+    mobileNumber :: Text,
+    identifierType :: SP.IdentifierType
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data OnSearchStatus = STILL_WAITING | RECEIVED deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PartnerQuoteConfirmRes = PartnerQuoteConfirmRes
+  { onSearchStatus :: OnSearchStatus,
+    body :: Maybe PartnerQuoteConfirmResBody
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PartnerQuoteConfirmResBody = PartnerQuoteConfirmResBody
+  { token :: RegToken,
+    bookingStatusRes :: FRFSTicketBookingStatusAPIRes
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
