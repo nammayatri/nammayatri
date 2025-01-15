@@ -994,8 +994,8 @@ routeItem push route index len =
                 [
                     text route.sourceText,
                     color Color.black700
-                    , ellipsize true      -- Added ellipsize
-                    , singleLine true    -- Ensure single line
+                    , ellipsize true      
+                    , singleLine true    
                     , weight 1.0  
 
                 ] <> FontStyle.body16 TypoGraphy,
@@ -1003,8 +1003,8 @@ routeItem push route index len =
                 [
                     text "  →  ",
                     color Color.black700
-                    , ellipsize true      -- Added ellipsize
-                    , singleLine true    -- Ensure single line
+                    , ellipsize true      
+                    , singleLine true    
                     , weight 1.0  
 
                 ] <> FontStyle.body16 TypoGraphy,
@@ -1012,8 +1012,8 @@ routeItem push route index len =
                 [
                     text route.destination,
                     color Color.black700
-                    , ellipsize true      -- Added ellipsize
-                    , singleLine true    -- Ensure single line
+                    , ellipsize true      
+                    , singleLine true    
                     , weight 1.0  
 
                 ] <> FontStyle.body16 TypoGraphy

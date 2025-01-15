@@ -202,11 +202,6 @@ infoView title value =
     , gravity LEFT
     , weight 1.0
     ][
-      -- linearLayout
-      -- [ height WRAP_CONTENT
-      -- , width WRAP_CONTENT
-      -- , orientation VERTICAL
-      -- ][
         textView $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -222,9 +217,7 @@ infoView title value =
           , color Color.black800
           , ellipsize true
           , singleLine true
-          -- , margin (MarginLeft 8)
           ] <> FontStyle.subHeading1 TypoGraphy
-      -- ]
     ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -292,17 +285,6 @@ sourceDestinationTextView push config =
         , afterRender push $ const NoAction
         , margin $ MarginBottom 15
         ] <> FontStyle.subHeading1 TypoGraphy
-      -- , textView $
-      --   [ height WRAP_CONTENT
-      --   , width WRAP_CONTENT
-      --   , text "config.sourceAddress.detailText"
-      --   , id (getNewIDWithTag "tripSourceAddress")
-      --   , color Color.black650
-      --   , margin (MarginBottom 25)
-      --   , ellipsize true
-      --   , singleLine true
-      --   , afterRender push $ const NoAction
-      --   ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
       ] 
 
@@ -321,15 +303,6 @@ destAddressTextView config push =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.subHeading1 TypoGraphy
-      -- , textView $
-      --   [ height WRAP_CONTENT
-      --   , width WRAP_CONTENT
-      --   , text $ ""
-      --   , id (getNewIDWithTag "tripDestination")
-      --   , color Color.black650
-      --   , ellipsize true
-      --   , margin (MarginBottom 0)
-      --   ]<> FontStyle.body1 TypoGraphy
       ]
 
 

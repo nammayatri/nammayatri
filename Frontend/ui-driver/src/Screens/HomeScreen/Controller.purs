@@ -1342,8 +1342,7 @@ eval (CurrentLocation lat lng) state = do
   let newState = state{data{ currentDriverLat = getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng }}
   exit $ UpdatedState newState
 eval (ModifyRoute lat lon) state = do
-  let _ = spy "DEBUG: modifyRoute" (lat <> " " <> lon)
-      newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
+  let newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
   continueWithCmd newState [ do
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRoute newState
     pure NoAction
@@ -2238,14 +2237,12 @@ updateRoute state = do
         pure unit
       Nothing -> pure unit
   else if state.props.showDottedRoute then do
-    let _ = spy "DEBUG: Dotted Route" state.props.showDottedRoute
     let coors = (Remote.walkCoordinate srcLon srcLat destLon destLat)
     liftFlow $ push $ UpdateState state{ props { routeVisible = true } }
     let _ = removeAllPolylines ""
         normalRoute = JB.mkRouteConfig coors srcMarkerConfig destMarkerConfig Nothing "NORMAL" "DOT" false JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
     liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
   else if not Array.null state.data.route then do
-    let _ = spy "DEBUG: Short Route" state.data.route
     let shortRoute = (state.data.route Array.!! 0)
     case shortRoute of
       Just (Route route) -> do
@@ -2258,16 +2255,12 @@ updateRoute state = do
         pure unit
       Nothing -> pure unit
   else do
-    let _ = spy "DEBUG: Long Route"
     eRouteAPIResponse <- Remote.getRoute (Remote.makeGetRouteReq srcLat srcLon destLat destLon) routeType
-    let _ = spy "DEBUG: Long Route Response" eRouteAPIResponse
     case eRouteAPIResponse of
       Right (GetRouteResp routeApiResponse) -> do
         let shortRoute = (routeApiResponse Array.!! 0)
-            _ = spy "DEBUG: Long Route Response" shortRoute
         case shortRoute of
           Just (Route route) -> do
-            let _ = spy "DEBUG: Long Route Response" route
             let coor = Remote.walkCoordinates route.points
             liftFlow $ push $ UpdateState state { data { activeRide { actualRideDistance = if state.props.currentStage == ST.RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } }
             void $ pure $ JB.removeMarker "ny_ic_auto"
@@ -2275,8 +2268,6 @@ updateRoute state = do
             let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
             liftFlow $ JB.drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
-          Nothing ->
-            let _ = spy "DEBUG: Long Route Nothing" ""
-            in pure unit   
+          Nothing -> pure unit   
       Left err -> pure unit
   pure unit

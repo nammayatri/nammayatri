@@ -810,7 +810,6 @@ public class LocationUpdateService extends Service {
                             }
                         }
                         Log.d(LOG_TAG, "LocationPayload Size - " + locationPayload.length());
-                        // System.out.println("DEBUG: baseHeaders" + baseHeaders);
                         MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
 
                         Log.d(LOG_TAG, "DriverUpdateLoc API  RespCode - " + apiResponse.getStatusCode() + " RespBody - " + apiResponse.getResponseBody());
@@ -820,7 +819,6 @@ public class LocationUpdateService extends Service {
                             if (respCode >= 400 && respCode < 500)
                                 updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
-                            // System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + baseHeaders);
                             try {
                                 JSONObject errorPayload = new JSONObject(apiResponse.getResponseBody());
                                 String errorCode = errorPayload.optString("errorCode", "");
