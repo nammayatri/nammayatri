@@ -20,6 +20,8 @@ module Storage.CachedQueries.Merchant.PayoutConfig
     findByMerchantOpCityIdAndIsPayoutEnabled,
     clearCache,
     clearCacheById,
+    clearCacheByCategory,
+    clearConfigCache,
   )
 where
 
@@ -86,3 +88,13 @@ clearCache merchantOpCityId isPayoutEnabled = Hedis.del (makeMerchantOpCityIdKey
 
 clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCacheById merchantOpCityId = Hedis.del (makeCityIdKey merchantOpCityId)
+
+clearCacheByCategory :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> VehicleCategory -> m ()
+clearCacheByCategory merchantOpCityId vehicleCategory = Hedis.del (makeMerchantOpCityIdKeyAndCategory merchantOpCityId vehicleCategory)
+
+clearConfigCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> VehicleCategory -> m ()
+clearConfigCache merchantOperatingCityId vehicleCategory = do
+  clearCacheById merchantOperatingCityId
+  clearCacheByCategory merchantOperatingCityId vehicleCategory
+  clearCache merchantOperatingCityId True
+  clearCache merchantOperatingCityId False

@@ -21,7 +21,6 @@ ALTER TABLE atlas_app.payout_config ADD COLUMN vehicle_category text ;
 ALTER TABLE atlas_app.payout_config ADD COLUMN threshold_payout_amount_per_person double precision ;
 ALTER TABLE atlas_app.payout_config ADD COLUMN referred_by_reward_amount double precision ;
 ALTER TABLE atlas_app.payout_config ADD COLUMN referral_reward_amount_per_ride double precision ;
-ALTER TABLE atlas_app.payout_config DROP CONSTRAINT payout_config_pkey;
 ALTER TABLE atlas_app.payout_config ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.payout_config ADD COLUMN max_payout_referral_for_a_day integer ;
 ALTER TABLE atlas_app.payout_config ADD COLUMN expand text ;
