@@ -3305,6 +3305,16 @@ homeScreenFlow = do
               setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
               homeScreenFlow
             _ -> homeScreenFlow
+    WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> do
+        void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
+        void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
+        if tripDetails.status == API.TRIP_ASSIGNED then do
+          updateStage $ HomeScreenStage TripAssigned
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
+        else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
+          updateStage $ HomeScreenStage ST.RideTracking
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
+        else (pure unit)
   homeScreenFlow
 
 
