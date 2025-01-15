@@ -141,6 +141,7 @@
                                     android:id="@+id/route_number"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
                                     android:fontFamily="@font/plus_jakarta_sans_bold"
                                     android:padding="16dp"
                                     android:textColor="#454545"
