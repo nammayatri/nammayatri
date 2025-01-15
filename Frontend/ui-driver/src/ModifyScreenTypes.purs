@@ -135,6 +135,17 @@ updateStage stage = do
                     currentStage = stage'
                   }
                 })
+        RideTracking -> do
+          modifyScreenState $
+            HomeScreenStateType
+              (\state ->
+                state
+                { props
+                  {
+                    routeVisible = false,
+                    currentStage = stage'
+                  }
+                })
         RideCompleted ->
           modifyScreenState $
             HomeScreenStateType

@@ -761,12 +761,13 @@ public class LocationUpdateService extends Service {
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
                     String vehicleCategory = getValueFromStorage("VEHICLE_CATEGORY");
-                    Boolean isBusVariantPresent = vehicleCategory != "BusCategory" || (getValueFromStorage("VEHICLE_VARIANT") != "__failed");
-                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && isBusVariantPresent) {
+                    String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
+                    boolean isBusVariantNotPresent = vehicleCategory.equals("BusCategory") && (vehicleVariant.equals("__failed") || vehicleVariant.equals(""));
+                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && !isBusVariantNotPresent) {
                         Log.d(LOG_TAG, "DriverUpdateLoc TOKEN | ValidTime Passed");
                         baseHeaders.put("source", log);
                         String merchantId = getValueFromStorage("MERCHANT_ID");
-                        String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
+
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
 
                         if (merchantId != null && vehicleVariant != null && driverMode != null) {
