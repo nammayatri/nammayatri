@@ -239,6 +239,11 @@ window.onMerchantEvent = function (_event, globalPayload) {
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
+    const jpConsumingBackpress = {
+      event: "jp_consuming_backpress",
+      payload: { jp_consuming_backpress: true }
+    }
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
     try {
       const clientPaylod = window.__payload.payload;
       if (

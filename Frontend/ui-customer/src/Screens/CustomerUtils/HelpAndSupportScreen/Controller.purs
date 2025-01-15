@@ -67,10 +67,7 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of
       AfterRender -> trackAppScreenRender appId "screen" (getScreen HELP_AND_SUPPORT_SCREEN)
-      BackPressed flag -> do
-        trackAppBackPress appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        if flag then trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "backpress_in_call_confirmation"
-        else trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
+      BackPressed -> trackAppBackPress appId (getScreen HELP_AND_SUPPORT_SCREEN)
       GenericHeaderActionController act -> case act of
         GenericHeader.PrefixImgOnClick -> do
           trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "back_icon"
@@ -173,10 +170,11 @@ instance loggableAction :: Loggable Action where
           IssueViewController.CallSupportCenter -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "CallSupportCenter"
         IssueListController.BackPressed -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "back_press"
         IssueListController.AfterRender -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "screen" "after_render"
+      _ -> pure unit
 
       -- _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
-data Action = BackPressed Boolean
+data Action = BackPressed
             | SourceToDestinationActionController SourceToDestination.Action
             | GenericHeaderActionController GenericHeader.Action
             | ContactUs
@@ -219,7 +217,7 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
-eval (BackPressed _ ) state =
+eval BackPressed state =
   if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
   else if state.props.isCallConfirmation then continue state{props{isCallConfirmation = false}}
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
@@ -255,7 +253,7 @@ eval CallSupport state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_click"
   continue state{props{isCallConfirmation = true}}
 
-eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
+eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed]
 
 eval ViewRides state = exit $ GoToMyRides state
 
