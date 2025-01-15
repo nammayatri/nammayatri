@@ -321,6 +321,10 @@ screen initialState (GlobalState globalState) =
                                 _ <- checkPermissionAndUpdateDriverMarker true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
+                                pushPlayEndRideAudio <- runEffectFn1 EHC.getValueFromIdMap "PlayEndRideAudio"
+                                when (pushPlayEndRideAudio.shouldPush && initialState.props.currentStage == RideCompleted) $ do
+                                  void $ pure $ runFn2  EHC.updatePushInIdMap "PlayEndRideAudio" false
+                                  void $ launchAff $ EHC.flowRunner defaultGlobalState $ playAudioOnRideEnd push
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
                                 
                                 if getValueToLocalStore GO_TO_PLANS_PAGE == "true" then do
@@ -2681,6 +2685,16 @@ playAudioAndLaunchMap push action state audioCompleted acRide requestedVehicleVa
       void $ delay $ Milliseconds 2000.0
       if needToTriggerMaps then liftFlow $ push $ action else pure unit
   pure unit
+
+playAudioOnRideEnd :: (Action -> Effect Unit) -> Flow GlobalState Unit
+playAudioOnRideEnd push = do
+  let city = getValueToLocalStore DRIVER_LOCATION
+      config = RC.getRideEndAudioConfig city
+  if config.enableRideEndAudio
+    then case config.rideEndAudioUrl of
+      Just url -> pure $ runFn4 JB.startAudioPlayer url push (const NoAction) "0"
+      Nothing -> pure unit
+  else pure unit
 
 checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
 checkBgLocation push action state bgLocPopupShown = do
