@@ -288,7 +288,8 @@ cancelRideByApp appToken driver bapBookingId = do
         { reasonCode = AppCR.CancellationReasonCode "",
           reasonStage = AppCR.OnAssign,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
   cancellationChecks bapBookingId driver
 
