@@ -2582,11 +2582,10 @@ homeScreenFlow = do
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    if (not $ HU.specialVariantsForTracking FunctionCall) 
-      then do 
-        void $ pure $ updateBusFleetConfig globalState.homeScreen
-        void $ pure $ updateRecentBusView globalState.homeScreen 
-      else updateBannerAndPopupFlags
+    if (HU.specialVariantsForTracking FunctionCall) then do 
+        updateBusFleetConfig globalState.homeScreen
+        updateRecentBusView globalState.homeScreen 
+      else do updateBannerAndPopupFlags
 
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
@@ -5061,18 +5060,19 @@ updateRecentBusView state = do
 
 updateBusFleetConfig :: HomeScreenState -> FlowBT String Unit
 updateBusFleetConfig state = do
-  when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
-    response <- lift $ lift $ Remote.getBusFleetConfig ""
-    case response of
-      Right config -> do
-        modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
-          { data {
-              whereIsMyBusData {
-                fleetConfig = Just config
-              }
-            }
-          }
-      Left _ -> pure unit
+  -- when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
+    _ <- lift $ lift $ Remote.getBusFleetConfig ""
+    -- case response of
+    --   Right config -> do
+    --     modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
+    --       { data {
+    --           whereIsMyBusData {
+    --             fleetConfig = Just config
+    --           }
+    --         }
+    --       }
+    --   Left _ -> 
+    pure unit
 
 giveFleetConsent :: FlowBT String Unit
 giveFleetConsent = do
