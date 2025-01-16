@@ -135,6 +135,7 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
         { visibility = VISIBLE,
           pillList = makePillList (BookingAPIEntity entity) entity.tripCategory
         }
+      , overrideSeparatorCount = 15
       }
   in
     sourceToDestinationConfig'
