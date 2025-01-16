@@ -229,6 +229,8 @@ castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
 castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
+castVariant Variant.HERITAGE_CAB = (show Enums.CAB, "HERITAGE_CAB")
+castVariant Variant.EV_AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
 castVariant Variant.DELIVERY_LIGHT_GOODS_VEHICLE = (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
 castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
 castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
@@ -248,7 +250,9 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "PREMIUM_SEDAN") -> Just Variant.PREMIUM_SEDAN
   (Just "CAB", Just "BLACK") -> Just Variant.BLACK
   (Just "CAB", Just "SUV_PLUS") -> Just Variant.SUV_PLUS
+  (Just "CAB", Just "HERITAGE_CAB") -> Just Variant.HERITAGE_CAB
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
+  (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just Variant.EV_AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
@@ -1542,6 +1546,8 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
                 Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
+                Variant.HERITAGE_CAB -> avgSpeed.heritagecab.getKilometers
+                Variant.EV_AUTO_RICKSHAW -> avgSpeed.evautorickshaw.getKilometers
                 Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
                 Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers

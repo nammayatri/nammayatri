@@ -878,6 +878,8 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
   DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
+  DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
+  DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
   DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
   DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
   DVeh.BUS_AC -> avgSpeedOfVehicle.busAc

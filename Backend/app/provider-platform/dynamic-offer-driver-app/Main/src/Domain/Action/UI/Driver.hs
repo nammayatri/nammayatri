@@ -1047,6 +1047,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.AMBULANCE_AC_OXY -> [DVST.AMBULANCE_AC_OXY]
               DV.AMBULANCE_VENTILATOR -> [DVST.AMBULANCE_VENTILATOR]
               DV.SUV_PLUS -> [DVST.SUV_PLUS]
+              DV.HERITAGE_CAB -> [DVST.HERITAGE_CAB]
+              DV.EV_AUTO_RICKSHAW -> [DVST.EV_AUTO_RICKSHAW]
               DV.DELIVERY_LIGHT_GOODS_VEHICLE -> [DVST.DELIVERY_LIGHT_GOODS_VEHICLE]
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
