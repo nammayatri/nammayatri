@@ -278,6 +278,7 @@ errorModalConfig state =
       isVehicleBike = vehicleVariantLocalStore == "BIKE"
       isVehicleAmbulance = vehicleVariantLocalStore `DA.elem` ["AMBULANCE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
       isVehicleTruck = vehicleVariantLocalStore == "DELIVERY_LIGHT_GOODS_VEHICLE"
+      isVehicleHeritageCab = vehicleVariantLocalStore == "HERITAGE_CAB"
   in ErrorModal.config
     { imageConfig
       { imageUrl =
@@ -289,6 +290,7 @@ errorModalConfig state =
         else if isVehicleBike then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_bike"
         else if isVehicleAmbulance then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_ambulance"
         else if isVehicleTruck then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_truck"
+        else if isVehicleHeritageCab then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_heritage_cab"
         else "ny_ic_no_rides_history_cab,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200

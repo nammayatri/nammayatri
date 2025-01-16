@@ -95,7 +95,8 @@ type VariantLevelRemoteConfig a =
       taxi :: a,
       taxiPlus :: a,
       default :: a,
-      deliveryBike :: a
+      deliveryBike :: a,
+      heritageCab :: a
     }
 
 
@@ -177,7 +178,8 @@ type TipsConfig
       taxiPlus :: Maybe (Array Int),
       bike :: Maybe (Array Int),
       default :: Maybe (Array Int),
-      deliveryBike :: Maybe (Array Int)
+      deliveryBike :: Maybe (Array Int),
+      heritageCab :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 

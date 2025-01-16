@@ -334,6 +334,11 @@ window.getMerchantConfig = function () {
           "name" : "XL Plus",
           "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "heritageCab" : {
+          "name" : "Heritage Cab",
+          "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/yatri/user/yatricommon/ny_ic_heritage_cab_side.png",
+          "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/beckn/yatri/yatricommon/images/ny_ic_heritage_cab_left_side.png"
         }
       }
     }
