@@ -15,6 +15,8 @@ import Effect (Effect)
 import Screens.Types as ST
 import Helpers.Utils as HU
 import Animation as Anim
+import Resource.Localizable.StringsV2 as StringsV2
+import Resource.Localizable.TypesV2 as LT2
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, frameLayout, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, scrollBarY, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
@@ -77,7 +79,7 @@ view push state =
                 ]
                 ,
                 textView
-                [ text "Scan bus QR"
+                [ text $ StringsV2.getStringV2 LT2.scan_bus_qr
                 , textSize 18
                 , color "#FFFFFF" 
                 ]

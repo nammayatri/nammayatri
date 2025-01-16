@@ -103,6 +103,7 @@ import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
 import Timers
+import Components.SelectRouteButton as SelectRouteButton
 import Components.BannerCarousel as BannerCarousel
 import CarouselHolder as CarouselHolder
 import PrestoDOM.List
@@ -128,6 +129,8 @@ import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Screens.HomeScreen.ScreenData
 import LocalStorage.Cache (getValueFromCache)
+import Resource.Localizable.StringsV2 as StringsV2
+import Resource.Localizable.TypesV2 as LT2
 import Services.API as API
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
@@ -1539,8 +1542,8 @@ driverStatusPill pillConfig push state index =
           , height WRAP_CONTENT
           , padding (Padding 0 0 4 0)
           , text $ case pillConfig.status of
-              Online -> if isSepcialTrackingVariants then "On Duty" else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
-              Offline -> if isSepcialTrackingVariants then "End Duty" else (getString OFFLINE)
+              Online -> if isSepcialTrackingVariants then StringsV2.getStringV2 LT2.on_duty else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
+              Offline -> if isSepcialTrackingVariants then StringsV2.getStringV2 LT2.end_duty else (getString OFFLINE)
               Silent -> (getString SILENT)
           , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> pillConfig.textColor
@@ -3545,7 +3548,7 @@ qrScannerView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER_HORIZONTAL
-                , text if showQR then "Scan the QR pasted in the \n bus to start a new ride" else "Your duty has started. Depot Manager will \n assign you a ride soon"
+                , text if showQR then StringsV2.getStringV2 LT2.scan_the_qr_to_start_new_ride else StringsV2.getStringV2 LT2.duty_started_depot_manager_will_assign_ride
                 , margin $ Margin 16 0 16 0
                 , padding $ PaddingBottom 42
                 ] <> FontStyle.body2 TypoGraphy
@@ -3600,7 +3603,7 @@ recentBusRideView push state =
         Nothing -> linearLayout[][]
   where
     startBusTripView tripDetails isAssigned = 
-      let title = if isAssigned then "Assigned Ride" else "Recent Ride"
+      let title = if isAssigned then StringsV2.getStringV2 LT2.assigned_rides else StringsV2.getStringV2 LT2.recent_ride
           busNumber = tripDetails.vehicleNumber
           busType = tripDetails.vehicleType
           routeNumber = tripDetails.routeInfo ^. _routeCode
@@ -3640,7 +3643,7 @@ recentBusRideView push state =
               , weight 1.0
               ][
                 textView $ 
-                [ text "Bus Number"
+                [ text $ StringsV2.getStringV2 LT2.bus_number
                 , color Color.black800
                 , margin $ MarginBottom 8
                 ] <> FontStyle.body3 TypoGraphy,
@@ -3656,85 +3659,33 @@ recentBusRideView push state =
               , margin $ Margin 0 0 64 0
               ][
                 textView $
-                [ text "Bus Type"
+                [ text $ StringsV2.getStringV2 LT2.bus_type
                 , color Color.black800
                 , margin $ MarginBottom 8
                 ] <> FontStyle.body3 TypoGraphy,
                 textView $
-                [ text $ if busType == "BUS_AC" then "AC" else "Non-AC"
+                [ text $ if busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac
                 , color Color.black800
                 ] <> FontStyle.subHeading3 TypoGraphy
               ]
             ],
             textView $
-            [ text "Route Number"
+            [ text $ StringsV2.getStringV2 LT2.route_number
             , color Color.black800
             , margin $ Margin 10 0 10 8
             ] <> FontStyle.body3 TypoGraphy,
-            linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , padding $ Padding 16 16 16 16
-            , cornerRadius 12.0
-            , margin $ Margin 10 0 10 24
-            , stroke $ "1," <> Color.grey900
-            , gravity CENTER_VERTICAL
-            , onClick push $ const $ if isAssigned then NoAction else SelectBusRoute
-            ][
-              textView $
-              [ text routeNumber
-              , textSize FontSize.a_20
-              , color Color.black900
-              ] <> FontStyle.subHeading3 LanguageStyle,
-              linearLayout [
-                color Color.black600,
-                margin $ Margin 8 0 8 0,
-                background Color.black600,
-                gravity CENTER,
-                width $ V 6,
-                height $ V 6,
-                cornerRadius 32.0 
-              ] [],
-              linearLayout
-              [
-                height WRAP_CONTENT,
-                width WRAP_CONTENT,
-                orientation HORIZONTAL,
-                gravity CENTER_VERTICAL,
-                weight 1.0
-              ]
-              [
-                textView $
-                [ text $ sourceName
-                , color Color.black700
-                , ellipsize true
-                , singleLine true    
-                , weight 1.0  
-                ] <> FontStyle.body16 TypoGraphy,
-                textView $
-                [ text $ " → "
-                , color Color.black700
-                , ellipsize true      
-                , singleLine true    
-                , weight 1.0
-                ] <> FontStyle.body16 TypoGraphy,
-                textView $
-                [ text $ destinationName
-                , color Color.black700
-                , ellipsize true      
-                , singleLine true    
-                , weight 1.0
-                ] <> FontStyle.body16 TypoGraphy
-              ],
-              imageView
-              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
-              , width $ V 8
-              , visibility $ boolToVisibility $ not isAssigned
-              , margin $ MarginHorizontal 8 0
-              , height $ V 12
-              ]
-            ],
+            SelectRouteButton.view (push <<< SelectBusRoute) (mkRouteButtonConfig routeNumber sourceName destinationName isAssigned),
             PrimaryButton.view (push <<< StartBusTrip) (startBusTripButtonConfig state)
           ]
+    mkRouteButtonConfig routeNumber sourceName destinationName isAssigned = SelectRouteButton.defaultConfig {
+          routeNumber = routeNumber
+        , sourceName = sourceName
+        , destinationName = destinationName
+        , onClick = if isAssigned then SelectRouteButton.NoAction else SelectRouteButton.Click
+        , showChevron = not isAssigned
+        , cornerRadius = 12.0
+        , margin = Margin 10 0 10 24
+        , padding = Padding 16 16 16 16
+        , fontSize = FontStyle.Body20
+      }    
           

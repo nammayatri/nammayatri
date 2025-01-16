@@ -68,7 +68,7 @@ import Debug
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
 import Components.PrimaryButton as PrimaryButton
-import Debug (spy)
+import Components.SelectRouteButton as SelectRouteButton
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -905,16 +905,29 @@ selectRoute push state =
     linearLayout
     [ height WRAP_CONTENT,
     width MATCH_PARENT,
-    orientation VERTICAL
+    orientation VERTICAL,
+    margin $ MarginBottom 24
     ][
         textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ "Route Number"
+        , text $ state.whereIsMyBusConfig.routeNumberLabel
         , color Color.black800
         , margin $ MarginBottom 8
         ] <> FontStyle.body3 TypoGraphy,
-        PrimaryButton.view (push <<< SelectRouteButton) $ state.whereIsMyBusConfig.selectRouteButton
+        SelectRouteButton.view (push <<< SelectRouteButton) $ SelectRouteButton.defaultConfig {
+            routeNumber = state.whereIsMyBusConfig.selectRouteButton.busRouteNumber
+            , sourceName = state.whereIsMyBusConfig.selectRouteButton.sourceText
+            , destinationName = state.whereIsMyBusConfig.selectRouteButton.destination
+            , onClick = SelectRouteButton.Click
+            , showChevron = true
+            , routeNumberColor = Color.grey900
+            , useHtmlFormatting = false
+            , showDot = false
+            , showRouteDetails = false
+            , padding = Padding 20 16 20 16
+            , fontSize = FontStyle.SubHeading3
+            }
     ]
 
 selectAvailableBusRoutes :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -947,75 +960,22 @@ routeList push routeList =
 routeItem :: forall w. (Action -> Effect Unit) -> RouteInfo -> Int -> Int -> PrestoDOM (Effect Unit) w
 routeItem push route index len = 
     linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , cornerRadius 8.0
-  , padding $ if index == len - 1 then Padding 0 0 0 32 else Padding 0 0 0 16
-  , gravity CENTER
-  ] $ [ 
-    linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER_VERTICAL
-          , background Color.white900
-          , cornerRadius 8.0
-          , stroke $ "1," <> Color.grey900
-          , padding $ Padding 20 16 20 16
-          , onClick push $ const $ SelectRoute index route.busRouteNumber
-          ]
-          [
-            textView $ [
-                textFromHtml $ "<span><strong>" <> route.busRouteNumber <> "</strong></span>"
-                , color Color.black900
-                , height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , maxLines 2
-                , ellipsize true
-            ] <> FontStyle.subHeading3 TypoGraphy,
-            linearLayout [
-                color Color.black600,
-                margin $ Margin 8 0 8 0,
-                background Color.black600,
-                gravity CENTER,
-                width $ V 6,
-                height $ V 6,
-                cornerRadius 32.0 
-            ] [],
-            linearLayout
-            [
-                height WRAP_CONTENT,
-                width WRAP_CONTENT,
-                orientation HORIZONTAL,
-                gravity CENTER_VERTICAL,
-                weight 1.0
-            ][
-                textView $
-                [
-                    text route.sourceText,
-                    color Color.black700
-                    , ellipsize true      
-                    , singleLine true    
-                    , weight 1.0  
-
-                ] <> FontStyle.body16 TypoGraphy,
-                textView $
-                [
-                    text "  →  ",
-                    color Color.black700
-                    , ellipsize true      
-                    , singleLine true    
-                    , weight 1.0  
-
-                ] <> FontStyle.body16 TypoGraphy,
-                textView $
-                [
-                    text route.destination,
-                    color Color.black700
-                    , ellipsize true      
-                    , singleLine true    
-                    , weight 1.0  
-
-                ] <> FontStyle.body16 TypoGraphy
-            ]
-  ]]
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , cornerRadius 8.0
+    , padding $ if index == len - 1 then Padding 0 0 0 32 else Padding 0 0 0 16
+    , gravity CENTER
+    ] [ 
+        SelectRouteButton.view (push <<< SelectRoute) $ SelectRouteButton.defaultConfig {
+            routeNumber = route.busRouteNumber
+            , sourceName = route.sourceText
+            , destinationName = route.destination
+            , onClick = SelectRouteButton.Select index route.busRouteNumber
+            , showChevron = false
+            , useHtmlFormatting = false
+            , padding = Padding 20 16 20 16
+            , fontSize = FontStyle.Body16
+            }
+    ]
+  

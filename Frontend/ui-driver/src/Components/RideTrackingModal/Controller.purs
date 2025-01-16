@@ -23,9 +23,9 @@ type Config = {
 
 config :: Config
 config = {
-    sourceStopName: "Source Stop",
-    destinationStopName: "Destination Stop",
-    busNumber: "Bus Number",
-    busType: "Bus Type",
-    routeNumber: "Route Number"
+    sourceStopName: "",
+    destinationStopName: "",
+    busNumber: "",
+    busType: "",
+    routeNumber: ""
 }

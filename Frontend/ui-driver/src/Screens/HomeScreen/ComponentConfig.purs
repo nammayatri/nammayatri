@@ -201,7 +201,7 @@ endRidePopUp state = let
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
     optionButtonOrientation = "VERTICAL",
-    option1 {text = "Send Request", enableRipple = true, width = MATCH_PARENT, margin = MarginHorizontal 16 16},
+    option1 {text = StringsV2.getStringV2 LT2.send_request, enableRipple = true, width = MATCH_PARENT, margin = MarginHorizontal 16 16},
     option2 {text = "Cancel", enableRipple = true, width = MATCH_PARENT,  margin = MarginHorizontal 16 16}
   }
 in popUpConfig'
@@ -213,11 +213,11 @@ endTripPopUp state =
       endTripPopUp' = 
         config' {
             primaryText {text = (getString END_RIDE)},
-            secondaryText {text = "Send end ride request to your depot" <> "\n" <> "manager to be approved"},
+            secondaryText {text = StringsV2.getStringV2 LT2.send_end_ride_request_to_your_depot},
             optionButtonOrientation = "VERTICAL",
             backgroundClickable = false,
             option1 {
-              text = "Send Request", 
+              text = StringsV2.getStringV2 LT2.send_request, 
               enableRipple = true, 
               width = MATCH_PARENT, 
               margin = Margin 16 0 16 4,
@@ -226,7 +226,7 @@ endTripPopUp state =
               strokeColor = Color.red
             },
             option2 {
-              text = "Cancel", 
+              text = StringsV2.getStringV2 LT2.cancel, 
               enableRipple = true, 
               width = MATCH_PARENT,
               margin = MarginHorizontal 16 16,
@@ -243,12 +243,12 @@ waitingForDepoRespPopUp state =
   let config' = PopUpModal.config
       waitingForDepoRespPopUp' = 
         config' {
-            primaryText {text = "Waiting for depot response!"},
-            secondaryText {text = "Waiting for the depot manager's response to end your ride"},
+            primaryText {text = StringsV2.getStringV2 LT2.waiting_for_depot_response},
+            secondaryText {text = StringsV2.getStringV2 LT2.waiting_for_depot_manager_response},
             optionButtonOrientation = "VERTICAL",
             backgroundClickable = false,
             option1 {
-              text = "Cancel Request", 
+              text = StringsV2.getStringV2 LT2.cancel_request, 
               enableRipple = true, 
               width = MATCH_PARENT,
               gravity = CENTER,
@@ -3185,7 +3185,6 @@ chooseBusRouteModalPopup state =
   let 
     (API.AvailableRoutesList availableRoutesList) = fromMaybe dummyAvailableRoutesList state.data.whereIsMyBusData.availableRoutes
     vehicleDetails = maybe dummyBusVehicleDetails (\dummyAvailableRoutes -> dummyAvailableRoutes ^. Acc._vehicleDetails) $ state.props.whereIsMyBusConfig.selectedRoute <|> (availableRoutesList DA.!! 0)
-    selectedRouteTitle = selectRouteNumberTitle state
     selectedRouteColor = if isJust state.props.whereIsMyBusConfig.selectedRoute then Color.black700 else Color.grey900
     config' = PopUpModal.config {
       padding = Padding 16 16 16 0,
@@ -3212,8 +3211,9 @@ chooseBusRouteModalPopup state =
         visibility = VISIBLE,
         selectRouteStage = state.props.whereIsMyBusConfig.selectRouteStage,
         busNumber = primaryTextConfig (vehicleDetails ^. Acc._busNumber) (StringsV2.getStringV2 LT2.bus_number),
-        busType = primaryTextConfig (vehicleDetails ^. Acc._busType) (StringsV2.getStringV2 LT2.bus_type),
-        selectRouteButton = routeButtonConfig selectedRouteTitle selectedRouteColor,
+        busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type),
+        routeNumberLabel = StringsV2.getStringV2 LT2.route_number,
+        selectRouteButton = selectRouteButtonConfig state.props.whereIsMyBusConfig.selectedRoute,
         availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
     }
     , option1 {
@@ -3267,44 +3267,24 @@ chooseBusRouteModalPopup state =
           margin = Margin 0 0 0 24,
           id = EHC.getNewIDWithTag (text <> topLabel <> "PrimaryEditText")
       }
-    routeButtonConfig selectedRouteTitle selectedRouteColor = 
-      PrimaryButton.config {
-        textConfig {
-          textFromHtml = selectedRouteTitle,
-          color = selectedRouteColor,
-          textStyle = Body16,
-          gravity = CENTER_VERTICAL,
-          width = V $ (EHC.screenWidth unit) - 100
-        },
-        isSuffixImage = true,
-        suffixImageConfig {
-          imageUrl = fetchImage FF_ASSET "ny_ic_drop_down",
-          gravity = RIGHT
-        },
-        gravity = CENTER_VERTICAL,
-        background = Color.white900,
-        margin = Margin 0 0 0 24,
-        padding = Padding 20 16 20 16,
-        height = V 54,
-        viewbackground = Color.black900, 
-        stroke = "1," <> Color.grey900
-      }
     transformAvailableRouteList (API.AvailableRoutesList availableRoutesList) = 
-          map (\(API.AvailableRoutes route) -> 
-                let (API.StopInfo destination) = route.destination
-                    (API.StopInfo source) = route.source
-                    (API.RouteInfo routeInfo) = route.routeInfo
-                in ({
-                    busRouteNumber : routeInfo.code,
-                    sourceText : source.name,
-                    destination : destination.name
-                  }::PopUpModal.RouteInfo )
-              ) availableRoutesList
-    selectRouteNumberTitle state = 
-        case state.props.whereIsMyBusConfig.selectedRoute of
-          Just (API.AvailableRoutes selectedRoute) -> Just $ 
-            "<span style='color:#000000;'><strong>" <> selectedRoute.routeInfo ^. Acc._routeCode <> "</strong></span> <span style='color:#909090;'>&bull;</span> <span style='color:#707070;'>" <> selectedRoute.source  ^. Acc._stopName <> "  →  " <> selectedRoute.destination ^. Acc._stopName <> "</span>"
-          Nothing -> Just $ "<b>" <> StringsV2.getStringV2 LT2.select_route_number <> "</b>"
+          map (\route -> 
+                {
+                  busRouteNumber : route ^. (Acc._routeInfo) ^. (Acc._routeCode),
+                  sourceText : route ^. (Acc._source) ^. (Acc._stopName),
+                  destination : route ^. (Acc._destination) ^. (Acc._stopName)
+                }) availableRoutesList
+    selectRouteButtonConfig (Just selectedRoute) = 
+             {
+                busRouteNumber : selectedRoute ^. Acc._routeInfo ^. Acc._routeCode,
+                sourceText : selectedRoute ^. Acc._source  ^. Acc._stopName,
+                destination : selectedRoute ^. Acc._destination ^. Acc._stopName
+            } 
+    selectRouteButtonConfig Nothing = {
+                busRouteNumber : StringsV2.getStringV2 LT2.select_route_number,
+                sourceText : "",
+                destination : ""
+            } 
 
 startBusTripButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 startBusTripButtonConfig state = PrimaryButton.config
