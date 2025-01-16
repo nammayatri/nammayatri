@@ -138,4 +138,5 @@ type DriverInfoCardData =
   , receiverDetails :: Maybe PersonDeliveryDetails
   , estimatedTimeToReachDestination :: Maybe String
   , requestorPartyRoles :: Maybe (Array String)
+  , isAirConditioned :: Maybe Boolean
   }

@@ -1906,7 +1906,7 @@ historyViewItemForEarnings push item state index =
                     [ width $ V 20
                     , height $ V 20
                     , margin $ MarginRight 5
-                    , imageWithFallback $ fetchImage FF_ASSET $ getVehicleVariantImage item.vehicleVariant
+                    , imageWithFallback $ getVehicleVariantImage item.vehicleVariant
                     ]
                   , textView $
                     [ color Color.black700

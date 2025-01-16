@@ -312,6 +312,11 @@ fetchVehicleVariant variant =
     "TAXI"          -> Just ST.TAXI 
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
+    "AMBULANCE_TAXI"-> Just ST.AMBULANCE_TAXI
+    "AMBULANCE_TAXI_OXY"-> Just ST.AMBULANCE_TAXI_OXY
+    "AMBULANCE_AC"  -> Just ST.AMBULANCE_AC
+    "AMBULANCE_AC_OXY" -> Just ST.AMBULANCE_AC_OXY
+    "AMBULANCE_VENTILATOR" -> Just ST.AMBULANCE_VENTILATOR
     "SUV_PLUS"      -> Just ST.SUV_PLUS
     "DELIVERY_BIKE" -> Just ST.DELIVERY_BIKE
     _               -> Nothing
@@ -399,4 +404,7 @@ locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
-mailToLink = "mailto:"
+mailToLink = "mailto:" 
+
+whiteListedInputString :: Array String 
+whiteListedInputString = ["Hospital"]

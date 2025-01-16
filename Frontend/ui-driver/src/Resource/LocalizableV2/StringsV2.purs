@@ -1853,3 +1853,5 @@ getProxy str = case str of
   SEARCH -> \a -> a @~ search
   BUS__ -> \a -> a @~ bus__
   DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed
+  CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> \a -> a @~ canceling_this_booking_may_affect_the_emergency_medical
+  DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> \a -> a @~ drivers_are_permitted_to_cancel_ambulance_bookings

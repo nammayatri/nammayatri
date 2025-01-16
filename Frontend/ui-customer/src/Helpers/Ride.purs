@@ -41,7 +41,7 @@ import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..),HomeScreenSta
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Helpers.Utils (getCurrentDate, getCityNameFromCode,getCityCodeFromCity,fetchDriverInformation)
+import Helpers.Utils (getCurrentDate, getCityNameFromCode,getCityCodeFromCity,fetchDriverInformation,isAmbulance)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON,encodeJSON)
@@ -108,7 +108,7 @@ feedbackPillDataWithRating3 vehicleVariant =
     ]
   , [ { id: "3", text: getString LT.FELT_UNSAFE }
     , { id: "8", text: getString LT.RASH_DRIVING }
-    , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: if isAmbulance vehicleVariant then getString UNCOMFORTABLE_AMBULANCE else if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
     ]
   , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
     , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
@@ -122,7 +122,7 @@ feedbackPillDataWithRating4 vehicleVariant =
     , { id: "4", text: getString LT.SAFE_RIDE }
     ]
   , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: if isAmbulance vehicleVariant then getString UNCOMFORTABLE_AMBULANCE else if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
     ]
   , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
     , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
@@ -134,7 +134,7 @@ feedbackPillDataWithRating5 vehicleVariant =
   [ [ { id: "10", text: getString LT.POLITE_DRIVER }
     , { id: "5", text: getString LT.EXPERT_DRIVING }
     ]
-  , [ { id: "12", text : if vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB }
+  , [ { id: "12", text : if isAmbulance vehicleVariant then getString CLEAN_AMBULANCE else if vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB }
     , { id: "10", text: getString LT.ON_TIME }
     ]
   , [ { id: "10", text: getString LT.SKILLED_NAVIGATOR }

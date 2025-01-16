@@ -281,7 +281,7 @@ data HOME_SCREEN_OUTPUT = HybridAppExit
                         | ONGOING_RIDE HomeScreenState
                         | CANCEL_RIDE_REQUEST HomeScreenState CancelSearchType
                         | FCM_NOTIFICATION String NotificationBody HomeScreenState
-                        | SEARCH_LOCATION String HomeScreenState
+                        | SEARCH_LOCATION String HomeScreenState Boolean
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_

@@ -92,9 +92,9 @@ homeScreen' = do
     EditDestinationSoft updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EDIT_DESTINATION_SOFT updatedState)
-    SearchPlace input updatedState -> do
+    SearchPlace input updatedState cacheInput -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
+          App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState cacheInput)
     GetQuotes updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)

@@ -730,7 +730,7 @@ eval TriggerMaps state = continueWithCmd state[ do
         _,_ -> pure unit
   else 
     if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon  > 0.200 then do
-      let driveMode =  if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE")) then  "TWOWHEELER" else "DRIVE"
+      let driveMode =  if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE") || (state.data.vehicleType == "DELIVERY_BIKE")) then  "TWOWHEELER" else "DRIVE"
       pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon driveMode
     else 
       void $ openUrlInApp $ "https://maps.google.com?saddr=&daddr="<> show state.data.activeRide.dest_lat <>","<> show state.data.activeRide.dest_lon <> "&dirflg=d"
