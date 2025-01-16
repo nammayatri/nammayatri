@@ -102,7 +102,8 @@ type VariantLevelRemoteConfig a =
       ambulanceVentilator :: a,
       default :: a,
       deliveryBike :: a,
-      evAutoRickshaw :: a
+      evAutoRickshaw :: a,
+      heritageCab :: a
     }
 
 
@@ -202,7 +203,8 @@ type TipsConfig
       ambulanceTaxiOxy ::  Maybe (Array Int),
       ambulanceAc ::  Maybe (Array Int),
       ambulanceAcOxy ::  Maybe (Array Int),
-      ambulanceVentilator :: Maybe (Array Int)
+      ambulanceVentilator :: Maybe (Array Int),
+      heritageCab :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 

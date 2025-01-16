@@ -153,6 +153,7 @@ defaultTipConfig = {
   ambulanceAc : [],
   ambulanceAcOxy : [],
   ambulanceVentilator : [],
+  heritageCab : [0, 20, 30, 50],
   default : [0, 10, 20, 30],
   bookAny : [0, 10, 20, 30]
 }
@@ -218,6 +219,7 @@ defaultVariantBasedBoostSearchConfig = {
   taxiPlus : defaultBoostSearchConfig,
   bike : defaultBoostSearchConfig,
   suvPlus : defaultBoostSearchConfig,
+  heritageCab : defaultBoostSearchConfig,
   default : defaultBoostSearchConfig,
   bookAny : defaultBoostSearchConfig
 }
@@ -238,6 +240,7 @@ getBoostSearchConfig city variant =
         "BOOK_ANY" -> cityConfig.bookAny
         "DELIVERY_BIKE" -> cityConfig.bike
         "EV_AUTO_RICKSHAW" -> cityConfig.evAutoRickshaw
+        "HERITAGE_CAB" -> cityConfig.heritageCab
         _ -> cityConfig.default
 
 

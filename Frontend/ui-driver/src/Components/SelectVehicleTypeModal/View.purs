@@ -118,6 +118,7 @@ imageSection item =
           Ambulance_Ventilator -> "ic_bike_ambulance"
           Suv_Plus  -> "ny_ic_suv_plus_side"
           EV_Auto   -> "ic_auto"
+          HERITAGE_CAB -> "ny_ic_heritage_cab_side" 
       ]
   ]
 
@@ -139,18 +140,19 @@ textList item =
           , color Color.greyTextColor
           , alpha 0.5
           , text $ case item of
-              Sedan     -> "Sedan"
-              SUV       -> "SUV"
-              Hatchback -> "Hatchback"
-              Auto      -> "Auto"
-              Bike      -> "Bike"
-              Ambulance_Taxi -> "Ambulance_Taxi"
-              Ambulance_AC -> "Ambulance_AC"
-              Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
-              Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
-              Ambulance_Ventilator -> "Ambulance_Ventilator"
-              Suv_Plus       -> "SUV_PLUS"
-              EV_Auto        -> "EV Auto"
+              Sedan                 -> "Sedan"
+              SUV                   -> "SUV"
+              Hatchback             -> "Hatchback"
+              Auto                  -> "Auto"
+              Bike                  -> "Bike"
+              Ambulance_Taxi        -> "Ambulance_Taxi"
+              Ambulance_AC          -> "Ambulance_AC"
+              Ambulance_AC_Oxy      -> "Ambulance_AC_Oxy"
+              Ambulance_Taxi_Oxy    -> "Ambulance_Taxi_Oxy"
+              Ambulance_Ventilator  -> "Ambulance_Ventilator"
+              Suv_Plus              -> "SUV_PLUS"
+              EV_Auto               -> "EV Auto"
+              HERITAGE_CAB          -> "Heritage Cab"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

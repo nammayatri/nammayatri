@@ -514,6 +514,7 @@ getVariant serviceTier variant =
     Just "Bike Taxi" -> Just "BIKE"
     Just "XL Plus" -> Just "SUV_PLUS"
     Just "2 Wheeler" -> Just "DELIVERY_BIKE"
+    Just "Heritage Cab" -> Just "HERITAGE_CAB"
     _ -> variant
 
 fetchFamousDestinations :: LazyCheck -> Array LocationListItemState

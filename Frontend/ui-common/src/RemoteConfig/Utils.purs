@@ -238,6 +238,7 @@ tipConfigData city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "HERITAGE_CAB" -> config.heritageCab
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -257,6 +258,7 @@ defaultTipsConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 
@@ -277,6 +279,7 @@ defaultSubscriptionsConfigVariantLevel =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 
@@ -374,6 +377,7 @@ subscriptionsConfigVariantLevel city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "HERITAGE_CAB" -> config.heritageCab
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig
@@ -485,6 +489,7 @@ getConfigForVariant variant config =
     "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
     "AMBULANCE_TAXI" -> config.ambulanceTaxi
     "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+    "HERITAGE_CAB" -> config.heritageCab
     _ -> config.default
       
 getInvoiceConfig :: String -> String -> InvoiceConfig
@@ -514,5 +519,6 @@ defaultInvoiceVariantConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
