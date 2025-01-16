@@ -325,6 +325,7 @@ defaultMetroWarriorConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 

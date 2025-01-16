@@ -34,7 +34,8 @@ type TipVehicleConfig = {
   taxiPlus :: TipConfig,
   bike :: TipConfig,
   evAutoRickshaw :: TipConfig,
-  suvPlus :: TipConfig
+  suvPlus :: TipConfig,
+  heritageCab :: TipConfig
 }
 
 
@@ -57,6 +58,7 @@ getTipConfig variant = do
     "AMBULANCE_AC" -> mkTipConfig tipsConfig.ambulanceAc
     "AMBULANCE_VENTILATOR" -> mkTipConfig tipsConfig.ambulanceVentilator
     "BIKE" -> mkTipConfig tipsConfig.bike
+    "HERITAGE_CAB" -> mkTipConfig tipsConfig.heritageCab
     _ -> mkTipConfig tipsConfig.default
 
 mkTipConfig :: Array Int -> TipConfig

@@ -746,6 +746,7 @@ getVehicleVariantImage variant viewType =
           "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.leftViewImage
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
           "DELIVERY_BIKE" -> variantConfig.deliveryBike.leftViewImage
+          "HERITAGE_CAB"  -> variantConfig.heritageCab.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -779,6 +780,7 @@ getVehicleVariantImage variant viewType =
           "AMBULANCE_AC" -> variantConfig.ambulanceAc.image
           "AMBULANCE_AC_OXY" -> variantConfig.ambulanceAcOxy.image
           "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.image
+          "HERITAGE_CAB"  -> variantConfig.heritageCab.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
 
 getVariantRideType :: String -> String
@@ -803,6 +805,7 @@ getTitleConfig vehicleVariant =
         _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> mkReturnObj ((getString LT.AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
+        "HERITAGE_CAB" -> mkReturnObj ("Heritage Cab") Color.blue800
         _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
@@ -1287,7 +1290,9 @@ getVehicleCapacity variant =
     _ -> "4"
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
 getCitySpecificMarker city variant currentStage =
+    -- For compatibility with older native apk versions
     let isDeliveryImagePresent = (JB.getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
+        isHeritageCabImagePresent = (JB.getResourceIdentifier "ny_ic_heritage_cab_nav_on_map" "drawable") /= 0 
         variantImage = case variant of
             _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
             "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
@@ -1297,6 +1302,7 @@ getCitySpecificMarker city variant currentStage =
             "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
             "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
             _ | isAmbulance variant -> "ny_ic_ambulance_nav_on_map"
+            "HERITAGE_CAB"  -> if isHeritageCabImagePresent then "ny_ic_heritage_cab_nav_on_map" else "ny_ic_vehicle_nav_on_map"
             _               -> "ny_ic_vehicle_nav_on_map"
     in variantImage
 

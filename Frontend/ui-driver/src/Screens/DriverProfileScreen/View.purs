@@ -59,7 +59,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import MerchantConfig.Types
 import Mobility.Prelude as MP
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
+import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport, rotation)
 import PrestoDOM.Animation as PrestoAnim
@@ -329,7 +329,7 @@ manageVehicleItem state vehicle push =
             [ width $ V 36
             , height $ V 36
             , margin $ Margin 16 0 16 0
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage (fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory) state
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -425,33 +425,6 @@ manageVehicleItem state vehicle push =
             ]
         ]
     ]
-  where
-  getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-  mkAsset :: ST.VehicleCategory -> CityConfig -> String
-  mkAsset category cityConfig =
-    if category == ST.AutoCategory then
-      cityConfig.assets.auto_image
-    else if category == ST.CarCategory then
-      "ny_ic_sedan"
-    else if category == ST.BikeCategory then
-      "ny_ic_bike_side"
-    else if category == ST.AmbulanceCategory then
-      "ny_ic_ambulance_side"
-    else if category == ST.TruckCategory then
-      "ny_ic_truck_side"
-    else if category == ST.BusCategory then
-      "ny_ic_bus_side"
-    else
-      "ny_ic_silhouette"
-
-  getAutoImage :: CityConfig -> String
-  getAutoImage cityConfig =
-    if cityConfig.cityCode == "std:040" then
-      "ny_ic_black_yellow_auto_side_view"
-    else
-      "ny_ic_auto_side_view"
 
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -882,34 +855,12 @@ tabImageView state push =
               , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
               ]
               [ imageView
-                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ getVehicleCategory state
+                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage (getVehicleCategory state) state
                   , height $ V 68
                   , width $ V 68
                   ]
               ]
       ]
-  where
-
-  getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-  mkAsset :: ST.VehicleCategory -> CityConfig -> String
-  mkAsset category cityConfig =
-    case category of
-      ST.AutoCategory -> cityConfig.assets.auto_image
-      ST.CarCategory -> "ny_ic_sedan"
-      ST.BikeCategory -> "ny_ic_bike_side"
-      ST.AmbulanceCategory -> "ny_ic_ambulance_side"
-      ST.TruckCategory -> "ny_ic_truck_side"
-      ST.BusCategory -> "ny_ic_bus_side"
-      _ -> "ny_ic_silhouette"
-
-  getAutoImage :: CityConfig -> String
-  getAutoImage cityConfig =
-    if cityConfig.cityCode == "std:040" then
-      "ny_ic_black_yellow_auto_side_view"
-    else
-      "ny_ic_auto_side_view"
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 driverDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -1770,7 +1721,7 @@ vehicleListItem state push vehicle =
             [ width $ V 36
             , height $ V 36
             , margin $ MarginRight 16
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage (fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory) state
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -1840,33 +1791,6 @@ vehicleListItem state push vehicle =
             ]
         ]
     ]
-  where
-  getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-
-  mkAsset :: ST.VehicleCategory -> CityConfig -> String
-  mkAsset category cityConfig =
-    if category == ST.AutoCategory then
-      cityConfig.assets.auto_image
-    else if category == ST.CarCategory then
-      "ny_ic_sedan"
-    else if category == ST.BikeCategory then
-      "ny_ic_bike_side"
-    else if category == ST.AmbulanceCategory then
-      "ny_ic_ambulance_side"
-    else if category == ST.TruckCategory then
-      "ny_ic_truck_side"
-    else if category == ST.BusCategory then
-      "ny_ic_bus_side"
-    else
-      "ny_ic_silhouette"
-
-  getAutoImage :: CityConfig -> String
-  getAutoImage cityConfig =
-    if cityConfig.cityCode == "std:040" then
-      "ny_ic_black_yellow_auto_side_view"
-    else
-      "ny_ic_auto_side_view"
   
 
 getRcDetails :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
@@ -2664,3 +2588,30 @@ type MissedOpportunity
     , action :: Action
     , valueColor :: String
     }
+
+getVehicleImage :: ST.VehicleCategory -> ST.DriverProfileScreenState -> String
+getVehicleImage category state =
+  let vehicleVariant = (getValueToLocalStore VEHICLE_VARIANT)
+      showSpecialVariantImage = vehicleVariant == "HERITAGE_CAB"
+  in 
+    if showSpecialVariantImage 
+      then HU.getVehicleVariantImage vehicleVariant
+      else mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  where
+    mkAsset :: ST.VehicleCategory -> CityConfig -> String
+    mkAsset category cityConfig =
+      case category of
+        ST.AutoCategory -> cityConfig.assets.auto_image
+        ST.CarCategory -> "ny_ic_sedan"
+        ST.BikeCategory -> "ny_ic_bike_side"
+        ST.AmbulanceCategory -> "ny_ic_ambulance_side"
+        ST.TruckCategory -> "ny_ic_truck_side"
+        ST.BusCategory -> "ny_ic_bus_side"
+        _ -> "ny_ic_silhouette"
+
+    getAutoImage :: CityConfig -> String
+    getAutoImage cityConfig =
+      if cityConfig.cityCode == "std:040" then
+        "ny_ic_black_yellow_auto_side_view"
+      else
+        "ny_ic_auto_side_view"
