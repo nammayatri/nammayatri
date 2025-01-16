@@ -20,6 +20,8 @@ data JourneyLegT f = JourneyLegT
     duration :: B.C f Kernel.Types.Common.Seconds,
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,
+    estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

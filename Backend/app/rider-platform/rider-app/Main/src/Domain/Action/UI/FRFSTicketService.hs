@@ -495,6 +495,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 journeyOnInitDone = Nothing,
                 frequency = mbSearch >>= (.frequency),
                 lineColor = mbSearch >>= (.lineColor),
+                lineColorCode = mbSearch >>= (.lineColorCode),
                 startTime = Just now, -- TODO
                 ..
               }

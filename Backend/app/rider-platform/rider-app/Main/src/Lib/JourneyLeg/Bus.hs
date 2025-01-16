@@ -77,7 +77,7 @@ instance JT.JourneyLeg BusLegRequest m where
         JT.mkLegInfoFromFrfsBooking booking
       Nothing -> do
         searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        JT.mkLegInfoFromFrfsSearchRequest searchReq
+        JT.mkLegInfoFromFrfsSearchRequest searchReq req.fallbackFare
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (BusLegRequestGetFare _) = do

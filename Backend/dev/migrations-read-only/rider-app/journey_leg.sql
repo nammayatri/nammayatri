@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.journey_leg ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.journey_leg ADD COLUMN route_color_name text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN route_color_code text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN frequency integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN estimated_min_fare double precision ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN estimated_max_fare double precision ;

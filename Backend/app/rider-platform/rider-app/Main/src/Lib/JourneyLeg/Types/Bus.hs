@@ -10,6 +10,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data BusLegRequestSearchData = BusLegRequestSearchData
   { quantity :: Int,
@@ -32,8 +33,9 @@ data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
 
-newtype BusLegRequestGetInfoData = BusLegRequestGetInfoData
-  { searchId :: Id FRFSSearch.FRFSSearch
+data BusLegRequestGetInfoData = BusLegRequestGetInfoData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    fallbackFare :: Maybe HighPrecMoney
   }
 
 newtype BusLegRequestGetStateData = BusLegRequestGetStateData

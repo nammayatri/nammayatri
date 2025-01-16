@@ -219,6 +219,8 @@ JourneyLeg:
     agency: Maybe MultiModalAgency
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
+    estimatedMinFare: Maybe HighPrecMoney
+    estimatedMaxFare: Maybe HighPrecMoney
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
     sequenceNumber: Int

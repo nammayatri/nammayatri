@@ -10,6 +10,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data MetroLegRequestSearchData = MetroLegRequestSearchData
   { quantity :: Int,
@@ -36,8 +37,9 @@ data MetroLegRequestGetStateData = MetroLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch
   }
 
-newtype MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
-  { searchId :: Id FRFSSearch.FRFSSearch
+data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    fallbackFare :: Maybe HighPrecMoney
   }
 
 data MetroLegRequest

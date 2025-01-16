@@ -20,6 +20,8 @@ data JourneyLeg = JourneyLeg
     distance :: Kernel.Types.Common.Distance,
     duration :: Kernel.Types.Common.Seconds,
     endLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
+    estimatedMaxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,

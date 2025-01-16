@@ -252,6 +252,7 @@ FRFSTicketBooking:
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
     lineColor : Maybe Text
+    lineColorCode : Maybe Text
     frequency : Maybe Int
     journeyLegOrder : Maybe Int
     journeyId: Maybe (Id Journey)

@@ -161,6 +161,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.journeyLegOrder journeyLegOrder,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.lineColor lineColor,
+      Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),

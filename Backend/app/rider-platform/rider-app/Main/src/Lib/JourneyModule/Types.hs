@@ -170,6 +170,7 @@ data LegInfo = LegInfo
   { skipBooking :: Bool,
     bookingAllowed :: Bool,
     pricingId :: Maybe Text,
+    searchId :: Text,
     travelMode :: DTrip.MultimodalTravelMode,
     startTime :: UTCTime,
     order :: Int,
@@ -198,7 +199,10 @@ data WalkLegExtraInfo = WalkLegExtraInfo
 
 data TaxiLegExtraInfo = TaxiLegExtraInfo
   { origin :: Location,
-    destination :: Location
+    destination :: Location,
+    driverName :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    otp :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -207,6 +211,7 @@ data MetroLegExtraInfo = MetroLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
     lineColor :: Maybe Text,
+    lineColorCode :: Maybe Text,
     tickets :: Maybe [Text],
     providerName :: Maybe Text,
     frequency :: Maybe Int -- make it Seconds
@@ -287,6 +292,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
     LegInfo
       { skipBooking = False,
         bookingAllowed = True,
+        searchId = booking.transactionId,
         pricingId = Just booking.id.getId,
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
@@ -302,7 +308,10 @@ mkLegInfoFromBookingAndRide booking mRide = do
           Taxi $
             TaxiLegExtraInfo
               { origin = booking.fromLocation,
-                destination = toLocation
+                destination = toLocation,
+                driverName = mRide <&> (.driverName),
+                vehicleNumber = mRide <&> (.vehicleNumber),
+                otp = mRide <&> (.otp)
               }
       }
 
@@ -320,6 +329,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed = True,
+        searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
@@ -331,7 +341,15 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
         status = getTexiLegStatusFromSearch journeyLegInfo',
-        legExtraInfo = Taxi $ TaxiLegExtraInfo {origin = fromLocation, destination = toLocation'}
+        legExtraInfo =
+          Taxi $
+            TaxiLegExtraInfo
+              { origin = fromLocation,
+                destination = toLocation',
+                driverName = Nothing,
+                vehicleNumber = Nothing,
+                otp = Nothing
+              }
       }
 
 getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -> JourneyLegStatus
@@ -353,6 +371,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed = False,
+        searchId = id.getId,
         pricingId = Just id.getId,
         travelMode = DTrip.Walk,
         startTime = startTime,
@@ -394,6 +413,7 @@ mkLegInfoFromFrfsBooking booking = do
     LegInfo
       { skipBooking = False,
         bookingAllowed = True,
+        searchId = booking.searchId.getId,
         pricingId = Just booking.id.getId,
         travelMode = DTrip.Metro,
         startTime = startTime,
@@ -411,6 +431,7 @@ mkLegInfoFromFrfsBooking booking = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = booking.lineColor,
+                lineColorCode = booking.lineColorCode,
                 tickets = Just qrDataList,
                 providerName = Just booking.providerName,
                 frequency = booking.frequency
@@ -426,23 +447,28 @@ mkLegInfoFromFrfsBooking booking = do
           address = station.address
         }
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> m LegInfo
-mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> m LegInfo
+mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
+  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  let bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
   now <- getCurrentTime
   mbEstimatedFare <-
     case journeyLegInfo'.pricingId of
       Just quoteId -> do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
         return $ mkPriceAPIEntity <$> (mbQuote <&> (.price))
-      Nothing -> return Nothing
+      Nothing -> do
+        if bookingAllowed && not journeyLegInfo'.skipBooking
+          then do return Nothing
+          else return $ mkPriceAPIEntity <$> (mkPrice Nothing <$> fallbackFare)
   fromStation <- QStation.findById fromStationId >>= fromMaybeM (InternalError "From Station not found")
   toStation <- QStation.findById toStationId >>= fromMaybeM (InternalError "To Station not found")
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
   return $
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
-        bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)),
+        bookingAllowed,
+        searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Metro,
         startTime = now,
@@ -460,6 +486,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = lineColor,
+                lineColorCode = lineColorCode,
                 tickets = Nothing,
                 providerName = Nothing,
                 frequency = frequency
@@ -509,8 +536,8 @@ mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parent
         estimatedMaxFare = Just $ sumHighPrecMoney $ totalFares <&> (.estimatedMaxFare)
       }
 
-mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> m DJL.JourneyLeg
-mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance = do
+mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> GetFareResponse -> m DJL.JourneyLeg
+mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   return $
@@ -532,6 +559,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance =
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
+        estimatedMinFare = Just fare.estimatedMinFare,
+        estimatedMaxFare = Just fare.estimatedMaxFare,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
         createdAt = now,

@@ -48,8 +48,8 @@ init journeyReq = do
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
           mbTotalLegFare <- JLI.getFare journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
-          whenJust mbTotalLegFare $ \_ -> do
-            journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance
+          whenJust mbTotalLegFare $ \fare -> do
+            journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance fare
             QJourneyLeg.create journeyLeg
           return mbTotalLegFare
       )
@@ -92,8 +92,8 @@ getAllLegsInfo journeyId = do
           case leg.mode of
             DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
             DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
-            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId}
-            _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
+            DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ sortBy (comparing (.order)) allLegsInfo
 
@@ -120,7 +120,7 @@ getAllLegsStatus journeyId = do
             DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId}
             DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId}
             DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId}
-            _ -> throwError $ InvalidRequest ("Mode " <> show leg.mode <> " not supported!")
+            DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId}
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ sortBy (comparing (.legOrder)) allLegsState
 
