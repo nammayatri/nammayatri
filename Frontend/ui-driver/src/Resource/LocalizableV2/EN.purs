@@ -1804,5 +1804,5 @@ getEn =
     , duty_started_depot_manager_will_assign_ride : "Your duty has started. Depot Manager will\nassign you a ride soon"
     , introducing_yatri_sathi_bus_tracking : "Introducing Yatri Sathi bus tracking"
     , on_ride : "On Ride"
-    , your_duty_has_started_please_start_the_ride : "Your duty has started, please start the ride"
+    , your_duty_has_started_please_start_the_ride : "Your duty has started, please start the ride" 
     }
