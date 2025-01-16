@@ -11,6 +11,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.ParcelDetails as DParcel
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -52,6 +53,16 @@ getOtpCode = \case
   DRB.InterCityDetails details -> details.otpCode
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
+
+getParcelQuantity :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Int
+getParcelQuantity = \case
+  DRB.DeliveryDetails details -> details.parcelQuantity
+  _ -> Nothing
+
+getParcelType :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DParcel.ParcelType
+getParcelType = \case
+  DRB.DeliveryDetails details -> Just details.parcelType
+  _ -> Nothing
 
 getIsUpgradedToCab :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Bool
 getIsUpgradedToCab = \case
@@ -125,8 +136,10 @@ toBookingDetailsAndFromLocation ::
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   Maybe Bool ->
+  Maybe DParcel.ParcelType ->
+  Maybe Int ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -248,6 +261,8 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         DRB.DeliveryBookingDetails
           { toLocation = toLocation,
             distance = distance',
+            parcelQuantity = parcelQuantity,
+            parcelType = fromMaybe (DParcel.Others "Unknown") parcelType,
             ..
           }
 
