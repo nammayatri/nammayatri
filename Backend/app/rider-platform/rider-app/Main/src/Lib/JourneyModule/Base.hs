@@ -268,12 +268,25 @@ addBusLeg parentSearchReq journeyLeg = do
             journeyLeg
           }
 
--- getCurrentLeg :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, Monad m, MonadTime m, JourneyLeg TaxiLegRequest Maybe, JourneyLeg BusLegRequest Maybe, JourneyLeg MetroLegRequest Maybe, JourneyLeg WalkLegRequest Maybe) => Id DJourney.Journey -> Maybe JL.LegInfo
--- getCurrentLeg journeyId = do
---   journeyLegs <- getAllLegsInfo journeyId
---   --let completedStatus = [] -- TODO: to be passed
---   let currentLeg = find (\leg -> leg.status `notElem` completedStatus) journeyLegs
---   currentLeg
+getCurrentLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    MonadTime m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  Id DJourney.Journey ->
+  m (Maybe JL.LegInfo)
+getCurrentLeg journeyId = do
+  journeyLegs <- getAllLegsInfo journeyId
+  --let completedStatus = [] -- TODO: to be passed
+  let currentLeg = find (\leg -> leg.status `notElem` JL.completedStatus) journeyLegs
+  return currentLeg
 
 getRemainingLegs ::
   ( CacheFlow m r,
@@ -335,6 +348,77 @@ getTickets leg = do
                 }
             )
         else throwError (InvalidRequest $ "Unknown provider: " <> provider)
+
+cancelLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  JL.LegInfo ->
+  m ()
+cancelLeg journeyLeg = do
+  unless (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
+    throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show journeyLeg.status
+  case journeyLeg.travelMode of
+    DTrip.Taxi -> JL.cancel $ TaxiLegRequestCancel TaxiLegRequestCancelData
+    DTrip.Walk -> JL.cancel $ WalkLegRequestCancel WalkLegRequestCancelData
+    DTrip.Metro -> JL.cancel $ MetroLegRequestCancel MetroLegRequestCancelData
+    DTrip.Bus -> JL.cancel $ BusLegRequestCancel BusLegRequestCancelData
+  return ()
+
+cancelRemainingLegs ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  Id DJourney.Journey ->
+  m ()
+cancelRemainingLegs journeyId = do
+  remainingLegs <- getRemainingLegs journeyId
+  results <- forM remainingLegs $ \leg -> try @_ @SomeException (cancelLeg leg)
+  let failures = [e | Left e <- results]
+  unless (null failures) $
+    throwError $ InternalError $ "Failed to cancel some legs: " <> show failures
+  return ()
+
+skipLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  Id DJourney.Journey ->
+  Id DJourneyLeg.JourneyLeg ->
+  m ()
+skipLeg journeyId legId = do
+  allLegs <- getAllLegsInfo journeyId
+  skippingLeg <-
+    find
+      (\leg -> maybe False (\id -> Kernel.Types.Id.Id id == legId) leg.pricingId)
+      allLegs
+      & fromMaybeM (InvalidRequest $ "Leg not found: " <> legId.getId)
+
+  unless (skippingLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
+    throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
+
+  cancelLeg skippingLeg
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()
 -- deleteLeg leg = do

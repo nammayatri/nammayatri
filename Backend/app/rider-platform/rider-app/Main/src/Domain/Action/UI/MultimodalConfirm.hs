@@ -167,7 +167,9 @@ postMultimodalJourneyCancel ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalJourneyCancel = do error "Logic yet to be decided"
+postMultimodalJourneyCancel (_, _) journeyId = do
+  _ <- JM.cancelRemainingLegs journeyId
+  pure Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLeg ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -186,7 +188,9 @@ postMultimodalJourneyLegSkip ::
     Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip = do error "Logic yet to be decided"
+postMultimodalJourneyLegSkip (_, _) journeyId journeyLegId = do
+  _ <- JM.skipLeg journeyId journeyLegId
+  pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
