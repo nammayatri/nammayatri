@@ -29,6 +29,7 @@ import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import Components.PrimaryButton as PrimaryButton
+import Components.SelectRouteButton as SelectRouteButton
 import JBridge
 import Effect (Effect)
 
@@ -51,8 +52,8 @@ data Action = OnButton1Click
             | CheckBoxClick
             | BusNumber PrimaryEditTextController.Action
             | BusType PrimaryEditTextController.Action
-            | SelectRouteButton PrimaryButton.Action
-            | SelectRoute Int String
+            | SelectRouteButton SelectRouteButton.Action
+            | SelectRoute SelectRouteButton.Action
 
 type Config = {
     primaryText :: TextConfig,
@@ -114,8 +115,9 @@ type WhereIsMyBusConfig = {
   visibility :: Visibility,
   selectRouteStage :: Boolean,
   busNumber :: PrimaryEditTextController.Config,
+  routeNumberLabel :: String,
   busType :: PrimaryEditTextController.Config,
-  selectRouteButton :: PrimaryButton.Config,
+  selectRouteButton :: RouteInfo,
   availableRouteList :: Array RouteInfo
 }
 
@@ -766,7 +768,12 @@ config = {
     selectRouteStage : false,
     busNumber : PrimaryEditTextController.config,
     busType : PrimaryEditTextController.config,
-    selectRouteButton : PrimaryButton.config,
+    routeNumberLabel : "",
+    selectRouteButton :  {
+        busRouteNumber : "",
+        sourceText : "",
+        destination : ""
+      },
     availableRouteList : []
   }
 }

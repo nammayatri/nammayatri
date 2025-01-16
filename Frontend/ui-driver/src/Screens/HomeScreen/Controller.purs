@@ -142,6 +142,7 @@ import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
+import Components.SelectRouteButton as RouteDisplayController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -507,7 +508,7 @@ data Action = NoAction
             | RideTrackingModalAction RideTrackingModal.Action
             | ChooseBusRoute PopUpModal.Action
             | StartBusTrip PrimaryButtonController.Action
-            | SelectBusRoute
+            | SelectBusRoute RouteDisplayController.Action
             | ScanQrCode
             | WMBTripActiveAction API.TripTransactionDetails
             | WMBEndTripModalAC PopUpModal.Action
@@ -1848,11 +1849,11 @@ eval (UpdateState newState) _ = continue newState
 
 eval (ChooseBusRoute action) state = 
   case action of
-    PopUpModal.SelectRoute index busRouteNumber ->
+    PopUpModal.SelectRoute (RouteDisplayController.Select index busRouteNumber) ->
       let selectedRoute = state.data.whereIsMyBusData.availableRoutes >>= \(API.AvailableRoutesList routes) -> routes Array.!! index
           newState = state { props { whereIsMyBusConfig { selectedRoute = selectedRoute, selectRouteStage = false, selectedIndex = index } }}
       in continue newState
-    PopUpModal.SelectRouteButton PrimaryButtonController.OnClick -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
+    PopUpModal.SelectRouteButton RouteDisplayController.Click -> continue state { props { whereIsMyBusConfig { selectRouteStage = true } }}
     PopUpModal.OnButton1Click -> do
       exit $ LinkAndStartBusRide state
     PopUpModal.OnImageClick -> continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = state.props.whereIsMyBusConfig.selectRouteStage}}}
@@ -1865,7 +1866,7 @@ eval (StartBusTrip PrimaryButtonController.OnClick) state =
         Just (ST.ASSIGNED_TRIP _) -> exit $ StartBusRide state
         _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then exit $ LinkAndStartBusRide state else update state
 
-eval (SelectBusRoute) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
+eval (SelectBusRoute RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 
 eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" then exit $ GoToBusEducationScreen state else exit $ GoToScanBusQR state
 
