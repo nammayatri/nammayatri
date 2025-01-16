@@ -362,6 +362,11 @@ const nammaYatriConfig = function () {
             "name" : "Ambulance with Ventilator",
             "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
             "leftViewImage" : "ny_ic_ambulance_ventilator,"
+          },
+          "heritageCab" : {
+            "name" : "Heritage Cab",
+            "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_side.png",
+            "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_left_side.png"
           }
       }
       , "enableOnlyAuto": true
@@ -724,6 +729,11 @@ const odishaYatriConfig = function () {
           "name" : "Ambulance with Ventilator",
           "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
           "leftViewImage" : "ny_ic_ambulance_ventilator,"
+        },
+        "heritageCab" : {
+          "name" : "Heritage Cab",
+          "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_heritage_cab_side.png",
+          "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_heritage_cab_left_side.png"
         }
       }
       , "enableOnlyAuto" : true
@@ -1086,6 +1096,11 @@ const manaYatriConfig = function () {
           "name" : "Ambulance with Ventilator",
           "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
           "leftViewImage" : "ny_ic_ambulance_ventilator,"
+        },
+        "heritageCab" : {
+          "name" : "Heritage Cab",
+          "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_side.png",
+          "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_left_side.png"
         }
       }
       , "enableOnlyAuto": true
