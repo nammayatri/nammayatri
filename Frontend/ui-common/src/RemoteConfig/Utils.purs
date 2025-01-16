@@ -208,6 +208,7 @@ tipConfigData city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "HERITAGE_CAB" -> config.heritageCab
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -226,6 +227,7 @@ defaultTipsConfig =
   , ambulanceAc : Nothing
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 
@@ -245,6 +247,7 @@ defaultSubscriptionsConfigVariantLevel =
   , ambulanceAc : Nothing
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 
@@ -341,6 +344,7 @@ subscriptionsConfigVariantLevel city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "HERITAGE_CAB" -> config.heritageCab
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig

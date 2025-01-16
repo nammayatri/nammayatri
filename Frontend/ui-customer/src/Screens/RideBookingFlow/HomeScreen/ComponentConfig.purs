@@ -1100,6 +1100,7 @@ getVehicleTitle vehicle =
       "BIKE" -> "Bike Taxi"
       "SUV_PLUS" -> "XL Plus"
       "DELIVERY_BIKE" -> "2 Wheeler"
+      "HERITAGE_CAB" -> "Heritage Cab"
       _ -> ""
   )
     <> " - "

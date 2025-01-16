@@ -140,6 +140,7 @@ defaultTipConfig = {
   ambulanceAc : [],
   ambulanceAcOxy : [],
   ambulanceVentilator : [],
+  heritageCab : [0, 20, 30, 50],
   default : [0, 10, 20, 30],
   bookAny : [0, 10, 20, 30]
 }
