@@ -77,6 +77,8 @@ PartnerOrgConfig:
     partnerOrgId: PrimaryKey
     configType: PrimaryKey
 
+  disableKVQueryConstraints: True  
+
   sqlType:
     configJSON: "json"
     configType: character varying(255)

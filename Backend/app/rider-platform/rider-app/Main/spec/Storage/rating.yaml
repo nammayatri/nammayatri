@@ -24,6 +24,8 @@ Rating:
     rideId: SecondaryKey
     driverId: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     updateRating:
       kvFunction: updateOneWithKV

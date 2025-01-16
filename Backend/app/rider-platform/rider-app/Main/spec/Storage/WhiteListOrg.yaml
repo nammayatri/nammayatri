@@ -35,6 +35,8 @@ WhiteListOrg:
     id: PrimaryKey
     subscriberId: !SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:
       kvFunction: findOneWithKV

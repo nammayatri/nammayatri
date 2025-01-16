@@ -47,6 +47,7 @@ Station:
   constraints:
     id: PrimaryKey
     code: SecondaryKey
+  disableKVQueryConstraints: True  
 
   fromTType:
     timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
@@ -117,6 +118,7 @@ Route:
   constraints:
     id: PrimaryKey
     code: SecondaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findByRouteCode:
@@ -181,6 +183,7 @@ RouteTripStopMapping:
     stopCode: PrimaryKey
     tripSequenceNum: PrimaryKey
     scheduledDay: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByLocation:
       kvFunction: findOneWithKV

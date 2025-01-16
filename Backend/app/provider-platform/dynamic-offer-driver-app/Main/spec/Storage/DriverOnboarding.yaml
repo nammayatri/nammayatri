@@ -202,6 +202,7 @@ VehicleRegistrationCertificate:
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
+  disableKVQueryConstraints: True
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -304,6 +305,7 @@ Image:
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
+  disableKVQueryConstraints: True  
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -394,6 +396,7 @@ DocumentVerificationConfig:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
     documentType: PrimaryKey
+  disableKVQueryConstraints: True  
   sqlType:
     dependencyDocumentType: text[]
     supportedVehicleClassesJSON: json
@@ -431,6 +434,7 @@ VehiclePermit:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -462,6 +466,7 @@ VehicleInsurance:
   constraints:
     id: PrimaryKey
     documentImageId: SecondaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -523,6 +528,7 @@ VehiclePUC:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -684,6 +690,7 @@ FleetOwnerDocumentVerificationConfig:
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentType: PrimaryKey
+  disableKVQueryConstraints: True  
   sqlType:
     dependencyDocumentType: text[]
   queries:
@@ -719,6 +726,7 @@ AadhaarCard:
   derives: "Generic,Show,ToJSON,FromJSON"
   constraints:
     driverId: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     updateVerificationStatus:
       kvFunction: updateWithKV

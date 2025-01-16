@@ -61,6 +61,8 @@ TripTransaction:
   constraints:
     id: PrimaryKey
 
+  disableKVQueryConstraints: True
+
   beamFields:
     startLocation:
       startLocationLat: Maybe Double
@@ -146,6 +148,8 @@ ApprovalRequest:
 
   constraints:
     id: PrimaryKey
+
+  disableKVQueryConstraints: True
 
   queries:
     updateStatusWithReason:

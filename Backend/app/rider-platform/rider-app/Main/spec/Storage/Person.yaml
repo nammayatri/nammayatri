@@ -187,6 +187,8 @@ Person:
     deviceToken: SecondaryKey
     customerReferralCode: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   sqlType:
     firstName: character varying(255)
     middleName: character varying(255)
