@@ -318,6 +318,7 @@ getVehicleName config =
     "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
     "AMBULANCE_VENTILATOR" -> "Ventilator"
     "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
+    "HERITAGE_CAB" -> "Heritage Cab"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

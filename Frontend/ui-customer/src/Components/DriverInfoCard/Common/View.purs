@@ -280,6 +280,7 @@ getVehicleImage variant vehicleDetail city = do
               "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_concept"
               "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
               "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+              "HERITAGE_CAB" -> "ny_ic_heritage_cab_concept"
               _           -> "ny_ic_sedan_concept"              
         where 
           mkAutoImage :: City -> String

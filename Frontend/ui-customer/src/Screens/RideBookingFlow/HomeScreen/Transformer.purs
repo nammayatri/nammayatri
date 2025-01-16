@@ -752,6 +752,7 @@ mapServiceTierName vehicleVariant isValueAddNP serviceTierName =
                 "Delivery Bike" -> Just "2 Wheeler"
                 "SUV_PLUS" -> Just "XL Plus"
                 "EV_AUTO_RICKSHAW" -> Just "EV Auto"
+                "HERITAGE_CAB" -> Just "Heritage Cab"
                 _ -> serviceTierName
 
 mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String

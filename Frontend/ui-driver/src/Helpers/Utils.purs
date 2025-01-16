@@ -296,30 +296,20 @@ toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions variant = case (getMerchant FunctionCall) of
-                                YATRISATHI -> case variant of
-                                                "TAXI"  -> []
-                                                "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                                "SEDAN" -> ["TAXI", "HATCHBACK"] 
-                                                "BIKE"  -> []
-                                                "AMBULANCE_TAXI" -> []
-                                                "AMBULANCE_TAXI_OXY" -> []
-                                                "AMBULANCE_AC" -> []
-                                                "AMBULANCE_AC_OXY" -> []
-                                                "AMBULANCE_VENTILATOR" -> []
-                                                "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
-                                                _       -> ["TAXI"]
-                                _ -> case variant of
-                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                        "SEDAN" -> ["HATCHBACK"]
-                                        "BIKE"  -> []
-                                        "AMBULANCE_TAXI" -> []
-                                        "AMBULANCE_TAXI_OXY" -> []
-                                        "AMBULANCE_AC" -> []
-                                        "AMBULANCE_AC_OXY" -> []
-                                        "AMBULANCE_VENTILATOR" -> []
-                                        "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
-                                        _       -> []
+getDowngradeOptions variant = 
+  case variant of
+    "TAXI"  -> []
+    "SUV"   -> ["SEDAN", "HATCHBACK"]
+    "SEDAN" -> ["HATCHBACK"]
+    "BIKE"  -> []
+    "AMBULANCE_TAXI" -> []
+    "AMBULANCE_TAXI_OXY" -> []
+    "AMBULANCE_AC" -> []
+    "AMBULANCE_AC_OXY" -> []
+    "AMBULANCE_VENTILATOR" -> []
+    "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
+    "HERITAGE_CAB" -> ["HATCHBACK"] 
+    _       -> []
 
 
 getDowngradeOptionsText :: String -> String
@@ -339,30 +329,20 @@ getDowngradeOptionsText vehicleType = do
   getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
 
 getUIDowngradeOptions :: String -> Array String
-getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
-                                YATRISATHI -> case variant of
-                                                "TAXI"  -> []
-                                                "BIKE"  -> []
-                                                "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                                "SEDAN" -> ["TAXI"] 
-                                                "AMBULANCE_TAXI" -> []
-                                                "AMBULANCE_TAXI_OXY" -> []
-                                                "AMBULANCE_AC" -> []
-                                                "AMBULANCE_AC_OXY" -> []
-                                                "AMBULANCE_VENTILATOR" -> []
-                                                "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
-                                                _       -> []
-                                _ -> case variant of
-                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                        "SEDAN" -> ["HATCHBACK"]
-                                        "BIKE"  -> []
-                                        "AMBULANCE_TAXI" -> []
-                                        "AMBULANCE_TAXI_OXY" -> []
-                                        "AMBULANCE_AC" -> []
-                                        "AMBULANCE_AC_OXY" -> []
-                                        "AMBULANCE_VENTILATOR" -> []
-                                        "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
-                                        _       -> []
+getUIDowngradeOptions variant = 
+  case variant of
+    "TAXI"  -> []
+    "BIKE"  -> []
+    "SUV"   -> ["SEDAN", "HATCHBACK"]
+    "SEDAN" -> ["TAXI"] 
+    "AMBULANCE_TAXI" -> []
+    "AMBULANCE_TAXI_OXY" -> []
+    "AMBULANCE_AC" -> []
+    "AMBULANCE_AC_OXY" -> []
+    "AMBULANCE_VENTILATOR" -> []
+    "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
+    "HERITAGE_CAB" -> ["HATCHBACK"]
+    _       -> []
   
 getVehicleType :: String -> String
 getVehicleType vehicleType =
@@ -384,6 +364,7 @@ getVehicleType vehicleType =
     "BUS_NON_AC" -> "Non AC Bus"
     "BUS_AC" -> "AC Bus"
     "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
+    "HERITAGE_CAB" -> "Heritage Cab"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -569,21 +550,23 @@ getRideTypeColor variant = case getCategorizedVariant variant of
 
 getCategorizedVariant :: Maybe String -> String
 getCategorizedVariant variant = case variant of
-  Just var -> case var of
-                "SEDAN"  -> "Sedan"
-                "HATCHBACK"  -> "Hatchback"
-                "TAXI_PLUS"  -> "AC Taxi"
-                "SUV" -> "Suv"
-                "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                "BIKE" -> "Bike Taxi"
-                "AMBULANCE_TAXI" -> "Ambulance_Taxi"
-                "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
-                "AMBULANCE_AC" -> "Ambulance_AC" 
-                "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
-                "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
-                "SUV_PLUS" -> "XL Plus"
-                "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
-                _ -> var
+  Just var -> 
+    case var of
+      "SEDAN"  -> "Sedan"
+      "HATCHBACK"  -> "Hatchback"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "Suv"
+      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      "BIKE" -> "Bike Taxi"
+      "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+      "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+      "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
+      "SUV_PLUS" -> "XL Plus"
+      "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
+      "HERITAGE_CAB" -> "Heritage Cab"
+      _ -> var
   Nothing -> ""
 
 
@@ -648,6 +631,8 @@ getVehicleVariantImage variant =
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
+      "HERITAGE_CAB" -> fetchImage FF_COMMON_ASSET "ny_ic_heritage_cab_side"
+      "HERITAGE_CAB_TIER" -> fetchImage FF_COMMON_ASSET "ny_ic_heritage_cab_side"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 isKeralaCity :: String -> Boolean 
@@ -1005,6 +990,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
   SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
   SA.EV_AUTO_RICKSHAW -> "EV_AUTO_RICKSHAW"
+  SA.HERITAGE_CAB_TIER -> "HERITAGE_CAB"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
@@ -1104,6 +1090,7 @@ driverVehicleToVechicleServiceTier vehicle =
         "AUTO_RICKSHAW"  ->  SA.AUTO_RICKSHAW
         "XL Cab" -> SA.SUV_TIER
         "XL Plus" -> SA.SUV_PLUS_TIER
+        "Heritage Cab" -> SA.HERITAGE_CAB_TIER
         _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
