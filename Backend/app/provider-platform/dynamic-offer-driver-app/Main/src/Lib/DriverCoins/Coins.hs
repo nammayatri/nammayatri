@@ -25,6 +25,7 @@ module Lib.DriverCoins.Coins
     sendCoinsNotificationV2,
     safeIncrBy,
     getValidRideCountByDriverIdKey,
+    incrementMetroRideCount,
     EventFlow,
   )
 where
@@ -160,11 +161,12 @@ hEndRide driverId merchantId merchantOpCityId isDisabled _ride metroRideType eve
         [ pure isDisabled
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
-    DCT.MetroRideCompleted mRideType -> do
-      logDebug $ "MetroRideEvent check DB value : " <> show mRideType <> ". Value at rideEnd : " <> show metroRideType
+    DCT.MetroRideCompleted mRideType maybeCount -> do
+      metroRideCount <- fromMaybe 0 <$> getMetroRideCountByDriverIdKey driverId mRideType
+      logDebug $ "Metro Ride Type DB - " <> show mRideType <> "and count - " <> show maybeCount <> "Metro Ride Count from Redis - " <> show metroRideCount
+      let conditions = [pure (mRideType == metroRideType)] ++ maybe [] (\cnt -> [pure (metroRideCount == cnt)]) maybeCount
       runActionWhenValidConditions
-        [ pure (mRideType == metroRideType)
-        ]
+        conditions
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
     _ -> pure 0
 
@@ -231,7 +233,7 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
   CHistory.updateCoinEvent driverCoinEvent
   when (numCoins > 0) $ do
     case eventFunction of
-      DCT.MetroRideCompleted _ -> do
+      DCT.MetroRideCompleted _ _ -> do
         -- case match to be removed after next deployment
         logDebug "metro notification case for coins"
         sendCoinsNotificationV3 merchantOpCityId driverId numCoins eventFunction
@@ -240,10 +242,10 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
 
 -- This function is to be removed after next apk deployment
 sendCoinsNotificationV3 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
-sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompleted metroRideType) =
+sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompleted metroRideType _) =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = (DCT.MetroRideCompleted metroRideType)}
+        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = (DCT.MetroRideCompleted metroRideType Nothing)}
      in MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =
@@ -334,3 +336,21 @@ safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> 
 safeIncrBy key value driverId timeDiffFromUtc = do
   _ <- getCoinsByDriverId driverId timeDiffFromUtc
   void $ Hedis.withCrossAppRedis $ Hedis.incrby key value
+
+mkMetroRideCountByDriverIdKey :: Id DP.Person -> DCT.MetroRideType -> Text
+mkMetroRideCountByDriverIdKey driverId metroRideType = "DriverMetroRideCount:DriverId:" <> driverId.getId <> ":MetroRideType:" <> show metroRideType
+
+getMetroRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> m (Maybe Int)
+getMetroRideCountByDriverIdKey driverId metroRideType = Hedis.withCrossAppRedis $ Hedis.get (mkMetroRideCountByDriverIdKey driverId metroRideType)
+
+setMetroRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> Int -> Int -> m ()
+setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod count = do
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkMetroRideCountByDriverIdKey driverId metroRideType) expirationPeriod
+
+incrementMetroRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> Int -> Int -> m ()
+incrementMetroRideCount driverId metroRideType expirationPeriod incrementValue = do
+  metroRideCountKeyExists <- getMetroRideCountByDriverIdKey driverId metroRideType
+  case metroRideCountKeyExists of
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral incrementValue)
+    Nothing -> setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod incrementValue

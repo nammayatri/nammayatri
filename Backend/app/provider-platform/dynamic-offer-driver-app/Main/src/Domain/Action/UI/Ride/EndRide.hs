@@ -446,6 +446,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       let validRideTaken = isValidRide updRide
           metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
       logDebug $ "MetroRideType : " <> show metroRideType
+      when (DCT.isMetroRideType metroRideType) $ do
+        DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant

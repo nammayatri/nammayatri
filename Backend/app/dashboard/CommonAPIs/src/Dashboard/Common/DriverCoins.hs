@@ -22,8 +22,10 @@ where
 import Dashboard.Common as ReExport
 import Data.Aeson
 import qualified Data.List as List
+import qualified Data.Vector as V
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
+import qualified Text.Show (show)
 
 data CoinMessage
   = CoinAdded
@@ -50,12 +52,31 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2 CoinMessage
-  | MetroRideCompleted MetroRideType
+  | MetroRideCompleted MetroRideType (Maybe Kernel.Prelude.Int)
   | RidesCompleted Kernel.Prelude.Int
   | QuizQuestionCompleted
   | BonusQuizCoins
-  deriving stock (Show, Generic, Eq, Ord)
+  deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToSchema, ToJSON)
+
+instance Show DriverCoinsFunctionType where
+  show (MetroRideCompleted rideType Nothing) =
+    "MetroRideCompleted " <> show rideType
+  show (MetroRideCompleted rideType (Just coins)) =
+    "MetroRideCompleted " <> show rideType <> " " <> show coins
+  show OneOrTwoStarRating = "OneOrTwoStarRating"
+  show FiveStarRating = "FiveStarRating"
+  show BookingCancellation = "BookingCancellation"
+  show CustomerReferral = "CustomerReferral"
+  show DriverReferral = "DriverReferral"
+  show PurpleRideCompleted = "PurpleRideCompleted"
+  show LeaderBoardTopFiveHundred = "LeaderBoardTopFiveHundred"
+  show TrainingCompleted = "TrainingCompleted"
+  show BulkUploadFunction = "BulkUploadFunction"
+  show QuizQuestionCompleted = "QuizQuestionCompleted"
+  show BonusQuizCoins = "BonusQuizCoins"
+  show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
+  show (RidesCompleted n) = "RidesCompleted " <> show n
 
 -- These instance are for backward compatibility of the Old Events stored in the DB.
 instance Read DriverCoinsFunctionType where
@@ -123,9 +144,21 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "BulkUploadFunctionV2 " r,
                    (msg, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (MetroRideCompleted v1, r2)
-                 | r1 <- stripPrefix "MetroRideCompleted" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
+            ++ [ (MetroRideCompleted ToMetro (Just coins), r2)
+                 | r1 <- stripPrefix "MetroRideCompleted ToMetro " r,
+                   (coins, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MetroRideCompleted ToMetro Nothing, r1)
+                 | r1 <- stripPrefix "MetroRideCompleted ToMetro" r,
+                   r1 == ""
+               ]
+            ++ [ (MetroRideCompleted FromMetro (Just coins), r2)
+                 | r1 <- stripPrefix "MetroRideCompleted FromMetro " r,
+                   (coins, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MetroRideCompleted FromMetro Nothing, r1)
+                 | r1 <- stripPrefix "MetroRideCompleted FromMetro" r,
+                   r1 == ""
                ]
             ++ [ (RidesCompleted v1, r2)
                  | r1 <- stripPrefix "RidesCompleted " r,
@@ -162,11 +195,31 @@ instance FromJSON DriverCoinsFunctionType where
       "LeaderBoardTopFiveHundred" -> pure LeaderBoardTopFiveHundred
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction
-      "MetroRideCompleted" -> MetroRideCompleted <$> obj .: "contents"
       "QuizQuestionCompleted" -> pure QuizQuestionCompleted
       "BonusQuizCoins" -> pure BonusQuizCoins
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
+      "MetroRideCompleted" -> do
+        contents <- obj .: "contents"
+        case contents of
+          -- Newer format: ["FromMetro", 5] or ["ToMetro"]
+          Array arr' -> case V.toList arr' of
+            [String rideType, Number rides] -> pure $ MetroRideCompleted (parseRideType rideType) (Just (round rides))
+            [String rideType] -> pure $ MetroRideCompleted (parseRideType rideType) Nothing
+            _ -> fail "Expected array of length 1 or 2 for 'MetroRideCompleted'"
+          -- Older format: "FromMetro"
+          String rideType -> pure $ MetroRideCompleted (parseRideType rideType) Nothing
+          _ -> fail "Unsupported format for 'MetroRideCompleted' contents"
       _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag
+
+parseRideType :: Text -> MetroRideType
+parseRideType "ToMetro" = ToMetro
+parseRideType "FromMetro" = FromMetro
+parseRideType _ = None
+
+isMetroRideType :: MetroRideType -> Bool
+isMetroRideType ToMetro = True
+isMetroRideType FromMetro = True
+isMetroRideType _ = False
 
 $(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
