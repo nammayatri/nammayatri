@@ -500,6 +500,23 @@
         "type": "github"
       }
     },
+    "cryptostore": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1722077847,
+        "narHash": "sha256-MMbzjW5BLor3MJEDasOZDbY0elXv7Wse6GJ9HSelx4o=",
+        "owner": "shivaraj-bh",
+        "repo": "cryptostore",
+        "rev": "79f174c7fa7166076827f15a04df9d9e24aafa9d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "shivaraj-bh",
+        "ref": "use_crypton",
+        "repo": "cryptostore",
+        "type": "github"
+      }
+    },
     "devenv": {
       "inputs": {
         "flake-compat": [
@@ -2944,6 +2961,7 @@
     },
     "passetto": {
       "inputs": {
+        "cryptostore": "cryptostore",
         "flake-parts": [
           "common",
           "flake-parts"
@@ -2965,16 +2983,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1705397217,
-        "narHash": "sha256-FZtmvLJCCVlNvqHOJ+nUaywSUFgzDAVo6MHNglu4J8A=",
+        "lastModified": 1722080814,
+        "narHash": "sha256-l42/tDSf2qe82ah6XKveinKkVgRs11bmyendBEfYX8Y=",
         "owner": "nammayatri",
         "repo": "passetto",
-        "rev": "5381386a1892f2f0d46a59ba144f1b2a624a8920",
+        "rev": "a1e0a291115125de01458f8830f781b868bf5eb4",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "nixify",
+        "ref": "use-crypton",
         "repo": "passetto",
         "type": "github"
       }
