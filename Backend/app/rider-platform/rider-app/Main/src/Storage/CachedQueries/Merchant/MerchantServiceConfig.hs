@@ -46,6 +46,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantServiceConfig as Queries
+import qualified Utils.Common.JWT.Config as GW
 
 -- create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 -- create = Queries.create
@@ -128,6 +129,8 @@ cacheMerchantServiceConfig merchantServiceConfig = do
       MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
         MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
         MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
+      WalletServiceConfig walletCfg -> case walletCfg of
+        GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

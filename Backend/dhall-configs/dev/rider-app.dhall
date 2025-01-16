@@ -360,4 +360,5 @@ in  { esqDBCfg
     , nyGatewayUrl = common.nyGatewayUrl
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , googleSAPrivateKey = sec.googleSAPrivateKey
     }

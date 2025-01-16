@@ -134,6 +134,7 @@ dependencies:
   - resource-pool
   - jwt
   - insert-ordered-containers
+  - mtl
 
 ghc-options:
   - -fwrite-ide-info

@@ -37,6 +37,8 @@ module SharedLogic.MessageBuilder
     BuildDeliveryMessageReq (..),
     DeliveryMessageRequestType (..),
     buildDeliveryDetailsMessage,
+    buildFRFSTicketCancelMessage,
+    BuildFRFSTicketCancelMessageReq (..),
   )
 where
 
@@ -223,6 +225,35 @@ buildFRFSTicketBookedMessage pOrgId req = do
         msg
           & T.replace (templateText "TICKET_PLURAL") ticketPlural
           & T.replace (templateText "URL") url
+
+data BuildFRFSTicketCancelMessageReq = BuildFRFSTicketCancelMessageReq
+  { countOfTickets :: Int,
+    bookingId :: Id DFTB.FRFSTicketBooking
+  }
+  deriving (Generic, Show)
+
+buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketCancelMessageReq -> m SmsReqBuilder
+buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKING_CANCELLED))
+  smsPOCfg <- do
+    pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
+    DPOC.getTicketSMSConfig pOrgCfg.config
+  let ticketPlural = bool "tickets" "ticket" $ req.countOfTickets == 1
+      baseUrl = smsPOCfg.publicUrl & T.replace (templateText "FRFS_BOOKING_ID") req.bookingId.getId
+      shortUrlReq =
+        UrlShortner.GenerateShortUrlReq
+          { baseUrl,
+            customShortCode = Nothing,
+            shortCodeLength = Nothing,
+            expiryInHours = Nothing,
+            urlCategory = UrlShortner.METRO_TICKET_BOOKING
+          }
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  let url = res.shortUrl
+  logDebug $ "Generated short url: " <> url
+  buildSendSmsReq merchantMessage [("URL", url), ("TICKET_PLURAL", ticketPlural)]
 
 shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
 shortenTrackingUrl url = do

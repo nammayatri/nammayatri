@@ -23,7 +23,6 @@ import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.PartnerOrganizationFRFS as DPOFRFS
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import qualified Domain.Types.PartnerOrgStation as DPOS
 import Domain.Types.PartnerOrganization
 import Environment
 import EulerHS.Prelude
@@ -54,9 +53,9 @@ type API =
                   :> Post '[JSON] DPOFRFS.GetFareResp
                   :<|> "getConfig"
                     :> ( "fromStation"
-                           :> Capture "fromGMMStationId" (Id DPOS.PartnerOrgStation)
+                           :> Capture "fromGMMStationId" Text
                            :> "toStation"
-                           :> Capture "toGMMStationId" (Id DPOS.PartnerOrgStation)
+                           :> Capture "toGMMStationId" Text
                            :> Get '[JSON] DPOFRFS.GetConfigResp
                        )
               )
@@ -119,7 +118,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
     buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
 
-getConfigByStationIds :: PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> FlowHandler DPOFRFS.GetConfigResp
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do
   void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
 

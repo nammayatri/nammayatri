@@ -153,7 +153,7 @@ getFrfsStations ::
   ) ->
   Kernel.Prelude.Maybe Context.City ->
   Kernel.Prelude.Maybe Text ->
-  Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) ->
+  Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
@@ -497,6 +497,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 lineColor = mbSearch >>= (.lineColor),
                 lineColorCode = mbSearch >>= (.lineColorCode),
                 startTime = Just now, -- TODO
+                googleWalletJWTUrl = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -519,6 +520,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
           tickets = [],
           discountedTickets = booking.discountedTickets,
           eventDiscountAmount = booking.eventDiscountAmount,
+          googleWalletJWTUrl = booking.googleWalletJWTUrl,
           ..
         }
 
@@ -788,6 +790,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        googleWalletJWTUrl = booking.googleWalletJWTUrl,
         ..
       }
 

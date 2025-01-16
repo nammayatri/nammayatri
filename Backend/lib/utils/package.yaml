@@ -62,6 +62,7 @@ dependencies:
   - exceptions
   - hspec
   - http-client
+  - http-client-tls
   - lens
   - servant
   - servant-client
@@ -111,6 +112,8 @@ dependencies:
   - base64-bytestring
   - http-conduit
   - yudhishthira
+  - aeson-casing
+  - jwt
 
 ghc-options:
   - -fwrite-ide-info

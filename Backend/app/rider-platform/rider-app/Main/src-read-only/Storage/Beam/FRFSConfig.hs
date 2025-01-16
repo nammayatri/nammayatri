@@ -21,6 +21,7 @@ data FRFSConfigT f = FRFSConfigT
     customEndTime :: B.C f Kernel.Prelude.Text,
     discount :: B.C f Kernel.Prelude.Int,
     freeTicketInterval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    googleWalletClassName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isCancellationAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEventOngoing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFreeTicketCashback :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -29,6 +29,8 @@ library
       Utils.Common.Cac.UtilsTH
       Utils.Common.CacUtils
       Utils.Common.Events
+      Utils.Common.JWT.Config
+      Utils.Common.JWT.TransitClaim
   other-modules:
       Paths_utils
   hs-source-dirs:
@@ -73,6 +75,7 @@ library
       JuicyPixels
     , JuicyPixels-extra
     , aeson
+    , aeson-casing
     , async
     , base >=4.7 && <5
     , base64-bytestring
@@ -98,8 +101,10 @@ library
     , haskell-cac
     , hspec
     , http-client
+    , http-client-tls
     , http-conduit
     , http-types
+    , jwt
     , lens
     , location-updates
     , mobility-core

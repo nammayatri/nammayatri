@@ -38,6 +38,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     frequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),

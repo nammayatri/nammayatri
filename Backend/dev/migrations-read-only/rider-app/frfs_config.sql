@@ -38,3 +38,8 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN bus_station_ttl integer  default 18
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN straight_line_distance integer  default 5000;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN google_wallet_class_name text  default 'namma_yatri_metro';

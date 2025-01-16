@@ -154,6 +154,7 @@ data AppCfg = AppCfg
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
@@ -249,6 +250,7 @@ data AppEnv = AppEnv
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }

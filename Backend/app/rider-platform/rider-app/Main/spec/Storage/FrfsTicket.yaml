@@ -253,6 +253,7 @@ FRFSTicketBooking:
     bppDelayedInterest : Maybe Int
     lineColor : Maybe Text
     lineColorCode : Maybe Text
+    googleWalletJWTUrl : Maybe Text    
     frequency : Maybe Int
     journeyLegOrder : Maybe Int
     journeyId: Maybe (Id Journey)
@@ -372,6 +373,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -566,6 +571,7 @@ FRFSConfig:
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
     radius: Meters
+    googleWalletClassName: Maybe Text
 
   beamType:
     isCancellationAllowed: Maybe Bool
@@ -589,6 +595,7 @@ FRFSConfig:
     busStationTtl: "1800"
     straightLineDistance: "5000"
     radius: "3000"
+    googleWalletClassName: "'namma_yatri_metro'"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
