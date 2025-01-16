@@ -684,7 +684,7 @@ apis:
             response:
               type: RouteDetails
 
-  - GET:
+  - POST:
       endpoint: /dashboard/fleet/track/driver
       auth: ApiAuthV2
       request:
@@ -692,7 +692,7 @@ apis:
       response:
         type: TrackDriverLocationsRes
       helperApi:
-        - GET:
+        - POST:
             endpoint: /dashboard/fleet/track/driver/{fleetOwnerId}
             auth: ApiAuthV2
             params:

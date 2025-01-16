@@ -42,7 +42,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetTripPlanner,
     getDriverFleetTripTransactions,
     postDriverFleetAddDriverBusRouteMapping,
-    getDriverDashboardFleetTrackDriver,
+    postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
   )
 where
@@ -290,11 +290,11 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity apiTokenInfo req 
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddDriverBusRouteMapping)) req{fleetOwnerId = Just fleetOwnerId}
 
-getDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
-getDriverDashboardFleetTrackDriver merchantShortId opCity apiTokenInfo req = do
+postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
+postDriverDashboardFleetTrackDriver merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverDashboardFleetTrackDriver) fleetOwnerId req
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetTrackDriver) fleetOwnerId req
 
 getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Flow Common.RouteDetails
 getDriverFleetWmbRouteDetails merchantShortId opCity apiTokenInfo routeCode = do

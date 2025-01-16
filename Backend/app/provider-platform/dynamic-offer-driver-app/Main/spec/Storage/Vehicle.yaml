@@ -65,6 +65,11 @@ Vehicle:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -80,17 +85,9 @@ Vehicle:
       kvFunction: updateWithKV
       params: [model]
       where: driverId
-    updateVehicleVariant:
-      kvFunction: updateWithKV
-      params: [variant, category]
-      where: driverId
     updateSelectedServiceTiers:
       kvFunction: updateOneWithKV
       params: [selectedServiceTiers]
-      where: driverId
-    updateVariantAndServiceTiers:
-      kvFunction: updateOneWithKV
-      params: [variant, selectedServiceTiers, category]
       where: driverId
     updateAirConditioned:
       kvFunction: updateWithKV

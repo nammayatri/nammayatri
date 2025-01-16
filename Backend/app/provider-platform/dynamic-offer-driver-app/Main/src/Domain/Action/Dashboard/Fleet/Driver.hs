@@ -42,7 +42,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetTripPlanner,
     getDriverFleetTripTransactions,
     postDriverFleetAddDriverBusRouteMapping,
-    getDriverDashboardFleetTrackDriver,
+    postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
   )
 where
@@ -111,6 +111,7 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
@@ -1497,7 +1498,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
-      QDriverInfo.updateOnboardingVehicleCategory (Just req_.driverOnboardingVehicleCategory) person.id
+      QDriverInfoInternal.updateOnboardingVehicleCategory (Just req_.driverOnboardingVehicleCategory) person.id
       WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
@@ -1550,8 +1551,8 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
 
 ---------------------------------------------------------------------
-getDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
-getDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
+postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
+postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
   void $
     mapM
       ( \driverId ->
