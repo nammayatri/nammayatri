@@ -453,3 +453,6 @@ verySoftOrange  = "#feebb9"
 
 seaGreen :: Color
 seaGreen = "#288B43"
+
+lightMint :: Color
+lightMint = "1A53BB6F"

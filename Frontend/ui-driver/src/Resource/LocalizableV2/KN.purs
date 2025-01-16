@@ -1803,4 +1803,5 @@ getKn =
     , scan_the_qr_to_start_new_ride : "ಹೊಸ ಪ್ರಯಾಣ ಪ್ರಾರಂಭಿಸಲು ಬಸ್ಸಿನಲ್ಲಿ ಅಂಟಿಸಿದ QR ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ"
     , duty_started_depot_manager_will_assign_ride : "ನಿಮ್ಮ ಹುದ್ದೆ ಪ್ರಾರಂಭವಾಗಿದೆ. ಡಿಪೋ ನಿರ್ವಾಹಕರು ಶೀಘ್ರದಲ್ಲೇ ನಿಮಗೆ ಪ್ರಯಾಣವನ್ನು ಹಂಚುತ್ತಾರೆ"
     , introducing_yatri_sathi_bus_tracking : "ಯಾತ್ರಿಸಾಥಿ ಬಸ್ ಟ್ರಾಕಿಂಗ್ ಪರಿಚಯಿಸಲಾಗಿದೆ"
+    , on_ride : "ಪ್ರಯಾಣದಲ್ಲಿ"
     }

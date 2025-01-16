@@ -1803,4 +1803,5 @@ getHi =
     , scan_the_qr_to_start_new_ride : "नई राइड शुरू करने के लिए बस में चिपका हुआ QR स्कैन करें"
     , duty_started_depot_manager_will_assign_ride : "आपकी ड्यूटी शुरू हो गई है। डिपो मैनेजर जल्द ही आपको एक राइड आवंटित करेंगे"
     , introducing_yatri_sathi_bus_tracking : "यात्री साथी बस ट्रैकिंग पेश कर रहे हैं"
+    , on_ride : "यात्रा पर"
     }

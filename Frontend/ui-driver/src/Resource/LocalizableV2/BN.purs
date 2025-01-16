@@ -1803,4 +1803,5 @@ getBn =
     , scan_the_qr_to_start_new_ride : "নতুন রাইড শুরু করতে বাসে পেস্ট করা QR স্ক্যান করুন"
     , duty_started_depot_manager_will_assign_ride : "আপনার ডিউটি শুরু হয়েছে। শীঘ্রই ডিপো ম্যানেজার আপনাকে একটি রাইড বরাদ্দ করবেন"
     , introducing_yatri_sathi_bus_tracking : "যাত্রী সাথী বাস ট্র্যাকিং প্রবর্তন করা হচ্ছে"
+    , on_ride : "যাত্রায়"
     }

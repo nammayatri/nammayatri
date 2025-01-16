@@ -1803,4 +1803,5 @@ getTa =
     , scan_the_qr_to_start_new_ride : "புதிய பயணத்தைத் தொடங்க பஸ்சில் ஒட்டிய QR ஐ ஸ்கேன் செய்யவும்"
     , duty_started_depot_manager_will_assign_ride : "உங்கள் கடமை தொடங்கப்பட்டது. டிப்போ மேலாளர் விரைவில் உங்களுக்கு ஒரு பயணம் ஒதுக்குவார்"
     , introducing_yatri_sathi_bus_tracking : "யாத்ரி சாதி பஸ் டிராக்கிங் அறிமுகமாகிறது"
+    , on_ride : "பயணத்தில்"
     }
