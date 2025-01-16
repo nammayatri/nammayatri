@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
 import Environment
-import EulerHS.Prelude hiding (all, find, forM_, id, map)
+import EulerHS.Prelude hiding (all, find, forM_, id, map, sum)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -32,9 +32,7 @@ import Kernel.Utils.Common
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
-import Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import Storage.Queries.Journey as QJourney
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -51,10 +49,14 @@ postMultimodalInfo (_personId, _merchantId) journeyId req = do
     addAllLegs journeyId req.legsReq
     journey <- JM.getJourney journeyId
     legs <- JM.getAllLegsInfo journeyId
+    let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
+    let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
+    let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
     return $
       ApiTypes.JourneyInfoResp
         { estimatedDuration = journey.estimatedDuration,
-          estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
+          estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+          estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
           estimatedDistance = journey.estimatedDistance,
           legs
         }
@@ -83,10 +85,14 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
+  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
+  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
+  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   return $
     ApiTypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
-        estimatedFare = mkPriceAPIEntity <$> journey.estimatedFare,
+        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
         estimatedDistance = journey.estimatedDistance,
         legs
       }
@@ -129,18 +135,7 @@ getMultimodalSwitchTaxi ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
-  searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
-  journeyLegInfo <- searchRequest.journeyLegInfo & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
-  oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
-  oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
-  newEstimate <- QEstimate.findById estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
   QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
-  let journeyId = journeyLegInfo.journeyId
-  journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
-  initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
-  price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
-  newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
-  QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalSwitch ::

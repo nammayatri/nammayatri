@@ -29,3 +29,11 @@ ALTER TABLE atlas_app.journey ADD COLUMN estimated_max_fare double precision ;
 
 ALTER TABLE atlas_app.journey ADD COLUMN start_time timestamp with time zone ;
 ALTER TABLE atlas_app.journey ADD COLUMN end_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_app.journey ALTER COLUMN legs_done DROP NOT NULL;
+--- Drop section ends. Please check before running ---

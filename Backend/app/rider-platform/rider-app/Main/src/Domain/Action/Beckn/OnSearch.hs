@@ -268,7 +268,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
       whenJust mbRequiredEstimate $ \requiredEstimate ->
-        SLCF.createFares searchRequest.journeyLegInfo requiredEstimate.estimatedTotalFare (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
+        SLCF.createFares searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
 
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}

@@ -28,7 +28,8 @@ types:
 
   JourneyInfoResp:
     estimatedDuration: Maybe Seconds
-    estimatedFare: Maybe PriceAPIEntity
+    estimatedMinFare: PriceAPIEntity
+    estimatedMaxFare: PriceAPIEntity
     estimatedDistance: Distance
     legs: [LegInfo]
 

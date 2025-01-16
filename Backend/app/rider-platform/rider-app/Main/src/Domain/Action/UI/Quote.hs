@@ -203,8 +203,8 @@ data GetQuotesRes = GetQuotesRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data JourneyData = JourneyData
-  { totalMinFare :: Maybe HighPrecMoney,
-    totalMaxFare :: Maybe HighPrecMoney,
+  { totalMinFare :: HighPrecMoney,
+    totalMaxFare :: HighPrecMoney,
     duration :: Maybe Seconds,
     distance :: Distance,
     modes :: [DTrip.MultimodalTravelMode],
@@ -381,10 +381,12 @@ getJourneys searchRequest = do
                     duration = journeyLeg.duration,
                     distance = journeyLeg.distance
                   }
+          let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegsFromOtp
+          let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegsFromOtp
           return $
             JourneyData
-              { totalMinFare = journey.estimatedMinFare,
-                totalMaxFare = journey.estimatedMaxFare,
+              { totalMinFare = estimatedMinFare,
+                totalMaxFare = estimatedMaxFare,
                 modes = journey.modes,
                 journeyLegs,
                 startTime = journey.startTime,

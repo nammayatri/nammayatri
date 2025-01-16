@@ -37,7 +37,8 @@ data JourneyInfoReq = JourneyInfoReq {legsReq :: [JourneyLegsReq]}
 data JourneyInfoResp = JourneyInfoResp
   { estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
+    estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
     legs :: [Lib.JourneyModule.Types.LegInfo]
   }
   deriving stock (Generic)

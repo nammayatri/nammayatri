@@ -176,7 +176,8 @@ data LegInfo = LegInfo
     order :: Int,
     status :: JourneyLegStatus,
     estimatedDuration :: Maybe Seconds,
-    estimatedFare :: Maybe PriceAPIEntity,
+    estimatedMinFare :: Maybe PriceAPIEntity,
+    estimatedMaxFare :: Maybe PriceAPIEntity,
     estimatedDistance :: Maybe Distance,
     legExtraInfo :: LegExtraInfo,
     merchantId :: Id DM.Merchant,
@@ -230,7 +231,6 @@ data BusLegExtraInfo = BusLegExtraInfo
 
 data UpdateJourneyReq = UpdateJourneyReq
   { fare :: Maybe Price,
-    legsDone :: Maybe Int,
     modes :: Maybe [DTrip.MultimodalTravelMode],
     totalLegs :: Maybe Int,
     updatedAt :: UTCTime
@@ -298,7 +298,8 @@ mkLegInfoFromBookingAndRide booking mRide = do
         startTime = booking.startTime,
         order = 0, -- booking.journeyLegOrder, FIX THIS @hkmangla
         estimatedDuration = booking.estimatedDuration,
-        estimatedFare = Just $ mkPriceAPIEntity booking.estimatedFare,
+        estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
+        estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedDistance = booking.estimatedDistance,
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
@@ -318,11 +319,11 @@ mkLegInfoFromBookingAndRide booking mRide = do
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  mbEstimatedFare <-
+  mbFareRange <-
     case journeyLegInfo'.pricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
-        return $ mkPriceAPIEntity <$> (mbEst <&> (.estimatedFare))
+        return $ mbEst <&> (.totalFareRange)
       Nothing -> return Nothing
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   return $
@@ -335,7 +336,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         startTime = startTime,
         order = journeyLegInfo'.journeyLegOrder,
         estimatedDuration = estimatedRideDuration,
-        estimatedFare = mbEstimatedFare,
+        estimatedMinFare = mkPriceAPIEntity <$> (mbFareRange <&> (.minFare)),
+        estimatedMaxFare = mkPriceAPIEntity <$> (mbFareRange <&> (.maxFare)),
         estimatedDistance = distance,
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
@@ -377,7 +379,8 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         startTime = startTime,
         order = journeyLegInfo'.journeyLegOrder,
         estimatedDuration = estimatedDuration,
-        estimatedFare = Nothing,
+        estimatedMinFare = Nothing,
+        estimatedMaxFare = Nothing,
         estimatedDistance = Just estimatedDistance,
         merchantId = merchantId,
         merchantOperatingCityId,
@@ -419,7 +422,8 @@ mkLegInfoFromFrfsBooking booking = do
         startTime = startTime,
         order = legOrder,
         estimatedDuration = Nothing, -------------- TODO : Should be changed
-        estimatedFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
         estimatedDistance = Nothing, --------------- TODO : Should be changed
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
@@ -474,7 +478,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
         estimatedDuration = Nothing, -- check with hemant if we can store estimatedDuration in frfsSearch table  --journeyLeg.duration,
-        estimatedFare = mbEstimatedFare,
+        estimatedMinFare = mbEstimatedFare,
+        estimatedMaxFare = mbEstimatedFare,
         estimatedDistance = Nothing, -- check with hemant if we can store estimatedDistance in frfsSearch table --journeyLeg.distance,
         merchantId = merchantId,
         merchantOperatingCityId,
@@ -509,8 +514,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [GetFareResponse] -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
-mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId totalFares legs maximumWalkDistance = do
+mkJourney :: MonadFlow m => Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
+mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
   now <- getCurrentTime
@@ -519,10 +524,7 @@ mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parent
       { convenienceCost = 0,
         estimatedDistance = estimatedDistance,
         estimatedDuration = Just estiamtedDuration,
-        estimatedFare = Nothing,
-        fare = Nothing,
         id = journeyId,
-        legsDone = 0,
         totalLegs = journeyLegsCount,
         modes = modes,
         searchRequestId = parentSearchId,
@@ -531,9 +533,7 @@ mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parent
         endTime,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
-        updatedAt = now,
-        estimatedMinFare = Just $ sumHighPrecMoney $ totalFares <&> (.estimatedMinFare),
-        estimatedMaxFare = Just $ sumHighPrecMoney $ totalFares <&> (.estimatedMaxFare)
+        updatedAt = now
       }
 
 mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> GetFareResponse -> m DJL.JourneyLeg

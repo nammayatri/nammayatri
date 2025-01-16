@@ -22,18 +22,13 @@ Journey:
   fields:
     id: Id Journey
     searchRequestId: Id SearchRequest
-    fare: Maybe Price
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
-    estimatedFare: Maybe Price
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     modes: "[MultimodalTravelMode]"
     convenienceCost: Int
     totalLegs: Int
-    legsDone: Int
-    estimatedMinFare: Maybe HighPrecMoney
-    estimatedMaxFare: Maybe HighPrecMoney
 
   beamFields:
     fare:
@@ -43,18 +38,10 @@ Journey:
       estimatedDistance: HighPrecDistance
       distanceUnit: DistanceUnit
 
-  beamType:
-    estimatedFare: Maybe HighPrecMoney
-
   fromTType:
-    fare: ((Kernel.Types.Common.mkPrice currency) <$> fare)|E
-    estimatedFare: ((Kernel.Types.Common.mkPrice currency) <$> estimatedFare)|E
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
 
   toTType:
-    fare: (Kernel.Prelude.fmap (.amount))|I
-    currency: (Kernel.Prelude.fmap (.currency))|I
-    estimatedFare: (Kernel.Prelude.fmap (.amount))|I
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
 
@@ -63,14 +50,6 @@ Journey:
     searchRequestId: "!SecondaryKey"
 
   queries:
-    updateEstimatedFare:
-      kvFunction: updateWithKV
-      params: [estimatedFare]
-      where: id
-    updateNumberOfLegs:
-      kvFunction: updateWithKV
-      params: [legsDone]
-      where: id
     findBySearchId:
         kvFunction: findAllWithKV
         where: searchRequestId
