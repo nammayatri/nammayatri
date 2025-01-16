@@ -74,6 +74,8 @@ FRFSSearch:
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
 
+  disableKVQueryConstraints: True  
+
   queries:
     getTicketPlaces:
       kvFunction: findAllWithKV
@@ -110,6 +112,8 @@ Station:
   constraints:
     id: PrimaryKey
     code: SecondaryKey
+
+  disableKVQueryConstraints: True  
 
   fromTType:
     timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
@@ -295,6 +299,8 @@ FRFSTicketBooking:
     quoteId: SecondaryKey
     journeyId: "!SecondaryKey"
 
+  disableKVQueryConstraints: True  
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -405,6 +411,8 @@ FRFSTicket:
     id: PrimaryKey
     frfsTicketBookingId: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -452,6 +460,8 @@ FRFSTicketBookingPayment:
     id: PrimaryKey
     frfsTicketBookingId: SecondaryKey
     paymentOrderId: SecondaryKey
+
+  disableKVQueryConstraints: True  
 
   queries:
     findById:
@@ -504,6 +514,8 @@ FRFSRecon:
     ticketStatus: Maybe FRFSTicketStatus
     providerId: Text
     providerName: Text
+
+  disableKVQueryConstraints: True
 
   queries:
     updateTOrderValueAndSettlementAmountById:
@@ -643,6 +655,8 @@ Route:
     id: PrimaryKey
     code: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findByRouteCode:
       kvFunction: findOneWithKV
@@ -693,6 +707,7 @@ RouteStopMapping:
   constraints:
     routeCode: PrimaryKey
     stopCode: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
@@ -723,6 +738,7 @@ FRFSRouteFareProduct:
     timeBounds: TimeBound
   default:
     timeBounds: "'Unbounded'"
+  disableKVQueryConstraints: True  
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
@@ -769,6 +785,7 @@ RouteStopFare:
     routeCode: PrimaryKey
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
@@ -798,6 +815,7 @@ FRFSStageFare:
   constraints:
     farePolicyId: PrimaryKey
     stage: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByFarePolicyId:
       kvFunction: findAllWithKV
@@ -841,6 +859,7 @@ FRFSTicketDiscount:
       enum: "FixedAmount HighPrecMoney, Percentage Double"
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByCodeAndVehicleAndCity:
       kvFunction: findOneWithKV
@@ -883,6 +902,7 @@ RouteTripMapping:
     updatedAt: UTCTime
   constraints:
     tripCode: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllTripIdByRouteCode:
       kvFunction: findAllWithKV

@@ -42,6 +42,7 @@ Suspect:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   types:
     FlaggedBy:
       partnerName : Maybe Text
@@ -151,6 +152,8 @@ SuspectFlagRequest:
   constraints:
     id: PrimaryKey
 
+  disableKVQueryConstraints: True
+
   types:
     AdminApproval:
       enum: "Pending,Approved,Rejected"
@@ -214,6 +217,8 @@ FlaggedCategory:
   constraints:
     id: PrimaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findByName:
       kvFunction: findOneWithKV
@@ -240,6 +245,7 @@ MerchantConfigs:
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   types:
     WebHookHeaders:
       key: Text
@@ -280,6 +286,7 @@ Notification :
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   types:
     NotificationCategory:
       enum: "ADMIN_CHANGE_SUSPECT_STATUS,FLAG_REQUEST_UPLOAD,CHANGE_REQUEST_PARTNER_ADMIN,FLAG_REQUEST_APPROVED,PARTNER_FLAGGED_SUSPECT,FLAG_REQUEST_REJECTED,ADMIN_FLAGGED_SUSPECT,ADMIN_CHARGED_SUSPECT,ADMIN_CLEAN_SUSPECT"
@@ -324,6 +331,8 @@ SuspectStatusChangeRequest:
     Tools.Auth: lib-dashboard
     Environment: lib-dashboard
 
+  disableKVQueryConstraints: True
+
   queries:
 
     findBySuspectIdAndMerchantId:
@@ -362,6 +371,7 @@ PortalConfigs :
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByConfigName:
       kvFunction: findOneWithKV

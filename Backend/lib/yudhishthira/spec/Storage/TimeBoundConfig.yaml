@@ -18,6 +18,8 @@ TimeBoundConfig:
     merchantOperatingCityId: PrimaryKey
     timeBoundDomain: PrimaryKey
 
+  disableKVQueryConstraints: True
+
   queries:
     findByCityAndDomain:
       kvFunction: findAllWithKV

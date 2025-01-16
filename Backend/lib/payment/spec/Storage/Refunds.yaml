@@ -27,6 +27,8 @@ Refunds:
     refund_amount: double precision
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
+  
+  disableKVQueryConstraints: True
 
   queries:
     findById:
