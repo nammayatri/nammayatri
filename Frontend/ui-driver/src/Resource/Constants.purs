@@ -105,6 +105,7 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   "Scheduled" -> ST.Scheduled
+  "NotTriggered" -> ST.NotTriggered
   _ -> ST.NoStatus
 
 transformDocText :: ST.RegisterationStep -> String
@@ -161,26 +162,34 @@ transformVehicleType vehicletype =
      Just "CAR" -> Just ST.CarCategory
      Just "AUTO_CATEGORY" -> Just ST.AutoCategory
      Just "MOTORCYCLE" -> Just ST.BikeCategory
+     Just "AMBULANCE" -> Just ST.AmbulanceCategory
+     Just "TRUCK" -> Just ST.TruckCategory
+     Just "BUS" -> Just ST.BusCategory
      _ -> Nothing
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
 decodeVehicleType value = case value of
-  "AutoCategory" -> Just ST.AutoCategory
-  "CarCategory" -> Just ST.CarCategory
-  "BikeCategory" -> Just ST.BikeCategory
-  _ -> Nothing
+    "AutoCategory" -> Just ST.AutoCategory
+    "CarCategory" -> Just ST.CarCategory
+    "BikeCategory" -> Just ST.BikeCategory
+    "AmbulanceCategory" -> Just ST.AmbulanceCategory
+    "TruckCategory" -> Just ST.TruckCategory
+    "BusCategory" -> Just ST.BusCategory
+    _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
 rideTypeConstructor ( tripCategory) = 
-        case tripCategory of
-            Nothing -> ST.OneWay
-            Just (TripCategory tripCategory') ->
-                case toLower tripCategory'.tag of
-                        "oneway" -> ST.OneWay 
-                        "roundtrip" -> ST.RoundTrip
-                        "rental" -> ST.Rental
-                        "intercity" -> ST.Intercity
-                        "rideshare" -> ST.RideShare
-                        _ -> ST.OneWay
+  case tripCategory of
+    Nothing -> ST.OneWay
+    Just (TripCategory tripCategory') ->
+        case toLower tripCategory'.tag of
+                "oneway" -> ST.OneWay 
+                "roundtrip" -> ST.RoundTrip
+                "rental" -> ST.Rental
+                "intercity" -> ST.Intercity
+                "rideshare" -> ST.RideShare
+                "delivery" -> ST.Delivery
+                _ -> ST.OneWay
+
 
 constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
 constructLocationInfo (latitude) (longitude) = 
@@ -196,7 +205,9 @@ constructLocationInfo (latitude) (longitude) =
                         lat : latitude',
                         city :  Just "",
                         areaCode :  Just "",
-                        lon : longitude'
+                        lon : longitude',
+                        instructions : Nothing,
+                        extras : Nothing
                 }
         _,_ -> Nothing
 
@@ -213,7 +224,9 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
                 lat : lat,
                 city :  city,
                 areaCode :  areaCode,
-                lon : lon
+                lon : lon,
+                instructions : Nothing,
+                extras : Nothing
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage
@@ -237,6 +250,7 @@ getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if an
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Just ST.AutoCategory
   "BIKE" -> Just ST.BikeCategory
+  _ | variant `DA.elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> Just ST.AmbulanceCategory
   _ -> Just ST.CarCategory
 
 rideMoreEarnMorePopupStartTime :: String
@@ -259,7 +273,23 @@ serviceTierMapping tierName acRide =
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
     Just false, "Non-AC Mini" -> "Mini"
+    _ , "DELIVERY_BIKE" -> "Delivery"
     _ , _ -> tierName
 
 defaultSliderDist :: Int
 defaultSliderDist = 4
+
+hvSdkTokenExp :: Int
+hvSdkTokenExp = 86400
+
+oneDayInMS :: Int
+oneDayInMS = 86400000
+
+maxDriverImages :: Int
+maxDriverImages = 4
+
+twoHrsInSec :: Int
+twoHrsInSec = 7200
+
+fiveMinInSec :: Int
+fiveMinInSec = 300

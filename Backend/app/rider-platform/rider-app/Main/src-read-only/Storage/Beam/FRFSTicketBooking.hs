@@ -1,14 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSTicketBooking where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -19,23 +18,34 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
     bppBankAccountNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBankCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bppDelayedInterest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cashbackPayoutOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cashbackStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus),
     customerCancelled :: B.C f Kernel.Prelude.Bool,
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    discountsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedPrice :: B.C f Kernel.Types.Common.HighPrecMoney,
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
@@ -46,12 +56,14 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     quoteId :: B.C f Kernel.Prelude.Text,
     refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     riderId :: B.C f Kernel.Prelude.Text,
+    routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
@@ -63,6 +75,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['journeyId], ['quoteId], ['riderId], ['searchId]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

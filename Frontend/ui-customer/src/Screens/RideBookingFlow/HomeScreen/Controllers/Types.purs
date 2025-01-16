@@ -12,12 +12,14 @@ import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.RideCompletedCard.Controller as RideCompletedCard
+import Screens.RideBookingFlow.RiderRideCompletedCard.Controller as RiderRideCompletedCard
 import Components.MenuButton.Controller (Action) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.QuoteListModel.Controller as QuoteListModelController
 import Components.RateCard as RateCard
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
@@ -37,12 +39,13 @@ import PrestoDOM.List (ListItem)
 import Prelude (class Show)
 import Data.Maybe (Maybe)
 
-import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip)
+import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip, NotificationBody, LocationType, LocationType(..), LocationActionId)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
-import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes, SelectListRes)
+import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
 import Common.Types.App as CTP
 
+import RemoteConfig as RemoteConfig
 
 
 data ScreenOutput = LogoutUser
@@ -59,7 +62,7 @@ data ScreenOutput = LogoutUser
   | ConfirmFare HomeScreenState
   | UpdatedState HomeScreenState Boolean
   | CancelRide HomeScreenState CancelSearchType
-  | NotificationHandler String HomeScreenState
+  | NotificationHandler String NotificationBody HomeScreenState
   | GetSelectList HomeScreenState
   | RideConfirmed HomeScreenState
   | SelectEstimate HomeScreenState
@@ -71,7 +74,6 @@ data ScreenOutput = LogoutUser
   | UpdatePickupName HomeScreenState Number Number
   | GoToHome HomeScreenState
   | GoToFavourites HomeScreenState
-  | SubmitRating HomeScreenState
   | UpdatedSource HomeScreenState
   | OpenGoogleMaps HomeScreenState
   | InAppTrackStatus HomeScreenState
@@ -90,22 +92,21 @@ data ScreenOutput = LogoutUser
   | CheckCurrentStatus
   | CheckFlowStatus HomeScreenState
   | ExitToPermissionFlow PermissionScreenStage
-  | RetryFindingQuotes Boolean HomeScreenState
-  | RideDetailsScreen HomeScreenState
+  | RetryFindingQuotes Boolean String HomeScreenState
   | GoToTicketBookingFlow HomeScreenState
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
   | ExitToTicketing HomeScreenState
-  | GoToHelpAndSupport HomeScreenState
+  | EditLocationScreenOutput HomeScreenState
+  | ConfirmEditedPickup HomeScreenState
   | ReAllocateRide HomeScreenState
   | GoToRentalsFlow HomeScreenState
-  | GoToScheduledRides
+  | GoToScheduledRides HomeScreenState (Maybe String)
   | Add_Stop HomeScreenState
   | SafetySupport HomeScreenState Boolean
   | GoToShareRide HomeScreenState
   | GoToNotifyRideShare HomeScreenState
   | ExitToFollowRide HomeScreenState
-  | GoToReportSafetyIssue HomeScreenState
   | GoToMyMetroTickets HomeScreenState
   | GoToMetroTicketBookingFlow HomeScreenState
   | GoToSafetyEducation HomeScreenState
@@ -114,17 +115,26 @@ data ScreenOutput = LogoutUser
   | ExitToConfirmingLocationStage HomeScreenState
   | UpdateReferralCode HomeScreenState String
   | GoToSafetySettingScreen 
+  | GoToDriverProfiles HomeScreenState
   | GoToRideRelatedIssues HomeScreenState
   | Go_To_Search_Location_Flow HomeScreenState Boolean
   | RideSearchSO
   | ConfirmRentalRideSO HomeScreenState
   | StayInHomeScreenSO HomeScreenState
-  | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
   | ReloadFlowStatus HomeScreenState
   | ExitToPickupInstructions HomeScreenState Number Number String String
   | EditDestLocSelected HomeScreenState
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
+  | SelectEstimateAndQuotes HomeScreenState
+  | UpdateChatScreen HomeScreenState
+  | GoToTripSelectionScreen HomeScreenState
+  | RideSummary HomeScreenState
+  | GoToParcelInstructions HomeScreenState
+  | GetDeliveryImage HomeScreenState
+  | GoToDeliveryDetails HomeScreenState
+  | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
+  | GoToBusTicketBookingFlow HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -136,7 +146,7 @@ data Action = NoAction
   | ChangeToRideStartedAction
   | SidebarCloseAnimationCompleted
   | RideDurationTimer String String Int
-  | NotificationListener String
+  | NotificationListener String NotificationBody
   | OpenSettings
   | ContinueCmd
   | OpenPricingTutorial
@@ -159,12 +169,10 @@ data Action = NoAction
   | QuoteListModelActionController QuoteListModelController.Action
   | DriverInfoCardActionController DriverInfoCardController.Action
   | RatingCardAC RatingCard.Action
-  | UpdateLocation String String String
   | CancelRidePopUpAction CancelRidePopUp.Action
   | PopUpModalAction PopUpModal.Action
   | TrackDriver GetDriverLocationResp
   | HandleCallback
-  | UpdatePickupLocation String String String
   | CloseLocationTracking
   | ShowCallDialer CallType
   | CloseShowCallDialer
@@ -176,6 +184,7 @@ data Action = NoAction
   | SourceUnserviceableActionController ErrorModalController.Action
   | UpdateCurrentLocation String String
   | UpdateCurrentStage String RideBookingRes
+  | UpdateCurrentStageStatus String RideBookingStatusRes
   | GoBackToSearchLocationModal
   | SkipButtonActionController PrimaryButtonController.Action
   | SearchExpireCountDown Int String String
@@ -240,6 +249,7 @@ data Action = NoAction
   | DisabilityBannerAC Banner.Action
   | DisabilityPopUpAC PopUpModal.Action
   | RideCompletedAC RideCompletedCard.Action
+  | RiderRideCompletedAC RiderRideCompletedCard.Action
   | LoadMessages
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String
@@ -273,6 +283,7 @@ data Action = NoAction
   | UpdateRepeatTrips RideBookingListRes 
   | RemoveShimmer 
   | ReportIssueClick
+  | EditLocation LocationType
   | DateTimePickerAction String Int Int Int String Int Int
   | ChooseSingleVehicleAction ChooseVehicleController.Action
   | LocationTagBarAC LocationTagBarV2Controller.Action
@@ -294,7 +305,7 @@ data Action = NoAction
   | ShowBookingPreference
   | UpdateBookingDetails RideBookingRes
   | UpdateContacts (Array NewContacts)
-  | UpdateChatWithEM Boolean
+  | UpdateChatWithEM Boolean NewContacts
   | ShareRideAction PopupWithCheckboxController.Action
   | AllChatsLoaded
   | GoToSafetyEducationScreen
@@ -324,6 +335,25 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | TollChargeIncludedPopUpAction PopUpModal.Action
+  | LocateOnMapCallBack String String String
+  | UpdatePickupLocation String String String
+  | ShakeActionCallback Int
+  | UpdateSafetySettings GetEmergencySettingsRes
+  | ServicesOnClick RemoteConfig.Service
+  | EnableShareRideForContact String 
+  | EditPickupPopupOnCancelAC PopUpModal.Action
+  | DateSelectAction String String Int Int Int String Int Int
+  | IntercityBusPermissionAction PopUpModal.Action
+  | IntercityBusAC
+  | HideIntercityBusView String
+  | OpenDeliverySearchLocation 
+  | ToggleCurrentPickupDropCurrentLocation Boolean
+  | UpdateSearchActionType
+  | DeliveryParcelImageOtpAction DeliveryParcelImageAndOtp.Action
+  | ConfirmDeliveryRide
+  | RefreshDelveryParcelImage
+  | DriverReachedDestinationAction String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
@@ -602,7 +632,6 @@ instance loggableAction :: Loggable Action where
   --   SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
   --   TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
   --   HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
-  --   UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
   --   ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
   --   Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
   --   UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"

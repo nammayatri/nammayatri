@@ -26,6 +26,7 @@ import Data.Int (pow)
 import Data.Function.Uncurried (Fn3(..), runFn3)
 import Data.String as DS
 import Effect (Effect)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 
 foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
@@ -52,6 +53,12 @@ boolToVisibility false = PD.GONE
 boolToInvisibility :: Boolean -> PD.Visibility
 boolToInvisibility true = PD.VISIBLE
 boolToInvisibility false = PD.INVISIBLE
+
+toggleVisibility :: PD.Visibility -> PD.Visibility
+toggleVisibility visibility = if visibility == PD.VISIBLE then PD.GONE else PD.VISIBLE
+
+reverseString :: String -> String
+reverseString = fromCharArray <<< DA.reverse <<< toCharArray
 
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 
@@ -137,3 +144,36 @@ getNumberWithSuffix n
       2 -> "nd"
       3 -> "rd"
       _ -> "th"
+
+convertMonthsToSeconds :: Int -> Int
+convertMonthsToSeconds months = months * daysPerMonth * secondsPerDay
+  where
+    daysPerMonth = 30 
+    secondsPerDay = 24 * 60 * 60
+
+-- Insert an element at a particular position in an array
+insertAtPosition :: forall a. Int -> a -> Array a -> Array a
+insertAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, [value], after]
+
+-- Insert an array at a particular position in an array
+insertArrayAtPosition :: forall a. Int -> Array a -> Array a -> Array a
+insertArrayAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, value, after]
+
+layoutWithWeight :: forall w . PD.PrestoDOM (Effect Unit) w
+layoutWithWeight = PD.linearLayout [ PD.weight 1.0 ][]

@@ -51,6 +51,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Helpers.Utils as HU
 import Mobility.Prelude (boolToVisibility)
 import Debug(spy)
+import Data.Maybe(Maybe(..))
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -65,7 +66,7 @@ screen initialState listItemm =
         ( \push -> do
                     void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
                     pure $ pure unit
-        )
+        ),globalNotificationListener
   ]
   , eval:
       \action state -> do
@@ -73,6 +74,11 @@ screen initialState listItemm =
         let _ = spy "MyRidesScreen state  " state
         eval action state
   }
+  where 
+  globalNotificationListener push = do    
+    void $ HU.storeCallBackCustomer push NotificationListener "MyRidesScreen" Just Nothing
+    pure $ pure unit
+    
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
@@ -167,14 +173,14 @@ ridesView listItemm push state =
         [ height MATCH_PARENT
         , scrollBarY false
         , width MATCH_PARENT
-        , onScroll "rides" "MyRidesScreen" push (Scroll)
+        , onScroll "rides" "MyRidesScreen" push (Scroll )
         , onScrollStateChange push (ScrollStateChanged)
         , visibility $ case DA.null state.itemsRides of
                     false -> VISIBLE
                     true -> GONE
         , PrestoList.listItem listItemm
         , background Color.white900
-        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED"]) state.prestoListArrayItems)
+        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED","UPCOMING","TRIP_ASSIGNED"]) state.prestoListArrayItems)
         ]
       , Tuple "NoRides"
         $ linearLayout
@@ -256,12 +262,17 @@ shimmerData i = {
   showVariantImage : toPropValue "",
   showRepeatRide : toPropValue "visible",
   isScheduled : toPropValue "gone",
-  showDestination : toPropValue "visible"
+  showDestination : toPropValue "visible",
+  itemRideType : toPropValue "ONE_WAY",
+  rideTypeVisibility : toPropValue "gone",
+  rideTypeBackground : toPropValue "#454545",
+  cornerRadius : toPropValue "24.0"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.MyRidesScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  (rideBookingListResponse) <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
+  let fromBanner = if state.props.fromBanner then "true" else "false"
+  (rideBookingListResponse) <- Remote.rideBookingList "8" (show state.data.offsetValue) fromBanner
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> do
           doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"

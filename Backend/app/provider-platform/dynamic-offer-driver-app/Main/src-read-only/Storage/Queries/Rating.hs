@@ -8,6 +8,7 @@ import qualified Data.Text
 import qualified Domain.Types.Person
 import qualified Domain.Types.Rating
 import qualified Domain.Types.Ride
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -33,8 +34,8 @@ findRatingForRide rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.T
 
 updateRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance isFavourite id driverId = do
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance isFavourite mediaId id driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.ratingValue ratingValue,
@@ -43,9 +44,14 @@ updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance isF
       Se.Set Beam.isSafe isSafe,
       Se.Set Beam.issueId issueId,
       Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
-      Se.Set Beam.isFavourite isFavourite
+      Se.Set Beam.isFavourite isFavourite,
+      Se.Set Beam.mediaId (Kernel.Types.Id.getId <$> mediaId)
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe Domain.Types.Rating.Rating))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -60,9 +66,12 @@ updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
       Se.Set Beam.isFavourite isFavourite,
       Se.Set Beam.isSafe isSafe,
       Se.Set Beam.issueId issueId,
+      Se.Set Beam.mediaId (Kernel.Types.Id.getId <$> mediaId),
       Se.Set Beam.ratingValue ratingValue,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
+      Se.Set Beam.wasOfferedAssistance wasOfferedAssistance,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

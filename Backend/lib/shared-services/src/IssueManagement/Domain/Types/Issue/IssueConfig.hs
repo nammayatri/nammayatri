@@ -20,12 +20,15 @@ data IssueConfig = IssueConfig
     onIssueReopenMsgs :: [Id IssueMessage],
     onKaptMarkIssueResMsgs :: [Id IssueMessage],
     merchantId :: Id Common.Merchant,
-    messageTransformationConfig :: Maybe MessageTransformationConfig
+    messageTransformationConfig :: Maybe MessageTransformationConfig,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
 data MessageTransformationConfig = MessageTransformationConfig
   { merchantName :: Maybe Text,
+    merchantNameWTranslations :: Maybe [Common.Translation],
     supportEmail :: Maybe Text
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)

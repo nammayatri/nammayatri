@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.CallbackRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.CallbackRequest
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude

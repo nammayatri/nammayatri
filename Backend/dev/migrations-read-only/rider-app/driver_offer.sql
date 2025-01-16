@@ -21,3 +21,18 @@ ALTER TABLE atlas_app.driver_offer ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.driver_offer ADD COLUMN fare_product_type character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.driver_offer ADD COLUMN trip_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.driver_offer ADD COLUMN is_upgraded_to_cab boolean ;
+
+
+
+------- SQL updates -------
+

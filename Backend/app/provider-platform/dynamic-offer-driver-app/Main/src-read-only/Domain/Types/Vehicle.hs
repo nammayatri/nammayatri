@@ -1,15 +1,16 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Vehicle where
 
 import Data.Aeson
 import qualified Data.Time.Calendar
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -18,8 +19,9 @@ import qualified Tools.Beam.UtilsTH
 data Vehicle = Vehicle
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    category :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
+    category :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     color :: Kernel.Prelude.Text,
+    downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     energyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -30,9 +32,9 @@ data Vehicle = Vehicle
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
-    selectedServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
+    selectedServiceTiers :: [Domain.Types.Common.ServiceTierType],
     size :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    variant :: Domain.Types.Vehicle.Variant,
+    variant :: Domain.Types.VehicleVariant.VehicleVariant,
     vehicleClass :: Kernel.Prelude.Text,
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -43,51 +45,22 @@ data Vehicle = Vehicle
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data Variant
-  = SEDAN
-  | SUV
-  | HATCHBACK
-  | AUTO_RICKSHAW
-  | TAXI
-  | TAXI_PLUS
-  | PREMIUM_SEDAN
-  | BLACK
-  | BLACK_XL
-  | BIKE
-  | AMBULANCE_TAXI
-  | AMBULANCE_TAXI_OXY
-  | AMBULANCE_AC
-  | AMBULANCE_AC_OXY
-  | AMBULANCE_VENTILATOR
-  | SUV_PLUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data VehicleAPIEntity = VehicleAPIEntity
   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    category :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
+    category :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     color :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     model :: Kernel.Prelude.Text,
     registrationNo :: Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
-    variant :: Domain.Types.Vehicle.Variant,
+    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,
+    variant :: Domain.Types.VehicleVariant.VehicleVariant,
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Category)
-
-$(mkHttpInstancesForEnum ''Category)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RegistrationCategory)
 
 $(mkHttpInstancesForEnum ''RegistrationCategory)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Variant)
-
-$(mkHttpInstancesForEnum ''Variant)

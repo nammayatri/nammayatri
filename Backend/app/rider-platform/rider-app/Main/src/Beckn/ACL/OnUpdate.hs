@@ -113,6 +113,9 @@ parseEventV2 transactionId messageId order = do
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
+        "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
+        "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
+        "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -197,7 +200,7 @@ parseEditDestinationSoftUpdate order messageId = do
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Quote breakup is not present in Soft Update Event.")
   fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in Soft Update Event.")
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in Soft Update Event.")
-  fareBreakups <- traverse Common.mkDFareBreakup fareBreakups'
+  let fareBreakups = mapMaybe Common.mkDFareBreakup fareBreakups'
   return $
     DOnUpdate.OUEditDestSoftUpdateReq $
       DOnUpdate.EditDestSoftUpdateReq
@@ -217,3 +220,45 @@ parseEditDestinationConfirmUpdate order messageId = do
         { bookingUpdateRequestId = Id messageId,
           ..
         }
+
+parseDriverReachedDestinationEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseDriverReachedDestinationEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  destinationReachedTime :: UTCTime <-
+    Utils.getTagV2 Tag.DRIVER_REACHED_DESTINATION_INFO Tag.DRIVER_REACHED_DESTINATION (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "DRIVER_REACHED_DESTINATION tag is not present in DestinationReached Event.")
+  return $
+    DOnUpdate.OUDestinationReachedReq $
+      DOnUpdate.DestinationReachedReq
+        { bppRideId = Id bppRideId,
+          ..
+        }
+
+parseEstimatedEndTimeRangeUpdatedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseEstimatedEndTimeRangeUpdatedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  estimatedEndTimeRangeStart :: UTCTime <-
+    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_START (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_START tag is not present in EstimatedEndTimeRangeUpdated Event.")
+  estimatedEndTimeRangeEnd :: UTCTime <-
+    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_END (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_END tag is not present in EstimatedEndTimeRangeUpdated Event.")
+  return $
+    DOnUpdate.OUEstimatedEndTimeRangeReq $
+      DOnUpdate.EstimatedEndTimeRangeReq
+        { bppRideId = Id bppRideId,
+          ..
+        }
+
+parseParcelImageUploaded :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseParcelImageUploaded order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  isParcelImageUploaded :: Bool <-
+    Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_IMAGE_UPLOADED (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "PARCEL_IMAGE_UPLOADED tag is not present in ParcelImage Event.")
+  return $
+    DOnUpdate.OUParcelImageFileUploadReq $
+      DOnUpdate.ParcelImageFileUploadReq {bppRideId = Id bppRideId, ..}

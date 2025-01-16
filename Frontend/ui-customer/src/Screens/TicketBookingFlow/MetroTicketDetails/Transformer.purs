@@ -21,11 +21,12 @@ import Screens.Types
 import Common.Types.App
 import Data.Array
 import Data.Maybe
+import Data.Int as INT
 import Engineering.Helpers.Commons
 import Helpers.Utils (getCityNameFromCode)
 
-metroTicketDetailsTransformer :: MetroTicketBookingStatus -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
-metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
+metroTicketDetailsTransformer :: FRFSTicketBookingStatusAPIRes -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
+metroTicketDetailsTransformer (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) state = 
   let
     
     metroRoute' = metroRouteTrasformer metroTicketBookingStatus.stations
@@ -41,6 +42,9 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
       , ticketType = metroTicketBookingStatus._type
       , noOfTickets = metroTicketBookingStatus.quantity
       , ticketPrice = metroTicketBookingStatus.price
+      , vehicleType = metroTicketBookingStatus.vehicleType
+      , route = metroTicketBookingStatus.routeStations
+      , transactionId = extractTransactionId metroTicketBookingStatus.payment
       }
     , props {
         stage = MetroTicketDetailsStage
@@ -57,42 +61,28 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
 --- Metro Route Transformer Logic Start------------------
 
 metroRouteTrasformer ::  Array FRFSStationAPI -> Array MetroRoute
-metroRouteTrasformer stations =  
+metroRouteTrasformer stations =
   foldl (\ acc (FRFSStationAPI station) -> acc <> (getNextInterMediates (FRFSStationAPI station) stations)) [] stations
 
 
-getNextInterMediates :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroRoute 
-getNextInterMediates (FRFSStationAPI station) stations = 
-  case station.stationType of 
-    Just stationType -> 
-      case stationType of 
-        "INTERMEDIATE" -> []
-        "START" -> [{
-            name : station.name
-          , line : GreenLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-        "END" -> [{
-            name : station.name
-          , line : RedLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-        _ -> [{
-            name : station.name
-          , line : case station.color of
-              Just color -> 
-                case color of 
-                  "Green" -> GreenLine
-                  "Blue" -> BlueLine
-                  "Red" -> RedLine
-                  _ -> NoColorLine
-              Nothing -> NoColorLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-    Nothing -> []
+getNextInterMediates :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroRoute
+getNextInterMediates (FRFSStationAPI station) stations =
+  let
+    defaultRoute = {
+      name: station.name,
+      line: case station.color of
+        Just "Green" -> GreenLine
+        Just "Blue" -> BlueLine
+        Just "Red" -> RedLine
+        _ -> NoColorLine,
+      stops: getStops (FRFSStationAPI station) stations,
+      listExpanded: false
+    }
+  in
+    case station.stationType of
+      Just "INTERMEDIATE" -> []
+      Just _ -> [defaultRoute]
+      Nothing -> [defaultRoute]
 
 getStops :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroStop 
 getStops (FRFSStationAPI station) stations = 
@@ -119,3 +109,9 @@ ticketsInfoTransformer tickets =
     , status : ticket.status
   }) tickets
 
+extractTransactionId :: Maybe FRFSBookingPaymentAPI -> String
+extractTransactionId payment =
+  let dummyTransactionId = "12345678ABCD"
+  in case payment of
+      Just (FRFSBookingPaymentAPI paymentInfo) -> fromMaybe dummyTransactionId paymentInfo.transactionId
+      Nothing -> dummyTransactionId

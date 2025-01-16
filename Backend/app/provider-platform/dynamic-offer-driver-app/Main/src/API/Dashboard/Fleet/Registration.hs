@@ -64,10 +64,10 @@ handler _ _ =
     :<|> fleetOwnerRegister
 
 fleetOwnerLogin :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
-fleetOwnerLogin = withFlowHandlerAPI . DFleet.fleetOwnerLogin
+fleetOwnerLogin = withDashboardFlowHandlerAPI . DFleet.fleetOwnerLogin
 
 fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
-fleetOwnerVerify = withFlowHandlerAPI . DFleet.fleetOwnerVerify
+fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
 fleetOwnerRegister :: DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes
-fleetOwnerRegister = withFlowHandlerAPI . DFleet.fleetOwnerRegister
+fleetOwnerRegister = withDashboardFlowHandlerAPI . DFleet.fleetOwnerRegister

@@ -11,13 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.ServiceTierType as DVST
+import Domain.Types
+import Domain.Types.Common ()
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Tools.Beam.UtilsTH
@@ -26,10 +25,10 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
     providerId :: B.C f Text,
-    vehicleVariant :: B.C f DVST.ServiceTierType,
+    vehicleVariant :: B.C f ServiceTierType,
     estimatedFinishTime :: B.C f (Maybe UTCTime),
     vehicleServiceTierName :: B.C f (Maybe Text),
-    tripCategory :: B.C f (Maybe DTC.TripCategory),
+    tripCategory :: B.C f (Maybe TripCategory),
     distance :: B.C f (Maybe Common.Meters),
     distanceUnit :: B.C f (Maybe Common.DistanceUnit),
     validTill :: B.C f LocalTime,
@@ -44,7 +43,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     isBlockedRoute :: B.C f (Maybe Bool),
     tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    updatedAt :: B.C f LocalTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

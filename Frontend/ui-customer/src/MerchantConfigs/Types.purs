@@ -10,6 +10,7 @@ type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    submitIssueBtnColor :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
@@ -81,6 +82,8 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , riderRideCompletedCard :: RiderRideCompletedCard
+  , enableDeliveryService :: Boolean
   | a
   }
 
@@ -153,6 +156,7 @@ type SearchLocationConfig = {
   separatorColor :: String,
   editTextColor :: String,
   showAdditionalChargesText :: Boolean,
+  showDriverAdditions :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
   primaryButtonHeight :: Int
@@ -208,7 +212,7 @@ type SuggestedDestinationAndTripsConfig = {
 type Language =  {
   name :: String,
   value :: String,
-  subTitle :: String
+  subtitle :: String
  }
 
 type BannerViewState = {
@@ -262,12 +266,14 @@ type Features = {
   shareWithEmergencyContacts :: Boolean,
   enableAutoReferral :: Boolean,
   enableRepeatTripBackfilling :: Boolean,
+  enableEditPickupLocation :: Boolean,
   enableCustomerSupportForSafety :: Boolean,
   enableSpecialPickup :: Boolean,
   enableAcPopup :: Boolean,
   enableRentalReallocation :: Boolean,
   enableEditDestination :: Boolean,
-  enableHelpAndSupport :: Boolean
+  enableHelpAndSupport :: Boolean,
+  enableBusBooking :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -318,6 +324,7 @@ type LocateOnMapConfigs = {
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
 , hotSpotConfig :: HotSpotConfig
+, editPickUpThreshold :: Number
 }
 
 type DottedLineConfig = {
@@ -390,7 +397,10 @@ type VariantConfig = {
   autoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
   taxiPlus :: VariantInfo,
-  bookAny :: VariantInfo
+  bookAny :: VariantInfo,
+  bike :: VariantInfo,
+  suvPlus :: VariantInfo,
+  deliveryBike :: VariantInfo
 }
 
 type VariantInfo = {
@@ -412,6 +422,7 @@ type CityConfig = {
   geoCodeConfig :: GeoCodeConfig,
   enableRentals :: Boolean,
   enableIntercity :: Boolean,
+  enableScheduling :: Boolean,
   enableCabs :: Boolean,
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
@@ -424,7 +435,9 @@ type CityConfig = {
   waitingChargeConfig :: WaitingChargeConfig,
   rentalWaitingChargeConfig :: WaitingChargeConfig,
   intercityWaitingChargeConfig :: WaitingChargeConfig,
-  enableWaitingConfig :: Boolean
+  enableWaitingConfig :: Boolean,
+  allowBlockedUserLogin :: Boolean
+, enableIntercityBus :: Boolean
 }
 
 type CityBasedFeatures = {
@@ -450,7 +463,9 @@ type Banners = {
 }
 
 type Safety = {
-  pastRideInterval :: Int
+  pastRideInterval :: Int,
+  followingInterval :: Int,
+  safetyTeamNumber :: String
 }
 
 type InteroperabilityConfig = {
@@ -466,10 +481,15 @@ type AcPopupConfig = {
 
 type WaitingChargeConfig = {
   auto :: WaitingCharge,
-  cabs :: WaitingCharge
+  cabs :: WaitingCharge,
+  bike :: WaitingCharge
 }
 
 type WaitingCharge = {
   freeMinutes :: Number,
   perMinCharges :: Number
+}
+
+type RiderRideCompletedCard = {
+  showDriverProfile :: Boolean
 }

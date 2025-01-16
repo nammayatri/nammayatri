@@ -20,7 +20,7 @@ Sos:
       enum: "EmergencyContactId Text"
 
     SosType:
-      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,PoliceAPI"
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,CSAlertSosTicket,AudioRecording"
 
     SosStatus:
       enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
@@ -40,6 +40,9 @@ Sos:
     findByRideId:
       kvFunction: findOneWithKV
       where: rideId
+    findByTicketId:
+      kvFunction: findOneWithKV
+      where: ticketId
 
   constraints:
     id: PrimaryKey

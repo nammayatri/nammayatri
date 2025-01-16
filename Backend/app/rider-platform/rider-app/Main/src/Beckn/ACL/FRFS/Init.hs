@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Beckn.ACL.FRFS.Init (buildInitReq) where
 
@@ -21,7 +20,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
-import Domain.Types (BknPaymentParams)
+import Domain.Types
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
@@ -121,7 +120,7 @@ tfPayments booking mPaymentParams mSettlementType = do
   let mCurrency = Just booking.price.currency
   Just $
     singleton $
-      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price.amount) Nothing mPaymentParams mSettlementType mCurrency
+      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price.amount) Nothing mPaymentParams mSettlementType mCurrency (show <$> booking.bppDelayedInterest)
 
 tfProvider :: DTBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider tBooking =

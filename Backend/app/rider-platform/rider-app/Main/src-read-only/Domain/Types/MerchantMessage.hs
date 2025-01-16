@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -23,6 +22,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
+    senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -40,9 +40,16 @@ data MessageKey
   | FOLLOW_RIDE
   | ADDED_AS_EMERGENCY_CONTACT
   | TICKET_BOOKING_CANCELLED
+  | POST_RIDE_SOS
+  | SMS_DELIVERY_DETAILS_SENDER
+  | SMS_DELIVERY_DETAILS_RECEIVER
+  | POST_DELIVERY_SENDER
+  | PRE_PICKUP_DELIVERY_RECEIVER
+  | SEND_SCHEDULED_RIDE_DETAILS
+  | SCHEDULED_RIDE_OTP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantMessage = MerchantMessageD ('Safe)
+type MerchantMessage = MerchantMessageD 'Safe
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -52,4 +59,4 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

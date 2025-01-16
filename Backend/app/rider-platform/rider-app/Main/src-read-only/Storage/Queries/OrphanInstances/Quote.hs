@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Quote as Beam
+import qualified Storage.Queries.QuoteBreakup
 import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
@@ -26,8 +27,10 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
-    quoteDetails' <- Storage.Queries.Transformers.Quote.getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
+    quoteBreakupList' <- Storage.Queries.QuoteBreakup.findAllByQuoteIdT id
+    quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
     tripTerms' <- getTripTerms tripTermsId
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.Quote.Quote
@@ -52,6 +55,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             merchantOperatingCityId = merchantOperatingCityId',
             providerId = providerId,
             providerUrl = providerUrl',
+            quoteBreakupList = quoteBreakupList',
             quoteDetails = quoteDetails',
             requestId = Kernel.Types.Id.Id requestId,
             serviceTierName = serviceTierName,
@@ -59,9 +63,11 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             specialLocationName = specialLocationName,
             specialLocationTag = specialLocationTag,
             tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
+            tripCategory = tripCategory,
             tripTerms = tripTerms',
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
+            vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
@@ -82,12 +88,12 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.createdAt = createdAt,
         Beam.currency = Just ((.currency) estimatedFare),
         Beam.discount = discount <&> (.amount),
-        Beam.distanceToNearestDriver = Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.distanceToNearestDriverValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.driverOfferId = Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.fareProductType = Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.rentalDetailsId = Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
-        Beam.specialZoneQuoteId = Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails),
+        Beam.distanceToNearestDriver = Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.distanceToNearestDriverValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.driverOfferId = Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.fareProductType = Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.rentalDetailsId = Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.specialZoneQuoteId = Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,
@@ -108,9 +114,11 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.specialLocationTag = specialLocationTag,
         Beam.tollCharges = tollChargesInfo <&> ((.amount) . (.tollCharges)),
         Beam.tollNames = tollChargesInfo <&> (.tollNames),
+        Beam.tripCategory = tripCategory,
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType

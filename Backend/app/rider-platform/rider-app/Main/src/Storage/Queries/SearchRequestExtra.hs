@@ -1,5 +1,7 @@
 module Storage.Queries.SearchRequestExtra where
 
+import Domain.Types.Journey
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
@@ -28,11 +30,17 @@ create dsReq = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
+createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> m ()
+createStopsLocation = QL.createMany
+
 createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq searchRequest = do
   fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
   void $ QLM.create fromLocationMap
+  void $ createStopsLocation searchRequest.stops
+  stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+  void $ QLM.createMany stopsLocMapping
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create searchRequest
 
@@ -64,4 +72,37 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
     [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateMultipleByRequestId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Bool -> Bool -> Maybe Bool -> m ()
+updateMultipleByRequestId (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 isAdvanceBookingEnabled = do
+  updateOneWithKV
+    [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
+      Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2,
+      Se.Set BeamSR.isAdvanceBookingEnabled isAdvanceBookingEnabled
+    ]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.SearchRequest.SearchRequest]
+findAllByJourneyId journeyId =
+  findAllWithKVAndConditionalDB
+    [Se.Is BeamSR.journeyId $ Se.Eq (Just journeyId.getId)]
+    Nothing
+
+updatePricingId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updatePricingId (Id searchRequestId) pricingId = do
+  updateOneWithKV
+    [Se.Set BeamSR.pricingId pricingId]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateSkipBooking :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Bool -> m ()
+updateSkipBooking (Id searchRequestId) skipBooking = do
+  updateOneWithKV
+    [Se.Set BeamSR.skipBooking skipBooking]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateDisability :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updateDisability (Id searchRequestId) disability = do
+  updateOneWithKV
+    [Se.Set BeamSR.disabilityTag disability]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

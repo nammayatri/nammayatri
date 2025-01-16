@@ -33,12 +33,16 @@ findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.se
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
-updateDriverResponse response status notificationSource id = do
+  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+updateDriverResponse response status notificationSource renderedAt respondedAt id = do
+  _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.response response,
       Se.Set Beam.status status,
-      Se.Set Beam.notificationSource notificationSource
+      Se.Set Beam.notificationSource notificationSource,
+      Se.Set Beam.renderedAt renderedAt,
+      Se.Set Beam.respondedAt respondedAt,
+      Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -49,6 +53,7 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {..}) = do
+  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.acceptanceRatio acceptanceRatio,
       Se.Set Beam.actualDistanceToPickup actualDistanceToPickup,
@@ -66,9 +71,10 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill),
+      Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerCancellationDues (Kernel.Prelude.Just customerCancellationDues),
+      Se.Set Beam.customerTags customerTags,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverAvailableTime driverAvailableTime,
       Se.Set Beam.driverDefaultStepFee (Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee),
@@ -81,9 +87,12 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.driverSpeed driverSpeed,
       Se.Set Beam.driverStepFee (Kernel.Prelude.roundToIntegral <$> driverStepFee),
       Se.Set Beam.driverStepFeeAmount driverStepFee,
+      Se.Set Beam.driverTags driverTags,
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId estimateId,
+      Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.goHomeRequestId (Kernel.Types.Id.getId <$> goHomeRequestId),
+      Se.Set Beam.isFavourite isFavourite,
       Se.Set Beam.isForwardRequest (Kernel.Prelude.Just isForwardRequest),
       Se.Set Beam.isPartOfIntelligentPool isPartOfIntelligentPool,
       Se.Set Beam.keepHiddenForSeconds keepHiddenForSeconds,
@@ -91,12 +100,17 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.middleStopCount middleStopCount,
       Se.Set Beam.mode mode,
       Se.Set Beam.notificationSource notificationSource,
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,
       Se.Set Beam.pickupZone pickupZone,
+      Se.Set Beam.poolingConfigVersion poolingConfigVersion,
+      Se.Set Beam.poolingLogicVersion poolingLogicVersion,
       Se.Set Beam.previousDropGeoHash previousDropGeoHash,
+      Se.Set Beam.renderedAt renderedAt,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.respondedAt respondedAt,
       Se.Set Beam.response response,
       Se.Set Beam.rideFrequencyScore rideFrequencyScore,
       Se.Set Beam.rideRequestPopupDelayDuration rideRequestPopupDelayDuration,
@@ -106,6 +120,8 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.status status,
       Se.Set Beam.straightLineDistanceToPickup straightLineDistanceToPickup,
       Se.Set Beam.totalRides (Kernel.Prelude.Just totalRides),
+      Se.Set Beam.updatedAt (Just _now),
+      Se.Set Beam.upgradeCabRequest upgradeCabRequest,
       Se.Set Beam.vehicleAge vehicleAge,
       Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
       Se.Set Beam.vehicleServiceTierName vehicleServiceTierName,

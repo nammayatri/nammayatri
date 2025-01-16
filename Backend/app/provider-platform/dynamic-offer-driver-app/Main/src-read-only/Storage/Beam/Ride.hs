@@ -1,14 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Ride where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.Ride
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -33,6 +32,8 @@ data RideT f = RideT
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    deliveryFileIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    destinationReachedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceCalculationFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -45,15 +46,20 @@ data RideT f = RideT
     endOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     endOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimatedEndTimeRangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    estimatedEndTimeRangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     estimatedTollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedTollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     fareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fareParametersId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDriverSpecialLocWarrior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPickupOrDestinationEdited :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numberOfDeviation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -62,16 +68,19 @@ data RideT f = RideT
     numberOfSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
+    passedThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     previousRideTripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     previousRideTripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     previousRideTripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
+    rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     shortId :: B.C f Kernel.Prelude.Text,
     startOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     status :: B.C f Domain.Types.Ride.RideStatus,
+    tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollConfidence :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
@@ -90,7 +99,7 @@ data RideT f = RideT
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)
   }
   deriving (Generic, B.Beamable)
 

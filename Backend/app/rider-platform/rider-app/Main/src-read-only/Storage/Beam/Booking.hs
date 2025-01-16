@@ -1,15 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Booking where
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -24,6 +25,7 @@ data BookingT f = BookingT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
+    isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -38,6 +40,7 @@ data BookingT f = BookingT
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
@@ -46,14 +49,19 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfillmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBookingUpdated :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
@@ -73,11 +81,13 @@ data BookingT f = BookingT
     startTime :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.Extra.Booking.BookingStatus,
     riderTransactionId :: B.C f Kernel.Prelude.Text,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType
+    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, B.Beamable)
 

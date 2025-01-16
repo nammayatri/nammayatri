@@ -29,6 +29,15 @@ import Storage.Queries.OrphanInstances.Person ()
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 
+findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
+findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
+
+findPersonIdsByPhoneNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> m [Person]
+findPersonIdsByPhoneNumber phoneNumbers = do
+  phoneNumbersHashes <- mapM getDbHash phoneNumbers
+  let mbhashes = Just <$> phoneNumbersHashes
+  findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
+
 findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_
@@ -40,8 +49,8 @@ findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = f
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> m ()
-updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion))
     do
@@ -55,7 +64,8 @@ updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersio
           Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice),
           Se.Set BeamP.clientModelName ((.deviceModel) <$> mbDevice),
           Se.Set BeamP.clientManufacturer ((.deviceManufacturer) =<< mbDevice),
-          Se.Set BeamP.backendAppVersion (Just deploymentVersion)
+          Se.Set BeamP.backendAppVersion (Just deploymentVersion),
+          Se.Set BeamP.clientReactNativeVersion mbRnVersion
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
@@ -65,12 +75,12 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe Text ->
   Maybe Text ->
   Maybe Language ->
   Maybe Gender ->
+  Maybe Text ->
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
@@ -78,9 +88,10 @@ updatePersonalInfo ::
   Text ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe Text ->
   Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -93,10 +104,9 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]
         <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
-        <> [Se.Set BeamP.referralCode mbReferralCode | isJust mbReferralCode]
-        <> [Se.Set BeamP.referredAt (Just now) | isJust mbReferralCode]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
+        <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
         <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
         <> [Se.Set BeamP.clientBundleVersion (versionToText <$> mbBundleVersion) | isJust mbBundleVersion]
         <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]
@@ -107,8 +117,32 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.backendAppVersion (Just deploymentVersion)]
         <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
+        <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
+
+updateRefCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
+updateRefCode (Id personId) refCode = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.referralCode (Just refCode)]
+        <> [Se.Set BeamP.referredAt (Just now)]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateAndroidIdAndDeviceId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Text -> Maybe Text -> m ()
+updateAndroidIdAndDeviceId (Id personId) mbAndroidId mbDeviceId =
+  case (mbAndroidId, mbDeviceId) of
+    (Nothing, Nothing) -> pure ()
+    _ -> do
+      now <- getCurrentTime
+      updateWithKV
+        ( [Se.Set BeamP.updatedAt now]
+            <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
+            <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
+        )
+        [Se.Is BeamP.id (Se.Eq personId)]
 
 findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
@@ -135,8 +169,8 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
-findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
-findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash =
+findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe (Id Person) -> m [Person]
+findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbPersonId = do
   findAllWithOptionsDb
     [ Se.And
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
@@ -150,6 +184,7 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
                        <> [Se.Is BeamP.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]
                    )
                ]
+            <> [Se.Is BeamP.id $ Se.Eq (getId $ fromJust mbPersonId) | isJust mbPersonId]
         )
     ]
     (Se.Asc BeamP.firstName)
@@ -186,8 +221,9 @@ updateEmergencyInfo ::
   Maybe RideShareOptions ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   m ()
-updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup = do
+updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup informPoliceSosFlag = do
   now <- getCurrentTime
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
@@ -195,6 +231,7 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
         <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
         <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
         <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+        <> [Se.Set BeamP.informPoliceSos informPoliceSosFlag | isJust informPoliceSosFlag]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -261,3 +298,13 @@ clearDeviceTokenByPersonId personId = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+updateTotalRidesCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Int -> m ()
+updateTotalRidesCount personId totalRidesCount = do
+  whenJust totalRidesCount \totalRidesCount' -> do
+    now <- getCurrentTime
+    updateWithKV
+      [ Se.Set BeamP.totalRidesCount (Just totalRidesCount'),
+        Se.Set BeamP.updatedAt now
+      ]
+      [Se.Is BeamP.id (Se.Eq (getId personId))]

@@ -71,12 +71,6 @@ export const getCurrentDatev2 = function (string) {
   return today;
 }
 
-
-export const compareDate = function (date1, date2) {
-  console.log("comparing : ", date1, date2);
-  return date1 >= date2;
-}
-
 export const getNextDate = function (unit) {
   const currentDate = new Date();
   const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
@@ -89,6 +83,8 @@ export const getNextDate = function (unit) {
   const dd = String(currentDate.getDate()).padStart(2, "0");
   const mm = String(currentDate.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = currentDate.getFullYear();
+  if(unit === "yyyy-mm-dd")
+    return yyyy + "-" + mm + "-" + dd;
   return dd + "/" + mm + "/" + yyyy;
 }
 
@@ -120,8 +116,84 @@ export const secondsToHms = function (d) {
   return hDisplay + mDisplay;
 }
 
+export const toIST = function (date) {
+  const today = new Date(date);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(today.getTime() + istOffset);
+  return istTime;
+}
+
+
+export const getISTDay = function (date) {
+  const today = toIST(date);
+  return today.getDay();
+}
+
+
+export const getISTMonth = function (date) {
+  const today = toIST(date);
+  return today.getMonth();
+}
+
+export const getISTFullYear = function (date) {
+  const today = toIST(date);
+  return today.getFullYear();
+}
+
+export const getISTDate = function (date) {
+  const today = toIST(date);
+  return today.getDate();
+}
+
+export const getISTHours = function (date) {
+  const today = toIST(date);
+  return today.getHours();
+}
+
+export const getISTMinutes = function (date) {
+  const today = toIST(date);
+  return today.getMinutes();
+}
+
+export const getISTSeconds = function (date) {
+  const today = toIST(date);
+  return today.getSeconds();
+}
+
+
 export const getUTCDay = function (date) {
-  return date.getUTCDay();
+  const today = new Date(date)
+  return today.getUTCDay();
+}
+
+export const getUTCMonth = function (date) {
+  const today = new Date(date)
+  return today.getUTCMonth();
+}
+
+export const getUTCFullYear = function (date) {
+  const today = new Date(date)
+  return today.getUTCFullYear();
+}
+
+export const getUTCDate = function (date) {
+  const today = new Date(date)
+  return today.getUTCDate();
+}
+
+export const getUTCHours = function (date) {
+  const today = new Date(date)
+  return today.getUTCHours();
+}
+
+export const getUTCMinutes = function (date) {
+  const today = new Date(date)
+  return today.getUTCMinutes();
+}
+
+export const getUTCSeconds = function (date) {
+  const today = new Date(date)
+  return today.getUTCSeconds();
 }
 
 export const getTime = function (unit) {
@@ -138,40 +210,48 @@ export const requestKeyboardShow = function (id) {
 }
 
 export const storeCallBackCustomer = function (cb) {
-
   return function (action) {
     return function(screenName){
-      return function () {
-        try {
-          notificationCallBacks[screenName] = function(notificationType){
-            cb(action(notificationType))();
-          }
-          const callback = callbackMapper.map(function (notificationType, notificationBody) {
-            console.log("notificationType ->", notificationType);
-            window.notificationType = notificationType;
-            if (window.whitelistedNotification.includes(notificationType)) {
-              Object.keys(notificationCallBacks).forEach((key) => {
-                notificationCallBacks[key](notificationType);
-              })
-              if (notificationBody) {
-                window.notificationBody = JSON.parse(notificationBody);
+      return function(just){
+        return function(nothing){
+          return function () {
+            try {
+              notificationCallBacks[screenName] = function(notificationType,notificationBody){
+                const parsedNotificationBody = JSON.parse(notificationBody || {});
+                const currentTimeUTC = new Date().toISOString();
+                const rideTimeIfAvailable = (parsedNotificationBody.rideTime) ? just (parsedNotificationBody.rideTime) : just (currentTimeUTC);
+                const bookingIdIfAvailable = (parsedNotificationBody.bookingId) ? just (parsedNotificationBody.bookingId) : nothing;
+                cb(action(notificationType)({rideTime : rideTimeIfAvailable, bookingId : bookingIdIfAvailable}))();
               }
+              const callback = callbackMapper.map(function (notificationType, notificationBody) {
+                console.log("notificationType ->", notificationType);
+                console.log("notificationBody ->", notificationBody);
+                window.notificationType = notificationType;
+                if (window.whitelistedNotification.has(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                  if (notificationBody) {
+                    window.notificationBody = JSON.parse(notificationBody);
+                  }
+                }
+              });
+              const notificationCallBack = function (notificationType,notificationBody) {
+                console.log("notificationType ->", notificationType);
+                if (window.whitelistedNotification.has(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                }
+              };
+              window.callNotificationCallBack = notificationCallBack;
+              console.log("In storeCallBackCustomer ---------- + " + action);
+              JBridge.storeCallBackCustomer(callback);
             }
-          });
-          const notificationCallBack = function (notificationType) {
-            console.log("notificationType ->", notificationType);
-            if (window.whitelistedNotification.includes(notificationType)) {
-              Object.keys(notificationCallBacks).forEach((key) => {
-                notificationCallBacks[key](notificationType);
-              })
+            catch (error) {
+              console.log("Error occurred in storeCallBackCustomer ------", error);
             }
-          };
-          window.callNotificationCallBack = notificationCallBack;
-          console.log("In storeCallBackCustomer ---------- + " + action);
-          JBridge.storeCallBackCustomer(callback);
-        }
-        catch (error) {
-          console.log("Error occurred in storeCallBackCustomer ------", error);
+          }
         }
       }
     }
@@ -184,11 +264,19 @@ export const storeCallBackContacts = function (cb) {
       try {
         const callback = callbackMapper.map(function (contact) {
           const json = JSON.parse(contact.toString().replace(/\s/g, " "));
-          console.log("storeCallBackContacts js " + json);
+          if (window.__OS == "IOS") {
+            json.forEach((object) => {
+              let base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+              if (base64regex.test(object.name)) {
+                object.name = new TextDecoder('utf-8').decode(Uint8Array.from(atob(object.name), c => c.charCodeAt(0)));
+              }
+            });
+          }
+          console.log("storeCallBackContacts js " , json);
           cb(action(json))();
         });
 
-        console.log("In storeCallBackContacts ---------- + " + action);
+        console.log("In storeCallBackContacts ---------- + " , action);
         return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
@@ -510,4 +598,45 @@ export const getAndRemoveLatestNotificationType = function() {
   const notificationType = window.notificationType;
   window.notificationType = null;
   return notificationType;
+}
+
+export const decodeErrorCode = function (a) {
+  try {
+    const errorCodee = JSON.parse(a).errorCode;
+    return  errorCodee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};
+
+export const isHybridApp = ()=>{
+  try {
+    return (window.__payload.payload.isHybrid === true);
+  } catch (unhandled){
+    return false;
+  }
+}
+
+export const decodeErrorMessage = function (a) {
+  try {
+    const errorMessagee = JSON.parse(a).errorMessage;
+    if(errorMessagee === null)
+    {
+      return "";
+    }
+    return  errorMessagee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};
+
+
+export const releaseBackpress = function (unit) {
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: false }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 }

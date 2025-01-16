@@ -111,6 +111,12 @@ imageSection item =
           Hatchback -> "ic_hatchback"
           Auto      -> "ic_auto"
           Bike      -> "ny_ic_bike_side"
+          Ambulance_Taxi -> "ic_bike_ambulance"
+          Ambulance_AC -> "ic_bike_ambulance"
+          Ambulance_AC_Oxy -> "ic_bike_ambulance"
+          Ambulance_Taxi_Oxy -> "ic_bike_ambulance"
+          Ambulance_Ventilator -> "ic_bike_ambulance"
+          Suv_Plus  -> "ny_ic_suv_plus_side"
       ]
   ]
 
@@ -137,6 +143,12 @@ textList item =
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
               Bike      -> "Bike"
+              Ambulance_Taxi -> "Ambulance_Taxi"
+              Ambulance_AC -> "Ambulance_AC"
+              Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
+              Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+              Ambulance_Ventilator -> "Ambulance_Ventilator"
+              Suv_Plus       -> "SUV_PLUS"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

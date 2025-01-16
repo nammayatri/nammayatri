@@ -1,17 +1,11 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.PartnerOrgConfig where
 
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Domain.Types.PartnerOrgConfig as Domain
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, throwError)
-import Tools.Error
+import Kernel.Utils.Common (MonadFlow, throwError)
 
 getTypeAndJSONFromPOrgConfig :: PartnerOrganizationConfig -> (ConfigType, A.Value)
 getTypeAndJSONFromPOrgConfig pOrgCfg =

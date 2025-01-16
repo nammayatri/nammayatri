@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude 
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -27,6 +27,8 @@ import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import Timers
 import Animation (fadeIn) as Anim
 import Common.Styles.Colors as Color
@@ -35,16 +37,13 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Control.Monad.Trans.Class (lift)
-import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Function.Uncurried (runFn5)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
-import Data.Maybe (Maybe(..),fromMaybe)
-import Control.Monad.Trans.Class (lift)
 import JBridge 
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
@@ -56,17 +55,18 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, noView)
 import Engineering.Helpers.Utils(splitIntoEqualParts)
 import Animation as Anim
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Prim.Boolean (True)
 import Debug
+import Constants (languageKey)
+import Locale.Utils (getLanguageLocale)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -281,7 +281,6 @@ view push state =
                     ][]
                   ]
                 ]
-         
         , linearLayout[
             height WRAP_CONTENT
           , width MATCH_PARENT
@@ -300,21 +299,29 @@ view push state =
             , onAnimationEnd (\_-> void $ pure $ startLottieProcess state.coverLottie.config )(const NoAction)
             ]
           ]
+        , maybe noView (\layout -> layout) state.completeProfileLayout
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             ]
-            [ textView $
+            [ imageView [
+               width state.primaryText.prefixImage.width
+               , height state.primaryText.prefixImage.height
+               , imageWithFallback state.primaryText.prefixImage.imageUrl
+               , visibility state.primaryText.prefixImage.visibility
+               , margin state.primaryText.prefixImage.margin
+                ]
+            , textView $
                 [ text $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
-                , margin $ state.primaryText.margin
-                , gravity $ state.primaryText.gravity
-                , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
+                , width if state.dismissPopupConfig.visibility == VISIBLE || state.headerInfo.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
                 , height WRAP_CONTENT
                 , visibility $ state.primaryText.visibility
+                , margin $ state.primaryText.margin
+                , gravity $ state.primaryText.gravity
                 ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT
@@ -329,13 +336,32 @@ view push state =
                     , onClick push $ const OnImageClick
                     , padding state.dismissPopupConfig.padding
                     ]
-                    [ imageView
+                    [ 
+                        imageView
                         [ width state.dismissPopupConfig.width
                         , height state.dismissPopupConfig.height
                         , imageWithFallback state.dismissPopupConfig.imageUrl
                         , visibility state.dismissPopupConfig.visibility
                         ]
                     ]
+                ]
+            , linearLayout
+                [ height (V 28)
+                , width MATCH_PARENT
+                , gravity RIGHT
+                , visibility state.headerInfo.visibility
+                ]
+                [ 
+                    textView $
+                    [ text state.headerInfo.text
+                    , accessibilityHint state.headerInfo.text
+                    , accessibility ENABLE
+                    , color Color.black600
+                    , gravity CENTER
+                    , width  WRAP_CONTENT 
+                    , height WRAP_CONTENT
+                    , visibility $ state.headerInfo.visibility
+                    ] <> (FontStyle.body1 TypoGraphy)
                 ]
             ]
         , linearLayout
@@ -346,6 +372,7 @@ view push state =
             , padding state.secondaryText.padding
             , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
+            , clickable $ state.secondaryText.isClickable
           ][ imageView [
                width state.secondaryText.prefixImage.width
                , height state.secondaryText.prefixImage.height
@@ -360,7 +387,7 @@ view push state =
              , gravity $ state.secondaryText.gravity
              , textFromHtml state.secondaryText.text
              , accessibility ENABLE
-             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
+             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") (if state.secondaryText.accessibilityHint /= ""  then state.secondaryText.accessibilityHint else state.secondaryText.text)
              , visibility $ state.secondaryText.visibility
              ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
             , imageView [
@@ -371,6 +398,8 @@ view push state =
                , margin state.secondaryText.suffixImage.margin
              ]
           ]
+        , deliveryView push state
+        , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
@@ -391,12 +420,12 @@ view push state =
             , margin state.buttonLayoutMargin
             ]
             [   linearLayout
-                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) then MATCH_PARENT else WRAP_CONTENT
+                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) || ( state.deliveryDetailsConfig.visibility == VISIBLE ) then MATCH_PARENT else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    ([ if state.option2.visibility then width state.option1.width 
+                    ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility /= VISIBLE then width state.option1.width 
                        else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
@@ -447,7 +476,7 @@ view push state =
                             [ width WRAP_CONTENT
                             , height WRAP_CONTENT
                             , accessibility ENABLE
-                            , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
+                            , text  (if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
                             , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                             , color $ state.option1.color
                             , gravity CENTER
@@ -455,7 +484,8 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    ([ if not state.showRetry then width state.option1.width 
+                    ([ if state.deliveryDetailsConfig.visibility == VISIBLE then weight 1.0
+                       else if not state.showRetry then width state.option1.width 
                        else if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
@@ -664,7 +694,173 @@ tipsViewConfig state = let
 
 parseConerRadius :: Corners -> Number
 parseConerRadius corners =
-    let rd = case corners of
-                Corners radius _ _ _ _ -> radius
-                Corner radius -> radius
-    in spy "rd" rd 
+  case corners of
+    Corners radius _ _ _ _ -> radius
+    Corner radius -> radius
+
+upiView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+upiView push state = 
+  let imageConfig = state.upiDetailConfig.imageConfig
+      hasSecondaryText = state.upiDetailConfig.accountName /= ""
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 16
+  , cornerRadius 12.0
+  , background Color.grey700
+  , padding $ Padding 12 8 12 8
+  , gravity CENTER_VERTICAL
+  , visibility state.upiDetailConfig.visibility
+  ][imageView
+    [ imageWithFallback $ imageConfig.imageUrl
+    , height $ imageConfig.height
+    , width $ imageConfig.width
+    , margin $ imageConfig.margin
+    , padding $ imageConfig.padding
+    ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ PaddingBottom $ if ((getLanguageLocale languageKey) == "EN_US") then 4 else 0
+    ][textView $
+      [ text state.upiDetailConfig.upiID
+      , color Color.black800
+      ] <> FontStyle.subHeading3 TypoGraphy 
+    , textView $
+      [ text state.upiDetailConfig.accountName
+      , color Color.black700
+      , visibility $ boolToVisibility $ hasSecondaryText
+      ] <> FontStyle.body23 TypoGraphy 
+    ]
+  ]
+
+deliveryView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+deliveryView push state = 
+    linearLayout
+    [ height WRAP_CONTENT,
+      width MATCH_PARENT,
+      visibility state.deliveryDetailsConfig.visibility
+    ]
+    [
+        deliveryDetailsView push state 
+    ]
+    
+deliveryDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+deliveryDetailsView push state =    
+    scrollView
+        [ height $ V (screenHeight unit - 400)
+        , width MATCH_PARENT
+        ]
+        [
+            linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin state.deliveryDetailsConfig.margin
+            , orientation VERTICAL
+            ]
+            [
+                pickupAndDrop push state 
+            ,   personName push state
+            ,   PrimaryEditText.view (push <<< PersonMobile) state.deliveryDetailsConfig.mobileNumberDetails
+            ,   PrimaryEditText.view (push <<< PersonAddress) state.deliveryDetailsConfig.addressDetails
+            ,   PrimaryEditText.view (push <<< PersonInstruction) state.deliveryDetailsConfig.instructionDetails
+            ]
+        ]
+
+pickupAndDrop :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+pickupAndDrop push state = 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][
+        textView $ 
+        [
+        text $ if state.deliveryDetailsConfig.isSource then getString PICKUP else getString DROP
+        , gravity LEFT
+        , color Color.black800
+        ] <> FontStyle.body3 TypoGraphy,
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 8
+        , background Color.blue600
+        , cornerRadius 8.0
+        , padding $ Padding 8 12 8 12
+        ][
+            textView $
+              [ text state.deliveryDetailsConfig.locationTitle
+              , maxLines 1
+              , ellipsize true
+              , gravity LEFT
+              , color Color.black900
+              , margin $ MarginBottom 2
+              ] <> FontStyle.tags TypoGraphy
+            , textView $
+              [ text $ state.deliveryDetailsConfig.locationDetails
+              , color Color.black700
+              , maxLines 1
+              , ellipsize true
+              , gravity LEFT
+              ] <> FontStyle.body3 TypoGraphy
+        ]
+    ]
+
+personName :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+personName push state =
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 20
+    ]
+    [
+      PrimaryEditText.view (push <<< PersonName) state.deliveryDetailsConfig.personNameDetails
+    , linearLayout
+        [
+        height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , visibility $ boolToVisibility state.deliveryDetailsConfig.checkBoxDetails.visibility
+        ]
+        [
+        checkBoxView push state
+        ,   textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ state.deliveryDetailsConfig.checkBoxDetails.text
+                , color Color.black800
+                , margin $ MarginLeft 4
+                ] <> FontStyle.body3 TypoGraphy
+        ]
+    ]
+
+checkBoxView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+checkBoxView push state =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , padding (Padding 0 0 0 0)
+    , margin (Margin 0 0 0 0)
+    , onClick push (const CheckBoxClick)
+    ][ frameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT      
+        ][ linearLayout
+            [ height (V 16)
+            , width (V 16)
+            , stroke ("1," <> Color.grey800)
+            , cornerRadius 2.0
+            ][
+            imageView
+                [ width (V 16)
+                , height (V 16)
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
+                , visibility $ boolToVisibility state.deliveryDetailsConfig.checkBoxDetails.isSelected
+                ]
+            ]
+        ]
+    ]

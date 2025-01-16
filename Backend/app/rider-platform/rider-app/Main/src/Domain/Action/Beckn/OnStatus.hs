@@ -32,10 +32,10 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -51,6 +51,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
@@ -148,12 +149,13 @@ rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus
+  -- not making booking parties link inactive as this function is not used
   case rideEntity of
     UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> do
       unless (rideOldStatus == rideNewStatus) $ do
         QRide.updateMultiple ride.id ride
     RenewedRide renewedRide -> do
-      QRide.create renewedRide
+      QRide.createRide renewedRide
 
 isStatusChanged :: DB.BookingStatus -> DB.BookingStatus -> RideEntity -> Bool
 isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
@@ -182,7 +184,8 @@ onStatus ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedOnStatusReq ->
   m ()
@@ -193,6 +196,7 @@ onStatus req = do
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
         QB.updateStatus booking.id bookingNewStatus
+      -- not making booking parties link inactive as this function is not used
       whenJust mbExistingRide \existingRide -> do
         unless (existingRide.status == rideNewStatus) $ do
           QRide.updateStatus existingRide.id rideNewStatus
@@ -282,13 +286,14 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   shortId <- generateShortId
   now <- getCurrentTime
   let fromLocation = booking.fromLocation
-      toLocation = case booking.bookingDetails of
-        DB.OneWayDetails details -> Just details.toLocation
-        DB.RentalDetails _ -> Nothing
-        DB.DriverOfferDetails details -> Just details.toLocation
-        DB.OneWaySpecialZoneDetails details -> Just details.toLocation
-        DB.InterCityDetails details -> Just details.toLocation
-        DB.AmbulanceDetails details -> Just details.toLocation
+      (toLocation, stops) = case booking.bookingDetails of
+        DB.OneWayDetails details -> (Just details.toLocation, details.stops)
+        DB.RentalDetails _ -> (Nothing, [])
+        DB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
+        DB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
+        DB.InterCityDetails details -> (Just details.toLocation, [])
+        DB.AmbulanceDetails details -> (Just details.toLocation, [])
+        DB.DeliveryDetails details -> (Just details.toLocation, [])
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber
@@ -299,7 +304,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       merchantOperatingCityId = Just booking.merchantOperatingCityId
       bookingId = booking.id
       status = DRide.NEW
-      vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType
+      vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType
       vehicleServiceTierType = Just booking.vehicleServiceTierType
       trackingUrl = Nothing
       fare = Nothing
@@ -326,7 +331,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       clientSdkVersion = Nothing
       tollConfidence = Nothing
       distanceUnit = booking.distanceUnit
-      paymentDone = False
+      paymentStatus = DRide.NotInitiated
       driverAccountId = Nothing
       vehicleAge = Nothing
       driverPhoneNumber = Just driverPhoneNumber'
@@ -335,6 +340,14 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       cancellationFeeIfCancelled = Nothing
       isAlreadyFav = Just False
       favCount = Just 0
+      safetyJourneyStatus = Nothing
+      destinationReachedAt = Nothing
+      estimatedEndTimeRange = Nothing
+      tipAmount = Nothing
+      hasStops = booking.hasStops
+      wasRideSafe = Nothing
+      feedbackSkipped = False
+      pickupRouteCallCount = Just 0
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
@@ -357,6 +370,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }

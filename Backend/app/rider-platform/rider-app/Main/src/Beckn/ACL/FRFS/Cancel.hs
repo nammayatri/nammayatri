@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Beckn.ACL.FRFS.Cancel (buildCancelReq) where
 
@@ -20,6 +19,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Control.Applicative ((<|>))
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
@@ -32,10 +32,11 @@ buildCancelReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
+  Maybe Text ->
   Spec.CancellationType ->
   Context.City ->
   m (Spec.CancelReq)
-buildCancelReq booking bapConfig bppData cancellationType city = do
+buildCancelReq booking bapConfig bppData mbCancellationReasonId cancellationType city = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
       validTill = addUTCTime (intToNominalDiffTime 30) now
@@ -48,13 +49,13 @@ buildCancelReq booking bapConfig bppData cancellationType city = do
   pure $
     Spec.CancelReq
       { cancelReqContext = context,
-        cancelReqMessage = tfCancelMessage bppOrderId cancellationType
+        cancelReqMessage = tfCancelMessage bppOrderId mbCancellationReasonId cancellationType
       }
 
-tfCancelMessage :: Text -> Spec.CancellationType -> Spec.CancelReqMessage
-tfCancelMessage bppOrderId cancellationType =
+tfCancelMessage :: Text -> Maybe Text -> Spec.CancellationType -> Spec.CancelReqMessage
+tfCancelMessage bppOrderId cancellationReasonId cancellationType =
   Spec.CancelReqMessage
-    { cancelReqMessageCancellationReasonId = Just "7", -- TODO: Get details around this from ONDC
+    { cancelReqMessageCancellationReasonId = cancellationReasonId <|> Just "7",
       cancelReqMessageDescriptor =
         Just $
           Spec.Descriptor

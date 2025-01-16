@@ -19,6 +19,9 @@ imports:
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   BusinessHourType: Domain.Types.BusinessHour
   Value: Data.Aeson
+  TimeBound : Kernel.Types.TimeBound
+  BookingStatus: Domain.Types.Extra.TicketBooking
+  Day: Data.Time
 
 TicketPlace:
   tableName: ticket_place
@@ -62,6 +65,10 @@ TicketPlace:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByNameAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [name, merchantOperatingCityId]
 
 TicketService:
   tableName: ticket_service
@@ -72,6 +79,7 @@ TicketService:
     service: Text
     shortDesc: Maybe Text
     operationalDays: "[Text]"
+    operationalDate: "Maybe OperationalDate"
     maxVerification: Int
     allowFutureBooking: Bool
     allowCancellation: Bool
@@ -80,6 +88,24 @@ TicketService:
   types:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
+    OperationalDate:
+      startDate: Day
+      eneDate: Day
+
+  beamFields:
+    operationalDate:
+      operationalStartDate: Maybe Day
+      operationalEndDate: Maybe Day
+
+  sqlType:
+    operationalDates: text[]
+
+  fromTType:
+    operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalStartDate' operationalEndDate'|E
+
+  toTType:
+    operationalStartDate: operationalDate <&> (.startDate)|E
+    operationalEndDate: operationalDate <&> (.eneDate)|E
 
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
@@ -92,6 +118,11 @@ TicketService:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+    findByPlacesIdAndService:
+      kvFunction: findOneWithKV
+      where:
+        and: [placesId, service]
 
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
@@ -158,6 +189,9 @@ BusinessHour:
       kvFunction: findOneWithKV
       where: id
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
 ServiceCategory:
   tableName: service_category
 
@@ -174,6 +208,9 @@ ServiceCategory:
       kvFunction: findOneWithKV
       where: id
 
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
 ServicePeopleCategory:
   tableName: service_people_category
   derives: "Generic,Show"
@@ -183,9 +220,13 @@ ServicePeopleCategory:
     description: Text
     pricePerUnit: Price
     cancellationCharges: "Maybe [CancellationCharge]"
+    timeBounds: TimeBound|NoRelation
+    pricingType: PricingType
 
   beamType:
     cancellationCharges: Maybe Value
+    timeBounds: Maybe TimeBound
+    pricingType: Maybe PricingType
 
   sqlType:
     cancellationCharges: json
@@ -198,11 +239,19 @@ ServicePeopleCategory:
   fromTType:
     pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
     cancellationCharges: getCancellationChargesFromTable
+    timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
+    pricingType: (Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays)|I
 
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     cancellationCharges: convertCancellationChargesToTable
+    timeBounds: Kernel.Prelude.Just|I
+    pricingType: Kernel.Prelude.Just|I
+
+  default:
+    timeBounds: "'Unbounded'"
+    pricingType: "'AllDays'"
 
   types:
     CancellationCharge:
@@ -211,11 +260,16 @@ ServicePeopleCategory:
       derive: "'ListInstance, Eq, Ord, Read"
     CancelCharge:
       enum: "FlatFee HighPrecMoney,Percentage Int"
+    PricingType:
+      enum: "SameDay,AllDays"
 
   queries:
-    findById:
-      kvFunction: findOneWithKV
+    findAllServicePeopleCategory:
+      kvFunction: findAllWithKV
       where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 SeatManagement:
   tableName: seat_management
@@ -291,11 +345,6 @@ TicketBooking:
     shortId: SecondaryKey
     personId: SecondaryKey
 
-  types:
-    BookingStatus:
-      enum: "Pending,Failed,Booked,Cancelled"
-      derive: HttpInstance
-
   default:
     bookedSeats: "0"
 
@@ -325,6 +374,7 @@ TicketBooking:
 
   extraOperations:
   - EXTRA_QUERY_FILE
+  - EXTRA_DOMAIN_TYPE_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service

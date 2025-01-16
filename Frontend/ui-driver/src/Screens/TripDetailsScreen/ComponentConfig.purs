@@ -18,7 +18,7 @@ module Screens.TripDetailsScreen.ComponentConfig where
 import Common.Types.App
 import Language.Strings
 import PrestoDOM
-
+import Prelude
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
@@ -32,6 +32,7 @@ import Prelude ((<>), ($))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
+import Debug
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -65,8 +66,9 @@ sourceToDestinationConfig state = let
   formatTimeAndLocation maybeTime location = case maybeTime of
     Just time -> ((EHC.convertUTCtoISC time "D MMM") <> " • " <> (EHC.convertUTCtoISC time "h:mm A")) <> "\n" <> location
     Nothing -> location
-  source = formatTimeAndLocation state.data.tripStartTime state.data.source
-  destination = formatTimeAndLocation state.data.tripEndTime state.data.destination
+  source =  formatTimeAndLocation state.data.tripStartTime state.data.source
+  destination =  formatTimeAndLocation state.data.tripEndTime state.data.destination
+  tripType  =  state.data.tripType
   sourceToDestinationConfig' = config
     {
       margin = (Margin 0 13 0 0)
@@ -92,6 +94,8 @@ sourceToDestinationConfig state = let
       , ellipsize = false
       }
     , overrideSeparatorCount = 6
+    , showDestination = tripType /= ST.Rental
+
     }
   in sourceToDestinationConfig'
 

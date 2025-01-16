@@ -26,9 +26,21 @@ flag Local
 
 library
   exposed-modules:
+      ChatCompletion.AzureOpenAI.API
+      ChatCompletion.AzureOpenAI.Config
+      ChatCompletion.AzureOpenAI.Types
+      ChatCompletion.Gemini.API
+      ChatCompletion.Gemini.Config
+      ChatCompletion.Gemini.Types
+      ChatCompletion.Interface
+      ChatCompletion.Interface.AzureOpenAI
+      ChatCompletion.Interface.Gemini
+      ChatCompletion.Interface.Types
+      ChatCompletion.Types
       Email.AWS.Flow
       Email.Types
       KafkaLogs.TransactionLogs
+      Slack.AWS.Flow
       TransactionLogs.Interface
       TransactionLogs.Interface.ONDC
       TransactionLogs.Interface.Types
@@ -65,6 +77,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -80,6 +93,7 @@ library
     , amazonka
     , amazonka-core
     , amazonka-ses
+    , amazonka-sns
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core

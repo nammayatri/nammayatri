@@ -58,9 +58,6 @@ type API =
       :> "payout"
       :> "order"
       :> "status"
-      :> QueryParam
-           "dailyStatsId"
-           Data.Text.Text
       :> MandatoryQueryParam
            "orderId"
            Data.Text.Text
@@ -116,8 +113,7 @@ getPayoutOrderStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
     Data.Text.Text ->
     Environment.FlowHandler Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp
   )
-getPayoutOrderStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPayoutOrderStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

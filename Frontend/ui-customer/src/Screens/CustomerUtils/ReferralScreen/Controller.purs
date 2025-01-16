@@ -20,7 +20,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.Referral as ReferralComponent
 import Data.String as DS
-import JBridge (hideKeyboardOnNavigation, shareTextMessage, showKeyboard, copyToClipboard, toast)
+import JBridge (hideKeyboardOnNavigation, shareTextMessage, showKeyboard, copyToClipboard)
+import Engineering.Helpers.Utils as EHU
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, not, pure, void, ($), (==), unit, (<>), (&&))
 import PrestoDOM (class Loggable, Eval, update, continue, continueWithCmd, exit)
@@ -56,6 +57,7 @@ instance loggableAction :: Loggable Action where
     ReferralEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_code_text_image_onclick" "primary_edit_text"
     GenericHeaderAC act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"
@@ -176,7 +178,7 @@ eval (ReferralComponentAction componentAction) state =
 eval CopyToClipboard state = 
   continueWithCmd state [ do
     _ <- pure $ copyToClipboard state.referralCode
-    _ <- pure $ toast (getString COPIED)
+    _ <- pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 

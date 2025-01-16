@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.FareCalculator where
@@ -6,7 +5,6 @@ module API.Types.UI.FareCalculator where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
-import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -23,9 +21,12 @@ data EstimateApi = EstimateApi
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FareResponse = FareResponse {estimatedFares :: [EstimateApi]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

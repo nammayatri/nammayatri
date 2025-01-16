@@ -364,4 +364,58 @@ ALTER TABLE atlas_app.person
 ADD COLUMN udf2 character varying(255);
 
 
+-- Ensure uniqueness when both trip_category and fcm_sub_category are not null
+CREATE UNIQUE INDEX unique_combination_dne_not_null
+ON atlas_app.merchant_push_notification (
+    fcm_notification_type,
+    key,
+    merchant_id,
+    merchant_operating_city_id,
+    language,
+    trip_category,
+    fcm_sub_category
+)
+WHERE trip_category IS NOT NULL AND fcm_sub_category IS NOT NULL;
+
+-- In master and prod drop existing pkeys and make id pkey
+-- Please drop all existing pkeys
+ALTER TABLE atlas_app.merchant_push_notification DROP CONSTRAINT merchant_push_notification_pkey;
+ALTER TABLE atlas_app.merchant_push_notification ADD PRIMARY KEY ( id);
+
+
+-- Ensure uniqueness when trip_category is null and fcm_sub_category is not null
+CREATE UNIQUE INDEX unique_combination_trip_null_fcm_sub_not_null
+ON atlas_app.merchant_push_notification (
+    fcm_notification_type,
+    key,
+    merchant_id,
+    merchant_operating_city_id,
+    language,
+    fcm_sub_category
+)
+WHERE trip_category IS NULL AND fcm_sub_category IS NOT NULL;
+
+-- Ensure uniqueness when trip_category is not null and fcm_sub_category is null
+CREATE UNIQUE INDEX unique_combination_trip_not_null_fcm_sub_null
+ON atlas_app.merchant_push_notification (
+    fcm_notification_type,
+    key,
+    merchant_id,
+    merchant_operating_city_id,
+    language,
+    trip_category
+)
+WHERE trip_category IS NOT NULL AND fcm_sub_category IS NULL;
+
+-- Ensure uniqueness when both trip_category and fcm_sub_category are null
+CREATE UNIQUE INDEX unique_combination_trip_null_fcm_sub_null
+ON atlas_app.merchant_push_notification (
+    fcm_notification_type,
+    key,
+    merchant_id,
+    merchant_operating_city_id,
+    language
+)
+WHERE trip_category IS NULL AND fcm_sub_category IS NULL;
+
 -- thank you for getting here!

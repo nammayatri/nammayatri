@@ -8,6 +8,7 @@ imports:
   DriverAutoPayStatus: Domain.Types.DriverInformation
   ServiceNames: Domain.Types.Plan
   SubscriptionServiceRelatedData: Domain.Types.Extra.DriverPlan
+  VehicleCategory: Domain.Types.VehicleCategory
 
 DriverPlan:
   tableName: driver_plan
@@ -31,6 +32,9 @@ DriverPlan:
     merchantId : Id Merchant
     merchantOpCityId : Id MerchantOperatingCity
     subscriptionServiceRelatedData : SubscriptionServiceRelatedData
+    vehicleCategory : Maybe VehicleCategory|NoRelation
+    isOnFreeTrial : Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
 
   beamFields:
     subscriptionServiceRelatedData:
@@ -41,16 +45,21 @@ DriverPlan:
     merchantId: Maybe Text
     merchantOpCityId: Maybe Text
     serviceName: Maybe ServiceNames
+    isOnFreeTrial : Maybe Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
 
   fromTType:
     enableServiceUsageCharge: Kernel.Prelude.fromMaybe False enableServiceUsageCharge|E
+    isOnFreeTrial : Kernel.Prelude.fromMaybe True isOnFreeTrial|E
     serviceName: Kernel.Prelude.fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
     subscriptionServiceRelatedData: Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber|EM
     merchantOpCityId: Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName|EM
     merchantId: Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName|EM
-
+    vehicleCategory: Storage.Queries.Transformers.DriverPlan.backfillVehicleCategoryByDriverIdAndServiceName vehicleCategory driverId serviceName planType planId|EM
+    isCategoryLevelSubscriptionEnabled: Storage.Queries.Transformers.DriverPlan.backfillIsSubscriptionEnabledAtCategory isCategoryLevelSubscriptionEnabled driverId serviceName| EM
   toTType:
     enableServiceUsageCharge: Kernel.Prelude.Just|I
+    isOnFreeTrial : Kernel.Prelude.Just|I
     serviceName: Kernel.Prelude.Just|I
     merchantId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantId)|E
     merchantOpCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOpCityId)|E
@@ -120,6 +129,13 @@ DriverPlan:
       params: [mandateSetupDate, updatedAt]
       where:
         and: [driverId, serviceName]
+
+    updateFreeTrialByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [isOnFreeTrial, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
   sqlType:
     mandateId: text
     merchantId:  text

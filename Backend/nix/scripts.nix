@@ -29,6 +29,26 @@ _:
         '';
       };
 
+      latest-docs = {
+        category = "Backend";
+        description = "Replica of https://hoogle.haskell.org/ to run locally.";
+        exec = ''
+          re_generate=false
+          for arg in "$@"; do
+            if [[ "$arg" == "--generate" ]]; then
+              re_generate=true
+              break
+            fi
+          done
+          set -x
+          if [ ! -d "''${FLAKE_ROOT}/Backend/hoogle-db" ] || [[ $re_generate == true ]]; then
+            hoogle generate --download --database="''${FLAKE_ROOT}/Backend/hoogle-db/.hoogle"
+          fi
+          echo "#### Hoogle running at: http://localhost:8091"
+          hoogle serve --port 8091 --database="''${FLAKE_ROOT}/Backend/hoogle-db/.hoogle"
+        '';
+      };
+
       hpack = {
         category = "Backend";
         description = "Run hpack to generate cabal files.";
@@ -79,11 +99,22 @@ _:
           # Automatically applies Redundant bracket hint
           applyHintArg=false
           allArg=false
+          pathArg=""
           for arg in "$@"; do
+            argName=$(echo "$arg" | cut -d "=" -f 1)
+            argValue=$(echo "$arg" | cut -d "=" -f 2)
             if [[ "$arg" == "--apply-hint" ]];
             then applyHintArg=true
             elif [[ "$arg" == "--all" ]];
             then allArg=true
+            elif [[ "$argName" == "--path" ]];
+            then
+              if [[ "$applyHintArg" == false ]]
+              then
+                echo "path arg works only with applyHint arg"
+                exit 1
+              else pathArg=$argValue
+              fi
             fi
           done
 
@@ -114,12 +145,20 @@ _:
 
           if "$applyHintArg"
           then
-            applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
+            if  [[ "$pathArg" == "" ]]
+            then
+              applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/shared-services/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/safety-dashboard/src-read-only" "$allArg"
+            else
+              applyHint "''${FLAKE_ROOT}/''${pathArg}" true
+            fi
           else
             echo "No hints applied"
           fi
@@ -161,7 +200,7 @@ _:
             (port: ''
               # Get the process ID using lsof for the specified port
               set +e
-              pid=$(${lib.getExe pkgs.lsof} -ti:${builtins.toString port})
+              pid=$(${pkgs.lsof}/bin/lsof -ti:${builtins.toString port})
               set -e
 
               # Check if lsof returned any process ID
@@ -188,7 +227,7 @@ _:
           cp -r ./app/example-service ./app/"''${name}"
           echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
           rm ./app/"''${name}"/example-service.cabal
-          ${lib.getExe pkgs.tree} ./app/"''${name}"
+          ${pkgs.tree}/bin/tree ./app/"''${name}"
         '';
       };
 

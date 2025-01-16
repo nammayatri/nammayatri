@@ -35,7 +35,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as Ride
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import Domain.Types.Beckn.Status as DStatus
 import qualified Domain.Types.BecknConfig as DBC
@@ -188,7 +188,8 @@ buildOnStatusReqV2' ::
   m Spec.OnStatusReq
 buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req mbFarePolicy bppConfig = do
   ttl <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  bapUri <- parseBaseUrl booking.bapUri
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   message <- mkOnStatusMessageV2 req mbFarePolicy bppConfig
   pure $
     Spec.OnStatusReq

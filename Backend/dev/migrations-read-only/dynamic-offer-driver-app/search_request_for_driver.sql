@@ -86,3 +86,59 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN client_manufacturer text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN previous_drop_geo_hash text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN responded_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN rendered_at timestamp with time zone ;
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN from_loc_geohash text ;
+
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_tags json ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN customer_tags json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN pooling_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN pooling_config_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN upgrade_cab_request boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_favourite boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN middle_stop_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN last_ride_id character varying(36) ;
+
+
+------- SQL updates -------
+

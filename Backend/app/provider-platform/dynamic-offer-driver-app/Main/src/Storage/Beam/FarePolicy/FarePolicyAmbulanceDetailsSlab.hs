@@ -6,7 +6,6 @@
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab where
 
@@ -22,6 +21,7 @@ data FarePolicyAmbulanceDetailsSlabT f = FarePolicyAmbulanceDetailsSlabT
   { id :: B.C f Int,
     farePolicyId :: B.C f Text,
     baseFare :: B.C f HighPrecMoney,
+    baseDistance :: B.C f Meters,
     perKmRate :: B.C f HighPrecMoney,
     currency :: B.C f Currency,
     vehicleAge :: B.C f Months,

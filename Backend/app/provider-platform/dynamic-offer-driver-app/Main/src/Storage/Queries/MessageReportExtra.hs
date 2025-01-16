@@ -1,10 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.MessageReportExtra where
 
-import qualified Data.Aeson as A
-import qualified Data.Map as Map
 import qualified Data.Time as T
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -15,14 +10,11 @@ import qualified Domain.Types.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Message as BeamM
@@ -31,7 +23,7 @@ import qualified Storage.Beam.MessageTranslation as BeamMT
 import Storage.Queries.Message as QMM hiding (create)
 import qualified Storage.Queries.Message ()
 import Storage.Queries.MessageTranslation as QMMT hiding (create)
-import Storage.Queries.OrphanInstances.MessageReport
+import Storage.Queries.OrphanInstances.MessageReport ()
 import qualified Storage.Queries.Person ()
 
 -- Extra code goes here --

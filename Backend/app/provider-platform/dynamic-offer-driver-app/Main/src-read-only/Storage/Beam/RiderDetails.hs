@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.RiderDetails where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.RiderDetails
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -23,7 +22,10 @@ data RiderDetailsT f = RiderDetailsT
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
     hasTakenValidRideAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
+    isDeviceIdExists :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isFlagConfirmed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileCountryCode :: B.C f Kernel.Prelude.Text,
     mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,

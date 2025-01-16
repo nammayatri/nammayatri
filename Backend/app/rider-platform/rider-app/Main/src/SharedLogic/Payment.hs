@@ -45,7 +45,22 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
       capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
+
+cancelPaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Ride.Ride ->
+  m ()
+cancelPaymentIntent merchantId merchantOpCityId rideId = do
+  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+  DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
 
 chargePaymentIntent ::
   ( MonadFlow m,
@@ -57,7 +72,7 @@ chargePaymentIntent ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentIntentId ->
-  m ()
+  m Bool
 chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
@@ -87,17 +102,25 @@ paymentErrorHandler booking exec = do
               { reasonCode = SCR.CancellationReasonCode (maybe "UNKOWN_ERROR" toErrorCode err),
                 reasonStage = SCR.OnAssign,
                 additionalInfo = err >>= toMessage,
-                reallocate = Nothing
+                reallocate = Nothing,
+                blockOnCancellationRate = Nothing
               }
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
 
-makeCancellationPayment ::
-  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+makeCxCancellationPayment ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  Id Person.Person ->
-  Ride.Ride ->
-  PriceAPIEntity ->
-  m ()
-makeCancellationPayment _ _ _ _ _ = logDebug "Cancellation payment not implemented yet."
+  Payment.PaymentIntentId ->
+  HighPrecMoney ->
+  m Bool
+makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount

@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Data.Maybe
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -37,12 +38,30 @@ type AppConfigDriver a =
     enableDriverReferral :: Boolean,
     enableCustomerReferral :: Boolean,
     rideRequest :: RideRequestConfig,
-    coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    appUpdatePopupUrl :: String,
+    showProfileAadhaarPan :: Boolean,
+    clientName :: String,
+    rateCardScreen :: RateCardScreenConfig,
+    rcLimit :: Int,
+    acExplanation :: Boolean,
+    showMonthlyLeaderBoard :: Boolean,
+    hotspotConfig :: HotspotConfig,
+    rentalRideVideoConfig :: RentalRideVideoConfig,
+    scheduledRideConfig :: ScheduledRideConfig
     | a
   } 
+
+type RentalRideVideoConfig = {
+  auto :: String,
+  cab :: String
+}
+
+type ScheduledRideConfig = {
+  scheduledBannerTimerValue :: Int
+}
 
 type PurpleRideConfig = {
   showPurpleVideos :: Boolean,
@@ -51,6 +70,11 @@ type PurpleRideConfig = {
   hearingImpairmentVideo :: String,
   genericAccessibilityVideo :: String
   }
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
+}
 
 type Language =  {
   name :: String,
@@ -72,8 +96,6 @@ type SubscriptionConfig =  {
   onBoardingSubscription :: Boolean,
   showLaterButtonforTimeRange :: Boolean,
   offerBannerConfig :: SubscriptionOfferBannerConfig,
-  lowDuesLimit :: Number,
-  maxDuesLimit :: Number,
   highDueWarningLimit :: Number,
   moveDriverToOfflineInHighDueDaily :: Boolean,
   enableSubscriptionPopups :: Boolean,
@@ -218,39 +240,38 @@ type NegotiationUnit = {
   cab :: String
 }
 
-type CoinsConfig = {
-  minCoinSliderValue :: Int,
-  maxCoinSliderValue :: Int,
-  stepFunctionForCoinConversion :: Int,
-  twoRidesCompletedThresholdForCoins :: String,
-  fiveRidesCompletedThresholdForCoins :: String,
-  numOfRideThresholdForCoins :: String,
-  leaderBoardThresholdForCoins :: String,
-  customerReferralCoins :: String,
-  twoPlusRidesCoins :: String,
-  fivePlusRidesCoins :: String,
-  eightPlusRidesCoins :: String,
-  purpleRideCoins :: String,
-  rideCompletedCoins :: String,
-  fiveStarRatingCoins :: String,
-  oneOrTwoStarRatingCoins :: String,
-  rideCancellationCoins :: String,
-  whatAreYatriCoinFAQ :: String,
-  howToEarnYatriCoinFAQ :: String,
-  howToRedeemYatriCoinFAQ :: String,
-  rideCompletedCoinEvent :: Boolean,
-  twoRideCoinEvent :: Boolean,
-  fiveRideCoinEvent :: Boolean,
-  eightRideCoinEvent :: Boolean,
-  prupleRideCoinEvent :: Boolean,
-  bookingCancelCoinEvent :: Boolean,
-  fiveStarCoinEvent :: Boolean,
-  oneTwoStarCoinEvent :: Boolean,
-  driverToCustomerRefCoinEvent :: Boolean,
-  coinConversionPopupLottie :: String,
-  driverToCustomerRefPopupEndDate :: String,
-  monsoonOfferDate :: String,
-  coinsValidTill :: Int
+type CityConfig = {
+  cityName :: String,
+  mapImage :: String,
+  cityCode :: String,
+  showSubscriptions :: Boolean,
+  enableAdvancedBooking :: Boolean,
+  advancedRidePopUpYoutubeLink :: String,
+  callDriverInfoPost :: Boolean,
+  cityLat :: Number,
+  cityLong :: Number,
+  supportNumber :: String,
+  languageKey :: String,
+  showDriverReferral :: Boolean,
+  showCustomerReferral :: Boolean,
+  uploadRCandDL :: Boolean,
+  enableYatriCoins :: Boolean,
+  registration :: RegistrationConfig,
+  vehicleNSImg :: String,
+  variantSubscriptionConfig :: VariantSubscriptionConfig,
+  showEarningSection :: Boolean,
+  referral :: Referral,
+  waitingCharges :: Number,
+  waitingChargesConfig :: WaitingChargesConfig,
+  rentalWaitingChargesConfig :: WaitingChargesConfig,
+  rateCardConfig :: RateCardConfig,
+  gstPercentage :: String,
+  assets :: Assets,
+  enableHvSdk :: Boolean,
+  enableGullak :: Boolean,
+  purpleRideConfig :: PurpleRideConfigForVehicle,
+  rideStartAudio :: RideStartAudio,
+  showScheduledRides :: Boolean
 }
 
 type InAppKeyboardModalConfig = {
@@ -263,4 +284,95 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+type RateCardScreenConfig = {
+  showYoutubeVideo :: Boolean,
+  showRateCard :: Boolean,
+  showTollCharges :: Boolean,
+  showDriverAdditions :: Boolean
+}
+
+type RateCardConfig = {
+  showLearnMore :: Boolean,
+  learnMoreVideoLink :: String
+}
+
+type Assets ={
+  auto_image :: String,
+  onboarding_auto_image :: String,
+  empty_referral_auto :: String,
+  empty_referral_cab :: String
+}
+
+type PurpleRideConfigForVehicle = {
+  purpleRideConfigForAuto :: VariantToDisabilityVideo,
+  purpleRideConfigForCabs :: VariantToDisabilityVideo,
+  purpleRideConfigForBikes :: VariantToDisabilityVideo
+}
+
+type RideStartAudio = {
+  acCab :: StartAudioUrls,
+  nonAcCab :: StartAudioUrls, 
+  auto :: StartAudioUrls,
+  bike :: StartAudioUrls
+}
+
+type StartAudioUrls = {
+  tollAudio :: Maybe String,
+  acAudio :: Maybe String,
+  parkingAudio :: Maybe String,
+  defaultAudio :: Maybe String
+}
+
+type VariantToDisabilityVideo = {
+  vehicleVariant :: String,
+  showVideo :: Boolean,
+  disabilityToVideo :: Array DisabilityToVideo,
+  genericVideoForVariant :: String
+}
+
+type DisabilityToVideo = {
+  disabilityType :: String, 
+  videoUrl :: String
+}
+
+type VariantSubscriptionConfig = {
+  enableVariantBasedSubscription :: Boolean,
+  variantList :: Array String,
+  enableCabsSubscriptionView :: Boolean,
+  staticViewPlans :: Array StaticViewPlans
+}
+
+type RegistrationConfig = {
+  supportWAN :: String,
+  callSupport :: Boolean,
+  whatsappSupport :: Boolean
+}
+
+type StaticViewPlans = {
+  price :: Number,
+  frequency :: String,
+  variantCategory :: String,
+  name :: String,
+  introductoryOffer :: String,
+  showSelected :: Boolean,
+  planDesc :: String
+}
+
+type WaitingChargesConfig = {
+  cab :: ChargesEntity,
+  auto :: ChargesEntity,
+  bike :: ChargesEntity
+}
+
+type HotspotConfig = {
+  veryHighHotspotColor :: String,
+  highHotspotColor :: String,
+  moderateHotspotColor :: String,
+  veryHighRange :: Number,
+  highRange :: Number,
+  circleRadius ::Number,
+  centerDeviation :: Number,
+  showColorWithRelativeWeight :: Boolean,
+  minCirclesNeededForSortedWeights :: Int
 }

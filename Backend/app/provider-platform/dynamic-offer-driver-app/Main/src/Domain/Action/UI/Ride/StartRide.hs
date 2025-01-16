@@ -26,8 +26,8 @@ where
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -37,7 +37,7 @@ import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -50,6 +50,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
@@ -100,7 +101,7 @@ buildStartRideHandle merchantId merchantOpCityId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int])
 
 driverStartRide ::
   (StartRideFlow m r, SchedulerFlow r) =>
@@ -135,12 +136,12 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))
       ( \_ -> do
-          transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-          pure $ (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
+          pure (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
       )
       driverInfo.merchantId
   when (includeDriverCurrentlyOnRide && driverInfo.hasAdvanceBooking) do throwError $ CurrentRideInprogress driverId.getId
@@ -176,13 +177,16 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             listToMaybe driverLocations & fromMaybeM LocationNotFound
           pure (getCoordinates driverLocation, dashboardReq.odometer)
   now <- getCurrentTime
+  -- create first entry of eta here
+  let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+  when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
   updatedRide <-
     if DTC.isEndOtpRequired booking.tripCategory
       then do
         endOtp <- Just <$> generateOTPCode
         QRide.updateEndRideOtp ride.id endOtp
-        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now}
-      else pure ride {DRide.tripStartTime = Just now}
+        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
+      else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer

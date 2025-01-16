@@ -6,15 +6,18 @@ import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, 
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2)
+import Engineering.Helpers.Utils(compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 import Screens.Types (OperationalDaysData, PeopleCategoriesData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR,isParentView,emitTerminateApp)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
@@ -25,11 +28,13 @@ import Common.Types.App as Common
 import Screens.TicketBookingFlow.PlaceDetails.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.TicketBookingFlow.PlaceDetails.Transformer (selectByDefaultOneServiceCategory, transformRespToStateDatav2)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -60,6 +65,7 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToTicketPayment TicketBookingScreenState
                   | BookTickets TicketBookingScreenState
                   | GoToOpenGoogleMaps TicketBookingScreenState Number Number
+                  | GoToTicketBook TicketBookingScreenState String
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 
@@ -87,8 +93,8 @@ eval  (DatePicker _ resp year month date ) state = do
                       && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
           selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
           modifiedServicesData = map (modifyService selectedOpDay) state.data.servicesInfo
-          
-      continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
+          updatedState = state { props{selectedOperationalDay = selectedOpDay, validDate = validDate},data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
+      updateAndExit updatedState $ GoToTicketBook updatedState selectedDateString
     _ -> continue state
   where
     modifyService selectedOpDay service = 
@@ -109,14 +115,18 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (UpdatePlacesData placeData Nothing) state = do
-  let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
-  continue newState
 
-eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
-  let selectedOpDay = convertUTCtoISC (getCurrentUTC "") "dddFull"
-      servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
-  continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
+eval (UpdatePlacesData placeData mbServiceData) state = do
+  case mbServiceData of 
+    Just (TicketServicesResponse serviceData) -> do
+      let selectedOpDay = convertUTCtoISC (state.data.dateOfVisit) "dddFull"
+          servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
+          
+      continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
+    Nothing -> do
+      let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
+      continue newState
+  
 
 eval BackPressed state = do
   case state.props.currentStage of 
@@ -129,7 +139,11 @@ eval BackPressed state = do
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
-                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (SelectServiceCategory serviceId selCategory) state =
   let modifiedServicesData = map modifyService state.data.servicesInfo
@@ -154,7 +168,7 @@ eval (OpenGoogleMap lat long) state = do
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text
-    void $ pure $ JB.toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 

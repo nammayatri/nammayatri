@@ -46,20 +46,20 @@ selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectLis
 selectResult :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.QuotesResultResponse
 cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.CancelAPIResponse
 selectEstimate :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM AppSelect.DSelectResultRes
-selectEstimate :<|> selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
+selectEstimate :<|> selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch :<|> _ = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
-  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing
+  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> Maybe Bool -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
-knowYourDriver :: Text -> Id BRide.Ride -> ClientM AppFeedback.DriverProfileResponse
-knowYourFavDriver :: Text -> Text -> ClientM AppFeedback.DriverProfileResponse
+knowYourDriver :: Text -> Id BRide.Ride -> Maybe Bool -> ClientM AppFeedback.DriverProfileResponse
+knowYourFavDriver :: Text -> Text -> Maybe Bool -> ClientM AppFeedback.DriverProfileResponse
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback :<|> knowYourDriver :<|> knowYourFavDriver = client (Proxy :: Proxy AppFeedback.API)
 
@@ -70,14 +70,15 @@ callAppFeedback ratingValue rideId =
           { rideId = rideId,
             rating = ratingValue,
             feedbackDetails = Just "driver was well behaved!",
-            nightSafety = Nothing,
+            wasRideSafe = Nothing,
             wasOfferedAssistance = Nothing,
-            shouldFavDriver = Nothing
+            shouldFavDriver = Nothing,
+            mbAudio = Nothing
           }
    in appFeedback appRegistrationToken request
 
 appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
-appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> ClientM AppBooking.BookingListRes
+appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [BRB.BookingStatus] -> ClientM AppBooking.BookingListRes
 appBookingStatus :<|> _ :<|> appBookingList :<|> _ :<|> _ = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
@@ -88,10 +89,10 @@ originServiceability regToken = origin
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
+    _ :<|> destination :<|> _ = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
-appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
+appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -121,7 +122,8 @@ mkAuthReq =
       otpChannel = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      enableOtpLessRide = Nothing
+      enableOtpLessRide = Nothing,
+      allowBlockedUserLogin = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq
@@ -133,7 +135,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing
+initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

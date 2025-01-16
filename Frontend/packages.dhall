@@ -251,8 +251,8 @@ in  upstream
       , "maybe"
       , "strings"
       ]
-    , repo = "https://github.com/juspay/purescript-tracker.git"
-    , version = "update/github-purescript-tracker-repo"
+    , repo = "https://github.com/nammayatri/purescript-tracker.git"
+    , version = "master"
     }
   with otp-reader =
     { dependencies =

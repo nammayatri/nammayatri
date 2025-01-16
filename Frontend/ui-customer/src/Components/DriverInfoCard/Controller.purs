@@ -18,17 +18,16 @@ module Components.DriverInfoCard.Controller where
 import MerchantConfig.Types
 
 import Common.Types.App (RentalBookingConfig)
-import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..))
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), FareProductType(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType, PersonDeliveryDetails(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
+import Screens.Types as ST
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -55,7 +54,9 @@ data Action = NoAction
             | RentalInfo
             | ShowEndOTP
             | ShowDirections Number Number
-            | EditingDestination
+            | EditingLocation LocationType
+            | GoToDriverProfile
+            | ShowDeliveryImageAndOtp
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -79,7 +80,8 @@ type DriverInfoCardProps =
     rideDurationTimerId :: String,
     endOTPShown :: Boolean,
     showEndOTP :: Boolean,
-    stageBeforeChatScreen :: Stage
+    stageBeforeChatScreen :: Stage,
+    isOtpRideFlow :: Boolean
   }
 
 type DriverInfoCardData =
@@ -129,4 +131,11 @@ type DriverInfoCardData =
   , fareProductType :: FareProductType
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , hasToll :: Boolean
+  , destinationReached :: Boolean
+  , destinationReachedAt :: Int
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
+  , estimatedTimeToReachDestination :: Maybe String
+  , requestorPartyRoles :: Maybe (Array String)
   }

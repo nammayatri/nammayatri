@@ -68,32 +68,41 @@ export const clearTimerWithId = function (id) {
   });
 }
 
-export const clearTimerWithIdEffect = function (id) {
-  return function () {
-    clearTimerWithId(id);
-  }
-}
+export const clearTimerWithIdEffect = clearTimerWithId;
 
 function getTwoDigitsNumber(number) {
   return number >= 10 ? number : "0" + number.toString();
 }
+
+export const timeInMinFormat = function (sec) {
+  const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+  const seconds = getTwoDigitsNumber(sec - minutes * 60);
+  return minutes + " : " + seconds;
+}
+
+function parseTwoDigitsNumber(str) {
+  return parseInt(str, 10);
+}
+
+export const timeStringToSeconds = function (timeStr) {
+  const [minutesStr, secondsStr] = timeStr.trim().split(' : ');
+  const minutes = parseTwoDigitsNumber(minutesStr);
+  const seconds = parseTwoDigitsNumber(secondsStr);
+  return (minutes * 60) + seconds;
+};
 
 export const waitingCountdownTimerV2Impl = function (startingTime, interval, timerId, cb, action) {
   activeTimerIds.push(timerId);
   if (window.__OS == "IOS") {
     if (JBridge.startCountUpTimerV2) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {
-        const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-        const seconds = getTwoDigitsNumber(sec - minutes * 60);
-        const timeInMinutesFormat = minutes + " : " + seconds;
+        const timeInMinutesFormat = timeInMinFormat(sec);
         cb(action(timerID)(timeInMinutesFormat)(sec))();
       });
       JBridge.startCountUpTimerV2(startingTime.toString(), interval, timerId, callbackIOS);
     } else if (JBridge.startCountUpTimer) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {
-        const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-        const seconds = getTwoDigitsNumber(sec - minutes * 60);
-        const timeInMinutesFormat = minutes + " : " + seconds;
+        const timeInMinutesFormat = timeInMinFormat(sec);
         cb(action(timerID)(timeInMinutesFormat)(sec))();
       });
       JBridge.startCountUpTimer(startingTime.toString(), callbackIOS);

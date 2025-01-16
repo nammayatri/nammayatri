@@ -1,0 +1,43 @@
+name: Run Python Script on l10n_master PR
+
+on:
+  pull_request:
+    paths:
+      - 'Frontend/ui-customer/src/generated/translations/**'
+      - 'Frontend/ui-driver/src/generated/translations/**'
+    types: [opened, synchronize]
+
+permissions: write-all
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the pull request branch
+      - name: Checkout the branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+
+      # Run your Python script
+      - name: Run Python Script
+        run: |
+          python crowdinTranslationGenerator.py 
+
+      # Add changes to the PR and commit
+      - name: Commit changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add .
+          git commit -m "Commit changes after running Python script"
+          git push origin ${{ github.head_ref }}

@@ -18,9 +18,9 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
-import Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -31,10 +31,14 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
+import qualified Domain.Types.ServiceTierType as DST
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import Domain.Utils
 import Environment
 import Kernel.External.Maps (LatLong (..))
-import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -44,7 +48,6 @@ import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.ScheduledNotifications as SN
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -62,7 +65,6 @@ import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
   Merchant ->
@@ -88,7 +90,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- bool (QRide.getInProgressByDriverId driver.id) (pure Nothing) (booking.isScheduled)
+  previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
+  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
@@ -98,16 +101,21 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRide.createRide ride
   QRideD.create rideDetails
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
-    when (not booking.isScheduled) $ QDI.updateOnRide True (cast driver.id)
+    when (not booking.isScheduled) $ do
+      whenJust (booking.toLocation) $ \toLoc -> do
+        QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+      QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
-  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
+  if booking.isScheduled
+    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
+    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken EmptyDynamicParam
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -117,12 +125,19 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   return (ride, rideDetails, vehicle)
   where
-    notificationType = FCM.DRIVER_ASSIGNMENT
+    notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
     message uBooking =
       cs $
         unwords
           [ "You have been assigned a ride for",
+            cs (showTimeIst uBooking.startTime) <> ".",
+            "Check the app for more details."
+          ]
+    messageForScheduled uBooking =
+      cs $
+        unwords
+          [ "You have been assigned a scheduled ride for",
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
@@ -155,7 +170,9 @@ buildRideDetails ride driver vehicle = do
         vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
         defaultServiceTierName = defaultServiceTierName,
-        createdAt = Just now
+        createdAt = Just now,
+        merchantId = ride.merchantId,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId
       }
 
 buildRide ::
@@ -165,19 +182,18 @@ buildRide ::
   Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
-  Maybe DRide.Ride ->
+  Maybe DDI.DriverInformation ->
   UTCTime ->
   DVeh.Vehicle ->
   Bool ->
   Maybe Bool ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment enableOtpLessRide = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
-  let previousRideToLocation = previousRide >>= (.toLocation)
+  let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
   return
     DRide.Ride
@@ -204,6 +220,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tripStartPos = Nothing,
         tripEndPos = Nothing,
         rideEndedBy = Nothing,
+        isDriverSpecialLocWarrior = fromMaybe False (dinfo <&> (.isSpecialLocWarrior)),
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
@@ -211,6 +228,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
         toLocation = booking.toLocation, --check if correct
+        stops = booking.stops,
         fareParametersId = Nothing,
         distanceCalculationFailed = Nothing,
         createdAt = now,
@@ -228,7 +246,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         estimatedTollNames = booking.tollNames,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
-        isFreeRide = Just ((getId driver.id) `elem` transporterConfig.specialDrivers),
+        isFreeRide = Just False,
         driverGoHomeRequestId = ghrId,
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
@@ -246,7 +264,15 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,
         enableOtpLessRide = enableOtpLessRide,
-        cancellationFeeIfCancelled = Nothing
+        cancellationFeeIfCancelled = Nothing,
+        tipAmount = Nothing,
+        passedThroughDestination = Nothing,
+        deliveryFileIds = Nothing,
+        destinationReachedAt = Nothing,
+        estimatedEndTimeRange = Nothing,
+        rideTags = Nothing,
+        hasStops = booking.hasStops,
+        isPickupOrDestinationEdited = Just False
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -274,7 +300,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.searchTryId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.searchTryId
-      void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.id
+      void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 
@@ -317,7 +343,7 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
     then do
       Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-        unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+        unless hasAdvancedRide $ QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
         QDI.updateHasAdvancedRide (cast personId) False
         void $ Redis.del $ editDestinationUpdatedLocGeohashKey personId
     else throwError $ DriverTransactionTryAgain (Just personId.getId)
@@ -326,3 +352,41 @@ throwErrorOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> DDI.D
 throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
   let checkOnRide = if includeDriverCurrentlyOnRide && isForwardRequest then driverInfo.hasAdvanceBooking else driverInfo.onRide
   when checkOnRide $ throwError DriverOnRide
+
+calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe DRide.EstimatedEndTimeRange
+calculateEstimatedEndTimeRange currTime tripEstimatedDuration bufferJson serviceTier =
+  case getArrivalTimeBufferOfVehicle bufferJson serviceTier of
+    Nothing -> Nothing
+    Just timebufferOfVehicle ->
+      let start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
+          end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
+       in Just $ DRide.EstimatedEndTimeRange {start = start, end = end}
+
+getArrivalTimeBufferOfVehicle :: Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe Seconds
+getArrivalTimeBufferOfVehicle bufferJson serviceTier =
+  bufferJson >>= \buffer -> case serviceTier of
+    DST.SEDAN -> buffer.sedan
+    DST.SUV -> buffer.suv
+    DST.HATCHBACK -> buffer.hatchback
+    DST.AUTO_RICKSHAW -> buffer.autorickshaw
+    DST.BIKE -> buffer.bike
+    DST.DELIVERY_BIKE -> buffer.deliverybike
+    DST.TAXI -> buffer.taxi
+    DST.TAXI_PLUS -> buffer.taxiplus
+    DST.PREMIUM_SEDAN -> buffer.premiumsedan
+    DST.BLACK -> buffer.black
+    DST.BLACK_XL -> buffer.blackxl
+    DST.ECO -> buffer.hatchback
+    DST.COMFY -> buffer.sedan
+    DST.PREMIUM -> buffer.sedan
+    DST.AMBULANCE_TAXI -> buffer.ambulance
+    DST.AMBULANCE_TAXI_OXY -> buffer.ambulance
+    DST.AMBULANCE_AC -> buffer.ambulance
+    DST.AMBULANCE_AC_OXY -> buffer.ambulance
+    DST.AMBULANCE_VENTILATOR -> buffer.ambulance
+    DST.SUV_PLUS -> buffer.suvplus
+    DST.HERITAGE_CAB -> buffer.heritagecab
+    DST.EV_AUTO_RICKSHAW -> buffer.evautorickshaw
+    DST.DELIVERY_LIGHT_GOODS_VEHICLE -> buffer.deliveryLightGoodsVehicle
+    DST.BUS_NON_AC -> buffer.busNonAc
+    DST.BUS_AC -> buffer.busAc

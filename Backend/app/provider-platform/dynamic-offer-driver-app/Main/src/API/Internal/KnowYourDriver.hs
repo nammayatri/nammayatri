@@ -17,10 +17,12 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "rideId" (Id Ride)
     :> "knowYourDriver"
+    :> QueryParam "isImages" Bool
     :> Header "token" Text
     :> Get '[JSON] Domain.DriverProfileRes
     :<|> Capture "driverId" (Id DP.Person)
       :> "knowYourFavDriver"
+      :> QueryParam "isImages" Bool
       :> Header "token" Text
       :> Get '[JSON] Domain.DriverProfileRes
 
@@ -29,8 +31,8 @@ handler =
   knowYourDriver
     :<|> knowYourFavDriver
 
-knowYourDriver :: Id Ride -> Maybe Text -> FlowHandler Domain.DriverProfileRes
-knowYourDriver rideId = withFlowHandlerAPI . Domain.knowYourDriver rideId
+knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> FlowHandler Domain.DriverProfileRes
+knowYourDriver rideId withImages = withFlowHandlerAPI . Domain.knowYourDriver rideId withImages
 
-knowYourFavDriver :: Id DP.Person -> Maybe Text -> FlowHandler Domain.DriverProfileRes
-knowYourFavDriver driverId = withFlowHandlerAPI . Domain.knowYourFavDriver driverId
+knowYourFavDriver :: Id DP.Person -> Maybe Bool -> Maybe Text -> FlowHandler Domain.DriverProfileRes
+knowYourFavDriver driverId withImages = withFlowHandlerAPI . Domain.knowYourFavDriver driverId withImages

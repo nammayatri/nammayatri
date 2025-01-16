@@ -90,6 +90,7 @@ in  { esqDBCfg
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/rider-dashboard"
+      , "dev/migrations-read-only/rider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
@@ -114,4 +115,5 @@ in  { esqDBCfg
     , cacheConfig
     , kvConfigUpdateFrequency = +60
     , cacConfig
+    , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     }

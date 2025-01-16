@@ -1,11 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketBookingServiceCategory where
 
 import Data.Aeson
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -26,7 +25,7 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
     name :: Kernel.Prelude.Text,
     serviceCategoryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketBookingServiceId :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
-    visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    visitDate :: Kernel.Prelude.Maybe Data.Time.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

@@ -9,17 +9,17 @@
 
 module SharedLogic.FareProduct where
 
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.TimeBound as DTB
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
@@ -40,7 +40,7 @@ getPickupSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getPickupSpecialLocation merchantOpCityId pickupSpecialLocation = do
-  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
+  pickupSpecialLocationPriority <- Esq.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::

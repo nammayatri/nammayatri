@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Domain.Types.Cac where
 
 import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
@@ -7,6 +5,7 @@ import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import qualified Domain.Types.DriverPoolConfig as DPC
 import qualified Domain.Types.FarePolicy as FP
 import qualified Domain.Types.GoHomeConfig as GHC
+import qualified Domain.Types.MerchantServiceUsageConfig as MSUC
 import qualified Domain.Types.TransporterConfig as TC
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
@@ -34,6 +33,10 @@ data FarePolicy = FarePolicy Text
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
+data MerchantServiceUsageConfig = MerchantServiceUsageConfig Text
+  deriving stock (Generic, Typeable, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
 data LastUpdatedGoHomeConfig = LastUpdatedGoHomeConfig
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
@@ -54,6 +57,12 @@ data LastUpdatedFarePolicy = LastUpdatedFarePolicy
   deriving stock (Generic, Typeable, Show, Eq)
   deriving anyclass (ToJSON, FromJSON)
 
+data LastUpdatedMerchantServiceUsageConfig = LastUpdatedMerchantServiceUsageConfig
+  deriving stock (Generic, Typeable, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance OptionEntity LastUpdatedMerchantServiceUsageConfig UTCTime
+
 instance OptionEntity LastUpdatedGoHomeConfig UTCTime
 
 instance OptionEntity LastUpdatedTransporterConfig UTCTime
@@ -65,6 +74,8 @@ instance OptionEntity LastUpdatedDriverIntelligentPoolConfig UTCTime
 instance OptionEntity LastUpdatedFarePolicy UTCTime
 
 instance OptionEntity GoHomeConfig GHC.GoHomeConfig
+
+instance OptionEntity MerchantServiceUsageConfig MSUC.MerchantServiceUsageConfig
 
 instance OptionEntity TransporterConfig TC.TransporterConfig
 

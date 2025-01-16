@@ -18,9 +18,9 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler (SchedulerType)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
@@ -97,95 +98,105 @@ reAllocateBookingIfPossible ::
   Bool ->
   m Bool
 reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant booking ride driver vehicle bookingCReason isForceReallocation = do
-  now <- getCurrentTime
   case booking.tripCategory of
-    DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> do
+    DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+    DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+    DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer
+    DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
+    DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+    _ -> cancelRideTransactionForNonReallocation Nothing Nothing
+  where
+    reallocateDynamicOffer = do
+      now <- getCurrentTime
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
       if isRepeatSearch
-        then do
-          DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-
-          tripQuoteDetails <-
-            if length searchTry.estimateIds > 1
-              then traverse (createQuoteDetails searchReq searchTry) searchTry.estimateIds
-              else do
-                quoteDetail <- createQuoteDetails searchReq searchTry driverQuote.estimateId.getId
-                return [quoteDetail]
-
-          let driverSearchBatchInput =
-                DriverSearchBatchInput
-                  { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
-                    merchant,
-                    searchReq,
-                    tripQuoteDetails,
-                    customerExtraFee = searchTry.customerExtraFee,
-                    messageId = searchTry.messageId,
-                    isRepeatSearch
-                  }
-          result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
-          case result of
-            Right _ -> do
-              if isValueAddNP
-                then do
-                  BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
-                  return True
-                else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
-            Left _ -> cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
+        then performDynamicOfferReallocation driverQuote searchReq searchTry
         else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
-    DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer now
-    DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer now
-    _ -> cancelRideTransactionForNonReallocation Nothing Nothing
-  where
-    reallocateStaticOffer now = do
+
+    reallocateStaticOffer = do
+      now <- getCurrentTime
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
       transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now searchReq.isScheduled transporterConfig
       if isRepeatSearch || isForceReallocation
-        then do
-          DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-          bookingId <- generateGUID
-          quoteId <- generateGUID
-          fareParamsId <- generateGUID
-          searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-          let newIsScheduled = booking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
-              newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
-              newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = booking.isScheduled} -- check if validTill req'D
-              newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
-              mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-              driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
-              driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
-          tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quoteId
-          void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
-          QQuote.create newQuote
-          QRB.createBooking newBooking
-          let driverSearchBatchInput =
-                DriverSearchBatchInput
-                  { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
-                    merchant,
-                    searchReq,
-                    tripQuoteDetails = [tripQuoteDetail],
-                    customerExtraFee = searchTry.customerExtraFee,
-                    messageId = newBooking.id.getId,
-                    isRepeatSearch
-                  }
-          result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput) --  remove CONSTRAINT quote_unique_reqid_bppid_quoteid UNIQUE (request_id, provider_id);, check searchTry key for scheduling
-          case result of
-            Right _ -> do
-              if isValueAddNP
-                then do
-                  BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle
-                  return True
-                else do
-                  cancelRideTransactionForNonReallocation (Just newBooking) Nothing
-            Left _ -> do
-              cancelRideTransactionForNonReallocation (Just newBooking) Nothing
+        then performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch
         else cancelRideTransactionForNonReallocation Nothing Nothing
+
+    performDynamicOfferReallocation driverQuote searchReq searchTry = do
+      DP.addDriverToSearchCancelledList searchReq.id ride.driverId
+      tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId
+      let driverSearchBatchInput =
+            DriverSearchBatchInput
+              { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                merchant,
+                searchReq,
+                tripQuoteDetails = tripQuoteDetails,
+                customerExtraFee = searchTry.customerExtraFee,
+                messageId = booking.id.getId,
+                isRepeatSearch = True,
+                isAllocatorBatch = False
+              }
+      handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
+
+    performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch = do
+      DP.addDriverToSearchCancelledList searchReq.id ride.driverId
+      (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
+      let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
+          driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
+          driverParkingCharge = (.parkingCharge) =<< (quote.farePolicy)
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId False
+      void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+      QQuote.create newQuote
+      QRB.createBooking newBooking
+      when newBooking.isScheduled $ void $ addScheduledBookingInRedis newBooking
+      let driverSearchBatchInput =
+            DriverSearchBatchInput
+              { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                merchant,
+                searchReq,
+                tripQuoteDetails = [tripQuoteDetail],
+                customerExtraFee = searchTry.customerExtraFee,
+                messageId = booking.id.getId,
+                isRepeatSearch,
+                isAllocatorBatch = False
+              }
+      handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
+
+    handleDriverSearchBatch driverSearchBatchInput newBooking estimateId isStatic = do
+      result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
+      case result of
+        Right _ ->
+          if isValueAddNP
+            then do
+              if isStatic then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle else BP.sendEstimateRepetitionUpdateToBAP booking ride (Id estimateId) bookingCReason.source driver vehicle
+              return True
+            else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
+        Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)
+
+    createTripQuoteDetails searchReq searchTry estimateId = do
+      if length searchTry.estimateIds > 1
+        then traverse (createQuoteDetails searchReq searchTry) searchTry.estimateIds
+        else do
+          quoteDetail <- createQuoteDetails searchReq searchTry estimateId.getId
+          return [quoteDetail]
+
+    createNewBookingAndQuote quote transporterConfig now searchReq = do
+      bookingId <- generateGUID
+      quoteId <- generateGUID
+      fareParamsId <- generateGUID
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let newIsScheduled = booking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+          newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
+          newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = booking.isScheduled}
+          newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+      return (newBooking, newQuote)
+
     createQuoteDetails ::
       ( MonadFlow m,
         CacheFlow m r,
@@ -201,7 +212,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
     cancelRideTransactionForNonReallocation ::
       ( MonadFlow m,
         Redis.HedisFlow m r,
@@ -225,7 +236,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       return False
     checkIfRepeatSearch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DST.SearchTry -> Maybe UTCTime -> Maybe Bool -> UTCTime -> Bool -> TransporterConfig -> m Bool
     checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now isScheduled transporterConfig = do
-      let searchRepeatLimit = transporterConfig.searchRepeatLimit
+      let searchRepeatLimit = if isScheduled then transporterConfig.scheduledRideSearchRepeatLimit else transporterConfig.searchRepeatLimit
           isSearchTryValid = searchTry.validTill > now
           arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
           driverHasNotArrived = isNothing driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
@@ -249,5 +260,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = newBooking.distanceUnit,
+            merchantOperatingCityId = Just newBooking.merchantOperatingCityId,
             ..
           }

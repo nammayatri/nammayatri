@@ -17,19 +17,22 @@ module Helpers.API where
 
 import Prelude
 import Engineering.Error.Utils
-import JBridge (factoryResetApp, stopChatListenerService)
+import JBridge (factoryResetApp, stopChatListenerService, getManufacturerName)
 import Engineering.Helpers.API as API
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, Header(..), ErrorResponse)
 import Foreign.Generic (class Decode)
 import Types.App (FlowBT, GlobalState)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
 import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow)
+import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow, fork)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
-
+import Data.String as DS
+import JBridge as JB
+import Screens.PermissionScreen.Handler as PermissionScreen
+import Engineering.Helpers.Utils (checkConditionToShowInternetScreen)
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -53,8 +56,13 @@ baseHeaders =
   , Header "x-client-version" (getValueToLocalStore VERSION_NAME)
   , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION)
   , Header "session_id" (getValueToLocalStore SESSION_ID)
-  , Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+  , Header "x-device" getDeviceDetails
   ]
+
+getDeviceDetails :: String
+getDeviceDetails = do
+  let manufacturer = getManufacturerName unit
+  (getValueToLocalNativeStore DEVICE_DETAILS) <> if not $ DS.null manufacturer then "/mf:" <> (getManufacturerName unit) else ""
 
 tokenHeader :: Maybe String -> Array Header
 tokenHeader regToken = maybe [] singleton $ (Header "token") <$> regToken
@@ -71,7 +79,7 @@ callApiBTWithOptions :: forall a b e.
 callApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApiBT payload headers' errorHandler
+  API.callApiBT payload headers' errorHandler $ noInternetScreenHandler "lazy"
 
 callApiWithOptions :: forall a b.
   StandardEncode a =>
@@ -83,7 +91,7 @@ callApiWithOptions :: forall a b.
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApi payload headers'
+  API.callApi payload headers' $ noInternetScreenHandler "lazy"
 
 callApi :: forall a b.
   StandardEncode a =>
@@ -104,7 +112,7 @@ callGzipApiWithOptions :: forall a b.
 callGzipApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApi payload headers'
+  API.callGzipApi payload headers' $ noInternetScreenHandler "lazy"
 
 callGzipApi :: forall a b.
   StandardEncode a =>
@@ -136,7 +144,7 @@ callGzipApiBTWithOptions :: forall a b e.
 callGzipApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApiBT payload headers' errorHandler
+  API.callGzipApiBT payload headers' errorHandler $ noInternetScreenHandler "lazy"
 
 callGzipApiBT :: forall a b.
   StandardEncode a =>
@@ -146,3 +154,13 @@ callGzipApiBT :: forall a b.
   FlowBT String b
 callGzipApiBT payload =
   callGzipApiBTWithOptions payload [] CustomerDefaultErrorHandler
+
+
+noInternetScreenHandler :: String -> Flow GlobalState Unit
+noInternetScreenHandler lazy = 
+  if checkConditionToShowInternetScreen lazy then do
+    void $ fork $ do  
+      void $ pure $ JB.hideKeyboardOnNavigation true
+      void $ PermissionScreen.noInternetScreen
+  else 
+    pure unit

@@ -1,22 +1,22 @@
 module Storage.Queries.BookingExtra where
 
 import Control.Applicative
+import Data.List.Extra (notNull)
 import qualified Database.Beam as B
+import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
-import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
-import Domain.Types.Merchant
+import Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
-import Domain.Types.VehicleServiceTier
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -25,9 +25,8 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.DriverOffer as BeamDO
-import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.BookingLocation as QBBL
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -37,32 +36,32 @@ import qualified Storage.Queries.Quote ()
 createBooking' :: (MonadFlow m, EsqDBFlow m r) => Booking -> m ()
 createBooking' = createWithKV
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
-create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
-  _ <- case dBooking.bookingDetails of
-    OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    RentalDetails detail -> whenJust detail.stopLocation $ \stopLoc -> void $ whenNothingM_ (QL.findById stopLoc.id) $ do QL.create stopLoc
-    DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    InterCityDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    AmbulanceDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-  void $ createBooking' dBooking
-
 createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-  mbToLocationMap <- case booking.bookingDetails of
-    DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.RentalDetails detail -> (\loc -> SLM.buildDropLocationMapping loc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)) `mapM` detail.stopLocation
-    DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.InterCityDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.AmbulanceDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  processSingleLocation booking.fromLocation SLM.buildPickUpLocationMapping
+  (mbToLocation, stops) <-
+    case booking.bookingDetails of
+      DRB.OneWayDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.RentalDetails detail -> return (detail.stopLocation, [])
+      DRB.DriverOfferDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.OneWaySpecialZoneDetails detail -> return (Just detail.toLocation, detail.stops)
+      DRB.InterCityDetails detail -> return (Just detail.toLocation, [])
+      DRB.AmbulanceDetails detail -> return (Just detail.toLocation, [])
+      DRB.DeliveryDetails detail -> return (Just detail.toLocation, [])
+  when (notNull stops) $ processMultipleLocations stops
+  whenJust mbToLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  createBooking' booking
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
-  create booking
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+      QLM.createMany locationMappings
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
@@ -91,8 +90,8 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
-findLatestByRiderId (Id riderId) =
+findLatestSelfAndPartyBookingByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
+findLatestSelfAndPartyBookingByRiderId (Id riderId) =
   do
     let options =
           [ Se.And
@@ -105,8 +104,16 @@ findLatestByRiderId (Id riderId) =
           ]
         sortBy' = Se.Desc BeamB.createdAt
         limit' = Just 1
-    findAllWithOptionsKV options sortBy' limit' Nothing
-    <&> listToMaybe
+    res <-
+      findAllWithOptionsKV options sortBy' limit' Nothing
+        <&> listToMaybe
+    if (isNothing res)
+      then do
+        bookingParty <- QBPL.findOneActivePartyByRiderId (Id riderId)
+        case bookingParty of
+          Just bp -> findById bp.bookingId
+          Nothing -> return Nothing
+      else (return res)
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -125,11 +132,11 @@ findByTransactionId transactionId =
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
-findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
-  let limit' = fmap fromIntegral $ mbLimit <|> Just 10
-      offset' = fmap fromIntegral $ mbOffset <|> Just 0
-  findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
+-- findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+-- findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
+--   let limit' = fmap fromIntegral $ mbLimit <|> Just 10
+--       offset' = fmap fromIntegral $ mbOffset <|> Just 0
+--   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
 findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do
@@ -159,7 +166,7 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [VehicleServiceTierType] -> m Int
+findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [ServiceTierType] -> m Int
 findCountByRideIdStatusAndVehicleServiceTierType (Id personId) status vehicleServiceTierType =
   findAllWithKV
     [ Se.And
@@ -187,18 +194,14 @@ findByRiderId (Id personId) = do
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
-findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe Booking)
-findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
-  driverOfferIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
-  if null driverOfferIds
-    then return Nothing
-    else do
-      quoteIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In driverOfferIds]
-      if null quoteIds
-        then return Nothing
-        else do
-          bookings <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In quoteIds, Se.Is BeamB.status $ Se.In statusList]
-          return $ listToMaybe bookings
+findByTransactionIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
+findByTransactionIdAndStatus transactionId statusList =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId,
+      Se.Is BeamB.status $ Se.In statusList
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
 
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
@@ -232,8 +235,8 @@ updatePaymentStatus rbId paymentStatus = do
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
-updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
-updateStop booking mbStopLoc = do
+updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> Maybe Bool -> m ()
+updateStop booking mbStopLoc isBookingUpdated = do
   now <- getCurrentTime
   -- whenJust mbStopLoc $ \stopLoc -> do
   --   void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
@@ -241,9 +244,11 @@ updateStop booking mbStopLoc = do
   -- QLM.create locationMapping
 
   updateOneWithKV
-    [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
-      Se.Set BeamB.updatedAt now
-    ]
+    ( [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
+        Se.Set BeamB.updatedAt now
+      ]
+        <> [Se.Set BeamB.isBookingUpdated isBookingUpdated | isJust isBookingUpdated]
+    )
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
 
 findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
@@ -252,7 +257,7 @@ findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
       offset' = fmap fromIntegral $ moffset <|> Just 0
   findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
-findStuckBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [Booking]
 findStuckBookings merchant moCity bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
@@ -269,7 +274,6 @@ findStuckBookings merchant moCity bookingIds now =
               )
           ]
       ]
-    <&> (Domain.id <$>)
 
 findAllCancelledBookingIdsByRider :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Id Booking]
 findAllCancelledBookingIdsByRider (Id riderId) =
@@ -289,18 +293,24 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  DBBL.BookingLocation ->
+  m DL.Location
+buildLocation merchantId merchantOperatingCityId DBBL.BookingLocation {..} =
   return $
     DL.Location
       { id = cast id,
+        merchantId = Just merchantId,
         ..
       }
 
 upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
 upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantOperatingCityId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) (buildLocation (Id merchantId) (Id <$> merchantOperatingCityId)) loc
   fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create pickupLoc >> QLM.create fromLocationMapping
   return pickupLoc
@@ -308,7 +318,7 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
 upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
 upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantOperatingCityId = do
   toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-  dropLoc <- buildLocation toLocation
+  dropLoc <- buildLocation (Id merchantId) (Id <$> merchantOperatingCityId) toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
 

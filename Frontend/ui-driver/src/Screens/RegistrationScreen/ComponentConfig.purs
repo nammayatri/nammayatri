@@ -64,6 +64,9 @@ appOnboardingNavBarConfig state =
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
               Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
               Just ST.BikeCategory -> getString REGISTER_YOUR_BIKE
+              Just ST.AmbulanceCategory -> getString REGISTER_YOUR_AMBULANCE
+              Just ST.TruckCategory -> getString REGISTER_YOUR_TRUCK
+              Just ST.BusCategory ->  "Register your Bus"
               Just ST.UnKnown -> getString REGISTRATION
               Nothing -> getString REGISTRATION
       },
@@ -260,10 +263,10 @@ continueButtonConfig state =
 optionsMenuConfig :: ST.RegistrationScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle}
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,

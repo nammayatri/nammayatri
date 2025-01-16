@@ -28,9 +28,9 @@ import Prelude
 import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd)
 import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
-import Screens.Types (RideScheduledScreenState, City(..))
+import Screens.Types (RideScheduledScreenState, City(..),NotificationBody)
 import Resources.Constants (cancelReasons, dummyCancelReason)
-import JBridge (hideKeyboardOnNavigation, toast)
+import JBridge (hideKeyboardOnNavigation)
 import Services.API
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
@@ -41,6 +41,9 @@ import Screens.Types (FareProductType(..)) as FPT
 import Language.Strings (getString)
 import Language.Types as STR
 import Debug (spy)
+import RemoteConfig as RemoteConfig
+import Locale.Utils (getLanguageLocale, languageKey)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -62,17 +65,17 @@ data Action
   | CancelRide
   | AddFirstStop
   | GenericHeaderAC GenericHeaderController.Action
-  | GetBookingList RideBookingListRes
   | CheckFlowStatusAction
   | GoBack
   | CancelRideActionController PopUpModalController.Action
-  | NotificationListener String
+  | NotificationListener String NotificationBody
+  | GetBooking RideBookingRes
 
 data ScreenOutput = GoToHomeScreen RideScheduledScreenState
                   | GoToSearchLocationScreen RideScheduledScreenState
                   | CancelRentalRide RideScheduledScreenState
                   | GoToMyRidesScreen RideScheduledScreenState
-                  | NotificationListenerSO String
+                  | NotificationListenerSO String NotificationBody
 
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 
@@ -88,7 +91,7 @@ eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClic
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [pure GoBack]
 
-eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons false}}
+eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = RemoteConfig.cancelBookingReasonsConfigData (fetchLanguage $ getLanguageLocale languageKey) false}}
 
 eval (CancelRideActionController (PopUpModalController.OnButton1Click)) state = exit $ CancelRentalRide state
 
@@ -101,9 +104,9 @@ eval (CancelRideActionController (PopUpModalController.OnButton2Click)) state = 
 --                     else exit $ CancelRentalRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.data.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.data.cancellationReasons !! index)).reasonCode }}
 --     Nothing    -> continue state
 
-eval (GetBookingList resp) state =
-  let (RideBookingListRes listResp) = resp
-      (RideBookingRes resp) = fromMaybe HomeScreenData.dummyRideBooking $ head listResp.list
+eval (GetBooking apiResp) state =
+  let
+      (RideBookingRes resp) = apiResp
       (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
       (RideBookingDetails contents) = bookingDetails.contents
       fareProductType = getFareProductType (bookingDetails.fareProductType)
@@ -119,11 +122,11 @@ eval (GetBookingList resp) state =
       , fareProductType = fareProductType
       }
     , props
-      { driverAllocationTime = "15" -- TODO-codex : Need to get the driver allocation time from the API 
+      { driverAllocationTime = "30" -- TODO-codex : Need to get the driver allocation time from the API 
       }
     }
 
 eval CheckFlowStatusAction state = update state
 
-eval (NotificationListener notificationType) state = exit $ NotificationListenerSO notificationType
+eval (NotificationListener notificationType notificationBody) state = exit $ NotificationListenerSO notificationType notificationBody
 eval _ state = update state

@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.QuestionInformation where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.QuestionInformation
 import Kernel.External.Encryption

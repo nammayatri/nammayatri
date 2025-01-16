@@ -18,4 +18,9 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
+    <application>
+        <activity
+            android:name="in.juspay.mobility.common.cropImage.CropImageActivity"
+            android:theme="@style/Base.Theme.AppCompat" />
+    </application>
 </manifest>

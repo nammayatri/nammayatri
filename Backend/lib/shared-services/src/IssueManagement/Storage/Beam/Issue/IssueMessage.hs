@@ -11,9 +11,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueMessage where
 

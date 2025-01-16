@@ -18,7 +18,8 @@ import Kernel.Utils.Common (Seconds)
 
 data FPRentalDetailsDistanceBuffersD (s :: UsageSafety) = FPRentalDetailsDistanceBuffers
   { rideDuration :: Seconds,
-    bufferKms :: Int
+    bufferKms :: Int,
+    bufferMeters :: Int
   }
   deriving (Generic, Show, Eq, ToSchema)
 
@@ -44,7 +45,8 @@ findFPRentalDetailsByDuration duration slabList = do
 
 data FPRentalDetailsDistanceBuffersAPIEntity = FPRentalDetailsDistanceBuffersAPIEntity
   { rideDuration :: Seconds,
-    bufferKms :: Int
+    bufferKms :: Int,
+    bufferMeters :: Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -55,12 +57,14 @@ makeFPRentalDetailsDistanceBuffersAPIEntity :: FPRentalDetailsDistanceBuffers ->
 makeFPRentalDetailsDistanceBuffersAPIEntity FPRentalDetailsDistanceBuffers {..} =
   FPRentalDetailsDistanceBuffersAPIEntity
     { rideDuration = rideDuration,
-      bufferKms = bufferKms
+      bufferKms = bufferKms,
+      bufferMeters = bufferMeters
     }
 
 makeFPRentalDetailsDistanceBuffers :: FPRentalDetailsDistanceBuffersAPIEntity -> FPRentalDetailsDistanceBuffers
 makeFPRentalDetailsDistanceBuffers FPRentalDetailsDistanceBuffersAPIEntity {..} =
   FPRentalDetailsDistanceBuffers
     { rideDuration = rideDuration,
-      bufferKms = bufferKms
+      bufferKms = bufferKms,
+      bufferMeters = bufferMeters
     }

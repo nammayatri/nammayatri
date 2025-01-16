@@ -22,7 +22,7 @@ import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
 
-data Action = DestinationClicked
+data Action = DestinationClicked | AfterRender
 type Config =
   {
     margin :: Margin
@@ -43,8 +43,22 @@ type Config =
   , id :: Maybe String
   , overrideSeparatorCount :: Int
   , horizontalSeperatorConfig :: SeparatorConfig
+  , pillsConfig :: PillsConfig
   , showDestination :: Boolean
+  , separatorLayoutMargin :: Margin
+  , showSourceDestWithStops :: Boolean
   }
+
+type PillsConfig = {
+    visibility :: Visibility
+  , pillList :: Array PillInfo
+}
+
+type PillInfo = {
+    text :: String
+  , imageUrl :: String
+  , imageVisibility :: Visibility
+}
 
 type SeparatorConfig = {
     visibility :: Visibility
@@ -171,8 +185,14 @@ config = {
     , padding : Padding 0 0 0 0
     , width : MATCH_PARENT
     , height : V 1
+  },
+  pillsConfig : {
+      visibility : GONE 
+    , pillList : []
   }
   , id : Nothing
   , overrideSeparatorCount : 0
   , showDestination : true
+  , separatorLayoutMargin : Margin 0 0 0 0
+  , showSourceDestWithStops : false
   }

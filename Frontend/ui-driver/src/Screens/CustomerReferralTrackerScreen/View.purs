@@ -131,7 +131,7 @@ view push state =
         ]
     , if state.props.calendarState.calendarPopup then Calendar.view (push <<< CalendarAC) (calendarConfig state) else dummyView state
     , if state.data.currentStage == ReferralSteps then referralStepsView push state else dummyView state
-    , if state.data.currentStage == UPIDetails then upiDetailsScreen push state else dummyView state
+    , if state.data.currentStage == UPIDetails && (not state.props.showShimmer) then upiDetailsScreen push state else dummyView state
     , if state.data.currentStage == TransactionHistory then transactionHistoryView push state else dummyView state
     , if state.props.showMenu && state.data.currentStage == Tracker then menuView push state else dummyView state
     , if (any (_ == state.data.orderStatus) [Just CHARGED, Just FAILED]) && state.props.showInfoPopUp then infoCardView push state else dummyView state
@@ -173,14 +173,16 @@ addUPIView push state =
   , background Color.seaShell
   , cornerRadius 16.0
   , margin $ MarginBottom 16
+  , gravity CENTER_VERTICAL
   , onClick push $ const $ AddUPIAction
   , visibility $ boolToVisibility $ isNothing state.data.upiID && state.data.orderStatus /= Just PENDING
   ][ linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
       ][ linearLayout
          [ height WRAP_CONTENT
-         , width $ V ((screenWidth unit) - 164)
+         , width $ V ((screenWidth unit) - 158)
          , orientation VERTICAL
          , margin $ Margin 16 16 16 16
          ][ textView $ 
@@ -203,10 +205,10 @@ addUPIView push state =
             ]
          ]
        , imageView
-         [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_add_upi"
-         , height $ V 96
+         [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_add_upi_small"
+         , height $ V 84
          , width $ V 84
-         , margin $ MarginRight 16
+         , margin $ MarginRight 10
          ]
       ]
   ]
@@ -306,7 +308,7 @@ emptyReferralView push state =
   ][ imageView 
      [ height $ V 248
      , width MATCH_PARENT
-     , imageWithFallback $ fetchImage COMMON_ASSET $ if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then "ny_ic_refer_now_auto" else "ny_ic_refer_now_cab" 
+     , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_refer_now"
      ]
    , textView $ 
      [ text $ getString $ EARN_FOR_EACH_REFERRAL $ state.data.config.currency <> (show state.data.referralRewardAmountPerRide)

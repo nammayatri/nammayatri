@@ -19,6 +19,7 @@ PayoutOrder:
     customerId : Text
     orderId : Text
     merchantId : Text
+    merchantOperatingCityId : Maybe Text
     city : Text
     amount : Price
     status : PayoutOrderStatus
@@ -31,6 +32,9 @@ PayoutOrder:
     createdAt : UTCTime
     updatedAt : UTCTime
     entityIds : Maybe [Text]
+    responseCode : Maybe Text
+    responseMessage : Maybe Text
+    retriedOrderId : Maybe Text
   beamFields:
     amount:
       currency: Maybe Currency
@@ -62,6 +66,21 @@ PayoutOrder:
       kvFunction: updateOneWithKV
       params: [status]
       where: orderId
+    findAllWithStatus:
+      kvFunction: findAllWithKV
+      where: status
+    findAllByCustomerId:
+      kvFunction: findAllWithKV
+      where: customerId
+    updatePayoutOrderTxnRespInfo:
+      kvFunction: updateOneWithKV
+      params: [responseCode, responseMessage]
+      where: orderId
+    updateRetriedOrderId:
+      kvFunction: updateOneWithKV
+      params: [retriedOrderId]
+      where: orderId
+
   extraOperations:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
@@ -79,6 +98,7 @@ PayoutTransaction:
     amount : Price
     status : Text
     merchantId: Text
+    merchantOperatingCityId : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:

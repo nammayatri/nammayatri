@@ -1,16 +1,14 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverQuote where
 
 import qualified Data.Time
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverQuote
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -54,9 +52,9 @@ data DriverQuoteT f = DriverQuoteT
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f Data.Time.LocalTime,
     validTill :: B.C f Data.Time.LocalTime,
-    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
+    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleVariant :: B.C f Domain.Types.Vehicle.Variant
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, B.Beamable)
 

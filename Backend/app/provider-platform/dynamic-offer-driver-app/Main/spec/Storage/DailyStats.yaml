@@ -13,7 +13,7 @@ DailyStats:
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     PayoutStatus:
-      enum: "Verifying,Processing,Success,Failed,ManualReview"
+      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa,Initialized"
   fields:
     id : Text
     driverId : Id Person
@@ -29,6 +29,13 @@ DailyStats:
     payoutStatus: PayoutStatus
     payoutOrderId: Maybe Text
     payoutOrderStatus: Maybe PayoutOrderStatus
+    tollCharges: HighPrecMoney
+    bonusEarnings: HighPrecMoney
+    tipAmount: HighPrecMoney
+    cancellationCharges: HighPrecMoney
+    totalRideTime: Seconds
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -36,6 +43,11 @@ DailyStats:
     referralCounts: Maybe Int
     payoutStatus: Maybe PayoutStatus
     referralEarnings: Maybe HighPrecMoney
+    tollCharges: Maybe HighPrecMoney
+    bonusEarnings: Maybe HighPrecMoney
+    tipAmount: Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    totalRideTime: Maybe Seconds
 
   beamFields:
     totalEarnings:
@@ -51,7 +63,12 @@ DailyStats:
     referralEarnings: getHighPrecMoney
     activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
     referralCounts: Kernel.Prelude.fromMaybe 0|I
-    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
+    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Initialized|I
+    tollCharges: Kernel.Prelude.fromMaybe 0|I
+    bonusEarnings: Kernel.Prelude.fromMaybe 0|I
+    tipAmount: Kernel.Prelude.fromMaybe 0|I
+    cancellationCharges: Kernel.Prelude.fromMaybe 0|I
+    totalRideTime: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
@@ -63,13 +80,17 @@ DailyStats:
     activatedValidRides:  Kernel.Prelude.Just|I
     referralCounts: Kernel.Prelude.Just|I
     payoutStatus: Kernel.Prelude.Just|I
+    tollCharges: Kernel.Prelude.Just|I
+    bonusEarnings: Kernel.Prelude.Just|I
+    tipAmount: Kernel.Prelude.Just|I
+    cancellationCharges: Kernel.Prelude.Just|I
+    totalRideTime: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
 
 
-  excludedFields: [merchantOperatingCityId, merchantId]
 
   queries:
     findByDriverIdAndDate:
@@ -79,13 +100,19 @@ DailyStats:
 
     updateByDriverId:
       kvFunction: updateOneWithKV
-      params: [totalEarnings, numRides, totalDistance]
+      params: [totalEarnings, numRides, totalDistance, tollCharges, bonusEarnings, totalRideTime]
       where:
         and: [driverId, merchantLocalDate]
 
     updateReferralStatsByDriverId:
       kvFunction: updateOneWithKV
       params: [activatedValidRides, referralEarnings, payoutStatus]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateTipAmountByDriverId:
+      kvFunction: updateOneWithKV
+      params: [tipAmount]
       where:
         and: [driverId, merchantLocalDate]
 
@@ -103,6 +130,11 @@ DailyStats:
     updatePayoutOrderId:
       kvFunction: updateOneWithKV
       params: [payoutOrderId]
+      where: id
+
+    updatePayoutOrderIdAndStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutOrderId, payoutStatus]
       where: id
 
   extraOperations:

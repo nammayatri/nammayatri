@@ -25,6 +25,8 @@ DriverGoHomeRequest:
     mbReachedHome : Maybe Bool
     createdAt : UTCTime
     updatedAt : UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
   beamFields:
     mbReachedHome:
@@ -68,7 +70,6 @@ DriverGoHomeRequest:
   default:
     numCancellation: 0
 
-  excludedFields: [merchantOperatingCityId, merchantId]
 
   excludedDefaultQueries:
     - createMany

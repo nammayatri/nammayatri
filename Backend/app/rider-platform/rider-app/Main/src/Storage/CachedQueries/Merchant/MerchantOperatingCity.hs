@@ -19,6 +19,7 @@ module Storage.CachedQueries.Merchant.MerchantOperatingCity
     findByMerchantIdAndCity,
     findByMerchantShortIdAndCity,
     findAllByMerchantIdAndState,
+    getMerchantOpCityId,
   )
 where
 
@@ -27,6 +28,7 @@ import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
@@ -57,6 +59,15 @@ findAllByMerchantIdAndState merchantId state =
   Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
     Just a -> return a
     Nothing -> cacheMerchantIdAndState merchantId state /=<< Queries.findAllByMerchantIdAndState merchantId state
+
+getMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Merchant -> Maybe Context.City -> m (Id MerchantOperatingCity)
+getMerchantOpCityId merchant mbCity = (.id) <$> getMerchantOpCity merchant mbCity
+
+getMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Merchant -> Maybe Context.City -> m MerchantOperatingCity
+getMerchantOpCity merchant mbCity = do
+  let city = fromMaybe merchant.defaultCity mbCity
+  findByMerchantIdAndCity merchant.id city
+    >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
 
 cachedMerchantOperatingCityId :: CacheFlow m r => MerchantOperatingCity -> m ()
 cachedMerchantOperatingCityId merchantOperatingCity = do

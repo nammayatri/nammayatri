@@ -7,9 +7,12 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -21,7 +24,7 @@ import Kernel.Utils.JSON (valueToMaybe)
 
 getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
 getServiceConfigFromDomain serviceName configJSON = do
-  maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
+  maybe (throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON - " <> show serviceName <> " | " <> encodeToText configJSON)) return $ case serviceName of
     Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
@@ -33,6 +36,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
+    Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Knowlarity -> Nothing
     Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
     Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
@@ -42,11 +46,20 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.MetroPaymentService Payment.Juspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.MetroPaymentService Payment.Stripe -> Domain.MetroPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.BusPaymentService Payment.Juspay -> Domain.BusPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.BusPaymentService Payment.Stripe -> Domain.BusPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.BbpsPaymentService Payment.Juspay -> Domain.BbpsPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.BbpsPaymentService Payment.Stripe -> Domain.BbpsPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.MultiModalPaymentService Payment.Juspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.MultiModalPaymentService Payment.Stripe -> Domain.MultiModalPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> valueToMaybe configJSON
+    Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> valueToMaybe configJSON
+    Domain.MultiModalService MultiModal.GoogleTransit -> Domain.MultiModalServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
+    Domain.MultiModalService MultiModal.OTPTransit -> Domain.MultiModalServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -64,6 +77,7 @@ getServiceNameConfigJson = \case
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+    Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
@@ -76,6 +90,15 @@ getServiceNameConfigJson = \case
   Domain.MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
+  Domain.BusPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
+  Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+  Domain.MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
@@ -84,3 +107,8 @@ getServiceNameConfigJson = \case
     Tokenize.JourneyMonitoringTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.JourneyMonitoring, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> (Domain.IncidentReportService IncidentReport.ERSS, toJSON cfg)
+  Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
+  Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+    MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
+    MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)

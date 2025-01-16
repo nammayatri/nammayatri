@@ -1,16 +1,15 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverInformation
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.SearchRequestForDriver
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -39,6 +38,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     createdAt :: B.C f Data.Time.LocalTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    customerTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverAvailableTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDefaultStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
@@ -51,10 +51,13 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    isFavourite :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isForwardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPartOfIntelligentPool :: B.C f Kernel.Prelude.Bool,
     keepHiddenForSeconds :: B.C f Kernel.Types.Common.Seconds,
@@ -62,12 +65,17 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode),
+    middleStopCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,
+    poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     requestId :: B.C f Kernel.Prelude.Text,
+    respondedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse),
     rideFrequencyScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rideRequestPopupDelayDuration :: B.C f Kernel.Types.Common.Seconds,
@@ -77,10 +85,12 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     status :: B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
     totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    upgradeCabRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
-    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
+    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleVariant :: B.C f Domain.Types.Vehicle.Variant
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, B.Beamable)
 

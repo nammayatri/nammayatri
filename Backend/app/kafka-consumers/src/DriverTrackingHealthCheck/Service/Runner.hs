@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module DriverTrackingHealthCheck.Service.Runner where
 
@@ -23,7 +22,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text.Encoding as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DriverInfo
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as DriverInfo
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified DriverTrackingHealthCheck.API as HC
 import Environment (Flow, HealthCheckAppCfg)
@@ -31,7 +30,6 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
-import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Service
@@ -57,7 +55,7 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
       Just allDrivers -> do
         results <- mapM (flip driverDevicePingService fcmNofificationSendCount) (toList allDrivers)
         let memberScores = catMaybes results
-        Redis.zRem key memberScores
+        void $ Redis.zRem key memberScores
         log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
     threadDelay (secondsToMcs serviceInterval).getMicroseconds
@@ -68,32 +66,24 @@ redisKey driverId = "beckn:driver-tracking-healthcheck:drivers-to-ping:" <> driv
 driverDevicePingService :: Text -> Int -> Flow (Maybe Text)
 driverDevicePingService driverId fcmNofificationSendCount = do
   log INFO "Ping driver"
-  driver <- SQP.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-  mbCount :: Maybe Int <- Redis.safeGet $ redisKey driverId
-  case mbCount of
-    Just count -> do
-      if count <= fcmNofificationSendCount
-        then do
-          void $ Redis.incr (redisKey driverId)
-          pingDriver driver
-          pure Nothing
-        else do
-          let encodedVal = A.encode driverId
-          _ <- Redis.del (redisKey driverId)
-          pure (Just $ T.decodeUtf8 $ BSL.toStrict encodedVal)
-    Nothing -> do
-      void $ Redis.incr (redisKey driverId)
-      Redis.expire (redisKey driverId) 86400
-      pingDriver driver
-      pure Nothing
+  SQP.findById (Id driverId) >>= \case
+    Nothing -> log ERROR ("Driver not found: " <> driverId) >> pure (Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId)
+    Just driver ->
+      Redis.safeGet (redisKey driverId) >>= \case
+        Just count | count > fcmNofificationSendCount -> do
+          Redis.del (redisKey driverId)
+          pure $ Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId
+        _ -> Redis.incr (redisKey driverId) >> Redis.expire (redisKey driverId) 86400 >> pingDriver driver >> pure Nothing
   where
     pingDriver :: DP.Person -> Flow ()
     pingDriver driver = do
-      driverInformation <- DI.findByPrimaryKey (Id driverId) >>= fromMaybeM (PersonNotFound $ driverId <> " information")
-      case driver.deviceToken of
-        Just token | driverInformation.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT] -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
-        Just _ -> log INFO $ "Driver went offline " <> show driver.id
-        Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
+      DI.findByPrimaryKey (Id driverId) >>= \case
+        Nothing -> log ERROR ("Driver information not found: " <> driverId)
+        Just driverInformation ->
+          case driver.deviceToken of
+            Just token | driverInformation.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT] -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
+            Just _ -> log INFO $ "Driver went offline " <> show driver.id
+            Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
 
 withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
 withLock serviceName func =

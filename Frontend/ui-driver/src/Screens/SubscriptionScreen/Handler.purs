@@ -88,3 +88,6 @@ subscriptionScreen = do
     SubscribeAPI updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SUBSCRIBE_API updatedState)
+    SwitchPlanOnCityOrVehicleChange plan updatedState -> do 
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_ON_CITY_VEHICLE_CHANGE plan updatedState)

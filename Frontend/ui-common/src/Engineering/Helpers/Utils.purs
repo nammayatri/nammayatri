@@ -21,10 +21,9 @@ import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
-import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop)
+import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop, replaceAll, Replacement(..), replace)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
@@ -40,6 +39,7 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
 import Halogen.VDom.DOM.Prop (PropValue)
 import LoaderOverlay.Handler as UI
+import Toast.Handler as UI
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DefaultConfig
 import MerchantConfig.Types (AppConfig)
@@ -59,6 +59,7 @@ import Language.Types
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
+import DecodeUtil
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -82,12 +83,25 @@ toggleLoader =
     pure unit
   else do
     doAff $ liftEffect $ terminateLoader ""
+showToast :: String -> Flow GlobalState Unit
+showToast message = do
+  void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = "", message = message } } })
+  doAff $ liftEffect $ terminateToast ""
+  state <- getState
+  _ <- liftFlow $ launchAff $ flowRunner state UI.toastScreen
+  pure unit
+
+terminateToast :: String -> Effect Unit
+terminateToast _ = terminateUI $ Just "Toast"
 
 terminateLoader :: String -> Effect Unit
 terminateLoader _ = terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
+
+toastText :: String -> String -> Flow GlobalState Unit
+toastText title message = void $ modifyState (\(GlobalState state) -> GlobalState state { toast { data { title = title, message = message } } })
 
 showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
 showAndHideLoader showLoader title description state = do
@@ -145,6 +159,8 @@ mobileNumberMaxLength countryShortCode = case countryShortCode of
 
 -- Local Storage Utils
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+
+foreign import compareDate :: EffectFn2 String String Boolean
 
 foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 
@@ -335,6 +351,12 @@ cityCodeMap =
   , Tuple "std:0452" "madurai"
   , Tuple "std:0416" "vellore"
   , Tuple "std:0353" "siliguri"
+  , Tuple "std:08192" "davanagere"
+  , Tuple "std:08182" "shivamogga"
+  , Tuple "std:0836" "hubli"
+  , Tuple "std:0824" "mangalore"
+  , Tuple "std:08472" "gulbarga"
+  , Tuple "std:08200" "udupi"
   ]
 
 getCityFromCode :: String -> String
@@ -360,7 +382,9 @@ fetchLanguage currLang = case currLang of
                   "HI_IN" -> "hi"
                   "KN_IN" -> "kn"
                   "TA_IN" -> "ta"
+                  "BN_IN" -> "bn"
                   "TE_IN" -> "te"
+                  "ML_IN" -> "ml"
                   _       -> "en"
 
 handleUpdatedTerms :: String -> Effect Unit
@@ -455,3 +479,42 @@ formatMinIntoHoursMins mins =
     hours = mins / 60
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
+
+getColorWithOpacity :: Int -> String -> String 
+getColorWithOpacity opacity color =
+  let percentToHex = (if opacity `mod` 2 == 1 then DI.ceil else DI.floor) $  (255.0 * (DI.toNumber opacity)) /100.0
+      hexString = getHexFromInt percentToHex
+      prefixForColor = "#" <> if length hexString < 2 then "0" <> hexString else hexString
+  in prefixForColor <> (replace (Pattern "#") (Replacement "") color)
+
+getHexFromInt :: Int -> String
+getHexFromInt number = if number == 0 then "0" else toUpper (convertToHex number)
+
+convertToHex :: Int -> String
+convertToHex number = do
+  if number == 0 
+    then ""
+    else do
+      let quotient = number/16
+          remainder = number `mod` 16
+          hexDigit = fromMaybe "" (intToHexChar remainder)
+      append (convertToHex quotient) hexDigit
+
+intToHexChar :: Int -> Maybe String
+intToHexChar n =
+  hexChars DA.!! n
+  where
+    hexChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
+
+checkConditionToShowInternetScreen :: forall a. a -> Boolean
+checkConditionToShowInternetScreen lazy = 
+  let 
+    count = (getKeyWithDefaultFromWindow "noInternetCount" 0) + 1
+    forced = getKeyWithDefaultFromWindow "forceAppToNoInternetScreen" false
+  in 
+    if count == 3 || forced then
+      let _ = setKeyInWindow "noInternetCount" 0
+      in true
+    else 
+      let _ = setKeyInWindow "noInternetCount" count
+      in false

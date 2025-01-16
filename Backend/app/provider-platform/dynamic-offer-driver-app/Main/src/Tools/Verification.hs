@@ -45,8 +45,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.GovtDataRC ()
+import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
 
 verifyDLAsync ::
@@ -64,7 +64,7 @@ verifyRC ::
   VerifyRCReq ->
   m VerifyRCResp
 verifyRC merchantId merchantOptCityId req = do
-  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
   runWithServiceConfig (Verification.verifyRC config.verificationProvidersPriorityList) (.verificationService) merchantId merchantOptCityId req
 
 validateImage ::
@@ -115,12 +115,12 @@ runWithServiceConfig ::
   Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> func vsc req

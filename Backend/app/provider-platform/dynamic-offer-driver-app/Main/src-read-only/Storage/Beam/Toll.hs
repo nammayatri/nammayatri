@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Toll where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -17,6 +16,7 @@ data TollT f = TollT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Kernel.Prelude.Text,
     isAutoRickshawAllowed :: B.C f Kernel.Prelude.Bool,
+    isTwoWheelerAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     name :: B.C f Kernel.Prelude.Text,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,

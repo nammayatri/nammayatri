@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -19,6 +18,7 @@ data InterCityDetails = InterCityDetails
     id :: Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails,
     kmPerPlannedExtraHour :: Kernel.Types.Common.Distance,
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Extra.RentalDetails.NightShiftInfo,
+    perDayMaxAllowanceInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     perDayMaxHourAllowance :: Kernel.Types.Common.Hours,
     perExtraKmRate :: Kernel.Types.Common.Price,
     perExtraMinRate :: Kernel.Types.Common.Price,

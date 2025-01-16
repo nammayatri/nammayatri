@@ -126,8 +126,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
     DCancel.CancelSearch cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
       lockAndCall searchTry $ do
-        fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
-          DCancel.cancelSearch transporterId searchTry
+        DCancel.cancelSearch transporterId searchTry
       return Ack
   where
     lockAndCall searchTry action = STL.whenSearchTryCancellable searchTry.id action

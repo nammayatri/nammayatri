@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EncryptedHashedField: Kernel.External.Encryption
   Ride: Domain.Types.Ride
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   DbHash: Kernel.External.Encryption
   Months: Kernel.Types.Time
 
@@ -19,13 +19,15 @@ RideDetails:
     driverCountryCode : Maybe Text
     vehicleNumber : Text
     vehicleColor : Maybe Text
-    vehicleVariant : Maybe Variant
+    vehicleVariant : Maybe VehicleVariant|NoRelation
     vehicleModel : Maybe Text
     vehicleClass : Maybe Text
     vehicleAge : Maybe Months
     fleetOwnerId : Maybe Text
     defaultServiceTierName : Maybe Text
     createdAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
 
   constraints:
@@ -63,4 +65,4 @@ RideDetails:
     vehicleAge: int
     fleetOwnerId: character varying(36)
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

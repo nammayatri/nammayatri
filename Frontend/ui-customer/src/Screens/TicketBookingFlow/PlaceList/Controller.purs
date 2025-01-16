@@ -15,7 +15,7 @@
 
 module Screens.TicketBookingFlow.PlaceList.Controller where 
 
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==))
+import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -26,6 +26,9 @@ import JBridge as JB
 import MerchantConfig.Utils as MU
 import Engineering.Helpers.Commons as EHC
 import Services.API as API
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
+import Data.Maybe (fromMaybe, Maybe(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -57,7 +60,13 @@ data ScreenOutput = GoBack
 
 eval :: Action -> TicketingScreenState -> Eval Action ScreenOutput TicketingScreenState
 
-eval BackPressed state = exit $ ExitToHomeScreen state
+eval BackPressed state = 
+   if isParentView FunctionCall
+        then do
+            void $ pure $ emitTerminateApp Nothing true
+            continue state
+        else
+            exit $ ExitToHomeScreen state
 
 eval MyTickets state = exit $ ExitToMyTicketsScreen state
 

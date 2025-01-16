@@ -6,10 +6,10 @@
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module UrlShortner.Common
-  ( GenerateShortUrlReq (..),
+  ( UrlCategory (..),
+    GenerateShortUrlReq (..),
     GenerateShortUrlRes (..),
     UrlShortnerConfig (..),
     generateShortUrl,
@@ -22,9 +22,8 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall (FromDhall)
-import Kernel.Utils.JSON
 import Servant hiding (throwError)
+import UrlShortner.Types
 
 type GenerateShortUrlAPI =
   "internal" :> "generateShortUrl"
@@ -38,38 +37,6 @@ generateShortUrlAPI = Proxy
 generateShortUrlClient :: Maybe Text -> GenerateShortUrlReq -> ET.EulerClient GenerateShortUrlRes
 generateShortUrlClient = ET.client generateShortUrlAPI
 
-data GenerateShortUrlReq = GenerateShortUrlReq
-  { baseUrl :: Text,
-    customShortCode :: Maybe Text,
-    shortCodeLength :: Maybe Int,
-    expiryInHours :: Maybe Int
-  }
-  deriving (Generic, Read, Show)
-
-instance FromJSON GenerateShortUrlReq where
-  parseJSON = genericParseJSON removeNullFields
-
-instance ToJSON GenerateShortUrlReq where
-  toJSON = genericToJSON removeNullFields
-
-data GenerateShortUrlRes = GenerateShortUrlRes
-  { shortUrl :: Text,
-    urlExpiry :: UTCTime
-  }
-  deriving (Generic, Read, Show)
-
-instance FromJSON GenerateShortUrlRes where
-  parseJSON = genericParseJSON removeNullFields
-
-instance ToJSON GenerateShortUrlRes where
-  toJSON = genericToJSON removeNullFields
-
-data UrlShortnerConfig = UrlShortnerConfig
-  { url :: BaseUrl,
-    apiKey :: Text
-  }
-  deriving (Generic, Show, FromDhall, FromJSON, ToJSON)
-
 generateShortUrl ::
   ( MonadFlow m,
     CoreMetrics m,
@@ -79,10 +46,5 @@ generateShortUrl ::
   m GenerateShortUrlRes
 generateShortUrl req = do
   cfg <- asks (.urlShortnerConfig)
-  res <-
-    callAPI cfg.url (generateShortUrlClient (Just cfg.apiKey) req) "generateShortUrl" generateShortUrlAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CALL_TO_URL_SHORTNER_FAILED") cfg.url)
-  validateUrl res.shortUrl
-  return res
-  where
-    validateUrl = void . parseBaseUrl
+  callAPI cfg.url (generateShortUrlClient (Just cfg.apiKey) req) "generateShortUrl" generateShortUrlAPI
+    >>= fromEitherM (ExternalAPICallError (Just "CALL_TO_URL_SHORTNER_FAILED") cfg.url)

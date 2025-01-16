@@ -1,0 +1,31 @@
+imports:
+  Chakra: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  User: Lib.Yudhishthira.Types.Common
+  Event: Lib.Yudhishthira.Types
+
+UserData:
+  tableName: user_data
+
+  fields:
+    id: Id UserData
+    chakra: Chakra
+    userId: Id User
+    eventId: Id Event
+    batchNumber: Int
+    userDataValue: Value
+
+  sqlType:
+    userDataValue: json
+
+  queries:
+    findAllByUserIdAndEventId:
+      kvFunction: findAllWithKV
+      where:
+        and: [userId, eventId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

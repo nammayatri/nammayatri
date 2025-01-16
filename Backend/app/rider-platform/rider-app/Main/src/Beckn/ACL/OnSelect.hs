@@ -24,7 +24,6 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
-import Domain.Types.FarePolicy.FareProductType
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -86,16 +85,8 @@ buildQuoteInfoV2 ::
   Spec.Item ->
   m DOnSelect.QuoteInfo
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
-  fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
-  quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> do
-      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just DRIVER_OFFER)
-      pure $ DOnSelect.OneWay qDetails
-    "AMBULANCE" -> do
-      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just AMBULANCE)
-      pure $ DOnSelect.Ambulance qDetails
-    "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
-    _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
+  tripCategory <- (fulfillment.fulfillmentType >>= (Just . Utils.fulfillmentTypeToTripCategory)) & fromMaybeM (InvalidRequest "Missing fulfillmentType")
+  quoteDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   let serviceTierName = Utils.getServiceTierName item
@@ -148,14 +139,14 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Quotation ->
   UTCTime ->
   UTCTime ->
-  Maybe FareProductType ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl fareProductType = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
       durationToPickup = getPickupDurationV2 agentTags
       distanceToPickup' = getDistanceToNearestDriverV2 itemTags
+      isUpgradedToCab = getIsUpgradedToCab itemTags
       rating = getDriverRatingV2 agentTags
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
@@ -181,6 +172,11 @@ getQuoteValidTill contextTime time = do
 getPickupDurationV2 :: Maybe [Spec.TagGroup] -> Maybe Int
 getPickupDurationV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
+  readMaybe $ T.unpack tagValue
+
+getIsUpgradedToCab :: Maybe [Spec.TagGroup] -> Maybe Bool
+getIsUpgradedToCab tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.UPGRADE_TO_CAB tagGroups
   readMaybe $ T.unpack tagValue
 
 getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Meters

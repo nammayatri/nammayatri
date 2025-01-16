@@ -18,12 +18,13 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.Utils
+import Data.Maybe
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Action.UI.Serviceability
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -38,11 +39,11 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
-import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Functions
-import Kernel.External.Maps (LatLong)
+import EulerHS.Prelude hiding (id, pack)
+import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -66,15 +67,26 @@ data StopReq = StopReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+newtype DriverNo = DriverNo
+  { driverNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 newtype BookingListRes = BookingListRes
   { list :: [SRB.BookingAPIEntity]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+newtype FavouriteBookingListRes = FavouriteBookingListRes
+  { list :: [SRB.FavouriteBookingAPIEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
-bookingStatus bookingId _ = do
+bookingStatus bookingId (personId, _merchantId) = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
+  fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
@@ -89,7 +101,8 @@ bookingStatusPolling bookingId _ = do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle $ DVST.castServiceTierToVariant booking.vehicleServiceTierType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId booking.merchantId "MOBILITY" booking.merchantOperatingCityId
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -107,7 +120,8 @@ handleConfirmTtlExpiry booking = do
         { reasonCode = CancellationReasonCode "External/Beckn API failure",
           reasonStage = OnConfirm,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
 
 callOnStatus :: SRB.Booking -> Flow ()
@@ -127,26 +141,46 @@ checkBookingsForStatus (currBooking : bookings) = do
   case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
     (Just timeDiffThreshold, Just estimatedEndDuration) -> do
       now <- getCurrentTime
-      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
+      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.startTime
       let diff = DT.diffUTCTime now estimatedEndTime
       let callStatusConditionNew = (currBooking.status == SRB.NEW && diff > fromIntegral timeDiffThreshold) || (currBooking.status == SRB.CONFIRMED && diff > fromIntegral timeDiffThreshold)
           callStatusConditionTripAssigned = currBooking.status == SRB.TRIP_ASSIGNED && diff > fromIntegral timeDiffThreshold
       when callStatusConditionNew $ do
         callOnStatus currBooking
       when callStatusConditionTripAssigned $ do
-        ride <- QR.findActiveByRBId currBooking.id >>= fromMaybeM (RideNotFound currBooking.id.getId)
-        unless (ride.status == DTR.INPROGRESS) do
-          callOnStatus currBooking
+        callOnStatus currBooking
       checkBookingsForStatus bookings
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
-bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
-  rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
-  fork "booking list status update" $ checkBookingsForStatus rbList
-  logInfo $ "rbList: test " <> show rbList
-  BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
+  let mbFromDate = millisecondsToUTC <$> mbFromDate'
+  let mbToDate = millisecondsToUTC <$> mbToDate'
+  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
+  let limit = maybe 10 fromIntegral mbLimit
+  if null rbList
+    then do
+      now <- getCurrentTime
+      let allBookingsNotScheduled = length $ filter (\booking -> booking.startTime < now) allbookings
+      if allBookingsNotScheduled == limit
+        then do
+          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList
+        else do
+          returnResonseAndClearStuckRides allbookings rbList personId
+    else do
+      returnResonseAndClearStuckRides allbookings rbList personId
+  where
+    returnResonseAndClearStuckRides allbookings rbList personId' = do
+      fork "booking list status update" $ checkBookingsForStatus allbookings
+      logInfo $ "rbList: test " <> show rbList
+      BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId') rbList
+
+favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
+favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
+  mobileNumberHash <- getDbHash driver.driverNumber
+  rides <- runInReplica $ QR.findAllByRiderIdAndDriverNumber personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mobileNumberHash
+  pure $ FavouriteBookingListRes $ SRB.favouritebuildBookingAPIEntity <$> rides
 
 addStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow APISuccess
 addStop (_, merchantId) bookingId req = do
@@ -162,15 +196,15 @@ processStop :: Id SRB.Booking -> StopReq -> Id Merchant -> Bool -> Flow ()
 processStop bookingId loc merchantId isEdit = do
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   uuid <- generateGUID
-  validateStopReq booking isEdit
-  location <- buildLocation loc
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  validateStopReq booking isEdit loc merchant
+  location <- buildLocation merchantId booking.merchantOperatingCityId loc
   prevOrder <- QLM.maxOrderByEntity booking.id.getId
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
   QLM.create locationMapping
-  QRB.updateStop booking (Just location)
+  QRB.updateStop booking (Just location) (Just True)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let details =
         if isEdit
           then do
@@ -197,8 +231,8 @@ processStop bookingId loc merchantId isEdit = do
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
 
-validateStopReq :: (MonadFlow m) => SRB.Booking -> Bool -> m ()
-validateStopReq booking isEdit = do
+validateStopReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Bool -> StopReq -> Merchant.Merchant -> m ()
+validateStopReq booking isEdit loc merchant = do
   unless (booking.status `elem` SRB.activeBookingStatus) $ throwError (RideInvalidStatus $ "Cannot edit/add stop in this booking " <> booking.id.getId)
   case booking.bookingDetails of
     SRB.OneWayDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in static offer on demand rides"
@@ -210,9 +244,21 @@ validateStopReq booking isEdit = do
     SRB.OneWaySpecialZoneDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in special zone rides"
     SRB.InterCityDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in intercity rides"
     SRB.AmbulanceDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in ambulance rides"
+    SRB.DeliveryDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in delivery rides"
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
-buildLocation req = do
+  nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+  fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+  case (nearestCity, fromLocCity) of
+    (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
+    _ -> throwError (InvalidRequest "Ride Unserviceable")
+
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  StopReq ->
+  m Location
+buildLocation merchantId merchantOperatingCityId req = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -222,6 +268,8 @@ buildLocation req = do
         address = req.address,
         createdAt = now,
         updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         ..
       }
 
@@ -239,3 +287,18 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         updatedAt = now,
         ..
       }
+
+emergencyContactSOSCache :: SRB.Booking -> Id Person.Person -> Flow ()
+emergencyContactSOSCache booking personId = do
+  now <- getCurrentTime
+  when (booking.riderId /= personId) $ do
+    mbRide <- runInReplica $ QR.findActiveByRBId booking.id
+    case mbRide of
+      Just ride -> do
+        logDebug "Creating cache for emergency contact SOS"
+        let hashKey = makeEmergencyContactSOSCacheKey (ride.id)
+        Hedis.hSetExp hashKey (personId.getId) now 86400 -- expiration is set to 24 hours
+      Nothing -> logDebug "No active ride found, skipping SOS cache creation."
+
+makeEmergencyContactSOSCacheKey :: Id DTR.Ride -> Text
+makeEmergencyContactSOSCacheKey rideId = "emergencyContactSOS:" <> rideId.getId

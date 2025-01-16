@@ -183,7 +183,7 @@ paymentList push state =
                       [ height WRAP_CONTENT
                       , weight 1.0
                       ][]
-                  , commonTV push (getString PAID_BY) Color.black700 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
+                  , commonTV push (getString DISCOUNTED) Color.black700 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                   , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -221,7 +221,7 @@ paymentList push state =
                             , margin (MarginRight 4)
                             , imageWithFallback $ fetchImage FF_ASSET if item.isPaidByYatriCoins then "ny_ic_yatri_coin" else "ny_ic_upi_logo"
                             ]
-                          , commonTV push (getString YATRI_COINS) Color.black900 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
+                          , commonTV push (getString DISCOUNT_POINTS) Color.black900 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                           , commonTV push (case item.feeType of 
                                             AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
                                             AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
@@ -403,6 +403,7 @@ transactionDetails push state visibility' =
                     "COIN_DISCOUNT" -> if item.val /= "0" then promoCodeView push (coinsOfferConfig item.val) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
+                    "FEE_BREAKUP" -> feeBreakUpView push state.data.transactionDetails.isCoinDiscountApplied item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
                   ) state.data.transactionDetails.details)
             , manualPaymentRidesList push state -- if manualPayment
@@ -509,6 +510,37 @@ promoCodeView push config =
      , margin $ MarginLeft 3
      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
      , visibility $ boolToVisibility config.isPaidByYatriCoins 
+     ]
+  ]
+
+
+feeBreakUpView :: forall w. (Action -> Effect Unit) -> Boolean -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Boolean -> PrestoDOM (Effect Unit) w 
+feeBreakUpView push isPaidByYatriCoins text' color' fontStyle marginTop gravity' visibility' =
+  linearLayout
+  ([ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity CENTER_VERTICAL
+  , visibility $ boolToVisibility visibility'
+  ])
+   [(textView $
+     [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color color'
+      , gravity CENTER_VERTICAL
+      , visibility if visibility' then VISIBLE else GONE
+      , text text'
+     ] <> fontStyle)
+   , imageView 
+     [ width $ V 12
+     , height $ V 12
+      , color color'
+      , margin $ MarginLeft 3
+      , padding $ PaddingTop 3
+      , gravity CENTER_VERTICAL
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
+      , visibility $ boolToVisibility isPaidByYatriCoins 
      ]
   ]
 

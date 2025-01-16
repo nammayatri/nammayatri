@@ -15,49 +15,45 @@
 
 module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
-    DriverCoinsFunctionType (..),
-    CoinMessage (..),
+    DCoins.DriverCoinsFunctionType (..),
+    DCoins.CoinMessage (..),
+    DCoins.CoinStatus (..),
+    DCoins.MetroRideType (..),
+    DCoins.isMetroRideType,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
+import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data DriverCoinsFunctionType
-  = OneOrTwoStarRating
-  | RideCompleted
-  | FiveStarRating
-  | BookingCancellation
-  | CustomerReferral
-  | DriverReferral
-  | TwoRidesCompleted
-  | FiveRidesCompleted
-  | EightPlusRidesInOneDay
-  | PurpleRideCompleted
-  | LeaderBoardTopFiveHundred
-  | TrainingCompleted
-  | BulkUploadFunction
-  | BulkUploadFunctionV2 CoinMessage
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+import qualified Text.Show (show)
 
 data DriverCoinsEventType
-  = Rating {ratingValue :: Int, chargeableDistance :: Maybe Meters}
-  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters}
+  = Rating {ratingValue :: Int, ride :: Ride}
+  | EndRide {isDisabled :: Bool, ride :: Ride, metroRideType :: DCoins.MetroRideType}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
-  | DriverToCustomerReferral {chargeableDistance :: Maybe Meters}
+  | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Show)
+  | LMS
+  | LMSBonus
+  deriving (Generic, ToJSON, FromJSON)
 
-data CoinMessage
-  = CoinAdded
-  | CoinSubtracted
-  | FareRecomputation
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+driverCoinsEventTypeToString :: DriverCoinsEventType -> String
+driverCoinsEventTypeToString = \case
+  Rating {} -> "Rating"
+  EndRide {} -> "EndRide"
+  Cancellation {} -> "Cancellation"
+  DriverToCustomerReferral {} -> "DriverToCustomerReferral"
+  CustomerToDriverReferral {} -> "CustomerToDriverReferral"
+  LeaderBoard -> "LeaderBoard"
+  Training -> "Training"
+  BulkUploadEvent -> "BulkUploadEvent"
+  LMS -> "LMS"
+  LMSBonus -> "LMSBonus"
 
-$(mkBeamInstancesForEnum ''CoinMessage)
-
-$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
+instance Show DriverCoinsEventType where
+  show = driverCoinsEventTypeToString

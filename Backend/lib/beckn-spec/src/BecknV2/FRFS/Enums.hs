@@ -12,7 +12,6 @@
   General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module BecknV2.FRFS.Enums where
 
@@ -22,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.JSON (constructorsToLowerOptions, constructorsWithHyphens)
+import Kernel.Utils.TH
 
 data Domain
   = FRFS
@@ -68,11 +68,21 @@ instance FromJSON Action where
 instance ToJSON Action where
   toJSON = genericToJSON constructorsToLowerOptions
 
-data VehicleCategory = METRO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+data VehicleCategory = METRO | BUS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''VehicleCategory)
+
+data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ServiceTierType)
 
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+data Network = BAP | BPP
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PaymentType = PRE_ORDER | PRE_FULFILLMENT | ON_FULFILLMENT | POST_FULFILLMENT | ON_ORDER
   deriving (Eq, Ord, Show, Read, Generic)
@@ -98,19 +108,21 @@ data CancellationType = SOFT_CANCEL | CONFIRM_CANCEL
 data CancellationParams = REFUND | CANCELLATION_CHARGES | BASE_FARE
   deriving (Eq, Ord, Show, Read, Generic)
 
-data OrderStatus = ON_CANCEL_SOFT_CANCEL | ON_CANCEL_CANCELLED | ACTIVE | COMPLETE
+data OrderStatus = SOFT_CANCELLED | CANCELLED | CANCEL_INITIATED | ACTIVE | COMPLETE
   deriving (Eq, Ord, Show, Read, Generic)
 
 instance FromJSON OrderStatus where
-  parseJSON (String "SOFT_CANCEL") = pure ON_CANCEL_SOFT_CANCEL
-  parseJSON (String "CANCELLED") = pure ON_CANCEL_CANCELLED
+  parseJSON (String "SOFT_CANCEL") = pure SOFT_CANCELLED
+  parseJSON (String "CANCELLED") = pure CANCELLED
+  parseJSON (String "CANCEL_INITIATED") = pure CANCEL_INITIATED
   parseJSON (String "ACTIVE") = pure ACTIVE
   parseJSON (String "COMPLETE") = pure COMPLETE
   parseJSON (String _) = parseFail "Invalid OnCancel Order Status"
   parseJSON e = typeMismatch "String" e
 
 instance ToJSON OrderStatus where
-  toJSON ON_CANCEL_SOFT_CANCEL = String "SOFT_CANCEL"
-  toJSON ON_CANCEL_CANCELLED = String "CANCELLED"
+  toJSON SOFT_CANCELLED = String "SOFT_CANCEL"
+  toJSON CANCELLED = String "CANCELLED"
+  toJSON CANCEL_INITIATED = String "CANCEL_INITIATED"
   toJSON ACTIVE = String "ACTIVE"
   toJSON COMPLETE = String "COMPLETE"

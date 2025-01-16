@@ -20,10 +20,11 @@ import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 
 import Data.Maybe(Maybe(..))
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..))
 import Common.Types.App
 
-data Action = TextChanged String String | FocusChanged Boolean
+data Action = TextChanged String String | FocusChanged Boolean | TextImageClicked
 
 type Config =
   { height :: Length
@@ -45,6 +46,7 @@ type Config =
   , constantField :: ConstantFieldConfig
   , showConstantField :: Boolean
   , focusedStroke :: String
+  , textImage :: ImageConfig
   }
 
 type ConstantFieldConfig = {
@@ -96,6 +98,7 @@ type ImageConfig =
   , imageUrl :: String
   , margin :: Margin
   , padding :: Padding
+  , visibility :: Visibility
   }
 
 config :: Config
@@ -160,6 +163,7 @@ config = {
     , imageUrl : ""
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
+    , visibility : VISIBLE
   }
   , showConstantField : false
   , constantField : {
@@ -171,5 +175,13 @@ config = {
   , color : Color.black800
   , padding : Padding 0 0 0 0
   , margin : Margin 10 0 0 0
+  }
+  , textImage : {
+      height : V 24
+    , width : V 24
+    , imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_id_filled"
+    , margin : (Margin 16 0 16 0)
+    , padding : (Padding 0 0 0 0)
+    , visibility : GONE
   }
 }

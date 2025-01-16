@@ -16,6 +16,7 @@ Exophone:
     callService : CallService
     createdAt : UTCTime
     updatedAt : UTCTime
+    enableAlternateNumber : Maybe Bool
 
   constraints:
     id: PrimaryKey

@@ -19,3 +19,6 @@ create cs = do
 
 findByCallSid :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
+
+findOneByRideId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
+findOneByRideId rideId = findAllWithOptionsKV [Se.Is BeamCS.rideId $ Se.Eq rideId] (Se.Desc BeamCS.createdAt) (Just 1) Nothing <&> listToMaybe

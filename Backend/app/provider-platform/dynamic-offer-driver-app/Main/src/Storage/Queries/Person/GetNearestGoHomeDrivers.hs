@@ -5,16 +5,17 @@ module Storage.Queries.Person.GetNearestGoHomeDrivers
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
 import Domain.Types.Common
-import Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import Domain.Types.ServiceTierType as DVST
-import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.VehicleVariant as DV
+import Domain.Utils
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -34,6 +35,7 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Tools.Utils as TU
 
 data NearestGoHomeDriversReq = NearestGoHomeDriversReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
@@ -56,10 +58,11 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     language :: Maybe Maps.Language,
     onRide :: Bool,
     distanceToDriver :: Meters,
-    variant :: DV.Variant,
-    serviceTier :: DVST.ServiceTierType,
+    variant :: DV.VehicleVariant,
+    serviceTier :: ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
+    isSpecialLocWarrior :: Bool,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode,
@@ -71,7 +74,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe LatLong
+    latestScheduledPickup :: Maybe LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -80,9 +84,14 @@ getNearestGoHomeDrivers ::
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
-  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius
+  let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
+  specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity isValueAddNP
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  let driverInfos = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
+  logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show specialLocWarriorDriverInfos
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -94,6 +103,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)
+  logDebug $ "MetroWarriorDebugging Result:- getNearestGoHomeDrivers -" <> show res
   return res
   where
     linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
@@ -116,12 +126,15 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
+      let softBlockedTiers = fromMaybe [] info.softBlockStiers
+      let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
       let selectedDriverServiceTiers =
-            if ifUsageRestricted
-              then do
-                (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection always send for available tiers
-              else do
-                DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
+            removeSoftBlockedTiers $
+              if ifUsageRestricted
+                then do
+                  (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection always send for available tiers
+                else do
+                  DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if null serviceTiers
         then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
         else do
@@ -142,6 +155,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 driverDeviceToken = person.deviceToken,
                 language = person.language,
                 onRide = info.onRide,
+                isSpecialLocWarrior = info.isSpecialLocWarrior,
                 distanceToDriver = roundToIntegral dist,
                 variant = vehicle.variant,
                 serviceTier = serviceTier,
@@ -158,5 +172,6 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
-                latestScheduledPickup = info.latestScheduledPickup
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = TU.convertTags $ fromMaybe [] person.driverTag
               }

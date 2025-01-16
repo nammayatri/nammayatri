@@ -1,13 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.BusinessEvent where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessEvent
-import qualified Domain.Types.Vehicle
+import Domain.Types.Common ()
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -24,7 +23,7 @@ data BusinessEventT f = BusinessEventT
     id :: B.C f Kernel.Prelude.Text,
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     timeStamp :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant),
     whenPoolWasComputed :: B.C f (Kernel.Prelude.Maybe Domain.Types.BusinessEvent.WhenPoolWasComputed)
   }
   deriving (Generic, B.Beamable)

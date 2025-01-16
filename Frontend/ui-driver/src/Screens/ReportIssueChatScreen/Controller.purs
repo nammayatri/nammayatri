@@ -39,7 +39,7 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn3 , runEffectFn4, runEffectFn7)
+import Effect.Uncurried (runEffectFn1, runEffectFn5 , runEffectFn4, runEffectFn7)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getNewIDWithTag)
 import JBridge ( addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig, clearFocus, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, stopAudioRecording, uploadMultiPartData)
 import Language.Strings (getString)
@@ -52,6 +52,7 @@ import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
 import Timers (waitingCountdownTimerV2, clearTimerWithId)
+import Common.Types.App
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -135,6 +136,13 @@ data ScreenOutput = GoBack
                   | UploadIssue  ReportIssueChatScreenState
                   | CallCustomer ReportIssueChatScreenState
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
 
 eval (Exit output) state =
@@ -159,7 +167,7 @@ eval ShowOptions state = do
   let message = (getString SELECT_OPTION) <> "\n"
                 <> joinWith "\n" options'
   let messages' = snoc state.data.chatConfig.messages
-                    (makeChatComponent' message "Bot" (getCurrentUTC "") "Text" 500)
+                    (makeChatComponent' message Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500)
   continue state { data { chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options' } } }
 
 ---------------------------------------------------- Add Media ----------------------------------------------------
@@ -246,7 +254,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "add_images_model_done_button" }
-    void $ liftEffect $ uploadFile false
+    void $ liftEffect $ uploadFile uploadFileConfig true
     pure NoAction
   ]
 
@@ -292,7 +300,7 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
-    void $  runEffectFn3 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    void $  runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
     pure NoAction
   ]
 
@@ -350,7 +358,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- runEffectFn1 saveAudioFile url
-                  void $  runEffectFn3 uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  void $  runEffectFn5 uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "fileId" "file"
                   pure $  UpdateState state { data  { recordedAudioUrl = Just res}}
       Nothing  -> do
                   if state.data.recordAudioState.openAddAudioModel
@@ -403,14 +411,14 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
       then
         continue state { props { showCallCustomerModel = true, isPopupModelOpen = true } }
       else do
-        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName "Driver" (getCurrentUTC ""))
+        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName Nothing Nothing "Driver" (getCurrentUTC ""))
         continueWithCmd state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId } } [do
           if state.props.isReversedFlow
           then
-            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" 500
+            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500
             in pure $ SendMessage message false
           else
-            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) "Bot" ((getCurrentUTC "")) "Text" 500) (not state.props.isReversedFlow)
+            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) Nothing Nothing "Bot" ((getCurrentUTC "")) "Text" 500) (not state.props.isReversedFlow)
       ]
     Nothing -> do
       void $  pure $ toast $ getString CANT_FIND_OPTION
@@ -447,7 +455,7 @@ eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id text)) sta
 eval (ConfirmCall (PrimaryButton.OnClick)) state =
   case find (\x -> x.label == "CALL_THE_CUSTOMER") state.data.options of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option "Driver" (getCurrentUTC ""))
+      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option Nothing Nothing "Driver" (getCurrentUTC ""))
       exit $ CallCustomer state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId }, props { isPopupModelOpen = false, showCallCustomerModel = false } }
     Nothing -> do
       void $ pure $ toast $ getString CANT_FIND_OPTION

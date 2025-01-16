@@ -2,7 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
@@ -28,6 +28,8 @@ types:
     cabs: Maybe [DocumentVerificationConfigAPIEntity]
     bikes: Maybe [DocumentVerificationConfigAPIEntity]
     ambulances: Maybe [DocumentVerificationConfigAPIEntity]
+    trucks: Maybe [DocumentVerificationConfigAPIEntity]
+    bus: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     title: Text
@@ -40,6 +42,7 @@ types:
     checkExtraction: Bool
     checkExpiry: Bool
     rcNumberPrefixList: '[Text]'
+    filterForOldApks: Maybe Bool
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
@@ -117,12 +120,22 @@ types:
   BankAccountResp:
     chargesEnabled: Bool
     detailsSubmitted: Bool
+  HVSdkCallLogReq:
+    txnId: Text
+    hvFlowId: Maybe Text
+    docType: Maybe DocumentType
+    status : Maybe Text
+    callbackResponse : Maybe Text
+    failureReason : Maybe Text
+
+
 
 apis:
   - GET:
       endpoint: /onboarding/configs
       query:
         onlyVehicle: Bool
+        makeSelfieAadhaarPanMandatory: Bool
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList
@@ -199,5 +212,13 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: AadhaarCardReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /driver/register/logHvSdkCall
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: HVSdkCallLogReq
       response:
         type: APISuccess

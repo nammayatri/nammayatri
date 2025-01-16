@@ -116,3 +116,73 @@ ALTER TABLE atlas_app.booking ADD COLUMN client_manufacturer text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_dashboard_request boolean ;
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_app.booking ADD COLUMN trip_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN initiated_by text ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN estimated_static_duration integer ;
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_referred_ride boolean ;
+ALTER TABLE atlas_app.booking ADD COLUMN is_upgraded_to_cab boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN vehicle_icon_url character varying(255) ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN disability_tag text ;
+ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_order integer ;

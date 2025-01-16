@@ -11,16 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.CancellationFarePolicy as DTC
-import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
@@ -28,10 +29,11 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
-import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
+import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
@@ -39,12 +41,15 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    perStopCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
+    tipOptions :: Maybe [Int],
+    additionalCongestionCharge :: HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
@@ -52,8 +57,14 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     farePolicyDetails :: FarePolicyDetailsD s,
     cancellationFarePolicyId :: Maybe (Id DTC.CancellationFarePolicy),
     description :: Maybe Text,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
@@ -109,13 +120,17 @@ data CongestionChargeMultiplier
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased
+  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable PlatformFeeMethods
 
 data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
+$(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+$(mkBeamInstancesForEnum ''PlatformFeeMethods)
 
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
@@ -124,26 +139,51 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe HighPrecMoney,
+    perStopCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    tipOptions :: Maybe [Int],
     distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
+    congestionChargePerMin :: Maybe Double,
+    dpVersion :: Maybe Text,
+    mbSupplyDemandRatioToLoc :: Maybe Double,
+    additionalCongestionCharge :: HighPrecMoney,
+    mbSupplyDemandRatioFromLoc :: Maybe Double,
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     cancellationFarePolicy :: Maybe DTC.CancellationFarePolicy,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: PlatformFeeMethods,
+    disableRecompute :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
 type FullFarePolicy = FullFarePolicyD 'DTC.Safe
+
+data CongestionChargeDetails = CongestionChargeDetails
+  { dpVersion :: Maybe Text,
+    mbSupplyDemandRatioToLoc :: Maybe Double,
+    mbSupplyDemandRatioFromLoc :: Maybe Double,
+    congestionChargePerMin :: Maybe Double,
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text
+  }
+  deriving (Generic, Show)
 
 instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
 
@@ -165,14 +205,20 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy FarePolicy {..} =
-  FullFarePolicy {..}
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> Maybe Bool -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} disableRecompute =
+  FullFarePolicy
+    { merchantId = merchantId',
+      ..
+    }
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
 fullFarePolicyToFarePolicy ffp@FullFarePolicy {..} =
   let cancellationFarePolicyId = (.id) <$> ffp.cancellationFarePolicy
-   in FarePolicy {..}
+   in FarePolicy
+        { merchantId = Just merchantId,
+          ..
+        }
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

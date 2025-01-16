@@ -97,3 +97,47 @@ ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
 
 ALTER TABLE atlas_app.person ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_app.person ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN inform_police_sos boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN android_id text ;
+ALTER TABLE atlas_app.person ADD COLUMN customer_namma_tags text[] ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN client_react_native_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN payout_vpa text ;
+
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN frequent_loc_geohashes text[] ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

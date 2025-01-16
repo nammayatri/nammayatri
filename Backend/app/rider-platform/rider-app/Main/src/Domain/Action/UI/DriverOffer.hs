@@ -27,6 +27,7 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
     distanceToPickupWithUnit :: Maybe Distance,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
+    isUpgradedToCab :: Bool,
     tollCharges :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

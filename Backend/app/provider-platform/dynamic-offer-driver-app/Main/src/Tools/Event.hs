@@ -15,6 +15,7 @@
 
 module Tools.Event where
 
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverQuote
 import qualified Domain.Types.Estimate as ES
@@ -24,7 +25,6 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.SearchTry
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
@@ -85,10 +85,13 @@ data Payload
         merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
         updatedAt :: UTCTime
       }
-  deriving (Show, Eq, Generic, FromJSON)
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Payload where
   toJSON = genericToJSON constructorsWithSnakeCase
+
+instance FromJSON Payload where
+  parseJSON = genericParseJSON constructorsWithSnakeCase
 
 data RideEventData = RideEventData
   { ride :: DRide.Ride,
@@ -151,7 +154,7 @@ data EventTrackerData = EventTrackerData
     updatedAt :: UTCTime
   }
 
-data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE
+data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE | REFUND_SECURITY_DEPOSIT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 triggerEstimateEvent ::

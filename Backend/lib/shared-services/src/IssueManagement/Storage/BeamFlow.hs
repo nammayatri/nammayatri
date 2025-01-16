@@ -1,6 +1,8 @@
 module IssueManagement.Storage.BeamFlow where
 
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
+import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
+import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueMessage as BeamIM
@@ -16,6 +18,8 @@ type BeamFlow m r =
     CacheFlow m r,
     EsqDBFlow m r,
     HasSchemaName BeamC.CommentT,
+    HasSchemaName BeamIGI.IGMIssueT,
+    HasSchemaName BeamIGMC.IGMConfigT,
     HasSchemaName BeamIC.IssueCategoryT,
     HasSchemaName BeamIC.IssueConfigT,
     HasSchemaName BeamIM.IssueMessageT,

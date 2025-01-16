@@ -1,7 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Extra.MerchantPaymentMethod where
@@ -9,11 +6,7 @@ module Domain.Types.Extra.MerchantPaymentMethod where
 import Data.Aeson.Types
 import qualified Data.List as List
 import Data.OpenApi
-import Domain.Types.Common (UsageSafety (..))
-import Domain.Types.Merchant (Merchant)
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
-import Kernel.Types.Id
 import qualified Text.Show
 import Tools.Beam.UtilsTH
 

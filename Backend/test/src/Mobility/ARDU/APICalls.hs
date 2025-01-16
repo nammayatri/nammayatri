@@ -15,13 +15,13 @@
 module Mobility.ARDU.APICalls where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Dashboard
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.Client as DC
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as DTST
@@ -48,7 +48,7 @@ data RideAPIs = RideAPIs
   }
 
 data DriverAPIs = DriverAPIs
-  { getDriverInfo :: Text -> Maybe Int -> ClientM DriverAPI.DriverInformationRes,
+  { getDriverInfo :: Text -> Maybe Int -> Maybe Text -> Maybe Text -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> Maybe (Id DTST.SearchTry) -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> Maybe (Id DC.Client) -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
@@ -121,10 +121,10 @@ dashboard merchantId _ token = do
   where
     helperAPIClient :<|> _exotelAPIClient = client (Proxy :: Proxy DashboardAPI.API)
 
-    managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
-    _ :<|> rideClient :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ = managementAPIClient token
+    _ :<|> _ :<|> managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
+    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideClientDSL :<|> _ = managementAPIClient token
 
-    _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClient
+    _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClientDSL
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =

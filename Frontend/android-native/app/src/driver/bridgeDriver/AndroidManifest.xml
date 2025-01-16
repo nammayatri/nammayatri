@@ -20,7 +20,7 @@
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" /> -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission-sdk-23 android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -46,7 +46,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"/>
                 <data android:scheme="http"/>
-                <data android:host="nammayatri.in"/>
+                <data android:host="bridge.cab"/>
                 <data android:path="/p" />
                 <data android:path="/driverRefer" />
             </intent-filter>

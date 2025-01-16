@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehicleRegistrationCertificate (module Storage.Queries.VehicleRegistrationCertificate, module ReExport) where
 
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
@@ -53,6 +54,13 @@ updateFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateFleetOwnerId fleetOwnerId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.fleetOwnerId fleetOwnerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateManufacturing ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateManufacturing mYManufacturing id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.mYManufacturing mYManufacturing, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOxygen ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -54,6 +54,8 @@ import Data.Tuple as TPL
 import Control.Apply as CA
 import Locale.Utils
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Components.PlanCard.Controller as PlanCard
+import Components.SelectPlansModal.Controller as SelectPlansModal
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -404,13 +406,13 @@ optionsMenuConfig state =
   in
   OptionsMenuConfig.config {
   menuItems = [
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
-    {image : "ny_ic_message_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
-    {image : "ny_ic_settings_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport, color : Color.black800},
+    {image : "ny_ic_message_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs, color : Color.black800},
+    {image : "ny_ic_settings_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, color : Color.black800}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,
@@ -438,7 +440,7 @@ clearManualDuesBtn state = let
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
 getHeaderConfig subView isManualPayDue isMultiDueType = 
   case subView of
-    ST.JoinPlan    -> {title : (getString (MY_PLAN_TITLE "MY_PLAN_TITLE")), actionText : getString SUPPORT, backbutton : false}
+    ST.JoinPlan    -> {title : (getString MY_PLAN_TITLE), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
@@ -448,7 +450,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
                                           true, false -> AUTOPAY_DUE_DETAILS
                                           true, true -> MANUAL_DUE_DETAILS
                                           _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
-    _           -> {title : (getString (MY_PLAN_TITLE "MY_PLAN_TITLE")), actionText : "", backbutton : false}
+    _           -> {title : (getString MY_PLAN_TITLE), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
@@ -484,48 +486,34 @@ dueDetailsListState state = let
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
 
-offerCardBannerConfig :: Boolean -> OfferBanner ->  Banner.Config
-offerCardBannerConfig isPlanCard bannerProps= 
-  let 
-    strArray = split (Pattern "-*$*-") bannerProps.offerBannerDeadline
-    getLanguage len = do
-        case getLanguageLocale languageKey of
-            "KN_IN" | len > 1 -> 1
-            "HI_IN" | len > 2 -> 2
-            "TA_IN" | len > 3 -> 3
-            "BN_IN" | len > 4 -> 4
-            "ML_IN" | len > 5 -> 5
-            "TE_IN" | len > 6 -> 6
-            _ -> 0
-    date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
-    title' = getVarString (OFFER_CARD_BANNER_TITLE "OFFER_CARD_BANNER_TITLE") [date]
-    config = Banner.config
-    config' = config  
-      {
-        backgroundColor = Color.yellow800,
-        title = title',
-        titleColor = Color.black800,
-        actionText {
-          text = getString OFFER_CARD_BANNER_DESC,
-          textColor = Color.black800
-        },
-        alertText {
-          text = getString OFFER_CARD_BANNER_ALERT,
-          textColor = Color.red
-        },
-        imageUrl = case getLanguageLocale languageKey of
-                      "HI_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_hi"
-                      "BN_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_bn"
-                      _       -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner",
-        isBanner = true,
-        alertTextVisibility = true,
-        showActionArrow = false,
-        bannerClickable = false,
-        titleStyle = if isPlanCard then Body6 else Body7,
-        imageHeight = if isPlanCard then (V 80) else (V 95),
-        imageWidth = if isPlanCard then (V 98) else (V 108),
-        margin = MarginTop 8,
-        padding = PaddingTop 0,
-        actionTextVisibility = false
-      }
-  in config'
+planCardConfig :: PlanCardConfig -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> Maybe Number -> ST.PlanCardState
+planCardConfig state isSelected clickable isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans mbCoinDiscountUpto = 
+  {
+    id : state.id,
+    title : state.title,
+    description : state.description,
+    isSelected : isSelected,
+    offers : state.offers,
+    priceBreakup : state.priceBreakup,
+    frequency : state.frequency,
+    freeRideCount : state.freeRideCount,
+    showOffer : state.showOffer,
+    clickable : clickable,
+    showBanner : showBanner,
+    isMyPlan : isMyPlan,
+    isSelectedLangTamil : isSelectedLangTamil,
+    isActivePlan : isActivePlan,
+    offerBannerProps : offerBannerProps,
+    isIntroductory : isIntroductory,
+    offerBannerPlans : offerBannerPlans,
+    mbCoinDiscountUpto : mbCoinDiscountUpto
+  }
+
+selectPlansModalState :: ST.SubscriptionScreenState -> SelectPlansModal.SelectPlansState
+selectPlansModalState state = SelectPlansModal.config
+  {
+    selectedPlan = state.data.switchPlanModalState.selectedPlan,
+    plansList = case state.data.switchPlanModalState.selectedPlan of
+                  Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.switchPlanModalState.plansList
+                  Nothing -> state.data.switchPlanModalState.plansList
+  }

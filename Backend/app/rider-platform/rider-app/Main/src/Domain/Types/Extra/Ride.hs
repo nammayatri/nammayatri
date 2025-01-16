@@ -1,23 +1,27 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.Ride where
 
 import Data.Aeson
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Ride
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
-import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
-import Kernel.Utils.TH
 
 -- Extra code goes here --
+data EditLocation = EditLocation
+  { gps :: Maps.LatLong,
+    address :: DLA.LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data RideAPIEntity = RideAPIEntity
   { allowedEditLocationAttempts :: Kernel.Prelude.Int,
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Int,
@@ -30,6 +34,7 @@ data RideAPIEntity = RideAPIEntity
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
+    stopsInfo :: [DSI.StopInformation],
     driverNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverRatings :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -38,6 +43,7 @@ data RideAPIEntity = RideAPIEntity
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onlinePayment :: Kernel.Prelude.Bool,
+    feedbackSkipped :: Kernel.Prelude.Bool,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideOtp :: Kernel.Prelude.Text,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -52,9 +58,10 @@ data RideAPIEntity = RideAPIEntity
     vehicleColor :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

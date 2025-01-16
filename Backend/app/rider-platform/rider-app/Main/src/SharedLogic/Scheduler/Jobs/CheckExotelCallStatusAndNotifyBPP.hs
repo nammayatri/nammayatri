@@ -16,6 +16,7 @@ module SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP where
 
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.CallStatus as DCallStatus hiding (rideId)
+import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Ride as Ride
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -23,6 +24,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler hiding (ScheduledRideNotificationsToRiderJobData (..))
 import qualified Storage.CachedQueries.Merchant as SMerchant
@@ -36,7 +39,8 @@ checkExotelCallStatusAndNotifyBPP ::
     EsqDBFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    EventStreamFlow m r
   ) =>
   Job 'CheckExotelCallStatusAndNotifyBPP ->
   m ExecutionResult
@@ -45,25 +49,28 @@ checkExotelCallStatusAndNotifyBPP Job {id, jobInfo} = withLogTag ("JobId-" <> id
   let rideId = jobData.rideId
   let bppRideId = jobData.bppRideId
   let merchantId = jobData.merchantId
-  callStatus <- QCallStatus.findByRideId (Just rideId) >>= fromMaybeM CallStatusDoesNotExist
+  let merchantOperatingCityId = jobData.merchantOpCityId
+  callStatus <- QCallStatus.findOneByRideId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  handleCallStatus callStatus bppRideId merchant.driverOfferApiKey merchant.driverOfferBaseUrl
+  handleCallStatus callStatus bppRideId merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchantOperatingCityId
 
 handleCallStatus ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], MonadFlow m, CoreMetrics m) =>
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], MonadFlow m, CoreMetrics m, EventStreamFlow m r) =>
   DCallStatus.CallStatus ->
   Id Ride.BPPRide ->
   Text ->
   BaseUrl ->
+  Id MOC.MerchantOperatingCity ->
   m ExecutionResult
-handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl = do
+handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl merchantOperatingCityId = do
+  deploymentVersion <- asks (.version)
   case callStatus.callAttempt of
     Just DCallStatus.Resolved ->
       return Complete
     Just DCallStatus.Failed -> do
-      void $ CallBPPInternal.callCustomerFCM driverOfferApiKey driverOfferBaseUrl (getId bppRideId)
       return Complete
     Just DCallStatus.Attempted -> do
+      fork "updating in prometheus" $ incrementCounter (getId merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
       -- attempted to call or unregistered Call Stuck
       void $ CallBPPInternal.callCustomerFCM driverOfferApiKey driverOfferBaseUrl (getId bppRideId)
       return Complete

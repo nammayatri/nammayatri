@@ -19,6 +19,7 @@ import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
 import qualified Storage.Queries.Location
 import qualified Storage.Queries.LocationMapping
+import qualified Storage.Queries.Transformers.SearchRequest
 import qualified Tools.Error
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
@@ -31,6 +32,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
+    stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
     toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
     pure $
       Just
@@ -45,13 +47,18 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = customerCancellationDues,
             customerLanguage = customerLanguage,
+            customerNammaTags = customerNammaTags,
             device = device,
             disabilityTag = disabilityTag,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverDefaultExtraFee = Kernel.Types.Common.mkAmountWithDefault driverDefaultExtraFeeAmount <$> driverDefaultExtraFee,
+            driverIdForSearch = Kernel.Types.Id.Id <$> driverIdForSearch,
+            dynamicPricingLogicVersion = dynamicPricingLogicVersion,
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
+            fromLocGeohash = fromLocGeohash,
             fromLocation = fromLocation',
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             isAdvanceBookingEnabled = fromMaybe False isAdvanceBookingEnabled,
             isBlockedRoute = isBlockedRoute,
@@ -62,16 +69,22 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
             pickupZoneGateId = pickupZoneGateId,
+            poolingConfigVersion = poolingConfigVersion,
+            poolingLogicVersion = poolingLogicVersion,
             providerId = Kernel.Types.Id.Id providerId,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
             roundTrip = roundTrip,
+            searchTags = searchTags,
             specialLocationTag = specialLocationTag,
             startTime = startTime_,
+            stops = stops',
+            toLocGeohash = toLocGeohash,
             toLocation = toLocation',
             tollCharges = tollCharges,
             tollNames = tollNames,
             transactionId = transactionId,
+            tripCategory = tripCategory,
             validTill = fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill
           }
 
@@ -88,14 +101,19 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.currency = Just currency,
         Beam.customerCancellationDues = customerCancellationDues,
         Beam.customerLanguage = customerLanguage,
+        Beam.customerNammaTags = customerNammaTags,
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverDefaultExtraFee = roundToIntegral <$> driverDefaultExtraFee,
         Beam.driverDefaultExtraFeeAmount = driverDefaultExtraFee,
+        Beam.driverIdForSearch = Kernel.Types.Id.getId <$> driverIdForSearch,
+        Beam.dynamicPricingLogicVersion = dynamicPricingLogicVersion,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
+        Beam.fromLocGeohash = fromLocGeohash,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvanceBookingEnabled = Just isAdvanceBookingEnabled,
         Beam.isBlockedRoute = isBlockedRoute,
@@ -106,15 +124,20 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
         Beam.pickupZoneGateId = pickupZoneGateId,
+        Beam.poolingConfigVersion = poolingConfigVersion,
+        Beam.poolingLogicVersion = poolingLogicVersion,
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.roundTrip = roundTrip,
+        Beam.searchTags = searchTags,
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
+        Beam.toLocGeohash = toLocGeohash,
         Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
         Beam.tollCharges = tollCharges,
         Beam.tollNames = tollNames,
         Beam.transactionId = transactionId,
+        Beam.tripCategory = tripCategory,
         Beam.validTill = Just validTill
       }

@@ -15,8 +15,10 @@
 module Domain.Action.UI.SearchRequestForDriver where
 
 import Control.Applicative ((<|>))
+import Data.Aeson.TH
+import Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
-import Domain.Types.Common as DTC
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
@@ -24,13 +26,11 @@ import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import SharedLogic.DriverPool.Types
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
@@ -39,7 +39,8 @@ data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
     baseFare :: Money,
     searchRequestValidTill :: UTCTime,
     distanceWithUnit :: Maybe Distance,
-    duration :: Maybe Seconds
+    duration :: Maybe Seconds,
+    isReferredRideReq :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -81,7 +82,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    requestedVehicleVariant :: Variant.Variant,
+    requestedVehicleVariant :: DV.VehicleVariant,
     vehicleServiceTier :: Maybe Text,
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
@@ -95,15 +96,22 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     useSilentFCMForForwardBatch :: Bool,
     isOnRide :: Bool,
     tollNames :: Maybe [Text],
-    parkingCharge :: Maybe HighPrecMoney
+    parkingCharge :: Maybe HighPrecMoney,
+    isFavourite :: Maybe Bool,
+    isReferredRideReq :: Maybe Bool,
+    roundTrip :: Maybe Bool,
+    middleStopCount :: Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToSchema, Show)
+
+$(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge =
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
-      specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
+      specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
+      driverStepFee = minNonZero specialZoneExtraTip nearbyReq.driverStepFee
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -129,13 +137,13 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
               { lat = fromMaybe 0.0 nearbyReq.lat,
                 lon = fromMaybe 0.0 nearbyReq.lon
               },
-          driverMinExtraFee = roundToIntegral <$> nearbyReq.driverMinExtraFee,
+          driverMinExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMinExtraFee,
           driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
-          driverMaxExtraFee = roundToIntegral <$> nearbyReq.driverMaxExtraFee,
+          driverMaxExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMaxExtraFee,
           driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
           driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
           driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
-          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverStepFee driverDefaultStepFee),
+          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverStepFee,
           rideRequestPopupDelayDuration = delayDuration,
           specialLocationTag = searchRequest.specialLocationTag,
           disabilityTag = searchRequest.disabilityTag,
@@ -152,14 +160,22 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
-          requestedVehicleVariant = castServiceTierToVariant requestedVehicleServiceTier,
+          requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
           tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicable then searchRequest.tollCharges else Nothing,
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,
+          isReferredRideReq = searchRequest.driverIdForSearch $> True,
+          isFavourite = nearbyReq.isFavourite,
+          roundTrip = searchRequest.roundTrip,
+          middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           ..
         }
+  where
+    minNonZero Nothing b = b
+    minNonZero (Just 0) b = b
+    minNonZero a b = min a b
 
 extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe HighPrecMoney
 extractDriverPickupCharges farePolicyDetails =
@@ -182,5 +198,8 @@ convertDomainType DLoc.Location {..} =
       areaCode = address.areaCode,
       area = address.area,
       full_address = address.fullAddress,
+      instructions = address.instructions,
+      extras = address.extras,
+      merchantOperatingCityId = merchantOperatingCityId,
       ..
     }

@@ -66,7 +66,9 @@ type CustomerReferralTrackerScreenProps = {
   showMenu :: Boolean,
   showDeleteUPIView :: Boolean,
   showUPIOptions :: Boolean,
-  showInfoPopUp :: Boolean
+  showInfoPopUp :: Boolean,
+  fromDeepLink :: Boolean,
+  openPP :: Boolean
 }
 type TotalEarningsData = {
   fromDate :: String,

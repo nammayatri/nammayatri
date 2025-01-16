@@ -7,14 +7,16 @@ imports:
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
-  TimeBound : Domain.Types.TimeBound
+  Common: Kernel.Types.Common
+  TimeBound : Kernel.Types.TimeBound
   Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
+  Vector: Data.Vector
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -45,6 +47,8 @@ DriverPoolConfig:
     area: Area
     timeBounds: TimeBound|NoRelation
     batchSizeOnRide: Int
+    batchSizeOnRideWithStraightLineDistance: Maybe Int
+    useOneToOneOsrmMapping : Maybe Bool
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     enableForwardBatching: Bool
@@ -57,17 +61,22 @@ DriverPoolConfig:
     actualDistanceThresholdOnRide: Maybe Meters
     currentRideTripCategoryValidForForwardBatching : "[Text]"
     distanceUnit: DistanceUnit
+    enableUnifiedPooling: Maybe Bool
+    dynamicBatchSize: Vector Int
 
   beamFields:
+    dynamicBatchSize:
+      dynamicBatchSize: Maybe [Int]
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
 
   fromTType:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    dynamicBatchSize: Kernel.Prelude.maybe (Data.Vector.singleton driverBatchSize) Data.Vector.fromList|I
 
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
-
+    dynamicBatchSize: Kernel.Prelude.Just $ Data.Vector.toList|I
 
   beamInstance:
     - MakeTableInstances
@@ -81,6 +90,7 @@ DriverPoolConfig:
     scheduleTryTimes: integer[]
     timeBounds: Text
     onRideBatchSplitConfig: text[]
+    dynamicBatchSize: integer[]
 
   default:
     tripCategory: "'All'"
@@ -161,8 +171,12 @@ SurgePricing:
   constraints:
     id: PrimaryKey
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   fromTType:
-    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.ServiceTierType.HATCHBACK|I
+    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.Common.HATCHBACK|I
 
   toTType:
     vehicleServiceTier: Kernel.Prelude.Just|I

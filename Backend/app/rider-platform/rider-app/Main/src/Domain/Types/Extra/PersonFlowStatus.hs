@@ -1,7 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Extra.PersonFlowStatus where
@@ -9,12 +6,10 @@ module Domain.Types.Extra.PersonFlowStatus where
 import Data.Aeson
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Booking.API as SRB
+import Domain.Types.Common
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.FarePolicy.FareProductType as DFPT
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSR
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
@@ -26,9 +21,20 @@ data FlowStatus
       { estimateId :: Id DE.Estimate,
         otherSelectedEstimates :: Maybe [Id DE.Estimate],
         validTill :: UTCTime,
-        providerId :: Maybe Text
+        providerId :: Maybe Text,
+        tripCategory :: Maybe TripCategory
       }
-  deriving (Show, Eq, Ord, Generic)
+  | WAITING_FOR_DRIVER_ASSIGNMENT
+      { bookingId :: Id DB.Booking,
+        validTill :: UTCTime,
+        fareProductType :: Maybe DFPT.FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        tripCategory :: Maybe TripCategory
+      }
+  | ACTIVE_BOOKINGS
+      { list :: [SRB.BookingAPIEntity]
+      }
+  | FEEDBACK_PENDING SRB.BookingAPIEntity
+  deriving (Show, Generic)
 
 $(mkBeamInstancesForJSON ''FlowStatus)
 

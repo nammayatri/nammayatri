@@ -19,7 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
@@ -31,11 +31,13 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 buildConfirmReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
@@ -45,7 +47,9 @@ buildConfirmReqV2 res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   ttl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttl)
   let message = mkConfirmMessageV2 res bapConfig
@@ -82,19 +86,17 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = res.fulfillmentId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) res.mbToLocation,
+          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation, -------fix me -----RITIKA
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ mkFulfillmentType res.bookingDetails,
+          fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
   where
-    mkFulfillmentType = \case
-      DRB.OneWaySpecialZoneDetails _ -> show Enums.RIDE_OTP
-      DRB.RentalDetails _ -> show Enums.RENTAL
-      DRB.InterCityDetails _ -> show Enums.INTER_CITY
-      DRB.AmbulanceDetails _ -> show Enums.AMBULANCE_FLOW
-      _ -> show Enums.DELIVERY
+    stops = case res.bookingDetails of
+      DRB.OneWayDetails details -> details.stops
+      DRB.OneWaySpecialZoneDetails details -> details.stops
+      _ -> []
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =

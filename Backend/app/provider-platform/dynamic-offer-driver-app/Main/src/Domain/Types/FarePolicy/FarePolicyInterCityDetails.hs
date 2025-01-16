@@ -11,6 +11,7 @@ module Domain.Types.FarePolicy.FarePolicyInterCityDetails where
 
 import Data.Aeson as DA
 import Domain.Types.Common
+import Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as Reexport
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -25,9 +26,13 @@ data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
     kmPerPlannedExtraHour :: Kilometers,
     deadKmFare :: HighPrecMoney,
     perDayMaxHourAllowance :: Hours,
+    perDayMaxAllowanceInMins :: Maybe Minutes,
+    pricingSlabs :: NonEmpty (FPInterCityDetailsPricingSlabsD s),
     defaultWaitTimeAtDestination :: Minutes,
     currency :: Currency,
-    nightShiftCharge :: Maybe Domain.NightShiftCharge
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
+    nightShiftCharge :: Maybe Domain.NightShiftCharge,
+    waitingChargeInfo :: Maybe Domain.WaitingChargeInfo
   }
   deriving (Generic, Show)
 

@@ -43,7 +43,7 @@ import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-view push config = 
+view push config =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -59,7 +59,8 @@ view push config =
      , background Color.white900
      , cornerRadius 16.0
      , onClick push $ const NoAction
-     ][linearLayout
+     ]
+     [  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , background if config.isNightShift then Color.black900 else Color.blue600
@@ -87,6 +88,7 @@ view push config =
         [ width MATCH_PARENT
         , height $ if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT 
                    else if config.currentRateCardType == RentalRateCard then V 400
+                   else if (config.showDetails && (DA.length config.fareInfoDescription == 2)) then V 300 -- In YS With no Driver Additions and Toll Charges
                    else if config.showDetails then V 350 else V 250 -- check in IOS (Added to handle glitch)
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if (DA.any (_ == config.currentRateCardType) [ PaymentFareBreakup, DefaultRateCard]) then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
@@ -96,6 +98,9 @@ view push config =
             PaymentFareBreakup -> paymentfareBreakup push config
             TollOrParkingCharges -> tollOrParkingView push config
             RentalRateCard -> rentalRateCardView push config
+            DriverAllowance -> driverAllowanceView push config 
+            NightShiftCharges -> nightShiftChargesView push config
+            TollAndParkingCharges -> tollViewIntercity push config
             _ -> defaultRateCardView push config 
         ]
       ,linearLayout
@@ -219,6 +224,9 @@ defaultRateCardView push config =
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
                         "TOLL_OR_PARKING_CHARGES" -> GoToTollOrParkingCharges
+                        "DRIVER_ALLOWANCES" -> GoToDriverAllowance
+                        "NIGHT_SHIFT_CHARGES" -> GoToNightShiftCharges
+                        "TOLL_AND_PARKING_CHARGES" -> GoToTollAndParkingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -370,12 +378,52 @@ tollOrParkingView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 20 0 20 160
+  , padding $ Padding 20 0 20 40
   ][
     commonTV push (getStringByKey config "TOLL_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction,
     commonTV push (getStringByKey config "TOLL_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction,
-    commonTV push (getStringByKey config "PARKING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGE") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
     commonTV push (getStringByKey config "PARKING_CHARGES_DESC") Color.black800 FontStyle.body3 LEFT 8 NoAction
+  ]
+
+tollViewIntercity :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+tollViewIntercity push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 40
+  ][
+    commonTV push (getStringByKey config "TOLL_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction,
+    commonTV push (getStringByKey config "TOLL_CHARGES_INTERCITY") Color.black800 FontStyle.body3 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "PARKING_CHARGES_INTERCITY") Color.black800 FontStyle.body3 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "STATE_CHARGES") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "STATE_PERMIT_CHARGES") Color.black800 FontStyle.body3 LEFT 8 NoAction
+  ]
+
+driverAllowanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+driverAllowanceView push config = 
+    linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 40
+  ][
+    commonTV push (getStringByKey config "DRIVER_ALLOWANCE") Color.black800 FontStyle.subHeading1 LEFT 20 NoAction,
+    commonTV push (getStringByKey config "DRIVER_ALLOWANCE_STR_INTERCITY") Color.black800 FontStyle.body3 LEFT 8 NoAction
+  ]
+
+nightShiftChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+nightShiftChargesView push config = 
+    linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 40
+  ][
+    commonTV push (getStringByKey config "NIGHT_SHIFT") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction,
+    commonTV push (getStringByKey config "NIGHT_SHIFT_CHARGES") Color.black800 FontStyle.body3 LEFT 8 NoAction
   ]
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 

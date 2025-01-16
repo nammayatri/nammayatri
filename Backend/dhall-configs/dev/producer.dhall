@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/kaal-chakra.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "kaal-chakra"
       , connectionPoolCount = +25
       }
 
@@ -77,9 +77,9 @@ in  { hedisCfg
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
-    , streamName = "Available_Jobs"
+    , streamName = "Available_Chakras"
     , cacheConfig
-    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerSetName = "Scheduled_Chakras"
     , entryId = "*"
     , reviverInterval = +2
     , reviveThreshold = +2

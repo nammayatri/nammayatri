@@ -2,9 +2,9 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Area: Lib.Types.SpecialLocation
-  TimeBound: Domain.Types.TimeBound
+  TimeBound: Kernel.Types.TimeBound
   FarePolicy: Domain.Types.FarePolicy
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
 
 
@@ -25,6 +25,7 @@ FareProduct:
     timeBounds : TimeBound|NoRelation
     searchSource: SearchSource
     enabled : Bool
+    disableRecompute : Maybe Bool
 
   beamFields:
     vehicleServiceTier:
@@ -37,6 +38,13 @@ FareProduct:
   queries:
     findUnboundedByMerchantOpCityIdVariantArea:
       kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
+          - in: [searchSource]
+
+    findAllUnboundedByMerchantOpCityIdVariantArea:
+      kvFunction: findAllWithKV
       where:
         and:
           - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]

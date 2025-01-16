@@ -31,10 +31,33 @@ findAllByTicketBookingId frfsTicketBookingId = do findAllWithKV [Se.Is Beam.frfs
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByTicketBookingIdTicketNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
+findByTicketBookingIdTicketNumber frfsTicketBookingId ticketNumber = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId),
+          Se.Is Beam.ticketNumber $ Se.Eq ticketNumber
+        ]
+    ]
+
 updateAllStatusByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateAllStatusByBookingId status frfsTicketBookingId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]]
+
+updateRefreshTicketQRByTBookingIdAndTicketNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ())
+updateRefreshTicketQRByTBookingIdAndTicketNumber qrData qrRefreshAt frfsTicketBookingId ticketNumber = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.qrData qrData,
+      Se.Set Beam.qrRefreshAt qrRefreshAt,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId), Se.Is Beam.ticketNumber $ Se.Eq ticketNumber]]
 
 updateStatusByTBookingIdAndTicketNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -56,13 +79,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
+    [ Se.Set Beam.description description,
+      Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.isTicketFree isTicketFree,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.qrData qrData,
+      Se.Set Beam.qrRefreshAt qrRefreshAt,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.status status,
       Se.Set Beam.ticketNumber ticketNumber,
@@ -77,7 +102,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
     pure $
       Just
         Domain.Types.FRFSTicket.FRFSTicket
-          { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
+          { description = description,
+            frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
             isTicketFree = isTicketFree,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -85,6 +111,7 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             qrData = qrData,
+            qrRefreshAt = qrRefreshAt,
             riderId = Kernel.Types.Id.Id riderId,
             status = status,
             ticketNumber = ticketNumber,
@@ -96,7 +123,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
 instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
   toTType' (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
     Beam.FRFSTicketT
-      { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
+      { Beam.description = description,
+        Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isTicketFree = isTicketFree,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -104,6 +132,7 @@ instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.qrData = qrData,
+        Beam.qrRefreshAt = qrRefreshAt,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.status = status,
         Beam.ticketNumber = ticketNumber,

@@ -2,7 +2,7 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
+import Components.ChooseVehicle.Controller (Action(..), Config, SearchResultType(..), FareProductType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
@@ -45,6 +45,8 @@ view push config =
     fromPrice = fromMaybe "" (priceRange DA.!! 0)
     toPrice = fromMaybe "" (priceRange DA.!! 1)
     accessibilityText = selectedVehicle <> (if isActiveIndex then " selected : " else " Un Selected : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
+    blackListedSearchResultType = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL,QUOTES INTER_CITY]
+    isFindingQuotes = (JB.getKeyInSharedPrefKeys "LOCAL_STAGE") == "FindingQuotes"
   in
     frameLayout
       [ width MATCH_PARENT
@@ -65,12 +67,22 @@ view push config =
           , gravity RIGHT
           , afterRender push $ const $ NoAction config
           , accessibility DISABLE
+          , visibility $ boolToVisibility $ not isFindingQuotes
           ] <> if os == "IOS" then [] else [pivotY 1.0])[]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
+          , cornerRadius 12.0
+          , stroke $ "1," <> Color.grey900
+          , afterRender push $ const $ NoAction config
+          , accessibility DISABLE
+          , visibility $ boolToVisibility $ isFindingQuotes
+          ][]
         , linearLayout
             [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $ EHC.getNewIDWithTag $ config.id <> show config.index
           , margin $ config.layoutMargin
           , padding padding'
           , orientation VERTICAL
@@ -100,12 +112,14 @@ view push config =
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , gravity CENTER_VERTICAL
+                    , accessibility DISABLE_DESCENDANT
                     ][ vehicleDetailsView push config ]
                   , linearLayout
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , padding $ PaddingTop 5
                     , gravity CENTER_VERTICAL
+                    , accessibility DISABLE_DESCENDANT
                     ][ capacityView push config
                     ]
                   ]
@@ -117,16 +131,16 @@ view push config =
         [ height $ V selectedEstimateHeight
         , width $ MATCH_PARENT
         , gravity RIGHT
-        , visibility $ boolToVisibility $ config.vehicleVariant /= "BOOK_ANY"
+        , visibility $ boolToVisibility $ (config.vehicleVariant /= "BOOK_ANY") && blackListedSearchResultType
         , accessibility DISABLE
         ][linearLayout
           [ height $ V selectedEstimateHeight
           , width $ V ((EHC.screenWidth unit) * 3/10)
           , clickable true
           , accessibility DISABLE
-          , onClick push $ const $ case config.showInfo && isActiveIndex of
+          , onClick push $ const $ case (config.showInfo && isActiveIndex) || isFindingQuotes of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && blackListedSearchResultType then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]
@@ -178,8 +192,8 @@ variantsView push state =
                             Nothing -> 0
                           isActiveIndex = elem item state.selectedServices
                           itemCount = if (length state.services) == 4 then 2 else 3
-                          isInActive = not $ elem item state.availableServices
-                          widthFactor = if (length listItem < 3) && item == "Non-AC Mini" then 20 else if itemCount == 2 then 36 else 28
+                          isInActive = not $ elem item state.availableServices 
+                          widthFactor = if itemCount == 3 && item == "Non-AC Mini" then 20 else if itemCount == 2 && item == "Non-AC Mini" then 38 else if itemCount == 2 then 36 else 28
                           shadowOpacity = if isInActive then 0.0 else 1.0
                         in
                           linearLayout
@@ -195,7 +209,7 @@ variantsView push state =
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
                             , gravity CENTER
                             , onClick (\action -> if isInActive then do 
-                                                     void $ pure $ JB.toast "Not available at this moment"
+                                                     void $ pure $ EHU.showToast "Not available at this moment"
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
                             , accessibility if isInActive then DISABLE else ENABLE
@@ -213,7 +227,7 @@ variantsView push state =
                                  , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_check_blue"
                                  ] 
                               , textView $ 
-                                 [ text $ item
+                                 [ text item
                                  , height MATCH_PARENT
                                  , width WRAP_CONTENT
                                  , gravity CENTER
@@ -234,7 +248,7 @@ variantsView push state =
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
-  let selectedVehicle = maybe (getVehicleName config) (\name -> name) config.serviceTierName
+  let selectedVehicle = maybe (getVehicleName config) (\name -> getCustomNameForServiceTier config.vehicleVariant name) config.serviceTierName
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -277,28 +291,33 @@ vehicleDetailsView push config =
         ] <> FontStyle.tags TypoGraphy
       ]
     ]
+  where
+    getCustomNameForServiceTier :: String -> String -> String
+    getCustomNameForServiceTier vehicleVariant name = 
+      case vehicleVariant of
+        "DELIVERY_BIKE" -> "2 Wheeler"
+        _ -> name
 
 getVehicleName :: Config -> String
 getVehicleName config = 
-  case (getMerchant FunctionCall) of
-    YATRISATHI -> case config.vehicleVariant of
-                    "TAXI" -> "Non AC Taxi"
-                    "SUV"  -> "AC SUV"
-                    _      -> "AC Cab"
-    _          -> case config.vehicleVariant of
-                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                    "TAXI" -> "Non-AC Taxi"
-                    "TAXI_PLUS" -> "AC Taxi"
-                    "SEDAN" -> "Sedan"
-                    "SUV" -> "SUV"
-                    "HATCHBACK" -> "Hatchback"
-                    _ -> "Non-AC Taxi"
+  case config.vehicleVariant of
+    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+    "TAXI" -> "Non-AC Mini"
+    "TAXI_PLUS" -> "AC Mini"
+    "SEDAN" -> "Sedan"
+    "SUV" -> "XL Cab"
+    "HATCHBACK" -> "AC Mini"
+    "BIKE" -> "Bike Taxi"
+    "BOOK_ANY" -> "Book Any"
+    "SUV_PLUS" -> "XL Plus"
+    "DELIVERY_BIKE" -> "2 Wheeler"
+    _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY"
+      enableRateCard = (JB.getKeyInSharedPrefKeys "LOCAL_STAGE") == "FindingQuotes" || (config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails)
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout
@@ -409,7 +428,7 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ic_user_filled" config.capacity
+    ][ vehicleInfoView "ny_ic_user_filled" config.capacity
      , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
      ]
 

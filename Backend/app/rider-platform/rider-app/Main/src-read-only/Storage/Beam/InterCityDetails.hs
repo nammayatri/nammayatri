@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.InterCityDetails where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -23,6 +22,7 @@ data InterCityDetailsT f = InterCityDetailsT
     nightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     nightShiftEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     nightShiftStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
+    perDayMaxAllowanceInMins :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
     perDayMaxHourAllowance :: B.C f Kernel.Types.Common.Hours,
     perExtraKmRate :: B.C f Kernel.Types.Common.HighPrecMoney,
     perExtraMinRate :: B.C f Kernel.Types.Common.HighPrecMoney,

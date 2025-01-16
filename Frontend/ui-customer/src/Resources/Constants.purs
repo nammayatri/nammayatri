@@ -33,9 +33,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.Types as ST
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import Data.String as DS
+import Services.API (LocationAddress(..), AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..), LocationAPIEntity(..))
 
 type Language
   = { name :: String
@@ -61,27 +62,31 @@ data DecodeAddress
   = Booking BookingLocationAPIEntity
   | SavedLoc SavedReqLocationAPIEntity
 
+decodeLocationAddress :: Maybe LocationAddress -> String
+decodeLocationAddress (Just (LocationAddress add)) =
+  let
+    components = [add.door, add.building, add.street, add.area, add.city, add.state, add.country]
+    nonEmptyComponents = filter (\comp -> trim (fromMaybe "" comp) /= "") components
+  in
+    if all isNothing [add.city, add.area, add.country, add.building, add.door, add.street, add.areaCode] then
+      ""
+    else
+      joinWith ", " (map (fromMaybe "") nonEmptyComponents)
+decodeLocationAddress Nothing = ""
+
 decodeAddress :: DecodeAddress -> String
 decodeAddress addressWithCons =
   let
     (BookingLocationAPIEntity address) = case addressWithCons of
       Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
+    components = [address.door, address.building, address.street, address.area, address.city, address.state, address.country]
+    nonEmptyComponents = filter (\comp -> trim (fromMaybe "" comp) /= "") components
   in
-    if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+    if all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.areaCode] then
       ""
-    else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "") then
-      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
     else
-      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+      joinWith ", " (map (fromMaybe "") nonEmptyComponents)
 
 encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
 encodeAddress fullAddress addressComponents placeId lat lon =
@@ -140,6 +145,8 @@ getBookingEntity (SavedReqLocationAPIEntity savedLocation) =
     , "lon": savedLocation.lon
     , "ward": savedLocation.ward
     , "placeId": savedLocation.placeId
+    , "extras": Nothing
+    , "instructions": Nothing
     }
 
 getAddressFromSaved :: SavedReqLocationAPIEntity -> ST.Address
@@ -203,8 +210,8 @@ getGender gender placeHolderText =
       _ -> (getString PREFER_NOT_TO_SAY)
     Nothing -> placeHolderText
 
-getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
-getFaresList fares chargeableRideDistance =
+getFaresList :: Array FareBreakupAPIEntity -> String -> Boolean -> Array ST.FareComponent
+getFaresList fares chargeableRideDistance isSpecialZone =
   let currency = (getAppConfig appConfig).currency
   in
   map
@@ -226,9 +233,9 @@ getFaresList fares chargeableRideDistance =
                       "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
                       "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
-                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
+                      "WAITING_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
@@ -238,6 +245,7 @@ getFaresList fares chargeableRideDistance =
                       "DIST_BASED_FARE" -> getEN DIST_BASED_CHARGES
                       "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
                       "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
+                      "PARKING_CHARGE" -> getEN PARKING_CHARGE
                       _ -> formatFareType $ item.description
           }
     )
@@ -246,7 +254,7 @@ getFaresList fares chargeableRideDistance =
 getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Number
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
-    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE"]
+    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE", "CGST", "SGST"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 
@@ -269,7 +277,7 @@ getFareFromArray fareBreakUp fareType = do
     Nothing -> 0.0
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amountWithCurrency : dummyPrice ,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity{ amount : 0.0, amountWithCurrency : dummyPrice ,description: ""}
 
 dummyPrice :: Price
 dummyPrice = {amount: 0.0, currency: ""}
@@ -277,7 +285,7 @@ dummyPrice = {amount: 0.0, currency: ""}
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
   case merchant of
-    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE"]
+    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE", "SGST"]
     _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
 
 getPlatformFeeIfIncluded :: Array FareBreakupAPIEntity -> Number
@@ -303,13 +311,19 @@ fetchVehicleVariant variant =
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
     "TAXI"          -> Just ST.TAXI 
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    "BIKE"          -> Just ST.BIKE
+    "SUV_PLUS"      -> Just ST.SUV_PLUS
+    "DELIVERY_BIKE" -> Just ST.DELIVERY_BIKE
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = 
   case fetchVehicleVariant variant of
     Just ST.SUV -> "6" 
+    Just ST.SUV_PLUS -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
+    Just ST.BIKE -> "1"
+    Just ST.DELIVERY_BIKE -> ""
     _ -> "4"
 
 intMax :: Int
@@ -350,7 +364,6 @@ maxImageUploadInIssueReporting = 3
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
 
-
 cancelReasons :: Boolean -> Array OptionButtonList
 cancelReasons showAcReason =
   ([ { reasonCode: "CHANGE_OF_PLANS"
@@ -366,34 +379,7 @@ cancelReasons showAcReason =
               , textBoxRequired : false
             }]
       else []
-  ) <>
-  ([
-    { reasonCode: "GOT_ANOTHER_RIDE"
-    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
-    , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
-    , textBoxRequired : false
-    }
-  , { reasonCode: "DRIVER_NOT_MOVING"
-    , description: getString DRIVER_IS_NOT_MOVING
-    , subtext: Just $ getString DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP
-    , textBoxRequired : false
-    }
-  , { reasonCode: "WAIT_TIME_TOO_LONG"
-    , description: getString WAIT_TIME_TOO_LONG
-    , subtext: Just $ getString DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION
-    , textBoxRequired : false
-    }
-  , { reasonCode: "WRONG_PICKUP_LOCATION"
-    , description: getString WRONG_PICKUP_LOCATION
-    , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
-    , textBoxRequired : false
-    }
-  , { reasonCode: "OTHER"
-    , description: getString OTHER
-    , subtext: Just $ getString SOME_OTHER_REASON
-    , textBoxRequired : true
-    }
-  ])
+  )  
 
 dummyCancelReason :: OptionButtonList
 dummyCancelReason =
@@ -413,4 +399,4 @@ locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
-mailToLink = "mailto:" 
+mailToLink = "mailto:"

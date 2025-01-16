@@ -11,14 +11,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Action.UI.Person where
 
 import Data.Aeson
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.SafetySettings as DSafety
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
@@ -52,14 +51,16 @@ data PersonAPIEntity = PersonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Bool -> PersonAPIEntity
-makePersonAPIEntity Person {..} disability isSafetyCenterDisabled =
+makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Bool -> DSafety.SafetySettings -> PersonAPIEntity
+makePersonAPIEntity Person {..} disability isSafetyCenterDisabled safetySettings =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
       bundleVersion = clientBundleVersion,
       clientVersion = clientSdkVersion,
+      hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
+      hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
       ..
     }
 

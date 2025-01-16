@@ -1,11 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Invoice where
 
 import Data.Aeson
 import qualified Domain.Types.DriverFee
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
@@ -28,6 +28,7 @@ data Invoice = Invoice
     invoiceStatus :: Domain.Types.Invoice.InvoiceStatus,
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     maxMandateAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMode :: Domain.Types.Invoice.InvoicePaymentMode,
     serviceName :: Domain.Types.Plan.ServiceNames,
@@ -42,6 +43,7 @@ data InvoicePaymentMode
   | CASH_COLLECTED_INVOICE
   | PAYOUT_REGISTRATION_INVOICE
   | ONE_TIME_SECURITY_INVOICE
+  | ONE_TIME_SECURITY_ADJUSTED_INVOICE
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED | CLEARED_BY_YATRI_COINS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

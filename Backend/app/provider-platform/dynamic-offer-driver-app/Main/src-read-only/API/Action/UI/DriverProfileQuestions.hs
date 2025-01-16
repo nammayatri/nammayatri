@@ -30,7 +30,10 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "DriverProfileQues"
-      :> Get '[JSON] API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+      :> QueryParam "isImages" Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
 
 handler :: Environment.FlowServer API
@@ -51,6 +54,7 @@ getDriverProfileQues ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
-getDriverProfileQues a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfileQuestions.getDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverProfileQues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfileQuestions.getDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

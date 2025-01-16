@@ -23,7 +23,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
-import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.External.Maps.Types as Maps
@@ -34,6 +33,8 @@ import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Servant.Client.Core as SCC
+import SharedLogic.Search as SLS
 import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
@@ -72,7 +73,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-mkLocation :: DSearch.SearchReqLocation -> Search.Location
+mkLocation :: SLS.SearchReqLocation -> Search.Location
 mkLocation info =
   Search.Location
     { gps =
@@ -156,41 +157,24 @@ parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> 
 parseRideAssignedEvent order msgId txnId = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
-  let castToBool mbVar = case T.toLower <$> mbVar of
-        Just "true" -> True
-        _ -> False
-  let isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
-      isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
+  let isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
+      isFreeRide = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
       vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
-      driverAlternateNumber :: Maybe Text = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
+      driverAlternateNumber :: Maybe Text = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
       (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
-      driverTrackingUrlText :: Maybe Text = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_TRACKING_URL tagGroups
+      driverTrackingUrl :: Maybe BaseUrl = SCC.parseBaseUrl . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_TRACKING_URL tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
-      isAlreadyFav = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
-      favCount = fromMaybe 0 $ castToInt $ getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
+      isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+      favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
-  fareBreakups <- (traverse mkDFareBreakup) `mapM` mbFareBreakupsQuotationBreakup
-  driverTrackingUrl <- mapM parseBaseUrl driverTrackingUrlText
+  let fareBreakups = mbFareBreakupsQuotationBreakup <&> (mapMaybe mkDFareBreakup)
   bookingDetails <- parseBookingDetails order msgId
   return
     Common.RideAssignedReq
       { bookingDetails = bookingDetails{driverAlternatePhoneNumber = driverAlternateNumber},
         transactionId = txnId,
-        isDriverBirthDay,
-        isFreeRide,
-        vehicleAge,
-        driverAccountId,
-        previousRideEndPos,
-        fareBreakups,
-        driverTrackingUrl,
-        isAlreadyFav,
-        favCount
+        ..
       }
-  where
-    castToInt :: Maybe Text -> Maybe Int
-    castToInt mbVar = case mbVar of
-      Just val -> readMaybe (T.unpack val)
-      _ -> Nothing
 
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
 parseRideStartedEvent order msgId = do
@@ -203,6 +187,8 @@ parseRideStartedEvent order msgId = do
       startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups
       tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       driverArrivalTime :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
+      estimatedEndTimeRangeStart :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_START tagGroups
+      estimatedEndTimeRangeEnd :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_END tagGroups
   pure $
     Common.RideStartedReq
       { bookingDetails,
@@ -232,15 +218,17 @@ parseRideCompletedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text ->
 parseRideCompletedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in RideCompleted Event.")
-  fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
+  fare' <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= decodeFromText & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
+  let fare = DecimalValue.DecimalValue fare'
   let totalFare = fare
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       chargeableDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
       traveledDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
       endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
       tollConfidence :: Maybe Confidence = readMaybe . T.unpack =<< getTagV2' Tag.TOLL_CONFIDENCE_INFO Tag.TOLL_CONFIDENCE tagGroups
+      isValidRide :: Maybe Bool = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DETAILS_INFO Tag.IS_VALID_RIDE tagGroups
   fareBreakupsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
-  fareBreakups <- traverse mkDFareBreakup fareBreakupsQuotationBreakup
+  let fareBreakups = mapMaybe mkDFareBreakup fareBreakupsQuotationBreakup
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
@@ -257,11 +245,12 @@ parseRideCompletedEvent order msgId = do
         ..
       }
 
-mkDFareBreakup :: (MonadFlow m, CacheFlow m r) => Spec.QuotationBreakupInner -> m Common.DFareBreakup
+mkDFareBreakup :: Spec.QuotationBreakupInner -> Maybe Common.DFareBreakup
 mkDFareBreakup breakup = do
-  val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
-  currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.breakup.price.currency is not present in RideCompleted Event.")
-  title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
+  val' <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= decodeFromText
+  let val = DecimalValue.DecimalValue val'
+  currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack
+  title <- breakup.quotationBreakupInnerTitle
   pure $
     Common.DFareBreakup
       { amount = Utils.decimalValueToPrice currency val,

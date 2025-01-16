@@ -11,7 +11,8 @@ import qualified Sequelize as Se
 import Storage.Beam.PersonStats as BeamPS
 import Storage.Queries.OrphanInstances.PersonStats ()
 
--- Extra code goes here --
+createPersonStats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.PersonStats -> m Domain.PersonStats
+createPersonStats p = createWithKV p >> pure p
 
 incrementOrSetPersonStats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.PersonStats -> m ()
 incrementOrSetPersonStats personStats = do
@@ -72,6 +73,28 @@ incrementCompletedRidesCount (Id personId') = do
         Se.Set BeamPS.updatedAt now
       ]
       [Se.Is BeamPS.personId (Se.Eq personId')]
+
+findPersonStats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Domain.PersonStats)
+findPersonStats (Id personId) = findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]
+
+incrementCompletedRidesEventCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Bool -> Bool -> Bool -> Bool -> Bool -> m ()
+incrementCompletedRidesEventCount (Id personId') isWeekend isMorningPeak isEveningPeak isWeekendPeak isAnyPeak = do
+  now <- getCurrentTime
+  -- Case analysis for the Bool type. bool f t p evaluates to f when p is False, and evaluates to t when p is True.
+  findPersonStats (Id personId') >>= \case
+    Just Domain.PersonStats {..} ->
+      updateOneWithKV
+        [ Se.Set BeamPS.completedRides (completedRides + 1),
+          Se.Set BeamPS.weekdayRides (weekdayRides + bool 0 1 (not isWeekend)),
+          Se.Set BeamPS.weekendRides (weekendRides + bool 0 1 isWeekend),
+          Se.Set BeamPS.offPeakRides (offPeakRides + bool 0 1 (not isAnyPeak)),
+          Se.Set BeamPS.morningPeakRides (morningPeakRides + bool 0 1 isMorningPeak),
+          Se.Set BeamPS.eveningPeakRides (eveningPeakRides + bool 0 1 isEveningPeak),
+          Se.Set BeamPS.weekendPeakRides (weekendPeakRides + bool 0 1 isWeekendPeak),
+          Se.Set BeamPS.updatedAt now
+        ]
+        [Se.Is BeamPS.personId (Se.Eq personId')]
+    Nothing -> pure ()
 
 findWeekendRides :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 findWeekendRides (Id personId) = maybe (pure 0) (pure . Domain.weekendRides) =<< findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]

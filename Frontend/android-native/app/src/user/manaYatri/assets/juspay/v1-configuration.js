@@ -221,8 +221,8 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
     , "estimateAndQuoteConfig" : 
-      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
+      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"] ]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY", "DELIVERY_BIKE"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -259,6 +259,21 @@ window.getMerchantConfig = function () {
           "image" : "ny_ic_cab_auto_yellow,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_yellow.png",
           "leftViewImage" : ","
         },
+        "bike" : {
+          "name" : "Bike",
+          "image": "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+          "leftViewImage" : "ny_ic_bike_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_left_side.png"
+        },
+        "suvPlus" : {
+          "name" : "XL Plus",
+          "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
+          "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "deliveryBike" : {
+            "name" : "2 Wheeler",
+            "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,"
+          }
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false
@@ -270,6 +285,7 @@ window.getMerchantConfig = function () {
         "enableSupport" : false
       , "enableSuggestions" : true
       , "enableEditDestination" : true
+      , "enableEditPickupLocation" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

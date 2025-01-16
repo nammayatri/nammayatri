@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Sos where
@@ -33,7 +32,14 @@ data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Pe
 
 data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow | PoliceAPI deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SosType
+  = Police
+  | CustomerCare
+  | EmergencyContact Domain.Types.Sos.EmergencyContactId
+  | SafetyFlow
+  | CSAlertSosTicket
+  | AudioRecording
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
 

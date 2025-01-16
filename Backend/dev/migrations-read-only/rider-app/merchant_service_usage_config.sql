@@ -50,3 +50,23 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_distances_for
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_distances_for_scheduled_rides SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN cancel_payment_intent text  default 'Stripe';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_frfs_autocomplete_distances text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multi_modal_service text  default 'OTPTransit';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_first_pickup_route text ;

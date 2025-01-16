@@ -14,87 +14,205 @@
 
 module Domain.Action.Internal.KnowYourDriver where
 
-import qualified Domain.Action.UI.Person as SP
+import qualified AWS.S3 as S3
+import Data.List (nub)
+import qualified Data.Text as T
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverModuleCompletion
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
-import Kernel.Beam.Functions
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Feedback as QFeedback
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.LmsModule as QLmsModule
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
+import qualified Storage.Queries.RatingExtra as QRating
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
-data DriverProfileRes = DriverProfileRes
-  { certificates :: [Text],
-    driverName :: Text,
-    likedByRidersNum :: Int,
-    trips :: Int,
-    approvalRate :: Maybe Centesimal,
-    cancellation :: Int,
-    onboardedAt :: UTCTime,
-    pledges :: [Text],
-    expertAt :: [Text],
-    whyNY :: [Text],
-    languages :: [Text]
+data DriverReview = DriverReview
+  { riderName :: Maybe Text,
+    review :: Maybe Text,
+    feedBackPills :: [Text],
+    rating :: Int,
+    tripDate :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Eq)
+
+data DriverStatSummary = DriverStatSummary
+  { avgRating :: Maybe Centesimal,
+    numTrips :: Int,
+    cancellationRate :: Int,
+    likedByRidersNum :: Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-knowYourDriver :: Id Ride -> Maybe Text -> Flow DriverProfileRes
-knowYourDriver rideId apiKey = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  merchantId <- maybe ((runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)) <&> (.providerId)) return ride.merchantId
-  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError $ AuthBlocked "Invalid BPP internal api key"
-  person <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  getDriverProfile person
+data DriverProfileRes = DriverProfileRes
+  { certificates :: [Text],
+    homeTown :: Maybe Text,
+    driverName :: Text,
+    aboutMe :: Maybe Text,
+    drivingSince :: Maybe Int,
+    onboardedAt :: UTCTime,
+    pledges :: [Text],
+    driverStats :: DriverStatSummary,
+    languages :: [Text],
+    aspirations :: [Text],
+    vehicleNum :: Maybe Text,
+    vechicleVariant :: Maybe DVeh.VehicleVariant,
+    vehicleTags :: [Text],
+    profileImage :: Maybe Text,
+    images :: [Text],
+    topReviews :: [DriverReview]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-knowYourFavDriver :: Id DP.Person -> Maybe Text -> Flow DriverProfileRes
-knowYourFavDriver driverId apiKey = do
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError $ AuthBlocked "Invalid BPP internal api key"
-  getDriverProfile person
+knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
+knowYourDriver rideId withImages apiKey = do
+  let rideLiteId = cast rideId :: Id QRLite.RideLite
+  QRLite.findByIdLite rideLiteId >>= fromMaybeM (RideNotFound rideId.getId)
+    >>= \ride ->
+      getDriver ride.driverId apiKey
+        >>= getDriverProfile withImages
 
-getDriverProfile :: DP.Person -> Flow DriverProfileRes
-getDriverProfile person = do
-  driverProfileQues <- DPQ.findByPersonId person.id
+knowYourFavDriver :: Id DP.Person -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
+knowYourFavDriver driverId withImages apiKey =
+  getDriver driverId apiKey
+    >>= getDriverProfile withImages
+
+getDriver :: Id DP.Person -> Maybe Text -> Flow DP.Person
+getDriver driverId apiKey = do
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound (driverId.getId))
+  QM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound (person.merchantId.getId))
+    >>= \merchant ->
+      if Just (merchant.internalApiKey) == apiKey
+        then pure person
+        else throwError (AuthBlocked "Invalid BPP internal api key")
+
+getDriverProfile :: Maybe Bool -> DP.Person -> Flow DriverProfileRes
+getDriverProfile withImages person = do
+  driverProfile <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  driverModulesCompleted <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED
-  modules <- mapM (\driverModule -> QLmsModule.findById driverModule.moduleId) driverModulesCompleted
-  let moduleCategories = mapMaybe (fmap (.category)) modules
-      moduleCategoriesText = map show moduleCategories
-      pledges = fromMaybe [] (driverProfileQues >>= Just . (.pledges))
-      expertAt = fromMaybe [] (driverProfileQues >>= Just . (.expertAt))
-      whyNY = fromMaybe [] (driverProfileQues >>= Just . (.whyNY))
+  vehicle <- QVeh.findById person.id
+  modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
+  images <- if withImages == Just True then maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile else pure []
+  profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+  topFeedbacks <- getTopFeedBackForDriver person.id
   pure $
     DriverProfileRes
-      { certificates = moduleCategoriesText,
+      { certificates = map show $ mapMaybe (fmap (.category)) modules,
+        homeTown = Nothing,
         driverName = person.firstName,
-        likedByRidersNum = driverStats.favRiderCount,
-        trips = driverStats.totalRides,
-        approvalRate = SP.roundToOneDecimal <$> driverStats.rating,
-        cancellation = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int),
         onboardedAt = person.createdAt,
-        pledges = pledges,
-        expertAt = expertAt,
-        whyNY = whyNY,
-        languages = fromMaybe [] person.languagesSpoken
+        pledges = maybe [] (.pledges) driverProfile,
+        languages = fromMaybe [] ((map getLanguages) <$> person.languagesSpoken),
+        aboutMe = (.aboutMe) =<< driverProfile,
+        drivingSince = (.drivingSince) =<< driverProfile,
+        driverStats = getDriverStatsSummary driverStats,
+        aspirations = fromMaybe [] ((.aspirations) =<< driverProfile),
+        vehicleNum = (.registrationNo) <$> vehicle,
+        vechicleVariant = (.variant) <$> vehicle,
+        vehicleTags = fromMaybe [] ((.vehicleTags) =<< driverProfile),
+        images = images,
+        profileImage = profileImage,
+        topReviews = topFeedbacks
       }
   where
     nonZero Nothing = 1
     nonZero (Just a)
       | a <= 0 = 1
       | otherwise = a
+
+    getDriverStatsSummary driverStats =
+      DriverStatSummary
+        { avgRating = driverStats.rating,
+          numTrips = driverStats.totalRides,
+          cancellationRate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int),
+          likedByRidersNum = driverStats.favRiderCount
+        }
+
+    getImages imagePaths = do
+      mapM (QMF.findById) imagePaths
+        >>= pure . catMaybes
+        >>= pure . ((.url) <$>)
+        >>= mapM (S3.get . T.unpack . extractFilePath)
+
+    getTopFeedBackForDriver driverId = do
+      ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
+      ratingsWithDriverNames <- getBookingsAndRides ratings
+      partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratingsWithDriverNames
+      remRatings <- constructRemRatings ratingsWithDriverNames driverId
+      pure $ nub $ partialRatings <> remRatings
+
+    constructPartialRatings ratings feedbacks =
+      pure $ foldl (goFeedbacks feedbacks) [] ratings
+
+    goFeedbacks feedbacks fullRating (rating, riderName) =
+      fullRating
+        <> [ DriverReview
+               { riderName = riderName,
+                 review = rating.feedbackDetails,
+                 feedBackPills = filter (\feedback -> feedback.rideId == rating.rideId) feedbacks <&> (.badge), -- map () ratingFeedbacks,
+                 rating = rating.ratingValue,
+                 tripDate = rating.createdAt
+               }
+           ]
+
+    getLanguages = \case
+      "EN_US" -> "English"
+      "HI_IN" -> "Hindi"
+      "TA_IN" -> "Tamil"
+      "KN_IN" -> "Kannada"
+      "TE_IN" -> "Telugu"
+      "BN_IN" -> "Bengali"
+      "ML_IN" -> "Malayalam"
+      lang -> lang
+
+    constructRemRatings prevRatings driverId = do
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 10)
+      ratings <- (QRating.findRatingForRideIfPositive (nub ((.rideId) <$> feedbacks)))
+      ratingsWithDriverNames <- getBookingsAndRides ratings
+      pure $ take 5 $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
+
+    extractFilePath url = case T.splitOn "filePath=" url of
+      [_before, after] -> after
+      _ -> T.empty
+
+    getBookingsAndRides :: [DRating.Rating] -> Flow [(DRating.Rating, Maybe Text)]
+    getBookingsAndRides ratings = do
+      let rideLiteIds = cast . (.rideId) <$> ratings
+      rides <- QRLite.findRidesFromDBLite rideLiteIds
+      let bookingLiteIds = cast . (.bookingId) <$> rides
+      bookings <- QBLite.findBookingsFromDBLite bookingLiteIds
+      let ratingBookingIds = constructRatingWithBookingId ratings rides
+      pure (constructRatingWithRiderName bookings ratingBookingIds)
+
+    constructRatingWithBookingId ratings rides =
+      foldl (mkRatingWithBookingId rides) [] ratings
+
+    constructRatingWithRiderName bookings ratings =
+      foldl (mkRatingWithRiderName bookings) [] ratings
+
+    mkRatingWithBookingId rides ratingWithBooking rating =
+      ratingWithBooking
+        <> [(rating, fromMaybe "" $ find (\ride -> ride.id == rating.rideId) rides <&> (.bookingId))]
+
+    mkRatingWithRiderName bookings ratingWithBooking (rating, bookingId) =
+      ratingWithBooking
+        <> [(rating, fromMaybe Nothing $ find (\booking -> booking.id == bookingId) bookings <&> (.riderName))]

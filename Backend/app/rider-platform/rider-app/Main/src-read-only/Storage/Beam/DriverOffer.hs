@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverOffer where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.FarePolicy.FareProductType
 import Kernel.External.Encryption
@@ -25,6 +24,7 @@ data DriverOfferT f = DriverOfferT
     estimateId :: B.C f Kernel.Prelude.Text,
     fareProductType :: B.C f (Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType),
     id :: B.C f Kernel.Prelude.Text,
+    isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),

@@ -34,11 +34,11 @@ import Foreign.Generic (decode)
 import JBridge as JBridge
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
+import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard, (==))
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..), SafetyAlertType(..))
+import Screens.Types(PermissionScreenStage(..), SafetyAlertType(..), FareProductType(..))
 import AssetsProvider (fetchAssets)
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -47,6 +47,8 @@ import Storage (setValueToLocalStore, KeyStore(..))
 main :: Event -> Boolean -> Effect Unit
 main event callInitUI = do
   void $ markPerformance "MAIN_FLOW"
+  JBridge.cleanOnResumeCallback
+  JBridge.cleanOnPauseCallback
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
@@ -69,9 +71,10 @@ main event callInitUI = do
 onEvent :: String -> Effect Unit
 onEvent event = do
   _ <- pure $ JBridge.toggleBtnLoader "" false
-  case event of 
+  case event of
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
+    "onReloadApp" -> main {type : "", data : ""} false
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
@@ -81,13 +84,11 @@ onConnectivityEvent triggertype = do
     Right payload'  -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
                 do
-                case triggertype of 
+                case triggertype of
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  "INTERNET_ACTION" -> do
-                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                    Flow.permissionScreenFlow
+                  "INTERNET_ACTION" -> pure unit
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit
@@ -97,15 +98,15 @@ onConnectivityEvent triggertype = do
           throwErr $ show e
         pure unit
 
-updateEventData :: Event -> FlowBT String Unit 
+updateEventData :: Event -> FlowBT String Unit
 updateEventData event = do
     case event.type of
       "CHAT_MESSAGE" -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
       "REFERRER_URL" -> setValueToLocalStore REFERRER_URL event.data
       "SAFETY_ALERT_DEVIATION" -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ safetyAlertType = Just DEVIATION } })
-      _ -> pure unit  
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ safetyAlertType = if homeScreen.data.fareProductType == DELIVERY then Nothing else Just DEVIATION } })
+      _ -> pure unit
 
 onNewIntent :: Event -> Effect Unit
 onNewIntent event = do
@@ -113,7 +114,7 @@ onNewIntent event = do
   case payload of
     Right payload'  -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
-                case event.type of 
+                case event.type of
                   "REFERRAL" -> do
                     setValueToLocalStore REFERRER_URL event.data
                     Flow.baseAppFlow payload' false
@@ -125,10 +126,10 @@ onNewIntent event = do
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
           throwErr $ show e
-        pure unit      
+        pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
-onBundleUpdatedEvent description= do 
+onBundleUpdatedEvent description= do
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
       appUpdatedFlow description

@@ -9,8 +9,11 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Distance
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSConfig as Beam
@@ -35,16 +38,21 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingEndTime bookingEndTime,
       Se.Set Beam.bookingStartTime bookingStartTime,
+      Se.Set Beam.busStationTtl (Kernel.Prelude.Just busStationTtl),
+      Se.Set Beam.cancellationReasonId cancellationReasonId,
       Se.Set Beam.customDates customDates,
       Se.Set Beam.customEndTime customEndTime,
       Se.Set Beam.discount discount,
       Se.Set Beam.freeTicketInterval freeTicketInterval,
+      Se.Set Beam.isCancellationAllowed (Kernel.Prelude.Just isCancellationAllowed),
       Se.Set Beam.isEventOngoing isEventOngoing,
       Se.Set Beam.maxFreeTicketCashback maxFreeTicketCashback,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.metroStationTtl metroStationTtl,
       Se.Set Beam.oneWayTicketLimit oneWayTicketLimit,
+      Se.Set Beam.radius (Kernel.Prelude.Just radius),
       Se.Set Beam.roundTripTicketLimit roundTripTicketLimit,
+      Se.Set Beam.straightLineDistance (Kernel.Prelude.Just straightLineDistance),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -57,17 +65,22 @@ instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
         Domain.Types.FRFSConfig.FRFSConfig
           { bookingEndTime = bookingEndTime,
             bookingStartTime = bookingStartTime,
+            busStationTtl = Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800) busStationTtl,
+            cancellationReasonId = cancellationReasonId,
             customDates = customDates,
             customEndTime = customEndTime,
             discount = discount,
             freeTicketInterval = freeTicketInterval,
+            isCancellationAllowed = Kernel.Prelude.fromMaybe True isCancellationAllowed,
             isEventOngoing = isEventOngoing,
             maxFreeTicketCashback = maxFreeTicketCashback,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             metroStationTtl = metroStationTtl,
             oneWayTicketLimit = oneWayTicketLimit,
+            radius = Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000) radius,
             roundTripTicketLimit = roundTripTicketLimit,
+            straightLineDistance = Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 5000) straightLineDistance,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -77,17 +90,22 @@ instance ToTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
     Beam.FRFSConfigT
       { Beam.bookingEndTime = bookingEndTime,
         Beam.bookingStartTime = bookingStartTime,
+        Beam.busStationTtl = Kernel.Prelude.Just busStationTtl,
+        Beam.cancellationReasonId = cancellationReasonId,
         Beam.customDates = customDates,
         Beam.customEndTime = customEndTime,
         Beam.discount = discount,
         Beam.freeTicketInterval = freeTicketInterval,
+        Beam.isCancellationAllowed = Kernel.Prelude.Just isCancellationAllowed,
         Beam.isEventOngoing = isEventOngoing,
         Beam.maxFreeTicketCashback = maxFreeTicketCashback,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.metroStationTtl = metroStationTtl,
         Beam.oneWayTicketLimit = oneWayTicketLimit,
+        Beam.radius = Kernel.Prelude.Just radius,
         Beam.roundTripTicketLimit = roundTripTicketLimit,
+        Beam.straightLineDistance = Kernel.Prelude.Just straightLineDistance,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

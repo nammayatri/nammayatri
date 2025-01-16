@@ -1,15 +1,14 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.TransporterConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.UtilsTH
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
@@ -27,6 +26,7 @@ data TransporterConfigT f = TransporterConfigT
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: B.C f Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: B.C f Kernel.Prelude.Bool,
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    arrivalTimeBufferOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
@@ -39,6 +39,7 @@ data TransporterConfigT f = TransporterConfigT
     bankErrorExpiry :: B.C f Kernel.Types.Common.Seconds,
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
+    cachedDevicesOSForSearchRequest :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     canAddCancellationFee :: B.C f Kernel.Prelude.Bool,
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
@@ -50,6 +51,10 @@ data TransporterConfigT f = TransporterConfigT
     cancellationDistDiff :: B.C f Kernel.Prelude.Int,
     cancellationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
+    cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateThresholdDaily :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateThresholdWeekly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationTimeDiff :: B.C f Kernel.Types.Common.Seconds,
     checkImageExtractionForDashboard :: B.C f Kernel.Prelude.Bool,
     coinConversionRate :: B.C f Kernel.Types.Common.HighPrecMoney,
@@ -62,14 +67,24 @@ data TransporterConfigT f = TransporterConfigT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     crossTravelCities :: B.C f [Kernel.Types.Beckn.City.City],
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    dailyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dailyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dailyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dailyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
+    demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    dpBlackListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    dpGeoHashPercision :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dpWhiteListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     driverAutoPayExecutionTime :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayNotificationTime :: B.C f Kernel.Types.Common.Seconds,
     driverDistanceToPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
+    driverDrivenSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculationTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculatorBatchGap :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculatorBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -104,12 +119,14 @@ data TransporterConfigT f = TransporterConfigT
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,
+    fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
+    issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],
@@ -122,11 +139,11 @@ data TransporterConfigT f = TransporterConfigT
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
-    minPickupDistanceThresholdForReferralPayout :: B.C f Kernel.Types.Common.Meters,
-    minRideDistanceThresholdForReferralPayout :: B.C f Kernel.Types.Common.HighPrecMeters,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minThresholdForPassThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
@@ -141,6 +158,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTimeLimit :: B.C f Kernel.Types.Common.Seconds,
+    otpRideStartRestrictionRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
@@ -149,6 +167,8 @@ data TransporterConfigT f = TransporterConfigT
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
+    recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
@@ -158,6 +178,7 @@ data TransporterConfigT f = TransporterConfigT
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
     scheduledRideFilterExclusionThresholdHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     scheduledRideJobRescheduleTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    scheduledRideSearchRepeatLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     searchRepeatLimit :: B.C f Kernel.Prelude.Int,
     snapToRoadConfidenceThreshold :: B.C f Kernel.Prelude.Double,
     specialDrivers :: B.C f [Kernel.Prelude.Text],
@@ -175,11 +196,16 @@ data TransporterConfigT f = TransporterConfigT
     updatePayoutStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     upwardsRecomputeBuffer :: B.C f Kernel.Types.Common.HighPrecMeters,
+    upwardsRecomputeBufferPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
-    variantsToEnableForSubscription :: B.C f [Domain.Types.Vehicle.Variant],
-    volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)
+    variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    weeklyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    weeklyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    weeklyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 

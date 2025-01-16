@@ -1,0 +1,404 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name merchantUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "name" : "merchantName",
+  "description" : "merchantDescription",
+  "enabled" : true,
+  "exoPhones" :
+    [
+      { "primaryPhone" : "+918035272984",
+        "backupPhone" :  "+804710859599",
+        "callService" : "Exotel"
+      },
+      { "primaryPhone" : "+918069457996",
+        "backupPhone" :  "+918069457986",
+        "callService" : "Exotel"
+      },
+      { "primaryPhone" : "+918069457991",
+        "backupPhone" :  "+918069457981",
+        "callService" : "Exotel"
+      },
+      { "primaryPhone" : "+918069457992",
+        "backupPhone" :  "+918069457982",
+        "callService" : "Exotel"
+      }
+    ],
+  "fcmConfig" :
+    { "fcmUrl" : "http://localhost:4545/someUrl/",
+      "fcmServiceAccount" : "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAianAtYmVja24tZGV2IiwKICAicHJpdmF0ZV9rZXlfaWQiOiAieHh4eHh4eHh4eHh4eHh4eHh4eCIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLXh4eHh4eHh4eHh4eHh4eHh4eHgtLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tXG4iLAogICJjbGllbnRfZW1haWwiOiAiYmVja24tZmNtQGpwLWJlY2tuLWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICJ4eHh4eHh4eHh4IiwKICAiYXV0aF91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLAogICJhdXRoX3Byb3ZpZGVyX3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwKICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9iZWNrbi1mY20lNDBqcC1iZWNrbi1kZXYuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iCn0="
+    }
+}
+
+###
+
+# @name merchantCommonConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/common
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name merchantCommonConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/common/update
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "pickupLocThreshold" : {"value" : 1},
+    "dropLocThreshold" : {"value" : 2},
+    "rideTimeEstimatedThreshold" : {"value" : 3},
+    "defaultPopupDelay" : {"value" : 4},
+    "popupDelayToAddAsPenalty" : {"value" : 5},
+    "thresholdCancellationScore" : {"value" : 6},
+    "minRidesForCancellationScore" : {"value" : 7},
+    "mediaFileUrlPattern" : {"value" : "mediaFileUrlPattern"},
+    "mediaFileSizeUpperLimit" : {"value" : 8},
+    "onboardingTryLimit" : {"value" : 10},
+    "onboardingRetryTimeInHours" : {"value" : 11},
+    "checkImageExtractionForDashboard" : {"value" : false},
+    "searchRepeatLimit" : {"value" : 12}
+  }
+
+###
+
+# @name driverPoolConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/driverPool?tripDistance=10000
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name driverPoolConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/driverPool/update?tripDistance=10000
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "minRadiusOfSearch" : {"value" : 21},
+    "maxRadiusOfSearch" : {"value" : 22},
+    "radiusStepSize" : {"value" : 23},
+    "driverPositionInfoExpiry" : {"value" : 24},
+    "actualDistanceThreshold" : {"value" : 25},
+    "maxDriverQuotesRequired" : {"value" : 26},
+    "driverQuoteLimit" : {"value" : 27},
+    "driverRequestCountLimit" : {"value" : 28},
+    "driverBatchSize" : {"value" : 29},
+    "maxNumberOfBatches" : {"value" : 30},
+    "maxParallelSearchRequests" : {"value" : 31},
+    "poolSortingType" : {"value" : "Random"},
+    "singleBatchProcessTime" : {"value" : 32}
+  }
+
+###
+
+# @name driverPoolConfigCreate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/driverPool/create?tripDistance=40000
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "minRadiusOfSearch" : 41,
+    "maxRadiusOfSearch" : 42,
+    "radiusStepSize" : 43,
+    "driverPositionInfoExpiry" : 44,
+    "actualDistanceThreshold" : 45,
+    "maxDriverQuotesRequired" : 46,
+    "driverQuoteLimit" : 47,
+    "driverRequestCountLimit" : 48,
+    "driverBatchSize" : 49,
+    "maxNumberOfBatches" : 50,
+    "maxParallelSearchRequests" : 51,
+    "poolSortingType" : "Random",
+    "singleBatchProcessTime" : 52,
+    "radiusShrinkValueForDriversOnRide" : 53,
+    "driverToDestinationDistanceThreshold" : 54,
+    "driverToDestinationDuration" : 55
+  }
+
+###
+
+# @name driverIntelligentPoolConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/driverIntelligentPool
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name driverIntelligentPoolConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/driverIntelligentPool/update
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "availabilityTimeWeightage" : {"value" : 61},
+    "availabilityTimeWindowOption" :
+      { "period": 62,
+        "periodType" : "Minutes"
+      },
+    "acceptanceRatioWeightage": {"value" : 63},
+    "acceptanceRatioWindowOption" :
+      { "period": 64,
+        "periodType" : "Hours"
+      },
+    "cancellationRatioWeightage":{"value" :  65},
+    "cancellationRatioWindowOption" :
+      { "period": 66,
+        "periodType" : "Days"
+      },
+    "minQuotesToQualifyForIntelligentPool": {"value" : 67},
+    "minQuotesToQualifyForIntelligentPoolWindowOption" :
+      { "period": 68,
+        "periodType" : "Years"
+      },
+    "intelligentPoolPercentage": {"value" : 69},
+    "speedNormalizer": {"value" : 70},
+    "driverSpeedWeightage": {"value" : 71},
+    "minLocationUpdates": {"value" : 72},
+    "locationUpdateSampleTime": {"value" : 73},
+    "defaultDriverSpeed": {"value" : 74}
+  }
+
+###
+
+# @name onboardingDocumentConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/onboardingDocument?documentType="DL"
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name onboardingDocumentConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/onboardingDocument/update?documentType="RC"
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "checkExtraction" : {"value" : false},
+    "checkExpiry" : {"value" : true},
+    "supportedVehicleClasses" : null,
+    "rcNumberPrefix": {"value": "KA"},
+    "vehicleClassCheckType" : {"value" : "Prefix"}
+  }
+
+###
+
+# @name onboardingDocumentConfigCreate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/config/onboardingDocument/create?documentType="RCInsurance"
+token: {{juspay_admin}}
+content-type: application/json
+
+  { "checkExtraction" : false,
+    "checkExpiry" : true,
+    "supportedVehicleClasses" : {"documentType" : "RC", "vehicleClasses" : ["vehicleClass1", "vehicleClass2"]},
+    "rcNumberPrefix": {"value": "KA"},
+    "vehicleClassCheckType" : "Suffix"
+  }
+
+###
+
+# @name merchanServiceUsageConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceUsageConfig
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name merchantGoogleConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "Google",
+  "serviceConfig" : {
+      "googleMapsUrl" : "http://localhost:8019/",
+      "googleRoadsUrl" : "http://localhost:8019/",
+      "googleKey" : "mock-google-key"
+  }
+}
+
+###
+
+# @name merchantRealGoogleConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "Google",
+  "serviceConfig" : {
+      "googleMapsUrl" : "https://maps.googleapis.com/maps/api/",
+      "googleRoadsUrl" : "https://roads.googleapis.com/",
+      "googleKey" : "{{google-key}}"
+  }
+}
+
+###
+
+# @name merchantOSRMConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "OSRM",
+  "serviceConfig" : {
+      "osrmUrl" : "osrmUrl",
+      "radiusDeviation" : 30
+  }
+}
+
+###
+
+# @name merchantMMIConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "MMI",
+  "serviceConfig" : {
+    "mmiAuthUrl" : "mmiAuthUrl",
+    "mmiAuthId" : "mmiAuthId",
+    "mmiAuthSecret" : "mmiAuthSecret",
+    "mmiApiKey" : "mmiApiKey",
+    "mmiKeyUrl" : "mmiKeyUrl",
+    "mmiNonKeyUrl" : "mmiNonKeyUrl"
+  }
+}
+
+###
+
+# @name mapsServiceUsageConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceUsageConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "getDistances" : "Google",
+  "getEstimatedPickupDistances" : "Google",
+  "getRoutes" : "Google",
+  "snapToRoad" : "OSRM",
+  "getPlaceName" : "Google",
+  "getPlaceDetails" : "Google",
+  "autoComplete" : "MMI"
+}
+###
+
+# @name merchantMyValueFirstConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "MyValueFirst",
+  "serviceConfig" : {
+      "username" : "username",
+      "password" : "password",
+      "url" : "http://localhost:4343/someUrl/"
+  }
+}
+
+###
+
+# @name merchantExotelSmsConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "ExotelSms",
+  "serviceConfig" : {
+      "apiKey" : "apiKey",
+      "apiToken" : "apiToken",
+      "sid" : "sid",
+      "url" : "url"
+  }
+}
+
+###
+
+# @name smsServiceUsageConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceUsageConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "smsProvidersPriorityList" : ["ExotelSms","MyValueFirst"]
+}
+
+###
+
+# @name merchantIdfyVerificationConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/serviceConfig/verification/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "accountId" : "xxxxxxx",
+  "apiKey" : "xxxxxxx",
+  "secret" : "xxxxxxx",
+  "url" : "http://localhost:6235"
+}
+
+#  this will work when we will add second service
+# { "serviceName" : "Idfy",
+#   "serviceConfig" : {
+#       "accountId" : "xxxxxxx",
+#       "apiKey" : "xxxxxxx",
+#       "secret" : "xxxxxxx",
+#       "url" : "http://localhost:6235"
+#   }
+# }
+
+###
+
+# @name postMerchantSpecialLocationUpsert
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/specialLocation/upsert?specialLocationId=9h8016d0-f9cd-4f9f-886f-bc4cbh6a86e5
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&locationName="NewLocation"
+&category="NewCategory"
+&city=Kochi
+
+###
+
+# @name postMerchantSpecialLocationGatesUpsert
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/specialLocation/9h8016d0-f9cd-4f9f-886f-bc4cbh6a86e5/gates/upsert
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&name="NewGate1"
+&latitude=0.0
+&longitude=0.0
+&defaultDriverExtra=null
+&address="Address"
+&canQueueUpOnGate=null

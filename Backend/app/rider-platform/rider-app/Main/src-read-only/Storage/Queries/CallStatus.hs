@@ -5,7 +5,6 @@
 module Storage.Queries.CallStatus (module Storage.Queries.CallStatus, module ReExport) where
 
 import qualified Domain.Types.CallStatus
-import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
@@ -27,9 +26,6 @@ findByCallId callId = do findOneWithKV [Se.Is Beam.callId $ Se.Eq callId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m (Maybe Domain.Types.CallStatus.CallStatus))
-findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
 
 updateCallError ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -89,6 +85,7 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.customerIvrResponse customerIvrResponse,
       Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.recordingUrl recordingUrl,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.status status,

@@ -18,18 +18,19 @@ imports:
   Quote: Domain.Types.Quote
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   TripTerms: Domain.Types.TripTerms
-  VehicleVariant: Domain.Types.VehicleVariant
   PaymentStatus: BecknV2.OnDemand.Enums
   BaseUrl: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
+  TripCategory: Domain.Types.Common
   HighPrecMeters: Kernel.Types.Common
   HighPrecDistance: Kernel.Types.Common
   Distance: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
-  VehicleServiceTier: Domain.Types.VehicleServiceTier
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  TripParty: Domain.Types.Trip
 
 BookingLocation:
   tableName: booking_location
@@ -56,6 +57,9 @@ BookingLocation:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
 
   beamFields:
     address:
@@ -69,6 +73,9 @@ BookingLocation:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
 
   toTType:
     street: Domain.Types.LocationAddress.street|I
@@ -81,9 +88,12 @@ BookingLocation:
     area: Domain.Types.LocationAddress.area|I
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
+    extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId}|E
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -121,11 +131,13 @@ Booking:
   types:
     BPPBooking: {}
     BookingDetails:
-      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails
+      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails
       derive': Show
     OneWayBookingDetails:
+      stops: "[Location]"
       toLocation: Location
       distance: Distance
+      isUpgradedToCab: Maybe Bool
       derive': Show
     RentalBookingDetails:
       stopLocation: Maybe Location
@@ -133,18 +145,25 @@ Booking:
       derive': Show
     OneWaySpecialZoneBookingDetails:
       toLocation: Location
+      stops: "[Location]"
       distance: Distance
       otpCode: Maybe Text
       derive': Show
     InterCityBookingDetails:
       toLocation: Location
       distance: Distance
+      stops: "[Location]"
       otpCode: Maybe Text
       derive': Show
     AmbulanceBookingDetails:
       toLocation: Location
       distance: Distance
       derive': Show
+    DeliveryBookingDetails:
+      derive': Generic,Show
+      toLocation: Location
+      distance: Distance
+      otpCode: Maybe Text
 
   fields:
     id: Id Booking
@@ -164,6 +183,7 @@ Booking:
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
+    hasStops : Maybe Bool
     riderId: Id Person
     fromLocation: Location
     initialPickupLocation: Location|NoRelation
@@ -171,12 +191,14 @@ Booking:
     estimatedDistance: Maybe Distance
     distanceUnit: DistanceUnit
     estimatedDuration: Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     discount: Maybe Price
     estimatedTotalFare: Price
     isScheduled: Bool
-    vehicleServiceTierType: VehicleServiceTierType|NoRelation
+    vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
+    vehicleIconUrl: Maybe BaseUrl
     isAirConditioned: Maybe Bool
     isDashboardRequest: Maybe Bool
     bookingDetails: BookingDetails
@@ -196,6 +218,11 @@ Booking:
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
+    tripCategory: Maybe TripCategory
+    initiatedBy: Maybe TripParty
+    isReferredRide: Maybe Bool
+    disabilityTag: Maybe Text
+    journeyLegOrder: Maybe Int
 
   beamFields:
     estimatedDistance:
@@ -205,15 +232,17 @@ Booking:
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
     vehicleServiceTierType:
-      vehicleVariant: VehicleServiceTierType
+      vehicleVariant: ServiceTierType
     transactionId:
       riderTransactionId: Text
     bookingDetails:
-      fareProductType: FareProductType
+      fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
       toLocationId: Maybe Text
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
       otpCode: Maybe Text
+      isUpgradedToCab: Maybe Bool
+      stops: {}
     fromLocation:
       fromLocationId: Maybe Text
     tripTerms:
@@ -245,6 +274,7 @@ Booking:
     backendConfigVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
 
   sqlType:
     id: character(36)
@@ -283,6 +313,7 @@ Booking:
     stopLocationId: character varying(36)
     estimatedDistance: double precision
     estimatedDuration: integer
+    estimatedStaticDuration: integer
     isScheduled: boolean
     serviceTierName: text
     clientId: character varying(36)
@@ -292,6 +323,7 @@ Booking:
     distanceUnit: character varying(255)
     distanceValue: double precision
     estimatedDistanceValue: double precision
+    vehicleIconUrl: character varying(255)
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -310,6 +342,7 @@ Booking:
     estimatedDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
     stopLocationId: getStopLocationId
     otpCode: getOtpCode
+    isUpgradedToCab: getIsUpgradedToCab
     isBookingUpdated: (Just isBookingUpdated)|E
     providerUrl: (showBaseUrl providerUrl)|E
     fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
@@ -329,21 +362,22 @@ Booking:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     bppEstimateId: itemId|E
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   intermediateTransformers:
     toTType:
       - distance: getDistance bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - fromLocationAndBookingDetails': Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
-    fromLocation: (fst fromLocationAndBookingDetails')|E
-    bookingDetails: (snd fromLocationAndBookingDetails')|E
+    fromLocation: (fst toBookingDetailsAndFromLocation')|E
+    bookingDetails: (snd toBookingDetailsAndFromLocation')|E
     tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
     merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
-    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst fromLocationAndBookingDetails')|EM
+    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')|EM
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
@@ -356,6 +390,7 @@ Booking:
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     itemId: bppEstimateId|E
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -371,3 +406,54 @@ Booking:
     riderId: "!SecondaryKey" # forcing to be a secondary key
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    updateIsBookingUpdated:
+      kvFunction: updateWithKV
+      params:
+        - isBookingUpdated
+      where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
+
+BookingPartiesLink:
+  fields:
+    id: Id BookingPartiesLink
+    bookingId: Id Booking
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
+    isActive: Bool
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    partyId: "!SecondaryKey"
+    bookingId: "!SecondaryKey"
+
+  queries:
+    findAllByBookingId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: bookingId
+    findAllActiveByBookingId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and:
+         - bookingId
+         - isActive: True|CB
+    makeAllInactiveByBookingId:
+      kvFunction: updateWithKV
+      params:
+        - isActive: False|CB
+      where:
+        and:
+          - bookingId
+          - isActive: True|CB
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+  extraOperations:
+    - EXTRA_QUERY_FILE

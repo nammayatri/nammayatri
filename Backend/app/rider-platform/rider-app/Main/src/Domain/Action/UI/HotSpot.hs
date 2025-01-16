@@ -25,7 +25,6 @@ import qualified Environment ()
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis
-import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, isExpired)
@@ -41,16 +40,17 @@ frequencyUpdator ::
   LatLong ->
   Maybe LA.LocationAddress ->
   TypeOfMovement ->
+  Maybe HotSpotConfig ->
   m ()
-frequencyUpdator merchantId latLong _ movement = do
-  hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
-  case hotSpotConfig of
+frequencyUpdator merchantId latLong _ movement mbHotSpotConfig = do
+  mbHotSpotConfig' <- maybe (QHotSpotConfig.findConfigByMerchantId merchantId) (pure . Just) mbHotSpotConfig
+  case mbHotSpotConfig' of
     Just HotSpotConfig {..} -> when shouldTakeHotSpot do
-      mbHotSpot <- convertToHotSpot latLong Nothing merchantId
+      mbHotSpot <- convertToHotSpot latLong Nothing merchantId mbHotSpotConfig'
       now <- getCurrentTime
       case mbHotSpot of
         Just HotSpot {..} -> do
-          mbTargetHotSpot :: Maybe [HotSpot] <- hGet makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash)
+          mbTargetHotSpot :: Maybe [HotSpot] <- get (makeHotSpotKey $ Dt.take precisionToGetGeohash _geoHash)
           case mbTargetHotSpot of
             Just hotSpots -> do
               let filteredHotSpot = filter (\hotSpot -> Dt.pack (Dt.unpack hotSpot._geoHash) == _geoHash) hotSpots
@@ -68,11 +68,11 @@ frequencyUpdator merchantId latLong _ movement = do
                 else do
                   expTime <- getSeconds <$> asks (.hotSpotExpiry)
                   let createdGeoHash = createGeoHash HotSpot {..} now
-                  hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) (hotSpots ++ [createdGeoHash]) expTime
+                  setExp (makeHotSpotKey $ Dt.take precisionToGetGeohash _geoHash) (hotSpots ++ [createdGeoHash]) expTime
             Nothing -> do
               expTime <- getSeconds <$> asks (.hotSpotExpiry)
               let createdGeoHash = createGeoHash HotSpot {..} now
-              hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) [createdGeoHash] expTime
+              setExp (makeHotSpotKey $ Dt.take precisionToGetGeohash _geoHash) [createdGeoHash] expTime
         Nothing -> return ()
     Nothing -> return ()
   where
@@ -103,24 +103,4 @@ filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
           Nothing -> return False
       )
       hotSpots
-  hSetExp makeHotSpotKey geohash filterWithExpiry expTime
-
-removeExpiredHotSpots ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    HasField "hotSpotExpiry" r Seconds
-  ) =>
-  Id Merchant ->
-  m APISuccess
-removeExpiredHotSpots merchantId = do
-  mbHotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
-  case mbHotSpotConfig of
-    (Just HotSpotConfig {..}) -> do
-      hotSpotKeys :: [(Text, [HotSpot])] <- hGetAll makeHotSpotKey
-      mapM_
-        ( \(hash, hotSpots) -> do
-            filterAndUpdateHotSpotWithExpiry hash hotSpots hotSpotExpiry
-        )
-        hotSpotKeys
-      pure Success
-    Nothing -> pure Success
+  setExp (makeHotSpotKey geohash) filterWithExpiry expTime

@@ -46,6 +46,7 @@ type API =
              :> Post '[JSON] DriverOnboarding.DriverRCRes
            :<|> "status"
              :> TokenAuth
+             :> QueryParam "makeSelfieAadhaarPanMandatory" Bool
              :> QueryParam "providePrefillDetails" Bool
              :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
@@ -113,8 +114,8 @@ verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverO
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req
 
-statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) prefillData = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) Nothing prefillData
+statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)

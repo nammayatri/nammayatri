@@ -65,6 +65,8 @@ import Components.OptionsMenu as OptionsMenu
 import Data.Array as DA
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Components.BottomDrawerList as BottomDrawerList
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
@@ -75,6 +77,7 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.DRIVING_LICENSE_OPTION)
     if initialState.props.successfulValidation then do
       _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
       pure unit

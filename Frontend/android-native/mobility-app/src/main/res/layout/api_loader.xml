@@ -50,13 +50,14 @@
 
                     <com.airbnb.lottie.LottieAnimationView
                         android:id="@+id/lottie_view_waiting"
-                        android:layout_marginTop="40dp"
-                        android:layout_width="128dp"
-                        android:layout_height="128dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="160dp"
                         app:lottie_autoPlay="true"
+                        android:scaleType="centerCrop"
                         app:lottie_loop="true"
-                        android:layout_gravity="center_horizontal"
-                        app:lottie_rawRes="@raw/auto_rickshaw_processing" />
+                        android:layout_gravity="center"
+                        app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
 
 
                     <TextView

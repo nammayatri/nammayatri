@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.PortalConfigs where
@@ -12,11 +10,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PortalConfigsT f = PortalConfigsT
-  { configName :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    value :: (B.C f Kernel.Prelude.Text)
+  { configName :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    value :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +24,6 @@ instance B.Table PortalConfigsT where
 
 type PortalConfigs = PortalConfigsT Identity
 
-$(enableKVPG (''PortalConfigsT) [('id)] [])
+$(enableKVPG ''PortalConfigsT ['id] [])
 
-$(mkTableInstances (''PortalConfigsT) "portal_configs")
+$(mkTableInstances ''PortalConfigsT "portal_configs")

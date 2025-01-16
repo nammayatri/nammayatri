@@ -44,8 +44,8 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
+import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml, nestedScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -54,20 +54,29 @@ import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(.
 import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalNativeStore)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 import Styles.Colors as Color
 import Screens.RegistrationScreen.ScreenData as SD
 import Resource.Constants as Constant
 import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Helpers.Utils as HU
+import Engineering.Helpers.Events as EHE
+import Effect.Uncurried (runEffectFn2)
+import Engineering.Helpers.Commons (flowRunner)
+import Types.App (GlobalState, defaultGlobalState)
+import Presto.Core.Types.Language.Flow (Flow, delay)
+import Effect.Aff (Milliseconds(..), launchAff)
+import RemoteConfig as RC
+import Log
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "RegistrationScreen"
-  , globalEvents : []
+  , globalEvents : [ globalActions ]
   , eval :
       ( \state action -> do
           let _ = spy "RegistrationScreen ----- state" state
@@ -75,6 +84,16 @@ screen initialState =
           eval state action
       )
   }
+  where 
+  globalActions push = do
+    let eventName = if isNothing initialState.data.vehicleCategory then "vehicle_selection_page_loaded" else "vehicle_registration_page_loaded"
+    void $ pure $ EHE.addEvent (EHE.defaultEventObject eventName)
+    if (getValueToLocalStore LOGS_TRACKING == "true" && getValueToLocalStore FUNCTION_EXECUTED_IN_SESSION /= "true") then do
+      void $ launchAff $ flowRunner defaultGlobalState $ runLogTracking push NoAction
+      void $ pure $ setValueToLocalStore FUNCTION_EXECUTED_IN_SESSION "true"
+      pure unit
+    else pure unit
+    pure $ pure unit
 
 view ::
   forall w.
@@ -83,12 +102,15 @@ view ::
   PrestoDOM (Effect Unit) w
 view push state =
   let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
-      completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
+      completedStatusCount = length $ filter (\doc -> statusCompOrManual (getStatus doc.stage state))  documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
       variantImage = case state.data.vehicleCategory of
         Just ST.AutoCategory -> "ny_ic_auto_side"
         Just ST.BikeCategory -> "ny_ic_bike_side"
+        Just ST.AmbulanceCategory -> "ny_ic_ambulance_side"
         Just ST.CarCategory -> "ny_ic_sedan_side"
+        Just ST.TruckCategory -> "ny_ic_truck_side"
+        Just ST.BusCategory -> "ny_ic_bus_side"
         Just ST.UnKnown -> ""
         Nothing -> ""
   in
@@ -178,6 +200,7 @@ view push state =
                                       _ -> VISIBLE
                                   , background case getStatus item.stage state of
                                       ST.COMPLETED -> Color.green900
+                                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
                                       ST.IN_PROGRESS -> Color.yellow900
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
@@ -229,8 +252,15 @@ view push state =
       <> if state.props.menuOptions then [menuOptionModal push state] else []
       where 
         callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
-        documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
-        buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
+        documentList = case state.data.vehicleCategory of
+                      Just ST.CarCategory -> state.data.registerationStepsCabs
+                      Just ST.TruckCategory -> state.data.registerationStepsTruck
+                      Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
+                      Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just ST.BusCategory -> state.data.registerationStepsBus
+                      _ -> state.data.registerationStepsAuto
+        buttonVisibility = if state.props.manageVehicle then all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ filter(\elem -> elem.isMandatory) documentList
                             else state.props.driverEnabled
 
 
@@ -310,6 +340,12 @@ cardsListView push state =
             vehicleSpecificList push state state.data.registerationStepsCabs
           else if state.data.vehicleCategory == Just ST.BikeCategory then
             vehicleSpecificList push state state.data.registerationStepsBike
+          else if state.data.vehicleCategory == Just ST.AmbulanceCategory then
+            vehicleSpecificList push state state.data.registerationStepsAmbulance
+          else if state.data.vehicleCategory == Just ST.TruckCategory then
+            vehicleSpecificList push state state.data.registerationStepsTruck
+          else if state.data.vehicleCategory == Just ST.BusCategory then
+            vehicleSpecificList push state state.data.registerationStepsBus
           else
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
@@ -369,12 +405,12 @@ listItem push item state =
     , orientation HORIZONTAL
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ compVisibility state item
+    , visibility $ boolToVisibility $ (compVisibility state item && ( if item.stage == ST.PAN_CARD || item.stage == ST.AADHAAR_CARD || item.stage == ST.PROFILE_PHOTO then state.data.config.showProfileAadhaarPan else true))
     , stroke $ componentStroke state item
     , background $ compBg state item
     , clickable $ compClickable state item
     , alpha $ compAlpha state item
-    , onClick push $ const $ RegistrationAction item
+    , onClick push $ const $ (if not state.props.dontAllowHvRelaunch then RegistrationAction item else NoAction)
     , margin (MarginBottom 20)
     , gravity CENTER_VERTICAL
     ][  linearLayout
@@ -426,7 +462,7 @@ listItem push item state =
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
           ST.DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
-          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else "ny_ic_vehicle_onboard"
+          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else if state.data.vehicleCategory == Just ST.AmbulanceCategory then "ny_ic_ambulance_onboard" else if state.data.vehicleCategory == Just ST.TruckCategory then "ny_ic_truck_onboard" else if state.data.vehicleCategory == Just ST.BusCategory then "ny_ic_bus_onboard" else  "ny_ic_vehicle_onboard"
           ST.GRANT_PERMISSION -> "ny_ic_grant_permission"
           ST.SUBSCRIPTION_PLAN -> "ny_ic_plus_circle_blue"
           ST.PROFILE_PHOTO -> "ny_ic_profile_image_blue"
@@ -443,6 +479,7 @@ listItem push item state =
         let strokeWidth = "1,"
             colour = case getStatus item.stage state of
                       ST.COMPLETED -> Color.green900
+                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
                       ST.IN_PROGRESS -> Color.yellow900
                       ST.NOT_STARTED -> Color.black500
                       ST.FAILED -> Color.red
@@ -453,6 +490,7 @@ listItem push item state =
       compBg state item = 
         case getStatus item.stage state of
           ST.COMPLETED -> Color.greenOpacity10
+          ST.MANUAL_VERIFICATION_REQUIRED ->  Color.greenOpacity10
           ST.IN_PROGRESS -> Color.yellowOpacity10
           ST.NOT_STARTED -> Color.white900
           ST.FAILED -> Color.redOpacity10
@@ -462,8 +500,8 @@ listItem push item state =
       compClickable state item = dependentDocAvailable item state && not item.isDisabled && not 
         case item.stage of
           ST.DRIVING_LICENSE_OPTION -> state.props.limitReachedFor == Just "DL" || any (_ == state.data.drivingLicenseStatus) [COMPLETED, IN_PROGRESS]
-          ST.GRANT_PERMISSION -> state.data.permissionsStatus == COMPLETED
-          _ -> (getStatus item.stage state) == ST.COMPLETED
+          ST.GRANT_PERMISSION -> statusCompOrManual state.data.permissionsStatus
+          _ -> statusCompOrManual (getStatus item.stage state)
 
       compAlpha :: ST.RegistrationScreenState -> ST.StepProgress -> Number
       compAlpha state item = if dependentDocAvailable item state && not item.isDisabled then 1.0 else 0.5
@@ -472,6 +510,7 @@ listItem push item state =
       compStatusImg state item = 
         case getStatus item.stage state of
           ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
+          ST.MANUAL_VERIFICATION_REQUIRED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
           ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
           ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
           ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
@@ -509,6 +548,9 @@ refreshView push state =
                       Just ST.CarCategory -> state.data.registerationStepsCabs
                       Just ST.BikeCategory -> state.data.registerationStepsBike
                       Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
+                      Just ST.TruckCategory -> state.data.registerationStepsTruck
+                      Just ST.BusCategory -> state.data.registerationStepsBus
                       Just ST.UnKnown -> state.data.registerationStepsCabs
                       Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
@@ -597,36 +639,49 @@ checkLimitReached step limitReachedFor =
 
 chooseVehicleView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 chooseVehicleView push state = 
-  linearLayout
+  relativeLayout 
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , clickable true
+  , onBackPressed push (const BackPressed)
+  , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory
+  ]
+  [ linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory
     ]
     [ headerView state push
     , textView $ 
       [ text $ getString SELECT_YOUR_VEHICLE_TYPE
       , color Color.black700
-      , margin $ Margin 16 24 16 0
+      , margin $ Margin 16 24 16 8
       , height WRAP_CONTENT
       , width MATCH_PARENT
       ] <> FontStyle.body1 TypoGraphy
-    , variantListView push state
-    , linearLayout [ weight 1.0 ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
+    , scrollView
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , scrollBarY false
       ]
-      [  linearLayout 
-         [ height $ V 1
-         , width MATCH_PARENT
-         , background Color.grey900
-         ]
-         []
-      , PrimaryButton.view (push <<< ContinueButtonAction) (continueButtonConfig state)
-      ]
+      [ variantListView push state ]
     ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , alignParentBottom "true,-1"
+    , background Color.white900
+    ]
+    [  linearLayout 
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey900
+      ]
+      []
+    , PrimaryButton.view (push <<< ContinueButtonAction) (continueButtonConfig state)
+    ]
+  ]
 
 variantListView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 variantListView push state = 
@@ -635,7 +690,7 @@ variantListView push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , padding $ Padding 16 0 16 16
+      , padding $ Padding 16 0 16 94 -- Padding of Primary Button
       , gravity CENTER
       ]( mapWithIndex
           ( \index item -> 
@@ -651,8 +706,8 @@ variantListView push state =
               , cornerRadius 8.0
               , stroke stroke'
               , gravity CENTER_VERTICAL
-              , margin $ MarginTop 16
-              , onClick push $ const $ ChooseVehicleCategory index
+              , margin $ MarginVertical 8 8
+              , onClick push $ const $ ChooseVehicleCategory index item
               ][  imageView
                   [ width $ V 116
                   , height $ V 80
@@ -661,21 +716,27 @@ variantListView push state =
                         ST.AutoCategory -> cityConfig.assets.onboarding_auto_image
                         ST.CarCategory -> "ny_ic_sedan_side"
                         ST.BikeCategory -> "ny_ic_bike_side"
+                        ST.AmbulanceCategory -> "ny_ic_ambulance_side"
+                        ST.TruckCategory -> "ny_ic_truck_side"
+                        ST.BusCategory -> "ny_ic_bus_side"
                         ST.UnKnown -> "ny_ic_silhouette"
-                  ]
-                , textView $
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , text case item of
-                            ST.AutoCategory -> getString AUTO_RICKSHAW
-                            ST.CarCategory -> getString CAR
-                            ST.BikeCategory -> getString BIKE_TAXI
-                            ST.UnKnown -> "Unknown"
-                  , color Color.black800
-                  , margin $ MarginLeft 20
-                  ] <> FontStyle.subHeading1 TypoGraphy
               ]
-          ) (state.data.variantList))
+            , textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text case item of
+                        ST.AutoCategory -> getString AUTO_RICKSHAW
+                        ST.CarCategory -> getString CAR
+                        ST.BikeCategory -> getString BIKE_TAXI
+                        ST.AmbulanceCategory -> getString AMBULANCE
+                        ST.TruckCategory -> getString TRUCK
+                        ST.BusCategory ->  getString BUS__
+                        ST.UnKnown -> "Unknown"
+              , color Color.black800
+              , margin $ MarginLeft 20
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ]
+      ) (state.data.variantList))
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 
@@ -694,7 +755,25 @@ getStatus step state =
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
-dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType
+dependentDocAvailable item state = 
+  case item.stage of
+    ST.AADHAAR_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    ST.PAN_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    _ -> all (\docType -> statusCompOrManual (getStatus docType state)) item.dependencyDocumentType
 
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
-compVisibility state item = not item.isHidden && dependentDocAvailable item state
+compVisibility state item = not item.isHidden && dependentDocAvailable item state && (if item.stage == ST.PAN_CARD || item.stage == ST.AADHAAR_CARD || item.stage == ST.PROFILE_PHOTO then state.data.config.showProfileAadhaarPan else true)
+
+statusCompOrManual :: ST.StageStatus -> Boolean
+statusCompOrManual status = any (_ == status) [ST.COMPLETED, ST.MANUAL_VERIFICATION_REQUIRED]
+
+runLogTracking :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
+runLogTracking push action = do
+  let eventsConfig = RC.eventsConfig "events_config"
+  if (getValueToLocalStore LOGS_TRACKING == "true" && eventsConfig.enabled) then do
+    void $ delay $ Milliseconds eventsConfig.loggingIntervalInMs
+    let _ = printLog "Logging Onboarding Events" ""
+    void $ EHE.pushEvent eventsConfig.pushEventChunkSize
+    runLogTracking push action
+  else 
+    pure unit

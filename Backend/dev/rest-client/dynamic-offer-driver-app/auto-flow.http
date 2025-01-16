@@ -55,6 +55,9 @@ content-type: application/json
 ###
 
 # @name setActive
+# UPDATE atlas_driver_offer_bpp.person SET merchant_id = 'favorit0-0000-0000-0000-00000favorit' WHERE id = 'favorit-auto1-0000000000000000000000'
+# UPDATE atlas_driver_offer_bpp.registration_token SET merchant_id = 'favorit0-0000-0000-0000-00000favorit' WHERE id = 'favorit-auto1-0000000000000000000000'
+
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
 content-type: application/json
 token: {{token1}}

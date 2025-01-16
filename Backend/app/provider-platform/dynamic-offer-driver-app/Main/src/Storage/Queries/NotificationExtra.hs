@@ -1,28 +1,19 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.NotificationExtra where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
-import Domain.Types.Extra.Notification (NotificationStatus (NOTIFICATION_CREATED, NOTIFICATION_FAILURE, PENDING))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
-import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as PaymentI
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.Notification as BeamI
-import qualified Storage.Queries.DriverFee as QDF
-import Storage.Queries.OrphanInstances.Notification
+import Storage.Queries.OrphanInstances.Notification ()
 
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> m (Maybe Domain.Notification)

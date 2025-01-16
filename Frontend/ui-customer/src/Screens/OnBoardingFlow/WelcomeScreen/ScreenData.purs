@@ -34,7 +34,7 @@ initData = {
                 margin : { top : 6 , bottom : 0 , right : 20 , left : 20 }
               }
             })
-              [ {image : "carousel_21", imageHeight : if (os == "IOS") then 260 else 390 , title : "The fastest ride booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.", gravity : 17},
+              [ {image : "carousel_21", imageHeight : if (os == "IOS") then 260 else 380 , title : "The fastest ride booking\napp is here!", description : "Our speedy booking process means\nyou get a ride quickly and easily.", gravity : 17},
                 {image : "carousel_22", imageHeight : if (os == "IOS") then 260 else 315 , title : "Dedicated\nSafety Center", description : "24X7 self serve feature and SOS for\nemergency support",  gravity : 17},
                 {image : "carousel_23", imageHeight : if (os == "IOS") then 260 else 315 , title : "Inclusive and accessible,\nfor everyone!", description : "We strive to provide all our users an\neven & equal experience.", gravity : 17},
                 {image : "carousel_24", imageHeight : if (os == "IOS") then 260 else 315 , title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.", gravity : 17}

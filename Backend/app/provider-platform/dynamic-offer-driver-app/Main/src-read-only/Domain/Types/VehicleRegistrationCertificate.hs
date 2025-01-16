@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.VehicleRegistrationCertificate where
@@ -9,7 +8,8 @@ import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -35,7 +35,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     reviewedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    userPassedVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
+    userPassedVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -46,7 +46,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleSeatBelts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

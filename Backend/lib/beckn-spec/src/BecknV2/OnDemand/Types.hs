@@ -1899,6 +1899,10 @@ data Stop = Stop
     -- |
     stopLocation :: Maybe Location,
     -- |
+    stopId :: Maybe String,
+    -- |
+    stopParentStopId :: Maybe String,
+    -- |
     stopTime :: Maybe Time,
     -- | The type of stop. Allowed values of this property can be defined by the network policy.
     stopType :: Maybe Text
@@ -1921,6 +1925,8 @@ optionsStop =
     table =
       [ ("stopAuthorization", "authorization"),
         ("stopLocation", "location"),
+        ("stopId", "id"),
+        ("stopParentStopId", "parent_stop_id"),
         ("stopTime", "time"),
         ("stopType", "type")
       ]

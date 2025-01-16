@@ -13,7 +13,7 @@ Invoice:
       enum: "ACTIVE_INVOICE, INACTIVE, SUCCESS, FAILED, EXPIRED, CLEARED_BY_YATRI_COINS"
 
     InvoicePaymentMode:
-      enum: "MANUAL_INVOICE, AUTOPAY_INVOICE, MANDATE_SETUP_INVOICE, CASH_COLLECTED_INVOICE, PAYOUT_REGISTRATION_INVOICE, ONE_TIME_SECURITY_INVOICE"
+      enum: "MANUAL_INVOICE, AUTOPAY_INVOICE, MANDATE_SETUP_INVOICE, CASH_COLLECTED_INVOICE, PAYOUT_REGISTRATION_INVOICE, ONE_TIME_SECURITY_INVOICE, ONE_TIME_SECURITY_ADJUSTED_INVOICE"
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
   fields:
@@ -26,6 +26,7 @@ Invoice:
     bankErrorMessage : Maybe Text
     bankErrorCode : Maybe Text
     bankErrorUpdatedAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
     merchantOperatingCityId : Id MerchantOperatingCity
     lastStatusCheckedAt : Maybe UTCTime
     maxMandateAmount : Maybe HighPrecMoney
@@ -108,4 +109,4 @@ Invoice:
     - EXTRA_QUERY_FILE
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, createdAt, updatedAt]

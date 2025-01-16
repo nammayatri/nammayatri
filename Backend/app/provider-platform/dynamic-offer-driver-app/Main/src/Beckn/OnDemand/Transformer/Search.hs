@@ -11,28 +11,20 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Search
-import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
-import qualified Data.List as L
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
-import qualified Domain.Types.Merchant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps
-import qualified Kernel.Prelude
 import qualified Kernel.Types.App
-import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (fromMaybeM, type (:::))
 import Tools.Error
@@ -43,6 +35,7 @@ buildSearchReq messageId subscriber req context = do
   let bapId_ = subscriber.subscriber_id
       bapUri_ = subscriber.subscriber_url
       customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
+      customerNammaTags_ = Beckn.OnDemand.Utils.Search.buildCustomerNammaTags req
       isDashboardRequest_ = Beckn.OnDemand.Utils.Search.checkIfDashboardSearch req
       customerPhoneNum_ = Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
       device_ = Nothing
@@ -55,10 +48,13 @@ buildSearchReq messageId subscriber req context = do
       isRoundTrip_ = Beckn.OnDemand.Utils.Search.getRoundTrip req
       routePoints_ = Beckn.OnDemand.Utils.Search.buildRoutePoints req
       multipleRoutes = Beckn.OnDemand.Utils.Search.buildMultipleRoutesTag req
+      driverIdentifier = Beckn.OnDemand.Utils.Search.getDriverIdentifier req
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
+  stopLocations <- Beckn.OnDemand.Utils.Search.getIntermediateStopLocations req
+  stops <- buildLocation `mapM` stopLocations
   pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
@@ -68,6 +64,7 @@ buildSearchReq messageId subscriber req context = do
         bapId = bapId_,
         bapUri = bapUri_,
         customerLanguage = customerLanguage_,
+        customerNammaTags = customerNammaTags_,
         customerPhoneNum = customerPhoneNum_,
         isDashboardRequest = fromMaybe False isDashboardRequest_,
         roundTrip = fromMaybe False isRoundTrip_,
@@ -85,6 +82,7 @@ buildSearchReq messageId subscriber req context = do
         routeDuration = routeDuration_,
         routePoints = routePoints_,
         transactionId = transactionId_,
+        stops,
         ..
       }
 
@@ -104,3 +102,14 @@ tfLatLong locationGps = do
   lat_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
   lon_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
   pure $ Kernel.External.Maps.LatLong {lat = Kernel.External.Maps.lat lat_, lon = Kernel.External.Maps.lon lon_}
+
+buildLocation :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Spec.Location -> m Domain.Action.Beckn.Search.DSearchReqLocation
+buildLocation location = do
+  address <- tfAddress (Just location)
+  locationGpsText <- location.locationGps & fromMaybeM (InvalidRequest "Missing Pickup Location")
+  latLong <- tfLatLong locationGpsText
+  pure $
+    Domain.Action.Beckn.Search.DSearchReqLocation
+      { address,
+        gps = latLong
+      }

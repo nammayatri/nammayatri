@@ -21,8 +21,8 @@ import Effect.Aff(makeAff, nonCanceler)
 import Common.Types.App (FlowBT) --Need to remove dependencies from app
 import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (doAff)
-import Foreign.Generic (encodeJSON)
-import Data.Either (Either(..))
+import Foreign.Generic (encodeJSON, decode)
+import Data.Either (Either(..), hush)
 import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -32,6 +32,9 @@ import Foreign.Class (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode)
 import Effect.Uncurried (runEffectFn1)
+import Control.Monad.Except (runExcept)
+import DecodeUtil (parseJSON)
+import Foreign (Foreign, unsafeFromForeign, unsafeToForeign)
 
 type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
@@ -107,10 +110,21 @@ getPaymentPageLangKey key = case key of
   "TA_IN" -> "tamil"
   _       -> "english"
 
-paymentPageUI :: forall st. PaymentPagePayload -> FlowBT String st String-- FlowBT String String
-paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+paymentPageUI :: forall st. String -> FlowBT String st String-- FlowBT String String
+paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP payload (Right >>> cb) ) *> pure nonCanceler)
 
 initiatePaymentPage :: Effect Unit
 initiatePaymentPage = do
   runEffectFn1 initiatePP unit
   runEffectFn1 initiatePPSingleInstance unit
+
+decodeSdkPayload :: String -> Maybe PaymentPagePayload
+decodeSdkPayload payload = decodePayload $ parseJSON payload
+  where
+    decodePayload = hush <<< runExcept <<< decode
+
+addLanguageToPayload :: String -> Foreign -> String
+addLanguageToPayload langKey payload = do
+  let jsonObj = unsafeFromForeign payload
+      updatedObj = jsonObj {language = unsafeToForeign langKey}
+  encodeJSON $ unsafeToForeign updatedObj

@@ -42,9 +42,10 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
@@ -78,10 +79,10 @@ idfyWebhookHandler merchantShortId secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -104,10 +105,10 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -132,7 +133,7 @@ onVerify resp respDump = do
       person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
       ack_ <- maybe (pure Ack) (verifyDocument person verificationReq) resp.result
       -- running statusHandler to enable Driver
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC Nothing
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
@@ -145,9 +146,8 @@ onVerify resp respDump = do
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do
-  maxShards <- asks (.maxShards)
   let scheduleTime = calculateScheduleTime (fromMaybe 0 verificationReq.retryCount)
-  createJobIn @_ @'RetryDocumentVerification scheduleTime maxShards $
+  createJobIn @_ @'RetryDocumentVerification verificationReq.merchantId verificationReq.merchantOperatingCityId scheduleTime $
     RetryDocumentVerificationJobData
       { requestId = verificationReq.requestId
       }

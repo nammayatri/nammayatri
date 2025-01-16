@@ -24,6 +24,21 @@ updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateEstimatedEndTimeRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateEstimatedEndTimeRange estimatedEndTimeRange id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.estimatedEndTimeRangeEnd (Kernel.Prelude.fmap (.end) estimatedEndTimeRange),
+      Se.Set Beam.estimatedEndTimeRangeStart (Kernel.Prelude.fmap (.start) estimatedEndTimeRange),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsPickupOrDestinationEdited :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isPickupOrDestinationEdited isPickupOrDestinationEdited, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePreviousRideTripEndPosAndTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
@@ -36,3 +51,9 @@ updatePreviousRideTripEndPosAndTime previousRideTripEndPos previousRideTripEndTi
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateRideTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateRideTags rideTags id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.rideTags rideTags, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateTipAmountField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateTipAmountField tipAmount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.tipAmount tipAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

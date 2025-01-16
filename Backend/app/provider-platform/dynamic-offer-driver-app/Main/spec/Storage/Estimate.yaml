@@ -2,10 +2,11 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
-
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 Estimate:
     tableName: estimate
@@ -22,22 +23,27 @@ Estimate:
       tripCategory: TripCategory
       minFare: HighPrecMoney
       maxFare: HighPrecMoney
+      dpVersion : Maybe Text
       currency: Currency
       estimatedDistance: Maybe Meters
+      supplyDemandRatioFromLoc : Maybe Double
+      supplyDemandRatioToLoc : Maybe Double
+      smartTipSuggestion: Maybe HighPrecMoney
+      smartTipReason: Maybe Text
       distanceUnit: DistanceUnit
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
+      tipOptions: Maybe [Int]
       isScheduled: Bool
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
       tollNames: Maybe [Text]
+      eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
-
-    excludedFields:
-      - merchantId
-      - merchantOperatingCityId
+      merchantId: Maybe (Id Merchant)
+      merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
     beamFields:
       farePolicy:
@@ -54,11 +60,17 @@ Estimate:
 
     sqlType:
       farePolicyId: character varying(36)
+      tipOptions: integer[]
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool
       tripCategory: Maybe TripCategory
       distanceUnit: Maybe DistanceUnit
+      eligibleForUpgrade: Maybe Bool
+
+    constraints:
+      id: PrimaryKey
+      requestId: SecondaryKey
 
     fromTType:
       updatedAt: Kernel.Prelude.fromMaybe createdAt|I
@@ -69,6 +81,7 @@ Estimate:
       maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
       currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
       distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+      eligibleForUpgrade: Kernel.Prelude.fromMaybe False|I
 
     toTType:
       updatedAt: Kernel.Prelude.Just|I
@@ -81,9 +94,19 @@ Estimate:
       maxFare:  Kernel.Prelude.roundToIntegral|I
       maxFareAmount: Kernel.Prelude.Just|I
       distanceUnit: Kernel.Prelude.Just|I
+      eligibleForUpgrade: Kernel.Prelude.Just|I
 
     queries:
       findById:
         kvFunction: findOneWithKV
         where:
           and: [id]
+      updateSupplyDemandRatioByReqIdAndServiceTier:
+        kvFunction: updateWithKV
+        params: [supplyDemandRatioFromLoc, supplyDemandRatioToLoc]
+        where:
+          and: [requestId,vehicleServiceTier]
+      findEligibleForCabUpgrade:
+        kvFunction: findAllWithKVAndConditionalDB
+        where:
+          and: [requestId, eligibleForUpgrade]

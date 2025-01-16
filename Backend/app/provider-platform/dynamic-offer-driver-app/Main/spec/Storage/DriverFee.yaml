@@ -6,19 +6,22 @@ imports:
   PaymentMode: Domain.Types.Plan
   ServiceNames: Domain.Types.Plan
   PlatformFee: Domain.Types.DriverFee
-
+  VehicleCategory : Domain.Types.VehicleCategory
 DriverFee:
   tableName: driver_fee
 
   types:
     DriverFeeStatus:
-      enum: "ONGOING, PAYMENT_PENDING, PAYMENT_OVERDUE, CLEARED, EXEMPTED, COLLECTED_CASH, INACTIVE, CLEARED_BY_YATRI_COINS, MANUAL_REVIEW_NEEDED"
+      enum: "ONGOING, PAYMENT_PENDING, PAYMENT_OVERDUE, CLEARED, EXEMPTED, COLLECTED_CASH, INACTIVE, CLEARED_BY_YATRI_COINS, MANUAL_REVIEW_NEEDED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_MANUAL_REVIEW_REQUIRED, ONE_TIME_SECURITY_ADJUSTED, SETTLED"
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
     FeeType:
       enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
-      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum"
 
+    RefundedBy:
+      enum: "PAYOUT, REFUNDS_API"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
     AutopayPaymentStage:
       enum: "NOTIFICATION_SCHEDULED, NOTIFICATION_ATTEMPTING, EXECUTION_SCHEDULED, EXECUTION_ATTEMPTING, EXECUTION_SUCCESS, EXECUTION_FAILED"
@@ -30,6 +33,14 @@ DriverFee:
       cgst: HighPrecMoney
       sgst: HighPrecMoney
       currency : Currency
+      derive': "Generic, Eq, Show"
+
+    RefundInfo:
+      refundedBy: Maybe RefundedBy
+      refundedAt: Maybe UTCTime
+      refundedAmount: Maybe HighPrecMoney
+      refundEntityId: Maybe Text
+      status: Maybe DriverFeeStatus
       derive': "Generic, Eq, Show"
 
 
@@ -69,7 +80,15 @@ DriverFee:
     planMode : Maybe PaymentMode
     serviceName : ServiceNames
     vehicleNumber : Maybe Text
+    refundedBy : Maybe RefundedBy
+    refundEntityId : Maybe Text
+    refundedAt : Maybe UTCTime
+    refundedAmount : Maybe HighPrecMoney
     currency : Currency
+    vehicleCategory : VehicleCategory|NoRelation
+    siblingFeeId : Maybe (Id DriverFee)
+    hasSibling : Maybe Bool
+    splitOfDriverFeeId : Maybe (Id DriverFee)
 
   derives: "Generic, Show, Eq"
 
@@ -79,10 +98,13 @@ DriverFee:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DriverFeeStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FeeType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AutopayPaymentStage>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RefundedBy>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <RefundedBy>
 
   beamType:
     merchantOperatingCityId: Maybe Text
     serviceName: Maybe ServiceNames
+    vehicleCategory: Maybe VehicleCategory
 
   beamFields:
     platformFee:
@@ -108,6 +130,7 @@ DriverFee:
     govtCharges: Kernel.Types.Common.mkAmountWithDefault govtChargesAmount govtCharges|E
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -115,7 +138,7 @@ DriverFee:
     sgst: ((.sgst) platformFee)|E
     serviceName: (Just serviceName)|E
     merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
-
+    vehicleCategory : Kernel.Prelude.Just|I
     govtCharges: Kernel.Prelude.roundToIntegral|I
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     govtChargesAmount:  Kernel.Prelude.Just|I

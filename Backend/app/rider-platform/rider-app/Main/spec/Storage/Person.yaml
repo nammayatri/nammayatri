@@ -88,6 +88,7 @@ Person:
     customerReferralCode: Maybe Text
     clientSdkVersion : Maybe Version
     clientBundleVersion : Maybe Version
+    clientReactNativeVersion : Maybe Text
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
@@ -98,6 +99,11 @@ Person:
     defaultPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
+    informPoliceSos : Bool
+    androidId: Maybe Text
+    customerNammaTags: "Maybe [Text]"
+    payoutVpa: Maybe Text
+    frequentLocGeohashes: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -137,7 +143,7 @@ Person:
     clientOsVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
-
+    informPoliceSos: Maybe Bool
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
@@ -152,7 +158,7 @@ Person:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
-
+    informPoliceSos : fromMaybe False informPoliceSos|E
 
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
@@ -171,6 +177,7 @@ Person:
     clientOsType:  (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    informPoliceSos: Just informPoliceSos|E
 
   constraints:
     id: PrimaryKey
@@ -235,6 +242,11 @@ Person:
       params: [whatsappNotificationEnrollStatus, updatedAt]
       where: id
 
+    updateFreqLocGeohashes:
+      kvFunction: updateWithKV
+      params: [frequentLocGeohashes]
+      where: id
+
     setIsNewFalse:
       kvFunction: updateWithKV
       params: [isNew, updatedAt]
@@ -296,14 +308,20 @@ Person:
       kvFunction: updateWithKV
       params: [defaultPaymentMethodId]
       where: id
-    updateTotalRidesCount:
-      kvFunction: updateOneWithKV
-      params: [id, totalRidesCount]
-      where: id
 
     findAllByDeviceId:
       kvFunction: findAllWithKV
       where: deviceId
+
+    updateCustomerTags:
+      kvFunction: updateWithKV
+      params: [customerNammaTags]
+      where: id
+
+    updatePayoutVpa:
+      kvFunction: updateWithKV
+      params: [payoutVpa]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

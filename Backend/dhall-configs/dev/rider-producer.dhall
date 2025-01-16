@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/rider-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "atlas_app"
       , connectionPoolCount = +25
       }
 
@@ -90,4 +90,5 @@ in  { hedisCfg
     , runReviver = True
     , kafkaProducerCfg
     , cacConfig
+    , producersPerPod = +5
     }

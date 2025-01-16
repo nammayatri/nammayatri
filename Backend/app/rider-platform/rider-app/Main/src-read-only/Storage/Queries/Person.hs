@@ -70,6 +70,11 @@ updateCustomerPaymentId customerPaymentId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.customerPaymentId customerPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCustomerTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCustomerTags customerNammaTags id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.customerNammaTags customerNammaTags, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDefaultPaymentMethodId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -83,6 +88,11 @@ updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.S
 updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFollowsRide followsRide id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFreqLocGeohashes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFreqLocGeohashes frequentLocGeohashes id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.frequentLocGeohashes frequentLocGeohashes, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateHasDisability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateHasDisability hasDisability id = do
   _now <- getCurrentTime
@@ -92,6 +102,9 @@ updateIsValidRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Pr
 updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateReferralCodeAndReferredAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -104,11 +117,6 @@ updateSafetyDrillStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kerne
 updateSafetyDrillStatus hasCompletedMockSafetyDrill id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateTotalRidesCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ())
-updateTotalRidesCount id totalRidesCount = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.id (Kernel.Types.Id.getId id), Se.Set Beam.totalRidesCount totalRidesCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateWhatsappNotificationEnrollStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -125,6 +133,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
+      Se.Set Beam.androidId androidId,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.blocked blocked,
       Se.Set Beam.blockedAt (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
@@ -136,9 +145,11 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientReactNativeVersion clientReactNativeVersion,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
+      Se.Set Beam.customerNammaTags customerNammaTags,
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
@@ -152,6 +163,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
       Se.Set Beam.firstName firstName,
       Se.Set Beam.followsRide followsRide,
+      Se.Set Beam.frequentLocGeohashes frequentLocGeohashes,
       Se.Set Beam.gender gender,
       Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
       Se.Set Beam.hasCompletedSafetySetup hasCompletedSafetySetup,
@@ -159,6 +171,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
+      Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.language language,
@@ -172,6 +185,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
+      Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,

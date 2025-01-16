@@ -53,3 +53,47 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN distance_unit chara
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_dashboard_request boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_namma_tags text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN search_tags text[] ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN trip_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN to_loc_geohash text ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN from_loc_geohash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_config_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN driver_id_for_search character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN dynamic_pricing_logic_version integer ;

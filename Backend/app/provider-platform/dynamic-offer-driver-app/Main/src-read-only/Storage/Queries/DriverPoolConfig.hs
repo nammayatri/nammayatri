@@ -4,6 +4,7 @@
 
 module Storage.Queries.DriverPoolConfig where
 
+import qualified Data.Vector
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -39,6 +40,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.actualDistanceThresholdOnRide actualDistanceThresholdOnRide,
       Se.Set Beam.area area,
       Se.Set Beam.batchSizeOnRide batchSizeOnRide,
+      Se.Set Beam.batchSizeOnRideWithStraightLineDistance batchSizeOnRideWithStraightLineDistance,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentRideTripCategoryValidForForwardBatching currentRideTripCategoryValidForForwardBatching,
       Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
@@ -49,7 +51,9 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.driverRequestCountLimit driverRequestCountLimit,
       Se.Set Beam.driverToDestinationDistanceThreshold driverToDestinationDistanceThreshold,
       Se.Set Beam.driverToDestinationDuration driverToDestinationDuration,
+      Se.Set Beam.dynamicBatchSize (Kernel.Prelude.Just $ Data.Vector.toList dynamicBatchSize),
       Se.Set Beam.enableForwardBatching enableForwardBatching,
+      Se.Set Beam.enableUnifiedPooling enableUnifiedPooling,
       Se.Set Beam.maxDriverQuotesRequired maxDriverQuotesRequired,
       Se.Set Beam.maxNumberOfBatches maxNumberOfBatches,
       Se.Set Beam.maxParallelSearchRequests maxParallelSearchRequests,
@@ -70,6 +74,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.tripCategory tripCategory,
       Se.Set Beam.tripDistance tripDistance,
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.useOneToOneOsrmMapping useOneToOneOsrmMapping,
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -83,6 +88,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             actualDistanceThresholdOnRide = actualDistanceThresholdOnRide,
             area = area,
             batchSizeOnRide = batchSizeOnRide,
+            batchSizeOnRideWithStraightLineDistance = batchSizeOnRideWithStraightLineDistance,
             createdAt = createdAt,
             currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
             distanceBasedBatchSplit = distanceBasedBatchSplit,
@@ -93,7 +99,9 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             driverRequestCountLimit = driverRequestCountLimit,
             driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
             driverToDestinationDuration = driverToDestinationDuration,
+            dynamicBatchSize = Kernel.Prelude.maybe (Data.Vector.singleton driverBatchSize) Data.Vector.fromList dynamicBatchSize,
             enableForwardBatching = enableForwardBatching,
+            enableUnifiedPooling = enableUnifiedPooling,
             id = Kernel.Types.Id.Id id,
             maxDriverQuotesRequired = maxDriverQuotesRequired,
             maxNumberOfBatches = maxNumberOfBatches,
@@ -115,6 +123,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             tripCategory = tripCategory,
             tripDistance = tripDistance,
             updatedAt = updatedAt,
+            useOneToOneOsrmMapping = useOneToOneOsrmMapping,
             vehicleVariant = vehicleVariant
           }
 
@@ -125,6 +134,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.actualDistanceThresholdOnRide = actualDistanceThresholdOnRide,
         Beam.area = area,
         Beam.batchSizeOnRide = batchSizeOnRide,
+        Beam.batchSizeOnRideWithStraightLineDistance = batchSizeOnRideWithStraightLineDistance,
         Beam.createdAt = createdAt,
         Beam.currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
         Beam.distanceBasedBatchSplit = distanceBasedBatchSplit,
@@ -135,7 +145,9 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.driverRequestCountLimit = driverRequestCountLimit,
         Beam.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
         Beam.driverToDestinationDuration = driverToDestinationDuration,
+        Beam.dynamicBatchSize = Kernel.Prelude.Just $ Data.Vector.toList dynamicBatchSize,
         Beam.enableForwardBatching = enableForwardBatching,
+        Beam.enableUnifiedPooling = enableUnifiedPooling,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxDriverQuotesRequired = maxDriverQuotesRequired,
         Beam.maxNumberOfBatches = maxNumberOfBatches,
@@ -157,5 +169,6 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.tripCategory = tripCategory,
         Beam.tripDistance = tripDistance,
         Beam.updatedAt = updatedAt,
+        Beam.useOneToOneOsrmMapping = useOneToOneOsrmMapping,
         Beam.vehicleVariant = vehicleVariant
       }

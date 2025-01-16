@@ -15,12 +15,15 @@
 
 module Storage.CachedQueries.BlackListOrg
   ( findBySubscriberIdAndDomain,
+    findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.BlackListOrg
 import Domain.Types.Common
+import Domain.Types.Merchant hiding (Subscriber)
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Beckn.Domain (Domain (..))
@@ -44,3 +47,19 @@ cacheOrganization org = do
 
 makeShortIdKey :: ShortId Subscriber -> Domain -> Text
 makeShortIdKey subscriberId domain = "CachedQueries:BlackListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain
+
+findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> Id Merchant -> Id MerchantOperatingCity -> m (Maybe BlackListOrg)
+findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId subscriberId domain merchantId merchantOperatingCityId =
+  Hedis.safeGet (makeConfigKey subscriberId domain merchantId merchantOperatingCityId) >>= \case
+    Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a
+    Nothing -> findAndCacheWithMerchantAndCityId
+  where
+    findAndCacheWithMerchantAndCityId = flip whenJust cacheOrganizationWithMerchantIdAndOperatingCityId /=<< Queries.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId subscriberId domain merchantId merchantOperatingCityId
+
+cacheOrganizationWithMerchantIdAndOperatingCityId :: (CacheFlow m r) => BlackListOrg -> m ()
+cacheOrganizationWithMerchantIdAndOperatingCityId org = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeConfigKey org.subscriberId org.domain org.merchantId org.merchantOperatingCityId) (coerce @BlackListOrg @(BlackListOrgD 'Unsafe) org) expTime
+
+makeConfigKey :: ShortId Subscriber -> Domain -> Id Merchant -> Id MerchantOperatingCity -> Text
+makeConfigKey subscriberId domain merchantId merchantOperatingCityId = "CachedQueries:BlackListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain <> "-MerchantId-" <> merchantId.getId <> "-MerchantOperatingCityId-" <> merchantOperatingCityId.getId

@@ -42,6 +42,7 @@ dump.rdb
 
 .hie-bios-cache
 .cabal-dir
+hoogle-db
 
 # load test files
 load-test/bin

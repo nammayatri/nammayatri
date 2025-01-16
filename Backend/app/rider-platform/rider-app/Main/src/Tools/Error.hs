@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error (module Tools.Error) where
 
@@ -22,19 +21,22 @@ import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Network.HTTP.Types (Status (statusCode))
 import Servant.Client (ResponseF (responseStatusCode))
 
-data CustomerError = PersonMobileAlreadyExists Text
+data CustomerError = PersonMobileAlreadyExists Text | DeviceTokenNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''CustomerError
 
 instance IsBaseError CustomerError where
   toMessage (PersonMobileAlreadyExists phoneNo) = Just $ "Mobile number " <> phoneNo <> " already exists with another user."
+  toMessage DeviceTokenNotFound = Just "Device Token does not exist."
 
 instance IsHTTPError CustomerError where
   toErrorCode = \case
     PersonMobileAlreadyExists _ -> "PERSON_MOBILE_ALREADY_EXISTS"
+    DeviceTokenNotFound -> "DEVICE_TOKEN_NOT_FOUND"
   toHttpCode = \case
     PersonMobileAlreadyExists _ -> E400
+    DeviceTokenNotFound -> E400
 
 instance IsAPIError CustomerError
 
@@ -305,6 +307,8 @@ instance IsAPIError RiderError
 data LocationMappingError
   = FromLocationMappingNotFound Text
   | FromLocationNotFound Text
+  | StopsLocationMappingNotFound Text
+  | StopsLocationNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''LocationMappingError
@@ -313,11 +317,15 @@ instance IsBaseError LocationMappingError where
   toMessage = \case
     FromLocationMappingNotFound id_ -> Just $ "From location mapping not found for entity id: " <> id_ <> "."
     FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
+    StopsLocationMappingNotFound id_ -> Just $ "Stops location mapping not found for entity id: " <> id_ <> "."
+    StopsLocationNotFound id_ -> Just $ "Stops location not found for locationId: " <> id_ <> "."
 
 instance IsHTTPError LocationMappingError where
   toErrorCode = \case
     FromLocationMappingNotFound _ -> "FROM_LOCATION_MAPPING_NOT_FOUND"
     FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
+    StopsLocationMappingNotFound _ -> "STOPS_LOCATION_MAPPING_NOT_FOUND"
+    StopsLocationNotFound _ -> "STOPS_LOCATION_NOT_FOUND"
 
   toHttpCode _ = E500
 
@@ -377,9 +385,45 @@ instance IsHTTPError PartnerOrgConfigError where
 
 instance IsAPIError PartnerOrgConfigError
 
+data RouteError
+  = RouteNotFound Text
+  | RouteDoesNotExist Text
+  | RouteFareNotFound Text Text Text
+  | RouteMappingNotFound Text
+  | RouteMappingDoesNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RouteError
+
+instance IsBaseError RouteError where
+  toMessage = \case
+    RouteNotFound msg -> Just $ "Route Not Found:-" <> msg
+    RouteDoesNotExist msg -> Just $ "Route Does Not Exist:-" <> msg
+    RouteMappingNotFound msg -> Just $ "Route Mapping Not Found:-" <> msg
+    RouteMappingDoesNotExist routeCode startStop -> Just $ "Route Mapping Does Not Exist:-" <> routeCode <> ", " <> startStop
+    RouteFareNotFound routeCode startStop endStop -> Just $ "Route Fare Not Found:-" <> routeCode <> ", " <> startStop <> ", " <> endStop
+
+instance IsHTTPError RouteError where
+  toErrorCode = \case
+    RouteNotFound _ -> "ROUTE_NOT_FOUND"
+    RouteDoesNotExist _ -> "ROUTE_DOES_NOT_EXIST"
+    RouteMappingNotFound _ -> "ROUTE_MAPPING_NOT_FOUND"
+    RouteMappingDoesNotExist _ _ -> "ROUTE_MAPPING_DOES_NOT_EXIST"
+    RouteFareNotFound _ _ _ -> "ROUTE_FARE_NOT_FOUND"
+
+  toHttpCode = \case
+    RouteNotFound _ -> E500
+    RouteDoesNotExist _ -> E400
+    RouteFareNotFound _ _ _ -> E500
+    RouteMappingDoesNotExist _ _ -> E500
+    RouteMappingNotFound _ -> E500
+
+instance IsAPIError RouteError
+
 data StationError
   = StationNotFound Text
   | StationDoesNotExist Text
+  | StationsNotFound Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''StationError
@@ -388,15 +432,18 @@ instance IsBaseError StationError where
   toMessage = \case
     StationNotFound msg -> Just $ "Station Not Found:-" <> msg
     StationDoesNotExist msg -> Just $ "Station Does Not Exist:-" <> msg
+    StationsNotFound start end -> Just $ "Station Not Found:-" <> start <> ", " <> end
 
 instance IsHTTPError StationError where
   toErrorCode = \case
     StationNotFound _ -> "STATION_NOT_FOUND"
     StationDoesNotExist _ -> "STATION_DOES_NOT_EXIST"
+    StationsNotFound _ _ -> "STATIONS_NOT_FOUND"
 
   toHttpCode = \case
     StationNotFound _ -> E500
     StationDoesNotExist _ -> E400
+    StationsNotFound _ _ -> E500
 
 instance IsAPIError StationError
 
@@ -604,6 +651,7 @@ data SafetyError
   | CallSidNullError
   | CallRecordNotFoundError Text
   | RideIdEmptyInCallRecord Text
+  | PoliceCallNotAllowed Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SafetyError
@@ -614,6 +662,7 @@ instance IsBaseError SafetyError where
     CallSidNullError -> Just "CallSid not found in IVR response from Exotel."
     CallRecordNotFoundError sid -> Just $ "Call Record not found in DB against callSid : " <> show sid
     RideIdEmptyInCallRecord sid -> Just $ "RideId is empty in Call Record against callSid : " <> show sid
+    PoliceCallNotAllowed personId -> Just $ "Police call not allowed by personId : " <> show personId
 
 instance IsHTTPError SafetyError where
   toErrorCode = \case
@@ -621,10 +670,72 @@ instance IsHTTPError SafetyError where
     CallSidNullError -> "CALL_SID_NULL_ERROR"
     CallRecordNotFoundError _ -> "CALL_RECORD_NOT_FOUND_ERROR"
     RideIdEmptyInCallRecord _ -> "RIDE_ID_EMPTY_IN_CALL_RECORD"
+    PoliceCallNotAllowed _ -> "POLICE_CALL_NOT_ALLOWED"
   toHttpCode = \case
     IncidentReportServiceUnavailable _ -> E400
     CallSidNullError -> E500
     CallRecordNotFoundError _ -> E500
     RideIdEmptyInCallRecord _ -> E500
+    PoliceCallNotAllowed _ -> E400
 
 instance IsAPIError SafetyError
+
+data JourneyError
+  = JourneyNotFound Text
+  | JourneyLegReqDataNotFound Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''JourneyError
+
+instance IsBaseError JourneyError where
+  toMessage = \case
+    JourneyNotFound journeyId -> Just ("Journey with id: " <> journeyId <> " not found.")
+    JourneyLegReqDataNotFound sequenceNumber -> Just ("Request data for journey leg number: " <> show sequenceNumber <> " not found!")
+
+instance IsHTTPError JourneyError where
+  toErrorCode = \case
+    JourneyNotFound _ -> "JOURNEY_NOT_FOUND"
+    JourneyLegReqDataNotFound _ -> "JOURNEY_LEG_REQ_DATA_NOT_FOUND"
+  toHttpCode = \case
+    JourneyNotFound _ -> E400
+    JourneyLegReqDataNotFound _ -> E400
+
+instance IsAPIError JourneyError
+
+data CancellationError
+  = CancellationNotSupported
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CancellationError
+
+instance IsBaseError CancellationError where
+  toMessage = \case
+    CancellationNotSupported -> Just $ "Cancellation Not Allowed"
+
+instance IsHTTPError CancellationError where
+  toErrorCode = \case
+    CancellationNotSupported -> "CANCELLATION_NOT_SUPPORTED"
+
+  toHttpCode = \case
+    CancellationNotSupported -> E500
+
+instance IsAPIError CancellationError
+
+data DiscountError
+  = DiscountsIneligible
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DiscountError
+
+instance IsBaseError DiscountError where
+  toMessage = \case
+    DiscountsIneligible -> Just $ "Discount not eligible"
+
+instance IsHTTPError DiscountError where
+  toErrorCode = \case
+    DiscountsIneligible -> "DISCOUNTS_INELIGIBLE"
+
+  toHttpCode = \case
+    DiscountsIneligible -> E400
+
+instance IsAPIError DiscountError

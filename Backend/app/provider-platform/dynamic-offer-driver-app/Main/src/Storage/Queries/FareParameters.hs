@@ -16,6 +16,7 @@
 module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -131,6 +132,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 customerExtraFee = mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
                 serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
                 parkingCharge = parkingCharge,
+                stopCharges = stopCharges,
                 nightShiftRateIfApplies = nightShiftRateIfApplies,
                 govtCharges = mkAmountWithDefault govtChargesAmount <$> govtCharges,
                 baseFare = mkAmountWithDefault baseFareAmount baseFare,
@@ -149,7 +151,11 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                       { onFare = cardChargeOnFare,
                         fixed = fixedCardCharge
                       },
-                updatedAt = fromMaybe now updatedAt
+                platformFeeChargesBy = fromMaybe FP.Subscription platformFeeChargesBy,
+                updatedAt = fromMaybe now updatedAt,
+                merchantId = Id <$> merchantId,
+                merchantOperatingCityId = Id <$> merchantOperatingCityId,
+                ..
               }
       Nothing -> return Nothing
 
@@ -161,6 +167,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.customerExtraFee = roundToIntegral <$> customerExtraFee,
         BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
+        BeamFP.stopCharges = stopCharges,
         BeamFP.govtCharges = roundToIntegral <$> govtCharges,
         BeamFP.driverSelectedFareAmount = driverSelectedFare,
         BeamFP.customerExtraFeeAmount = customerExtraFee,
@@ -183,6 +190,10 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.insuranceCharge = insuranceCharge,
         BeamFP.cardChargeOnFare = cardCharge >>= (.onFare),
         BeamFP.fixedCardCharge = cardCharge >>= (.fixed),
+        BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.currency = Just currency,
-        BeamFP.updatedAt = Just updatedAt
+        BeamFP.updatedAt = Just updatedAt,
+        merchantId = getId <$> merchantId,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        ..
       }

@@ -14,7 +14,7 @@
 
 module Beckn.OnDemand.Utils.Search where
 
-import Beckn.OnDemand.Utils.Common (firstStop, lastStop)
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
@@ -22,10 +22,11 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Time
+import qualified Domain.Types.RefereeLink as DRL
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
 
 getPickUpTime :: Spec.SearchReqMessage -> Maybe Data.Time.UTCTime
@@ -46,6 +47,14 @@ getPickUpLocation req =
     >>= (.stopLocation)
     & fromMaybeM (InvalidRequest "Missing Pickup Location")
 
+getPickUp :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Stop
+getPickUp req =
+  req.searchReqMessageIntent
+    >>= (.intentFulfillment)
+    >>= (.fulfillmentStops)
+    >>= firstStop
+    & fromMaybeM (InvalidRequest "Missing Pickup")
+
 getDropOffLocation :: Spec.SearchReqMessage -> Maybe Spec.Location
 getDropOffLocation req = do
   req.searchReqMessageIntent
@@ -53,6 +62,24 @@ getDropOffLocation req = do
     >>= (.fulfillmentStops)
     >>= lastStop
     >>= (.stopLocation)
+
+getIntermediateStops :: Spec.SearchReqMessage -> Maybe [Spec.Stop]
+getIntermediateStops req = do
+  req.searchReqMessageIntent
+    >>= (.intentFulfillment)
+    >>= (.fulfillmentStops)
+    >>= (Just . intermediateStops)
+
+getIntermediateStopLocations :: MonadFlow m => Spec.SearchReqMessage -> m [Spec.Location]
+getIntermediateStopLocations req = do
+  pickup <- getPickUp req
+  case getIntermediateStops req of
+    Nothing -> return []
+    Just stops -> do
+      traverse getIntermediateStopLocation (sequenceStops pickup.stopId stops)
+  where
+    getIntermediateStopLocation :: MonadFlow m => Spec.Stop -> m Spec.Location
+    getIntermediateStopLocation stop = stop.stopLocation & fromMaybeM (InvalidRequest ("Missing Stop Location" <> show stop))
 
 getPickUpLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
 getPickUpLocationGps req =
@@ -103,6 +130,12 @@ buildCustomerLanguage req = do
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
   readMaybe . T.unpack =<< tagValue
 
+buildCustomerNammaTags :: Spec.SearchReqMessage -> Maybe [Text]
+buildCustomerNammaTags req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_NAMMA_TAGS tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 checkIfDashboardSearch :: Spec.SearchReqMessage -> Maybe Bool
 checkIfDashboardSearch req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
@@ -136,3 +169,31 @@ buildMultipleRoutesTag :: Spec.SearchReqMessage -> Maybe [Maps.RouteInfo]
 buildMultipleRoutesTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   decode . encodeUtf8 =<< Utils.getTagV2 Tag.ROUTE_INFO Tag.MULTIPLE_ROUTES tagGroups
+
+getDriverIdentifier :: Spec.SearchReqMessage -> Maybe DRL.DriverIdentifier
+getDriverIdentifier req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  decode . encodeUtf8 =<< Utils.getTagV2 Tag.DRIVER_IDENTIFIER Tag.DRIVER_IDENTITY tagGroups
+
+firstStop :: [Spec.Stop] -> Maybe Spec.Stop
+firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
+
+lastStop :: [Spec.Stop] -> Maybe Spec.Stop
+lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
+
+intermediateStops :: [Spec.Stop] -> [Spec.Stop]
+intermediateStops = filter (\stop -> Spec.stopType stop == Just (show Enums.INTERMEDIATE_STOP))
+
+sequenceStops :: Maybe String -> [Spec.Stop] -> [Spec.Stop]
+sequenceStops pickupStopId stops = go pickupStopId []
+  where
+    go mbPreviousStopId acc = do
+      case mbPreviousStopId of
+        Nothing -> acc
+        Just previousStopId -> do
+          case findNextStop previousStopId of
+            Just nextStop -> go nextStop.stopId (acc ++ [nextStop])
+            Nothing -> acc
+
+    findNextStop :: String -> Maybe Spec.Stop
+    findNextStop prevStopId = stops & find (\stop -> stop.stopParentStopId == Just prevStopId)

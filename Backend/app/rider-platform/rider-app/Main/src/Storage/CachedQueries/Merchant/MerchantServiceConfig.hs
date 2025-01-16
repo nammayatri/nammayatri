@@ -31,9 +31,12 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -92,6 +95,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
       CallServiceConfig callCfg -> case callCfg of
         Call.ExotelConfig _ -> CallService Call.Exotel
+        Call.TwillioCallConfig _ -> CallService Call.TwillioCall
       NotificationServiceConfig notificationCfg -> case notificationCfg of
         Notification.FCMConfig _ -> NotificationService Notification.FCM
         Notification.PayTMConfig _ -> NotificationService Notification.PayTM
@@ -102,6 +106,15 @@ cacheMerchantServiceConfig merchantServiceConfig = do
       MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
         Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
         Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
+      BusPaymentServiceConfig paymentCfg -> case paymentCfg of
+        Payment.JuspayConfig _ -> BusPaymentService Payment.Juspay
+        Payment.StripeConfig _ -> BusPaymentService Payment.Stripe
+      BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+        Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
+        Payment.StripeConfig _ -> BbpsPaymentService Payment.Stripe
+      MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+        Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
+        Payment.StripeConfig _ -> MultiModalPaymentService Payment.Stripe
       IssueTicketServiceConfig ticketCfg -> case ticketCfg of
         Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
       IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -110,6 +123,11 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
         Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
         Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
+      PayoutServiceConfig payoutCfg -> case payoutCfg of
+        Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+      MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+        MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
+        MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

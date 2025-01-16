@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.Vehicle where
 
 import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -19,8 +20,9 @@ instance FromTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Domain.Types.Vehicle.Vehicle
           { airConditioned = airConditioned,
             capacity = capacity,
-            category = category,
+            category = Domain.Types.VehicleVariant.getVehicleCategory category variant,
             color = color,
+            downgradeReason = downgradeReason,
             driverId = Kernel.Types.Id.Id driverId,
             energyType = energyType,
             luggageCapacity = luggageCapacity,
@@ -50,6 +52,7 @@ instance ToTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Beam.capacity = capacity,
         Beam.category = category,
         Beam.color = color,
+        Beam.downgradeReason = downgradeReason,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.energyType = energyType,
         Beam.luggageCapacity = luggageCapacity,

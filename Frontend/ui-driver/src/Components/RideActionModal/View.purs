@@ -22,7 +22,7 @@ import Prelude (class Eq, class Show, ($))
 import Animation (scaleYAnimWithDelay)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.RideActionModal.Controller (Action(..), Config)
+import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..))
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
@@ -30,10 +30,9 @@ import Data.Int as Int
 import Data.Maybe as Maybe
 import Data.Ord (abs)
 import Data.Tuple
-import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
@@ -47,8 +46,8 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
-import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom)
+import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -65,6 +64,9 @@ import Debug
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.String as DS
 import JBridge (fromMetersToKm)
+import Data.Maybe
+import Data.Int
+import Components.RateCard.Controller 
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -124,7 +126,7 @@ messageButton push config =
       ]
   ]
   where 
-    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall))
+    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) && (not config.isDelivery || config.driverVehicle /= "BIKE")
 
 getCurrentAndroidVersion :: Merchant -> Int
 getCurrentAndroidVersion merchant =
@@ -152,7 +154,7 @@ callButton push config =
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
-  , visibility $ boolToVisibility $ config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental
+  , visibility $ boolToVisibility $ config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || DA.any (_ == config.rideType) [ST.Rental, ST.Delivery]
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
   , rippleColor Color.rippleShade
@@ -167,8 +169,30 @@ rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> Presto
 rideActionViewWithLabel push config =
   let tagConfig = if config.bookingFromOtherPlatform then 
                     dummyLabelConfig{ text = (getString THIRD_PARTY_BOOKING) <> ": " <> config.bapName, textColor = Color.black700, backgroundColor = Color.grey900 }
-                  else 
+                  else if config.rideType == ST.Rental then 
+                  
+                    dummyLabelConfig
+                      { label = "Rental Ride",
+                        backgroundColor = Color.blueGreen,
+                        text = getString RENTAL_RIDE,
+                        secondaryText = getString LEARN_MORE,
+                        imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
+                      }
+                  else if config.rideType == ST.Intercity then 
+                    dummyLabelConfig
+                      { label = "Intercity Ride ",
+                        backgroundColor = Color.blue800,
+                        text = getString  INTERCITY_RIDE,
+                        secondaryText = getString LEARN_MORE,
+                        imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
+                      }
+
+                    else 
                     getRideLabelData config.specialLocationTag
+      popupType = if config.bookingFromOtherPlatform then NoInfo
+                  else if config.rideType == ST.Rental then RentalInfo
+                  else if config.rideType == ST.Intercity then IntercityInfo
+                  else AccessibilityInfo
   in
   linearLayout
   [ width MATCH_PARENT
@@ -200,7 +224,7 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility if Maybe.isJust config.accessibilityTag && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
+          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity ) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
@@ -214,7 +238,7 @@ rideActionViewWithLabel push config =
               , height WRAP_CONTENT
               , orientation VERTICAL
               , margin $ MarginLeft 5
-              , onClick push $ const SecondaryTextClick
+              , onClick push $ const $ SecondaryTextClick popupType
               ]
               [ textView $ 
                   [ width WRAP_CONTENT
@@ -242,7 +266,7 @@ rideTypeView push config =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingHorizontal 16 16
-  , visibility if config.appConfig.rideActionModelConfig.showVehicleVariant && config.requestedVehicleVariant /= Maybe.Nothing then VISIBLE else GONE
+  , visibility $ boolToVisibility $ config.appConfig.rideActionModelConfig.showVehicleVariant && config.requestedVehicleVariant /= Maybe.Nothing && not config.isDelivery
   ][ linearLayout
       [ height $ V 1
       , width MATCH_PARENT
@@ -272,6 +296,14 @@ rideTypeView push config =
 
 rideActionView :: forall w . Margin -> (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideActionView layoutMargin push config =
+  
+  (if os == "IOS" then linearLayout else scrollView)
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , nestedScrollView true
+  , scrollBarY false
+  ]
+  [
   Keyed.linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -281,7 +313,7 @@ rideActionView layoutMargin push config =
   , padding $ PaddingTop 6
   , gravity CENTER
   , margin layoutMargin
-    , stroke $ "1," <> Color.grey800
+  , stroke $ "1," <> Color.grey800
   ][ Tuple "rideActionView_Child_1" $ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -305,7 +337,7 @@ rideActionView layoutMargin push config =
                 else if(config.rideType == ST.Rental && Maybe.isJust config.stopAddress) then arrivedStopView push config else endRide push config ]
         ])
     , Tuple "rideActionView_Child_2" $ cancelRide push config
-  ]
+  ]]
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 openGoogleMap push config =
@@ -610,7 +642,7 @@ startRide push config =
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text (getString START_RIDE)
+      , text $ if config.isDelivery then if (getValueToLocalStore PARCEL_IMAGE_UPLOADED) == "true" then getString START' else getString UPLOAD_PARCEL_IMAGE else (getString START_RIDE)
       , color Color.white900
       , afterRender push $ const NoAction
       , padding (Padding 0 0 0 4)
@@ -632,7 +664,7 @@ endRide push config =
   ][ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text (getString END_RIDE)
+    , text $ if config.isDelivery then getString END' else getString END_RIDE
     , color Color.white900
     , padding (Padding 0 0 0 4)
     , afterRender push $ const NoAction
@@ -690,7 +722,12 @@ estimatedFareView push config =
     , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
-    ][ textView $
+    ][ linearLayout [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation HORIZONTAL
+    ][
+       textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text if config.rideType == ST.Rental then (getString RENTAL_FARE) else (getString RIDE_FARE)
@@ -698,6 +735,7 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
+    ]
       , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -909,13 +947,28 @@ rideTierAndCapacity push config =
       , background Color.black700
       , cornerRadius 4.0
       , margin $ MarginRight 6
-      , visibility $ boolToVisibility $ Maybe.isJust config.capacity
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity && not config.isDelivery
+      ][]
+    , textView
+      [ height $ V 18
+      , width WRAP_CONTENT
+      , text $ show config.rideType
+      , margin $ MarginRight 6
+      , visibility $ boolToVisibility $  config.rideType == ST.Intercity
+      ]
+    , linearLayout
+      [ width $ V 5
+      , height $ V 5
+      , background Color.black700
+      , cornerRadius 4.0
+      , margin $ MarginRight 6
+      , visibility $ boolToVisibility $  config.rideType == ST.Intercity
       ][]
     , imageView
       [ height $ V 16
       , width $ V 16
       , imageWithFallback $ fetchImage FF_ASSET "ic_profile_active"
-      , visibility $ boolToVisibility $ Maybe.isJust config.capacity
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity && not config.isDelivery
       , alpha 0.9
       , margin $ MarginRight 2
       ]
@@ -924,10 +977,9 @@ rideTierAndCapacity push config =
       , width WRAP_CONTENT
       , color Color.black700
       , margin $ MarginRight 10
+      , text $ maybe "" show config.capacity
+      , visibility $ boolToVisibility $ Maybe.isJust config.capacity && not config.isDelivery
       ] <> FontStyle.body1 TypoGraphy
-        <> case config.capacity of
-            Maybe.Just cap -> [text $ show cap]
-            Maybe.Nothing -> [visibility GONE]
   ] 
   where paddingLeft = if Maybe.isJust config.acRide then 4 else 10
         tierName = if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
@@ -962,28 +1014,36 @@ normalRideInfoView push config =
           , separator true
           , totalDistanceView push config
           ]
-      , linearLayout[
-          height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , visibility $ boolToVisibility config.hasToll
-        , margin $ MarginTop 12
-        ][
-          imageView[
-            height $ V 20
-          , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
-          ]
-        , textView $
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text $ getString RIDE_TOLL_FARE_INCLUDES
-          , color Color.blue800
-          , margin $ MarginLeft 4
-          ] <> FontStyle.body1 TypoGraphy
-        ]
+      , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
+      , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
+      , if config.isDelivery then collectDeliveryCashView else noView
       ] 
   ]
-  
+
+
+extraChargesView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
+extraChargesView img txt = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ MarginTop 12
+  ][
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , imageWithFallback img
+    ]
+  , textView $ [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text txt
+    , color Color.blue800
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+
+
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
   linearLayout
@@ -1012,14 +1072,14 @@ sourceDestinationImageView  config =
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
         ]]<>
         (if not $ config.rideType == ST.Rental && config.startRideActive then ([
-        SeparatorView.view separatorConfig
+        SeparatorView.view (separatorConfig config)
       , imageView
         [ height $ V 14
         , width $ V 14
         , imageWithFallback $ fetchImage FF_ASSET if config.rideType == ST.Rental then (if Maybe.isNothing config.stopAddress then "ny_ic_last_drop_indicator" else "ny_ic_drop_indicator") else "ny_ic_destination"
         , margin $ if config.rideType == ST.Rental then MarginTop 4 else MarginTop 0
         ]
-      ]<> if config.rideType == ST.Rental then [SeparatorView.view separatorConfig] else []) else []))
+      ]<> if config.rideType == ST.Rental then [SeparatorView.view (separatorConfig config)] else []) else []))
 
 
 sourceDestinationTextView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -1030,7 +1090,9 @@ sourceDestinationTextView push config =
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
     , afterRender push $ const NoAction
-    ][  textView $
+    ][  
+      personNameAndDeliveryDetails push config true
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.titleText
@@ -1039,6 +1101,7 @@ sourceDestinationTextView push config =
         , ellipsize true
         , singleLine true
         , afterRender push $ const NoAction
+        , visibility $ boolToVisibility $ not config.isDelivery
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -1046,12 +1109,14 @@ sourceDestinationTextView push config =
         , text config.sourceAddress.detailText
         , id (getNewIDWithTag "sourceAddress")
         , color Color.black650
-        , margin (MarginBottom 25)
+        , margin $ if config.isDelivery then (MarginBottom 8) else (MarginBottom 25)
         , ellipsize true
         , singleLine true
+        , visibility $ boolToVisibility $ not config.isDelivery || config.isSourceDetailsExpanded
         , afterRender push $ const NoAction
         ] <> FontStyle.body1 TypoGraphy
-        ,destAddressTextView config push
+      , instructionView config (config.delivery >>= (\delivery -> delivery.sender.instructions)) config.isSourceDetailsExpanded
+      , destAddressTextView config push
       ] 
 
 destinationView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1079,13 +1144,7 @@ lineImageView val =
     , margin $ MarginLeft 7
     ]
 
-dummyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-dummyView push config =
-  textView
-    [ afterRender push $ const NoAction
-    , width $ V 0
-    , height $ V 0
-    ]
+
 
 destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 destAddressTextView config push=
@@ -1093,7 +1152,8 @@ destAddressTextView config push=
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    ][  textView $
+    ][  personNameAndDeliveryDetails push config false
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text $ Maybe.fromMaybe "" ((\destinationAddress -> destinationAddress.titleText) <$> config.destinationAddress)
@@ -1101,6 +1161,7 @@ destAddressTextView config push=
         , color Color.black800
         , ellipsize true
         , singleLine true
+        , visibility $ boolToVisibility $ not config.isDelivery
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -1109,8 +1170,11 @@ destAddressTextView config push=
         , id (getNewIDWithTag "destinationAddress")
         , color Color.black650
         , ellipsize true
+        , margin $ if config.isDelivery then (MarginBottom 8) else (MarginBottom 0)
         , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
+        , visibility $ boolToVisibility $ not config.isDelivery || (config.isDestinationDetailsExpanded)
         ]<> FontStyle.body1 TypoGraphy
+      , instructionView config (config.delivery >>= (\delivery -> delivery.receiver.instructions)) config.isDestinationDetailsExpanded
       ]
 
 
@@ -1150,12 +1214,14 @@ getTitle config = do
         ST.Rental -> (getString YOU_ARE_ON_A_RENTAL_RIDE)
         ST.Intercity -> (getString YOU_ARE_ON_A_INTERCITY_RIDE)
         _ -> (getString YOU_ARE_ON_A_RIDE)
-    true, false, _  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
+    true, false, _  ->  ((getCustomerName config) <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
     true, true, _ -> case (getLanguageLocale languageKey) of
         "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
         "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
         _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
   where
+    getCustomerName :: Config -> String
+    getCustomerName config = maybe config.customerName (\delivery -> delivery.sender.name) config.delivery
     getRideStartRemainingTimeTitle :: Config -> String
     getRideStartRemainingTimeTitle config = 
       let time = HU.formatSecIntoMinSecs config.rideStartRemainingTime
@@ -1166,20 +1232,23 @@ getTitle config = do
     showRideStartRemainingTime :: Config -> Boolean
     showRideStartRemainingTime config = getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled)
 
-separatorConfig :: SeparatorView.Config
-separatorConfig =
-  {
+separatorConfig :: Config -> SeparatorView.Config
+separatorConfig config =
+  let count = if config.isDelivery then if config.isSourceDetailsExpanded then if deliveryHasSourceInstruction config then 17 else 4 else 3 else 6
+  in {
     orientation : VERTICAL
-  , count : 6
+  , count : count
   , height : V 4
   , width : V 2
   , layoutWidth : V 14
   , layoutHeight : V 16
   , color : Color.black500
   }
+  where
+    deliveryHasSourceInstruction config = maybe false (\delivery -> isJust delivery.sender.instructions) config.delivery
 
 showTag :: Config -> Boolean
-showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
@@ -1283,14 +1352,98 @@ stopImageView  config push =
         ,visibility $ boolToVisibility $ (not config.startRideActive) && (Maybe.isJust config.stopAddress || Maybe.isJust config.lastStopAddress)
         ]
         [ 
-          SeparatorView.view separatorConfig,
+          SeparatorView.view (separatorConfig config),
           imageView
             [ height $ V 14
             , width $ V 14
             , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if Maybe.isJust config.stopAddress then  "ny_ic_drop_indicator" else "ny_ic_last_drop_indicator"
             , margin $ MarginTop 4
             ],
-            SeparatorView.view separatorConfig]
+            SeparatorView.view (separatorConfig config)]
     ]
 isWaitingTimeStarted :: Config -> Boolean
 isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+
+collectDeliveryCashView :: forall w. PrestoDOM (Effect Unit) w
+collectDeliveryCashView = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ MarginTop 12
+  ][
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , gravity CENTER
+    , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_money_outline"
+    ]
+  , textView $ [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text $ getString COLLECT_CASH_AT_DROP
+    , color Color.black800
+    , gravity CENTER
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+personNameAndDeliveryDetails :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+personNameAndDeliveryDetails push config isSource = 
+  let marginBottom = if isSource && config.isDestinationDetailsExpanded then MarginBottom 12 else MarginBottom 0
+  in linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , visibility $ boolToVisibility $ config.isDelivery
+    , margin marginBottom
+    ][
+      personName push config isSource,
+      moreDetailsView push config isSource
+    ]
+
+personName :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+personName push config isSource = 
+  let expanded = if isSource then config.isSourceDetailsExpanded else config.isDestinationDetailsExpanded
+  in textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text $ Maybe.maybe "" (\delivery -> (if isSource then delivery.sender.name else delivery.receiver.name) <> if not expanded then "... " else " "  ) config.delivery
+      , color Color.black800
+      , ellipsize true
+      , singleLine true
+      , afterRender push $ const NoAction
+      ] <> FontStyle.subHeading1 TypoGraphy
+
+moreDetailsView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+moreDetailsView push config isSource =
+  let expanded = if isSource then config.isSourceDetailsExpanded else config.isDestinationDetailsExpanded
+  in textView $
+    [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text $ getString MORE_DETAILS
+    , color Color.blue800
+    , onClick push $ const MoreDetails
+    , visibility $ boolToVisibility $ not expanded
+    ] <> FontStyle.body1 TypoGraphy
+
+instructionView :: forall w. Config -> Maybe String -> Boolean -> PrestoDOM (Effect Unit) w
+instructionView config instruction showInstruction = 
+  textView $
+    [ height $ V 84
+    , width MATCH_PARENT
+    , text $ getInstructionText instruction
+    , color Color.seaGreen 
+    , margin $ if config.isSourceDetailsExpanded then MarginBottom 12 else MarginBottom 0
+    , cornerRadius 8.0
+    , background Color.greenOpacity10
+    , padding $ Padding 12 11 12 11
+    , ellipsize false
+    , singleLine false
+    , maxLines 3
+    , visibility $ boolToVisibility $ Maybe.isJust instruction && showInstruction
+    ] <> FontStyle.body1 TypoGraphy
+  where
+    getInstructionText instruction = let instructionHeader = if config.isSourceDetailsExpanded then getString PICKUP_INSTRUCTION <> ": " else getString DROP_INSTRUCTION <> ": " 
+                      in maybe "" (\instruction' -> instructionHeader <> instruction') instruction
+

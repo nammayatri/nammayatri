@@ -18,6 +18,7 @@ import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import Kernel.Prelude
 import Kernel.Utils.JSON
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Prelude (show)
 
 -- #################################################################
@@ -31,8 +32,14 @@ data VehicleCategory
     AUTO_RICKSHAW
   | CAB
   | MOTORCYCLE
+  | METRO
+  | BUS
   | AMBULANCE
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  | TWO_WHEELER
+  | TRUCK
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Read, ToSchema)
+
+$(mkHttpInstancesForEnum ''VehicleCategory)
 
 data FulfillmentType
   = -- ..fulfillment.type
@@ -71,6 +78,7 @@ data FulfillmentState
   | EDIT_LOCATION -- Custom type only used for on-us transaction
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
+  | DRIVER_REACHED_DESTINATION
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus
@@ -142,6 +150,7 @@ data QuoteBreakupTitle
   | DISTANCE_FARE
   | CANCELLATION_CHARGES
   | TOLL_CHARGES
+  | STATE_ENTRY_PERMIT_CHARGES
   | CONGESTION_CHARGE
   | -- Custom Titles not in ONDC Spec
     SERVICE_CHARGE

@@ -20,7 +20,6 @@ module Beckn.ACL.Track
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
@@ -30,9 +29,8 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Id
@@ -86,9 +84,10 @@ buildTrackReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   booking <- QRB.findByBPPBookingId res.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> res.bppBookingId.getId)
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle $ DVST.castServiceTierToVariant booking.vehicleServiceTierType) >>= fromMaybeM (InternalError "Beckn Config not found")
-  ttl <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttl)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" booking.merchantOperatingCityId
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  ttls <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttls)
   pure $ Spec.TrackReq context $ mkTrackMessageV2 res
   where
     key messageId = "Track:bppRideId:" <> messageId

@@ -4,7 +4,8 @@
 
 module Storage.Queries.TicketBooking (module Storage.Queries.TicketBooking, module ReExport) where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
+import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketBooking
@@ -34,7 +35,7 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 
 getAllBookingsByPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
 getAllBookingsByPersonId limit offset personId merchantOperatingCityId status = do
   findAllWithOptionsKV
     [ Se.And
@@ -49,7 +50,7 @@ getAllBookingsByPersonId limit offset personId merchantOperatingCityId status = 
 
 getAllBookingsByPlaceIdAndVisitDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Calendar.Day -> Domain.Types.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
+  (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Day -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
 getAllBookingsByPlaceIdAndVisitDate ticketPlaceId visitDate status = do
   findAllWithKV
     [ Se.And
@@ -61,12 +62,12 @@ getAllBookingsByPlaceIdAndVisitDate ticketPlaceId visitDate status = do
 
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.TicketBooking.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ())
+  (Domain.Types.Extra.TicketBooking.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ())
 updateStatusAndCancelledSeatsById status cancelledSeats id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.cancelledSeats cancelledSeats, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatusByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBooking.BookingStatus -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ())
+updateStatusByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Extra.TicketBooking.BookingStatus -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ())
 updateStatusByShortId status shortId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]

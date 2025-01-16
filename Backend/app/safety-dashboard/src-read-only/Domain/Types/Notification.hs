@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Notification where
@@ -36,4 +35,4 @@ data NotificationCategory
   | ADMIN_CLEAN_SUSPECT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationCategory)

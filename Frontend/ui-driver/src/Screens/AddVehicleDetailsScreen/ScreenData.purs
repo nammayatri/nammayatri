@@ -19,9 +19,9 @@ import Data.Maybe
 import Screens.Types
 
 import Foreign.Object (empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import ConfigProvider
 import Screens.Types as ST
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -40,10 +40,13 @@ initData = {
       dateOfRegistrationView : "",
       logField : empty,
       driverMobileNumber : "",
-      cityConfig : dummyCityConfig,
+      cityConfig : defaultCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      airConditioned : Nothing,
+      ventilator : Nothing,
+      oxygen : Nothing
     },
     props: {
       rcAvailable : false,
@@ -78,6 +81,11 @@ initData = {
       confirmChangeVehicle : false,
       contactSupportModal : ST.HIDE,
       buttonIndex : Nothing,
-      acModal : false
+      acModal : false,
+      facilities : false,
+      showIssueOptions : true,
+      isvariant : "",
+      ambulanceModal : false,
+      agreeTermsModal : false
     }
 }

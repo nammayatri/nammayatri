@@ -1,31 +1,23 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.MerchantServiceConfigExtra where
 
-import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Prelude as P
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
-import Storage.Queries.OrphanInstances.MerchantServiceConfig
+import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
 import Storage.Queries.Transformers.MerchantServiceConfig
-import Tools.Error
 
-findByMerchantIdAndServiceWithCity ::
+findByServiceAndCity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
   ServiceName ->
   Id DMOC.MerchantOperatingCity ->
   m (Maybe MerchantServiceConfig)
-findByMerchantIdAndServiceWithCity _merchant serviceName merchantOperatingCityId = do
+findByServiceAndCity serviceName merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is BeamMSC.serviceName $ Se.Eq serviceName,
@@ -44,7 +36,7 @@ upsertMerchantServiceConfig merchantServiceConfig opCity = do
   now <- getCurrentTime
   let _serviceName = getServiceName merchantServiceConfig.serviceConfig
       configJSON = getConfigJSON merchantServiceConfig.serviceConfig
-  res <- findByMerchantIdAndServiceWithCity merchantServiceConfig.merchantId _serviceName opCity
+  res <- findByServiceAndCity _serviceName opCity
   if isJust res
     then
       updateWithKV

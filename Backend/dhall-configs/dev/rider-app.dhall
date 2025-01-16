@@ -6,6 +6,8 @@ let globalCommon = ../generic/common.dhall
 
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
+let sosAlertsTopicARN = common.sosAlertsTopicARN
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -179,24 +181,52 @@ let kvConfigUpdateFrequency = +10
 
 let RiderJobType =
       < CheckPNAndSendSMS
+      | ScheduledRidePopupToRider
       | ScheduledRideNotificationsToRider
       | SafetyIVR
       | CallPoliceApi
+      | SafetyCSAlert
       | CheckExotelCallStatusAndNotifyBPP
+      | ExecutePaymentIntent
+      | CancelExecutePaymentIntent
       | OtherJobTypes
+      | MetroIncentivePayout
+      | Daily
+      | Weekly
+      | Monthly
+      | Quarterly
+      | DailyUpdateTag
+      | WeeklyUpdateTag
+      | MonthlyUpdateTag
+      | QuarterlyUpdateTag
+      | PostRideSafetyNotification
       >
 
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
         }
       , { mapKey = RiderJobType.SafetyIVR, mapValue = False }
+      , { mapKey = RiderJobType.ExecutePaymentIntent, mapValue = True }
+      , { mapKey = RiderJobType.CancelExecutePaymentIntent, mapValue = True }
       , { mapKey = RiderJobType.CallPoliceApi, mapValue = False }
+      , { mapKey = RiderJobType.SafetyCSAlert, mapValue = False }
       , { mapKey = RiderJobType.CheckExotelCallStatusAndNotifyBPP
         , mapValue = False
         }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
+      , { mapKey = RiderJobType.MetroIncentivePayout, mapValue = True }
+      , { mapKey = RiderJobType.Daily, mapValue = True }
+      , { mapKey = RiderJobType.Weekly, mapValue = True }
+      , { mapKey = RiderJobType.Monthly, mapValue = True }
+      , { mapKey = RiderJobType.Quarterly, mapValue = True }
+      , { mapKey = RiderJobType.DailyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.MonthlyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.QuarterlyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
       ]
 
 let cacConfig =
@@ -220,6 +250,8 @@ let superPositionConfig =
       , enableSuperPosition = False
       }
 
+let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
@@ -227,6 +259,7 @@ let kafkaClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let riderClickhouseCfg =
@@ -236,7 +269,10 @@ let riderClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_app"
       , tls = False
+      , retryInterval = [ +0 ]
       }
+
+let dashboardClickhouseCfg = riderClickhouseCfg
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -261,6 +297,7 @@ in  { esqDBCfg
     , searchRequestExpiry = Some +600
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"
+      , "dev/migrations/scheduler"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"
       ]
     , autoMigrate = True
@@ -271,6 +308,7 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey
+    , internalClickhouseAPIKey = sec.internalClickhouseAPIKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
@@ -310,8 +348,16 @@ in  { esqDBCfg
     , collectRouteData = True
     , kafkaClickhouseCfg
     , riderClickhouseCfg
+    , dashboardClickhouseCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
+    , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
+    , ltsCfg = LocationTrackingeServiceConfig
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     }

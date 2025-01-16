@@ -25,12 +25,13 @@ newtype FPAmbulanceDetailsD (s :: UsageSafety) = FPAmbulanceDetails
 
 data FPAmbulanceDetailsSlabD (s :: UsageSafety) = FPAmbulanceDetailsSlab
   { id :: Int,
-    vehicleAge :: Months,
     baseFare :: HighPrecMoney,
+    baseDistance :: Meters,
+    vehicleAge :: Months,
     perKmRate :: HighPrecMoney,
     currency :: Currency,
     waitingChargeInfo :: Maybe Domain.WaitingChargeInfo,
-    platformFeeInfo :: Maybe Domain.PlatformFeeInfo, -- add in table
+    platformFeeInfo :: Maybe Domain.PlatformFeeInfo,
     nightShiftCharge :: Maybe Domain.NightShiftCharge
   }
   deriving (Generic, Show, Eq)

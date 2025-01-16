@@ -25,12 +25,19 @@ import EulerHS.Prelude hiding (toStrict)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Logging (logDebug)
 
-processLocationData :: [(T.LocationUpdates, T.DriverId)] -> Flow ()
-processLocationData locationData = do
+processLocationData :: [Text] -> [(T.LocationUpdates, T.DriverId)] -> Flow ()
+processLocationData enabledMerchantCityIds locationData = do
   logDebug $ "driver updated time locationData: " <> show locationData
   key <- incrementCounterAndReturnShard
-  let encodedVals = map (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, driverId)) locationData
+  let encodedVals =
+        mapFilter
+          (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, driverId))
+          (\(T.LocationUpdates {..}, _) -> (fromMaybe "" mocid) `elem` enabledMerchantCityIds)
+          locationData
   Redis.zAdd key encodedVals
+  where
+    mapFilter :: (a -> b) -> (a -> Bool) -> [a] -> [b]
+    mapFilter mapFunc filterFunc xs = [mapFunc x | x <- xs, filterFunc x]
 
 incrementCounterAndReturnShard :: Flow Text
 incrementCounterAndReturnShard = do

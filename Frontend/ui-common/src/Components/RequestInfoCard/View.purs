@@ -60,7 +60,14 @@ view push state =
             ][
               genericTextView push state.title
             , genericTextView push state.primaryText
-            , bulletPoints push state
+            ,linearLayout
+            [ 
+              height $ V 1
+             , width MATCH_PARENT
+              , background Color.grey700
+              , visibility $ state.subTitle.visibility
+            ][]
+            , genericTextView push state.subTitle
             ]
             , linearLayout
               [ height WRAP_CONTENT
@@ -68,6 +75,7 @@ view push state =
               ][]
             , genericImageView state.imageConfig
         ]
+        , bulletPoints push state
         , genericImageView state.infoImageConfig
         , genericTextView push state.secondaryText
         , textView $
@@ -105,6 +113,7 @@ bulletPoints push config =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin $ Margin 20 12 0 0
+  , padding $ Padding 0 0 15 0
   , visibility $ boolToVisibility $ DA.length config.bulletPoints > 0
   ](map (\item -> bulletPoint push item) config.bulletPoints) 
 

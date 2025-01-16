@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Person where
@@ -24,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     blockedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -32,9 +32,11 @@ data PersonE e = Person
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    clientReactNativeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currentCity :: Kernel.Types.Beckn.Context.City,
+    customerNammaTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
@@ -47,6 +49,7 @@ data PersonE e = Person
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     followsRide :: Kernel.Prelude.Bool,
+    frequentLocGeohashes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gender :: Domain.Types.Person.Gender,
     hasCompletedMockSafetyDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasCompletedSafetySetup :: Kernel.Prelude.Bool,
@@ -55,6 +58,7 @@ data PersonE e = Person
     id :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     identifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     identifierType :: Domain.Types.Person.IdentifierType,
+    informPoliceSos :: Kernel.Prelude.Bool,
     isNew :: Kernel.Prelude.Bool,
     isValidRating :: Kernel.Prelude.Bool,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
@@ -67,6 +71,7 @@ data PersonE e = Person
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -99,6 +104,7 @@ instance EncryptedItem Person where
     pure
       Person
         { aadhaarVerified = aadhaarVerified entity,
+          androidId = androidId entity,
           backendAppVersion = backendAppVersion entity,
           blocked = blocked entity,
           blockedAt = blockedAt entity,
@@ -107,9 +113,11 @@ instance EncryptedItem Person where
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
           clientDevice = clientDevice entity,
+          clientReactNativeVersion = clientReactNativeVersion entity,
           clientSdkVersion = clientSdkVersion entity,
           createdAt = createdAt entity,
           currentCity = currentCity entity,
+          customerNammaTags = customerNammaTags entity,
           customerPaymentId = customerPaymentId entity,
           customerReferralCode = customerReferralCode entity,
           defaultPaymentMethodId = defaultPaymentMethodId entity,
@@ -122,6 +130,7 @@ instance EncryptedItem Person where
           falseSafetyAlarmCount = falseSafetyAlarmCount entity,
           firstName = firstName entity,
           followsRide = followsRide entity,
+          frequentLocGeohashes = frequentLocGeohashes entity,
           gender = gender entity,
           hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill entity,
           hasCompletedSafetySetup = hasCompletedSafetySetup entity,
@@ -130,6 +139,7 @@ instance EncryptedItem Person where
           id = id entity,
           identifier = identifier entity,
           identifierType = identifierType entity,
+          informPoliceSos = informPoliceSos entity,
           isNew = isNew entity,
           isValidRating = isValidRating entity,
           language = language entity,
@@ -142,6 +152,7 @@ instance EncryptedItem Person where
           nightSafetyChecks = nightSafetyChecks entity,
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
+          payoutVpa = payoutVpa entity,
           rating = rating entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
@@ -166,6 +177,7 @@ instance EncryptedItem Person where
     pure
       ( Person
           { aadhaarVerified = aadhaarVerified entity,
+            androidId = androidId entity,
             backendAppVersion = backendAppVersion entity,
             blocked = blocked entity,
             blockedAt = blockedAt entity,
@@ -174,9 +186,11 @@ instance EncryptedItem Person where
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
             clientDevice = clientDevice entity,
+            clientReactNativeVersion = clientReactNativeVersion entity,
             clientSdkVersion = clientSdkVersion entity,
             createdAt = createdAt entity,
             currentCity = currentCity entity,
+            customerNammaTags = customerNammaTags entity,
             customerPaymentId = customerPaymentId entity,
             customerReferralCode = customerReferralCode entity,
             defaultPaymentMethodId = defaultPaymentMethodId entity,
@@ -189,6 +203,7 @@ instance EncryptedItem Person where
             falseSafetyAlarmCount = falseSafetyAlarmCount entity,
             firstName = firstName entity,
             followsRide = followsRide entity,
+            frequentLocGeohashes = frequentLocGeohashes entity,
             gender = gender entity,
             hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill entity,
             hasCompletedSafetySetup = hasCompletedSafetySetup entity,
@@ -197,6 +212,7 @@ instance EncryptedItem Person where
             id = id entity,
             identifier = identifier entity,
             identifierType = identifierType entity,
+            informPoliceSos = informPoliceSos entity,
             isNew = isNew entity,
             isValidRating = isValidRating entity,
             language = language entity,
@@ -209,6 +225,7 @@ instance EncryptedItem Person where
             nightSafetyChecks = nightSafetyChecks entity,
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
+            payoutVpa = payoutVpa entity,
             rating = rating entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,

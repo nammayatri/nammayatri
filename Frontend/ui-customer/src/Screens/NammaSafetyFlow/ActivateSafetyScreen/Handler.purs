@@ -41,7 +41,7 @@ activateSafetyScreen = do
     GoToEducationScreen updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ act)
-    CreateSos updatedState isPoliceFlow -> do
+    CreateSos updatedState flowType -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)
     GoToIssueScreen updatedState -> do
@@ -50,3 +50,6 @@ activateSafetyScreen = do
     NotifyMockDrill updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)
+    GoToDataFetchScreen updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ act)

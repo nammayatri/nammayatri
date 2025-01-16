@@ -87,6 +87,8 @@ dependencies:
   - singletons
   - dynamic-offer-driver-app
   - rider-app
+  - yudhishthira
+  - unordered-containers
 
 ghc-options:
   - -Wall

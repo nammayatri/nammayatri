@@ -1,13 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSQuote where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -16,10 +15,12 @@ import Tools.Beam.UtilsTH
 
 data FRFSQuoteT f = FRFSQuoteT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
+    bppDelayedInterest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    discountsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
@@ -34,11 +35,12 @@ data FRFSQuoteT f = FRFSQuoteT
     providerName :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
     riderId :: B.C f Kernel.Prelude.Text,
+    routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
     stationsJson :: B.C f Kernel.Prelude.Text,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

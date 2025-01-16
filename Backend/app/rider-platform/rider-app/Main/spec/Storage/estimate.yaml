@@ -6,7 +6,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Centesimal: Kernel.Types.Common
   LatLong: Kernel.External.Maps
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   TripTerms: Domain.Types.TripTerms
   PrettyShow: Kernel.Utils.GenericPretty
   Money: Kernel.Types.Common
@@ -17,6 +17,7 @@ imports:
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
 
 Estimate:
   tableName: estimate
@@ -74,6 +75,7 @@ Estimate:
     estimatedTotalFare : Price
     totalFareRange : FareRange
     estimatedDuration : Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     estimatedDistance : Maybe Distance
     estimatedPickupDuration : Maybe Seconds
     device : Maybe Text
@@ -82,7 +84,7 @@ Estimate:
     providerName : Text
     providerMobileNumber : Text
     providerCompletedRidesCount : Int
-    vehicleServiceTierType : VehicleServiceTierType
+    vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
@@ -107,9 +109,14 @@ Estimate:
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
+    tripCategory: Maybe TripCategory
+    tipOptions: Maybe [Int]
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime
+    vehicleIconUrl : Maybe BaseUrl
+    smartTipSuggestion: Maybe HighPrecMoney
+    smartTipReason: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -132,7 +139,7 @@ Estimate:
       clientManufacturer: Maybe Text
 
     vehicleServiceTierType:
-      vehicleVariant: VehicleServiceTierType
+      vehicleVariant: ServiceTierType
 
     estimatedDistance:
       estimatedDistance: Maybe HighPrecMeters
@@ -171,6 +178,7 @@ Estimate:
     clientOsVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
 
   fromTType:
     totalFareRange: mkFareRange
@@ -190,6 +198,7 @@ Estimate:
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
@@ -220,9 +229,11 @@ Estimate:
     clientOsType:  (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   sqlType:
     estimatedFare: numeric(30,10)
+    vehicleIconUrl: character varying(255)
     estimatedTotalFare: numeric(30,2)
     providerId: character varying(255)
     providerUrl: character varying(255)
@@ -238,6 +249,7 @@ Estimate:
     nightShiftCharge: integer
     currency: character varying(255)
     estimatedPickupDuration: integer
+    tipOptions: integer[]
 
   queries:
     findById:

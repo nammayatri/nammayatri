@@ -17,29 +17,31 @@ instance FromTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuesti
     pure $
       Just
         Domain.Types.DriverProfileQuestions.DriverProfileQuestions
-          { aspirations = aspirations,
+          { aboutMe = aboutMe,
+            aspirations = aspirations,
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
-            expertAt = expertAt,
+            drivingSince = drivingSince,
             hometown = hometown,
-            merchantId = Kernel.Types.Id.Id merchantId,
+            imageIds = imageIds,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             pledges = pledges,
             updatedAt = updatedAt,
-            whyNY = whyNY
+            vehicleTags = vehicleTags
           }
 
 instance ToTType' Beam.DriverProfileQuestions Domain.Types.DriverProfileQuestions.DriverProfileQuestions where
   toTType' (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {..}) = do
     Beam.DriverProfileQuestionsT
-      { Beam.aspirations = aspirations,
+      { Beam.aboutMe = aboutMe,
+        Beam.aspirations = aspirations,
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.expertAt = expertAt,
+        Beam.drivingSince = drivingSince,
         Beam.hometown = hometown,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.imageIds = imageIds,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.pledges = pledges,
         Beam.updatedAt = updatedAt,
-        Beam.whyNY = whyNY
+        Beam.vehicleTags = vehicleTags
       }

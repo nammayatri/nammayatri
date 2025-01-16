@@ -52,6 +52,7 @@ import Components.PrimaryButton (view) as PrimaryButton
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
+import Data.Maybe(Maybe(..), fromMaybe)
 
 screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
 screen initialState rideListItem =
@@ -152,7 +153,7 @@ headerLayout state push =
       , textView
         ([ width WRAP_CONTENT
          , height WRAP_CONTENT
-         , text $ getCategoryName state.selectedCategory.categoryAction
+         , text $ getCategoryName $ fromMaybe "" state.selectedCategory.categoryAction
          , textSize FontSize.a_18
          , margin $ MarginLeft 10
          , weight 1.0

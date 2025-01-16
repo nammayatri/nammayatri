@@ -7,17 +7,21 @@ import qualified Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.Plan as Beam
+import qualified Storage.Queries.Transformers.Plan
 
 instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
   fromTType' (Beam.PlanT {..}) = do
+    vehicleCategory' <- Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName
     pure $
       Just
         Domain.Types.Plan.Plan
-          { basedOnEntity = basedOnEntity,
+          { allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
+            basedOnEntity = basedOnEntity,
             cgstPercentage = cgstPercentage,
             description = description,
             eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -26,6 +30,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             id = Kernel.Types.Id.Id id,
             isDeprecated = isDeprecated,
             isOfferApplicable = isOfferApplicable,
+            listingPriority = listingPriority,
             maxAmount = maxAmount,
             maxCreditLimit = maxCreditLimit,
             maxMandateAmount = maxMandateAmount,
@@ -39,13 +44,15 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             serviceName = serviceName,
             sgstPercentage = sgstPercentage,
             subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+            vehicleCategory = vehicleCategory',
             vehicleVariant = vehicleVariant
           }
 
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
   toTType' (Domain.Types.Plan.Plan {..}) = do
     Beam.PlanT
-      { Beam.basedOnEntity = basedOnEntity,
+      { Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
+        Beam.basedOnEntity = basedOnEntity,
         Beam.cgstPercentage = cgstPercentage,
         Beam.description = description,
         Beam.eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -54,6 +61,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDeprecated = isDeprecated,
         Beam.isOfferApplicable = isOfferApplicable,
+        Beam.listingPriority = listingPriority,
         Beam.maxAmount = maxAmount,
         Beam.maxCreditLimit = maxCreditLimit,
         Beam.maxMandateAmount = maxMandateAmount,
@@ -67,5 +75,6 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.serviceName = serviceName,
         Beam.sgstPercentage = sgstPercentage,
         Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+        Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
         Beam.vehicleVariant = vehicleVariant
       }

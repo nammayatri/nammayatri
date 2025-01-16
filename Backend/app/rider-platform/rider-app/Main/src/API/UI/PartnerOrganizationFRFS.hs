@@ -35,10 +35,13 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import Servant hiding (throwError)
+import qualified Lib.JourneyLeg.Types as JPT
+import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Station as CQS
+import qualified Storage.Queries.Route as QRoute
 import Tools.Auth
 import Tools.Error
 
@@ -75,24 +78,31 @@ upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandl
 upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
 
-  fromStation <- B.runInReplica $ CQS.findByStationCode req.fromStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "")
-  let fromStationOpCityId = fromStation.merchantOperatingCityId
-      merchantId = fromStation.merchantId
-
+  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  toStation <- B.runInReplica $ CQS.findByStationCode req.toStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "")
+  route <-
+    maybe
+      (pure Nothing)
+      ( \routeCode' -> do
+          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          return $ Just route'
+      )
+      req.routeCode
   pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.REGISTRATION)
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
 
   let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
-  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStationOpCityId merchantId mbRegCoordinates req
+  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.cityId merchantId mbRegCoordinates req
+  merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
 
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
-    let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code req.numberOfPassengers
+    let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
         frfsVehicleType = fromStation.vehicleType
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId)
+    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId) Nothing Nothing Nothing
 
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where
@@ -106,8 +116,8 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
       (Just lat, Just lon) -> Just $ Maps.LatLong {..}
       _ -> Nothing
 
-    buildFRFSSearchReq :: Text -> Text -> Int -> DFRFSTypes.FRFSSearchAPIReq
-    buildFRFSSearchReq fromStationCode toStationCode quantity = DFRFSTypes.FRFSSearchAPIReq {..}
+    buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
+    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
 
 getConfigByStationIds :: PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do

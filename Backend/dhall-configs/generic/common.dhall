@@ -106,6 +106,8 @@ let healthCheckAppCfgT =
       , loggerConfig : loggerConfigT
       , batchSize : Integer
       , numberOfShards : Integer
+      , enabledMerchantCityIds : List Text
+      , fcmNofificationSendCount : Integer
       }
 
 in  { smsSessionConfig

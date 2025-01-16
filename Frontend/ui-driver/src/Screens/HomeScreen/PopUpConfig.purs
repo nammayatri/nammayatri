@@ -29,18 +29,18 @@ tollChargesIncluded lazyCheck = PopUpModal.config{
 , primaryText {
     text = getString TOLL_CHARGES_INCLUDED
   , color = Color.black800
-  , margin = Margin 0 24 0 0
+  , margin = MarginTop 24
   }
 , secondaryText {
     text = getString PLEASE_DO_NOT_DEMAND_EXTRA
-  , margin = Margin 0 8 0 0
+  , margin = MarginTop 8
   }
 , option1{
   visibility = false
 }
 , option2 {
     text = getString OK_GOT_IT
-  , margin = Margin 0 24 0 0
+  , margin = MarginTop 24
   }
 }
 
@@ -60,17 +60,17 @@ finalFareExcludesToll lazyCheck = PopUpModal.config{
 , primaryText {
     text = getString FINAL_FARE_EXCLUDES_TOLL
   , color = Color.black800
-  , margin = Margin 0 24 0 0
+  , margin = MarginTop 24
   }
 , secondaryText {
     text = getString PLEASE_COLLECT_SEPARATELY
-  , margin = Margin 0 8 0 0
+  , margin = MarginTop 8
   }
 , option1{
   visibility = false
 }
 , option2 {
     text = getString OK_GOT_IT
-  , margin = Margin 0 24 0 0
+  , margin = MarginTop 24
   }
 }

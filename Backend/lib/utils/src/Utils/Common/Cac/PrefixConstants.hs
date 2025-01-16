@@ -16,6 +16,7 @@
 module Utils.Common.Cac.PrefixConstants where
 
 import Kernel.Prelude as KP
+import Utils.Common.Cac.UtilsTH
 import Prelude (Show (..))
 
 data CacPrefix
@@ -33,9 +34,11 @@ data CacPrefix
   | FarePolicyInterCityDetails
   | FarePolicyAmbulanceDetailsSlab
   | FarePolicyRentalDetailsDistanceBuffers
+  | FarePolicyRentalDetailsPricingSlabs
+  | FarePolicyInterCityDetailsPricingSlabs
   | MerchantServiceUsageConfig
   | Empty
-  deriving (Eq)
+  deriving (Eq, Bounded)
 
 instance Show CacPrefix where
   show DriverPoolConfig = "driverPoolConfig:"
@@ -52,23 +55,11 @@ instance Show CacPrefix where
   show FarePolicyInterCityDetails = "farePolicyInterCityDetails:"
   show FarePolicyAmbulanceDetailsSlab = "farePolicyAmbulanceDetailsSlab:"
   show FarePolicyRentalDetailsDistanceBuffers = "farePolicyRentalDetailsDistanceBuffers:"
+  show FarePolicyRentalDetailsPricingSlabs = "farePolicyRentalDetailsPricingSlabs:"
+  show FarePolicyInterCityDetailsPricingSlabs = "farePolicyInterCityDetailsPricingSlabs:"
   show MerchantServiceUsageConfig = "merchantServiceUsageConfig:"
   show Empty = ""
 
-getTableName :: CacPrefix -> Text
-getTableName DriverPoolConfig = "driver_pool_config"
-getTableName FarePolicy = "fare_policy"
-getTableName TransporterConfig = "transporter_config"
-getTableName DriverIntelligentPoolConfig = "driver_intelligent_pool_config"
-getTableName GoHomeConfig = "go_home_config"
-getTableName FarePolicyDriverExtraFeeBounds = "fare_policy_driver_extra_fee_bounds"
-getTableName FarePolicyProgressiveDetailsPerExtraKmRateSection = "fare_policy_progressive_details_per_extra_km_rate_section"
-getTableName FullFarePolicyProgressiveDetailsPerMinRateSection = "full_fare_policy_progressive_details_per_min_rate_section"
-getTableName FarePolicyProgressiveDetails = "fare_policy_progressive_details"
-getTableName FarePolicySlabsDetailsSlab = "fare_policy_slabs_details_slab"
-getTableName FarePolicyRentalDetails = "fare_policy_rental_details"
-getTableName FarePolicyInterCityDetails = "fare_policy_inter_city_details"
-getTableName FarePolicyAmbulanceDetailsSlab = "fare_policy_ambulance_details_slab"
-getTableName FarePolicyRentalDetailsDistanceBuffers = "fare_policy_rental_details_distance_buffers"
-getTableName MerchantServiceUsageConfig = "merchant_service_usage_config"
-getTableName Empty = ""
+$(mkCacFunction ''CacPrefix "getCacMetricErrorFromCac" "_from_cac_parse_error")
+$(mkCacFunction ''CacPrefix "getCacMetricErrorFromDB" "_from_db_parse_error")
+$(mkCacFunction ''CacPrefix "getTableName" "")

@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Rating where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -20,10 +19,13 @@ data RatingT f = RatingT
     isFavourite :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafe :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    mediaId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     ratingValue :: B.C f Kernel.Prelude.Int,
     rideId :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    wasOfferedAssistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
+    wasOfferedAssistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
   }
   deriving (Generic, B.Beamable)
 

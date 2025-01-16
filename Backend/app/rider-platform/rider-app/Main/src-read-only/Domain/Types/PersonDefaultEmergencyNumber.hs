@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.PersonDefaultEmergencyNumber where
@@ -22,7 +21,8 @@ data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    priority :: Kernel.Prelude.Int
+    priority :: Kernel.Prelude.Int,
+    shareTripWithEmergencyContactOption :: Kernel.Prelude.Maybe Domain.Types.Person.RideShareOptions
   }
   deriving (Generic)
 
@@ -45,7 +45,8 @@ instance EncryptedItem PersonDefaultEmergencyNumber where
           mobileNumber = mobileNumber_,
           name = name entity,
           personId = personId entity,
-          priority = priority entity
+          priority = priority entity,
+          shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption entity
         }
   decryptItem entity = do
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
@@ -60,7 +61,8 @@ instance EncryptedItem PersonDefaultEmergencyNumber where
             mobileNumber = mobileNumber_,
             name = name entity,
             personId = personId entity,
-            priority = priority entity
+            priority = priority entity,
+            shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption entity
           },
         ""
       )

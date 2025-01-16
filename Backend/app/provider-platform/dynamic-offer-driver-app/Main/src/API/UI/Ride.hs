@@ -35,6 +35,7 @@ import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -46,9 +47,11 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Servant hiding (throwError)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCT
@@ -75,6 +78,7 @@ type API =
                     :> QueryParam "onlyActive" Bool
                     :> QueryParam "status" Ride.RideStatus
                     :> QueryParam "day" Day
+                    :> QueryParam "numOfDay" Int
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -108,6 +112,31 @@ type API =
                     :> "uploadOdometer"
                     :> MultipartForm Tmp DRide.UploadOdometerReq
                     :> Post '[JSON] DRide.UploadOdometerResp
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "uploadDeliveryImage"
+                    :> MultipartForm Tmp DRide.DeliveryImageUploadReq
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> "destination"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> Capture "stopId" (Id DL.Location)
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "departed"
+                    :> Capture "stopId" (Id DL.Location)
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -129,7 +158,8 @@ data EndRideReq = EndRideReq
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    doCancellationRateBasedBlocking :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -143,6 +173,10 @@ handler =
              :<|> cancelRide
              :<|> arrivedAtStop
              :<|> uploadOdometerReading
+             :<|> uploadDeliveryImage
+             :<|> arrivedAtDestination
+             :<|> arrivedStop
+             :<|> departedStop
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -160,12 +194,33 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = specialZoneOtpCode
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  booking <-
+    runInReplica $
+      QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry
+        |<|>| QBooking.findBookingBySpecialZoneOTP rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
+        >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   ride <- DRide.otpRideCreate requestor rideOtp booking clientId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
+  where
+    validateOtpRideStartRestriction driverInfo mbOtpRideStartRestrictionRadius pickupLocation = do
+      case mbOtpRideStartRestrictionRadius of
+        Just otpRideStartRestrictionRadius -> do
+          driverLocation <- try @_ @SomeException $ LTF.driversLocation [driverInfo.driverId]
+          case driverLocation of
+            Left _ -> throwError DriverLocationOutOfRestictionBounds
+            Right locations -> do
+              case listToMaybe locations of
+                Just location -> do
+                  let driverToPickupDistance = distanceBetweenInMeters (LatLong location.lat location.lon) (LatLong pickupLocation.lat pickupLocation.lon)
+                  if Meters (round driverToPickupDistance) > otpRideStartRestrictionRadius
+                    then throwError DriverLocationOutOfRestictionBounds
+                    else return ()
+                Nothing -> throwError DriverLocationOutOfRestictionBounds
+        Nothing -> return ()
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do
@@ -175,8 +230,8 @@ endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = wit
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
-cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
-  let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
+cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking} = withFlowHandlerAPI $ do
+  let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
 
 listDriverRides ::
@@ -186,8 +241,9 @@ listDriverRides ::
   Maybe Bool ->
   Maybe Ride.RideStatus ->
   Maybe Day ->
+  Maybe Int ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides (driverId, _, _) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = withFlowHandlerAPI $ DRide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing
+listDriverRides (driverId, _, _) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay = withFlowHandlerAPI $ DRide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
@@ -195,5 +251,17 @@ arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPicku
 arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtStop rideId req
 
+arrivedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
+arrivedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.ARRIVE
+
+departedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
+departedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.DEPART
+
 uploadOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.UploadOdometerReq -> FlowHandler DRide.UploadOdometerResp
 uploadOdometerReading (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadOdometerReading cityId rideId req
+
+uploadDeliveryImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.DeliveryImageUploadReq -> FlowHandler APISuccess
+uploadDeliveryImage (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadDeliveryImage cityId rideId req
+
+arrivedAtDestination :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtDestination (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtDestination rideId req

@@ -26,6 +26,7 @@ import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, parseFloat)
 import Engineering.Helpers.Commons as EHC
@@ -54,8 +55,8 @@ screen initialState =
   , name: "DriverSavedLocationScreen"
   , globalEvents:
       [ ( \push -> do
-            if initialState.props.viewType == LOCATE_ON_MAP then
-              JB.storeCallBackLocateOnMap push UpdateLocation
+            if initialState.props.viewType == LOCATE_ON_MAP then do
+              void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "DriverSavedLocationScreen")
             else if initialState.props.viewType == GoToList then do
               void $ launchAff $ flowRunner defaultGlobalState
                 $ do
@@ -425,10 +426,10 @@ locationAndMap state push visibility' =
         [ linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            , id (EHC.getNewIDWithTag "DriverSavedLoc")
+            , id (EHC.getNewIDWithTag "DriverSavedLocationScreen")
             , afterRender
                 ( \action -> do
-                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
+                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLocationScreen") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
                     pure unit
                 )
                 (const AfterRender)

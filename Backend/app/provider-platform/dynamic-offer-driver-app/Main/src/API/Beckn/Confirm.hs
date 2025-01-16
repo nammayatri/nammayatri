@@ -81,14 +81,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
           case dConfirmRes.rideInfo of
             Just rideInfo' -> do
-              fork "on_confirm/on_update" $ do
+              fork "on_confirm with rideInfo" $ do
                 handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
-                  -- We assign driver post `on_confirm`, so removing `rideInfo` details fron `dConfirmRes`.
-                  let dConfirmRes' = dConfirmRes {DConfirm.rideInfo = Nothing}
-                  callOnConfirm dConfirmRes' msgId txnId bapId callbackUrl bppId bppUri city country
-                  void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle
+                  void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
             Nothing -> do
-              fork "on_confirm/on_update" $ do
+              fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
                   callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
     pure Ack

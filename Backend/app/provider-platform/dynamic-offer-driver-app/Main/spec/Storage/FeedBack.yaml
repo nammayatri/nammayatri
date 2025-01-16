@@ -20,9 +20,10 @@ Feedback:
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
 
   sqlType:
     badge: character varying (255)
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

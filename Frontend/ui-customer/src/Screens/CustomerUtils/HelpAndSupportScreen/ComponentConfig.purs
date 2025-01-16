@@ -77,6 +77,8 @@ sourceToDestinationConfig state = let
       , ellipsize = true
       }
     , overrideSeparatorCount = 2
+    , separatorLayoutMargin = (MarginTop 14)
+    , showSourceDestWithStops = true
     }
   in sourceToDestinationConfig'
 
@@ -141,7 +143,7 @@ callConfirmationPopup state = let
 genericHeaderConfig :: HelpAndSupportScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {

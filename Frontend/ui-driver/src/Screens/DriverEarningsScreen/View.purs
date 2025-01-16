@@ -42,6 +42,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any, head)
 import Data.Either (Either(..), either)
+import RemoteConfig.Utils
 import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Data.Int (ceil, floor, fromNumber, toNumber, fromString)
 import Data.String as DS
@@ -68,7 +69,7 @@ import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions, tableData)
+import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions)
 import Screens.DriverEarningsScreen.ScreenData (dummyDateItem)
 import Screens.Types (DriverEarningsScreenState)
 import Screens.Types as ST
@@ -107,7 +108,7 @@ screen initialState =
 
                             datesList = getDatesList currentDate initialState
                           (GetRidesSummaryListResp rideSummaryResp) <- Remote.getRideSummaryListReqBT datesList
-                          liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list (spy "printing currentDate" currentDate) datesList
+                          liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list currentDate datesList
                         else
                           pure unit
                         (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "100" "0" "false" "null" (convertUTCtoISC initialState.props.date "YYYY-MM-DD")
@@ -313,7 +314,7 @@ tabView push state =
       , visibility $ setVisibility
       ]
       [ tabItem push (state.props.subView == ST.EARNINGS_VIEW) EARNINGS ST.EARNINGS_VIEW "ny_ic_tab_earnings"
-      , tabItem push (state.props.subView == ST.YATRI_COINS_VIEW) YATRI_COINS ST.YATRI_COINS_VIEW "ny_ic_tab_coins"
+      , tabItem push (state.props.subView == ST.YATRI_COINS_VIEW) YATRI_POINTS ST.YATRI_COINS_VIEW "ny_ic_tab_coins"
       ]
 
 tabItem :: forall w. (Action -> Effect Unit) -> Boolean -> STR -> ST.DriverEarningsSubView -> String -> PrestoDOM (Effect Unit) w
@@ -600,7 +601,7 @@ balanceView push state =
               , weight 1.0
               ]
               [ textView
-                  $ [ text $ getString COINS_BALANCE
+                  $ [ text $ getString POINTS_BALANCE
                     ]
                   <> FontStyle.paragraphText TypoGraphy
               , linearLayout
@@ -672,7 +673,7 @@ balanceView push state =
               , gravity CENTER_VERTICAL
               ]
               [ textView
-                  $ [ text $ getString COINS_USED
+                  $ [ text $ getString POINTS_USED
                     , color Color.black700
                     , margin $ Margin 0 1 8 0
                     ]
@@ -696,7 +697,7 @@ balanceView push state =
           , rippleColor Color.rippleShade
           ]
           [ textView
-              $ [ text $ getString USE_COINS <> "  →"
+              $ [ text $ getString USE_POINTS <> "  →"
                 , color Color.blue800
                 , margin $ MarginRight 8
                 ]
@@ -709,7 +710,7 @@ balanceView push state =
           , margin $ MarginTop 12
           ]
           [ textView
-            $ [ textFromHtml $ "<u>" <> (getString KNOW_ABOUT_COINS) <> "</u>"
+            $ [ textFromHtml $ "<u>" <> (getString KNOW_ABOUT_POINTS) <> "</u>"
               , color Color.black700
               , gravity CENTER
               , onClick push $ const $ ChangeTab ST.FAQ_VIEW
@@ -734,7 +735,7 @@ balanceView push state =
               , margin $ MarginRight 10
               ]
           , textView
-              $ [ text $ getVarString COINS_EXPIRING_IN_THE_NEXT $ show <$> [ state.data.expiringCoins, state.data.expiringDays ]
+              $ [ text $ getVarString POINTS_EXPIRING_IN_THE_NEXT $ show <$> [ state.data.expiringCoins, state.data.expiringDays ]
                 , color Color.black700
                 ]
               <> FontStyle.tags TypoGraphy
@@ -833,12 +834,12 @@ faqView push state =
     , background Color.blue600
     ]
     [ textView
-        $ [ text $ getString LEARN_ABOUT_YATRI_COINS
+        $ [ text $ getString LEARN_ABOUT_YATRI_POINTS
           , color Color.black700
           , margin $ Margin 16 12 0 12
           ]
         <> FontStyle.subHeading2 TypoGraphy
-    , questionsListView push (dummyQuestions state Language) state
+    , questionsListView push (dummyQuestions Language) state
     ]
 
 questionsListView :: forall w. (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
@@ -917,23 +918,22 @@ faqQuestionView push state =
             <> FontStyle.h1 TypoGraphy
         )
     , answersListView push state.props.individualQuestion.answer state
-    , tableView state $ tableData state
+    , tableView state
     ]
 
-tableView :: forall w. ST.DriverEarningsScreenState -> Array ST.TableItem -> PrestoDOM (Effect Unit) w
-tableView state tableData =
+tableView :: forall w. ST.DriverEarningsScreenState ->  PrestoDOM (Effect Unit) w
+tableView state  =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 5.0
     , stroke $ "1," <> Color.grey900
     , orientation VERTICAL
-    , visibility $ boolToVisibility (state.props.individualQuestion.showTable)
-    ]
-    (mapWithIndex (\index item -> tableItemView item index state) tableData)
+    , visibility $ boolToVisibility $ state.props.individualQuestion.tag == ST.HowEarnLosePoints
+    ] $ mapWithIndex (\index item -> tableItemView item index state) (fromMaybe [] state.data.coinInfoRes)
 
-tableItemView :: forall w. ST.TableItem -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-tableItemView item index state =
+tableItemView :: forall w. API.CoinInfo -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+tableItemView (API.CoinInfo item) index state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -951,7 +951,7 @@ tableItemView item index state =
             [ textView
               ( [ height WRAP_CONTENT
                 , width $ V (((screenWidth unit - 10) * 55) / 100)
-                , text item.key
+                , text item.title
                 , color Color.black900
                 , padding $ if index == 0 then Padding 16 12 16 12 else Padding 16 8 16 8
                 ]
@@ -961,10 +961,10 @@ tableItemView item index state =
                 ( [
                     height WRAP_CONTENT
                   , width $ V (((screenWidth unit - 10) * 55) / 100)
-                  , text $ "*" <> getString CUSTOMER_SHOULD_COMPLETE_A_VALID_RIDE
+                  , text item.description
                   , color Color.black700
                   , padding $ Padding 16 0 16 8
-                  , visibility $ boolToVisibility (item.key == getString CUSTOMER_REFERRAL)
+                  , visibility $ boolToVisibility $ not $ DS.null item.description
                   ] <> FontStyle.body1 TypoGraphy
                 )
             ]
@@ -983,7 +983,7 @@ tableItemView item index state =
               [ textView
                   ( [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , text item.value
+                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
                     , color Color.black900
                     ]
                       <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
@@ -997,7 +997,7 @@ tableItemView item index state =
                     ]
               ]
           ]
-    , separatorView (not (index == length (tableData state) - 1)) state.props.subView
+    , separatorView (not (index == (length $ fromMaybe [] state.data.coinInfoRes) - 1)) state.props.subView
     ]
 
 faqVideoView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
@@ -1036,7 +1036,7 @@ youtubeData state mediaType =
   , hideFullScreenButton : false
   }
 
-answersListView :: forall w. (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+answersListView :: forall w. (Action -> Effect Unit) -> Array ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 answersListView push answersList state =
   linearLayout
     [ height MATCH_PARENT
@@ -1046,7 +1046,7 @@ answersListView push answersList state =
     $ [ faqVideoView push state ]
     <> (map (\item -> if length answersList > 1 then singleAnswerView push item state else multipleAnswerView push item state) answersList)
 
-singleAnswerView :: forall w. (Action -> Effect Unit) -> String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+singleAnswerView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 singleAnswerView push answer state =
   linearLayout
     [ height MATCH_PARENT
@@ -1062,30 +1062,47 @@ singleAnswerView push answer state =
           ]
             <> FontStyle.subHeading2 TypoGraphy
         )
-    , textView
-        ( [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text answer
-          , color Color.black900
-          ]
-            <> FontStyle.subHeading2 TypoGraphy
-        )
+    , ansWithHyperLinkView push answer state
     ]
 
-multipleAnswerView :: forall w. (Action -> Effect Unit) -> String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+multipleAnswerView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 multipleAnswerView push answer state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingVertical 12 12
     ]
+    [ ansWithHyperLinkView push answer state]
+
+
+ansWithHyperLinkView :: forall w. (Action -> Effect Unit) -> ST.AnswerConfig -> ST.DriverEarningsScreenState ->  PrestoDOM (Effect Unit) w
+ansWithHyperLinkView push answer state =
+  let hyperLinkUrl = fromMaybe "" answer.hyperLinkUrl
+      hyperLinkText = fromMaybe "" answer.hyperLinkText
+  in
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    ]
     [ textView
         ( [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text answer
+          , text answer.answer
           , color Color.black900
           ]
             <> FontStyle.subHeading2 TypoGraphy
+        ),
+        textView
+         ( [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text hyperLinkText
+          , color Color.blue900
+          , gravity CENTER
+          , margin $ Margin 0 0 0 40
+          , visibility $ boolToVisibility $ not ( DS.null hyperLinkUrl || DS.null hyperLinkText)
+          , onClick (\_ -> openUrlInApp $ hyperLinkUrl) (const unit)
+          ] <> FontStyle.subHeading2 TypoGraphy
         )
     ]
 
@@ -1218,7 +1235,7 @@ historyView push state =
             , gravity CENTER_VERTICAL
             ]
             [ textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (getFixedTwoDecimals state.data.totalCoinConvertedToCash)
+                $ [ text $ formatCurrencyWithCommas (getFixedTwoDecimals state.data.totalCoinConvertedToCash)
                   , color Color.black800
                   , visibility $ boolToVisibility (state.props.subView == ST.USE_COINS_VIEW)
                   , margin $ MarginRight 8
@@ -1226,8 +1243,8 @@ historyView push state =
                 <> FontStyle.h2 TypoGraphy
             , textView
                 $ [ text case state.props.subView of
-                      ST.YATRI_COINS_VIEW -> getString COINS_EARNED
-                      ST.USE_COINS_VIEW -> getString CASH_CONVERTED
+                      ST.YATRI_COINS_VIEW -> getString POINTS_EARNED
+                      ST.USE_COINS_VIEW -> getString DISCOUNT_POINTS
                       _ -> ""
                   , weight 1.0
                   , color Color.black700
@@ -1294,7 +1311,7 @@ historyViewItem item isLast subView =
                   , width WRAP_CONTENT
                   ]
                   [ textView
-                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else "₹" <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_COINS
+                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "₹") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
                         , color Color.black900
                         ]
                       <> FontStyle.tags TypoGraphy
@@ -1364,7 +1381,7 @@ convertCoinsView push state =
         , stroke $ "1," <> Color.grey900
         ]
         [ textView
-            $ [ text $ getString COINS_BALANCE
+            $ [ text $ getString POINTS_BALANCE
               , color Color.black700
               , margin $ MarginRight 8
               , weight 1.0
@@ -1466,16 +1483,13 @@ alertView push image messagePref message messageSuf showButton backgroundColor c
 convertView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 convertView push state =
   let
+    coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
     bounds = runFn1 getLayoutBounds $ getNewIDWithTag "ConvertCoinsSliderView"
-
     marginLeft' = (state.data.coinsToUse * bounds.width) / 100
-
-    setVisibility = if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
-
-    coinBalanceNearestCeil = ((state.data.coinBalance + state.data.config.coinsConfig.stepFunctionForCoinConversion - 1) / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
-
-    coinsDefaultValue = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
-    
+    setVisibility = if state.data.coinBalance < coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
+    coinBalanceNearestCeil = ((state.data.coinBalance + coinsConfig.stepFunctionForCoinConversion - 1) / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
+    coinsDefaultValue = (state.data.coinBalance / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
+    discountPoints = (toNumber coinsDefaultValue) * state.data.coinConversionRate
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1490,7 +1504,7 @@ convertView push state =
           , margin $ MarginBottom 12
           ]
           [ textView
-              $ [ text $ getString CONVERT_COINS
+              $ [ text $ getString CONVERT_POINTS
                 , color Color.black800
                 ]
               <> FontStyle.h2 TypoGraphy
@@ -1502,10 +1516,10 @@ convertView push state =
               , onClick push $ const $ ShowCoinsUsagePopup
               ]
           ]
-     , if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue then
-          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show state.data.config.coinsConfig.minCoinSliderValue <> " " <> getString COINS_IS_REQUIRED_FOR_CONVERSION) "" "" false Color.yellowOpacity40 8.0 (MarginBottom 8)
+     , if state.data.coinBalance < coinsConfig.minCoinSliderValue then
+          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show coinsConfig.minCoinSliderValue <> " " <> getString POINTS_IS_REQUIRED_FOR_CONVERSION) "" "" false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else if not state.data.hasActivePlan then
-          alertView push "ny_ic_info_yellow" (getString USING_COINS_REQUIRES_AN_ACTIVE_PLAN <> " ") (getString CHOOSE_A_PLAN <> " ") (getString TO_GET_STARTED) false Color.yellowOpacity40 8.0 (MarginBottom 8)
+          alertView push "ny_ic_info_yellow" (getString USING_POINTS_REQUIRES_AN_ACTIVE_PLAN <> " ") (getString CHOOSE_A_PLAN <> " ") (getString TO_GET_STARTED) false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else
           dummyView
       , linearLayout
@@ -1515,68 +1529,72 @@ convertView push state =
           , cornerRadius 12.0
           , background Color.white900
           , stroke $ "1," <> Color.grey900
-          , alpha if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then 0.6 else 1.0
           , padding $ PaddingVertical 16 16
+          , gravity CENTER
           ]
-          [ Anim.screenAnimationFadeInOut
-              $ linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , id $ getNewIDWithTag "SliderToolTipView"
-                  ]
-                  []
-          , frameLayout
-              [ height MATCH_PARENT
+          [
+            linearLayout 
+              [
+                height $ V 44
               , width MATCH_PARENT
-              , padding $ PaddingHorizontal 20 20
+              , orientation HORIZONTAL
+              , stroke $ "1," <> Color.grey900
+              , cornerRadius 8.0
+              , margin $ Margin 16 0 16 0
+              , gravity CENTER
               ]
-              [ linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , gravity CENTER
-                  , clickable $ state.data.coinBalance >= state.data.config.coinsConfig.minCoinSliderValue && state.data.hasActivePlan
-                  ]
-                  [ textView
-                      $ [ text $ show state.data.config.coinsConfig.minCoinSliderValue
-                        , color Color.black700
-                        ]
-                      <> FontStyle.body3 TypoGraphy
-                  , Anim.screenAnimationFadeInOut
-                      $ linearLayout
-                          [ height WRAP_CONTENT
-                          , weight 1.0
-                          , id $ getNewIDWithTag "ConvertCoinsSliderView"
-                          , onAnimationEnd
-                              ( \action ->
-                                  void $ renderSlider push SliderCallback sliderConfig{ id= (getNewIDWithTag "ConvertCoinsSliderView"), stepFunctionForCoinConversion= state.data.config.coinsConfig.stepFunctionForCoinConversion, sliderConversionRate= state.data.coinConversionRate, sliderMinValue = state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue = coinBalanceNearestCeil, sliderDefaultValue = coinsDefaultValue, toolTipId = getNewIDWithTag "SliderToolTipView", progressColor = Color.blue800, enableToolTip = true }
-                              )
-                              (const AfterRender)
-                          ]
-                          []
-                  , textView
-                      $ [ text 
-                            $ case state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue of
-                                true -> getString MAX
-                                false -> show coinBalanceNearestCeil
-                        , color Color.black700
-                        ]
-                      <> FontStyle.body3 TypoGraphy
-                  ]
-              , linearLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , visibility $ setVisibility
-                  , clickable true
-                  ]
-                  []
-              ]
-          , if state.data.coinsToUse > state.data.coinBalance then
-              alertView push "ny_ic_alert_red" (getString NOT_ENOUGH_COINS_DESCRIPTION) "" "" false Color.redOpacity10 6.0 (Margin 16 20 16 0)
+              [
+                  pointsOrDiscountTally push (show coinsDefaultValue) (getString YATRI_POINTS)
+                  , textView $ [ 
+                    text $ " → "
+                    , color Color.black800
+                    , width WRAP_CONTENT
+                    , margin $ Margin 8 0 8 0
+                    , gravity CENTER
+                    ]
+                  <> FontStyle.paragraphText TypoGraphy
+                  , pointsOrDiscountTally push (getFixedTwoDecimals discountPoints) (getString DISCOUNT_POINTS)
+            ]
+            , if state.data.coinsToUse > state.data.coinBalance then
+              alertView push "ny_ic_alert_red" (getString NOT_ENOUGH_POINTS_DESCRIPTION) "" "" false Color.redOpacity10 6.0 (Margin 16 20 16 0)
             else
               dummyView
-          , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (state.data.coinBalance >= state.data.config.coinsConfig.minCoinSliderValue && state.data.hasActivePlan && state.data.coinsToUse <= state.data.coinBalance))
+            , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (coinsDefaultValue > 0 && state.data.hasActivePlan && state.data.coinsToUse <= state.data.coinBalance))
           ]
+        
       ]
+
+
+
+pointsOrDiscountTally :: forall w. (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
+pointsOrDiscountTally push amount title = 
+   linearLayout 
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    ]
+
+    [
+      textView $
+      [
+        text amount
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , color Color.black900
+
+      ]  <> FontStyle.subHeading1 TypoGraphy
+
+      , textView $
+      [
+        text $ " " <> title
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , color Color.black800
+
+      ]  <> FontStyle.paragraphText TypoGraphy
+    ]
+
 
 usageHistoryView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 usageHistoryView push state =
@@ -1606,13 +1624,14 @@ separatorView isVisible subView =
     []
 
 coinsUsagePopup :: forall w. (Action -> Effect Unit) -> DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-coinsUsagePopup push state =
+coinsUsagePopup push state = do
+  let conversionRate = fromMaybe 0 (fromNumber $ state.data.coinConversionRate * 100.0)
   PrestoAnim.animationSet [ Anim.fadeIn true ]
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall) ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall conversionRate) ]
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [ visibility GONE ] []
@@ -1948,9 +1967,9 @@ noRideHistoryView push state =
 
 getNotItemsViewText :: ST.DriverEarningsScreenState -> Array String
 getNotItemsViewText state = case state.props.subView of
-  ST.YATRI_COINS_VIEW -> [ getString NO_COINS_EARNED, getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"]
+  ST.YATRI_COINS_VIEW -> [ getString NO_POINTS_EARNED, getString $ EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"]
   ST.EARNINGS_VIEW -> [ getString NO_RIDES, getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> convertUTCtoISC state.props.date "DD MMM, YYYY" <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX ]
-  _ -> [ getString NO_COINS_USED, getString USE_THEM_BEFORE_THEY_EXPIRE ]
+  _ -> [ getString NO_POINTS_USED, getString USE_THEM_BEFORE_THEY_EXPIRE ]
 
 lottieCoinDifference :: forall w. ST.DriverEarningsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieCoinDifference state push =
@@ -2005,7 +2024,7 @@ lottieCoinDifference state push =
           , textView
               $ [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , text $ getString COINS_ADDED
+                , text $ getString POINTS_ADDED
                 , color Color.white900
                 , gravity CENTER
                 ]

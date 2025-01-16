@@ -1,22 +1,22 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverInformationExtra where
 
 import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
+import qualified Domain.Types.Common as Common
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -24,8 +24,10 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
-import Storage.Queries.OrphanInstances.DriverInformation
+import qualified Storage.Queries.DriverBlockTransactions as QDBT
+import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
+import Tools.Error
 
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
@@ -125,35 +127,85 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
-updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName isBlocked = do
+updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
+updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
   now <- getCurrentTime
   driverInfo <- findById driverId
-  let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+  let expiryTime = (\hrs -> addUTCTime (fromIntegral hrs * 3600) now) <$> blockedExpiryTime
+
+  uid <- generateGUID
+  let driverBlockDetails =
+        DTDBT.DriverBlockTransactions
+          { blockLiftTime = expiryTime,
+            blockReason = blockedReason,
+            blockTimeInHours = blockedExpiryTime,
+            driverId = driverId,
+            id = uid,
+            reasonCode = Just reasonCode,
+            reportedAt = now,
+            merchantId = Just merchantId,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            blockedBy = blockedBy,
+            requestorId = Just dashboardUserName,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
+            blockReasonFlag = Just blockReasonFlag
+          }
+
+  QDBT.create driverBlockDetails
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
+  let activeState = (.active) <$> driverInfo
+  let modeState = driverInfo >>= mode
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockedReason blockedReason,
         Se.Set BeamDI.blockExpiryTime expiryTime,
         Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
+        Se.Set BeamDI.active $ fromMaybe True (mbActive <|> activeState),
+        Se.Set BeamDI.mode $ mbMode <|> modeState,
+        Se.Set BeamDI.blockReasonFlag (Just blockReasonFlag),
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> m ()
-updateBlockedState driverId isBlocked blockStateModifier = do
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
+updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
   now <- getCurrentTime
   driverInfo <- findById driverId
+  uid <- generateGUID
+
+  let driverBlockDetails =
+        DTDBT.DriverBlockTransactions
+          { blockLiftTime = Nothing,
+            blockReason = Nothing,
+            blockTimeInHours = Nothing,
+            driverId = driverId,
+            id = uid,
+            reasonCode = Nothing,
+            blockReasonFlag = Nothing,
+            reportedAt = now,
+            merchantId = Just merchantId,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            blockedBy = blockedBy,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
+            requestorId = Nothing
+          }
+
+  QDBT.create driverBlockDetails
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockStateModifier blockStateModifier,
+        Se.Set BeamDI.blockExpiryTime Nothing, --this prevents wrong date to be in this column because same is passed in error to frontend
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
@@ -272,3 +324,55 @@ updateHasAdvancedRide (Id driverId) isOnAdvancedRide = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updatePayoutVpaAndStatusByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe PayoutVpaStatus -> [Id Person.Driver] -> m ()
+updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.payoutVpaStatus payoutVpaStatus,
+      Se.Set BeamDI.payoutVpa payoutVpa,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+
+updateTripCategoryAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Common.TripCategory -> Maybe Maps.LatLong -> m ()
+updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRideTripCategory tripCategory | isJust tripCategory]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
+updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRide onRide]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasRideStarted driverId hasRideStarted = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.hasRideStarted (Just hasRideStarted),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateIsBlockedForReferralPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> Bool -> m ()
+updateIsBlockedForReferralPayout driverIds isBlocked = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.isBlockedForReferralPayout (Just isBlocked),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]

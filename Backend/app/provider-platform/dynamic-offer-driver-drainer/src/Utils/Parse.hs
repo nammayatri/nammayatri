@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
-
 module Utils.Parse where
 
 import DBQuery.Types
@@ -147,7 +145,7 @@ decodeTerm = \case
           ("$ne", Just value) -> do
             (TermWrap column fieldValue) <- parseFieldAndGetClause value keyCamel
             return $ Is column (Not $ Eq fieldValue)
-          ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [AesonKey.fromText keyCamel A..= value])
+          ("$not", Just value) -> withIsClause (\col term -> Is col (Not term)) =<< decodeTerm (A.object [AesonKey.fromText keyCamel A..= value])
           _ -> fail "Expecting term constructor - Error decoding term"
       Just value -> do
         (TermWrap column fieldValue) <- parseFieldAndGetClause value keyCamel
@@ -158,6 +156,14 @@ decodeTerm = \case
     getSingleKeyValue km = case AKM.keys km of
       [k] -> return (k, AKM.lookup k km)
       _ -> fail "Unable to decode term - Expecting object with single key"
+
+    withIsClause ::
+      forall a.
+      (Column -> Term -> a) ->
+      Clause ->
+      Parser a
+    withIsClause f (Is col term) = pure $ f col term
+    withIsClause _ _ = fail "Is Clause expected"
 
 parseFieldAndGetClause :: A.Value -> Text -> Parser TermWrap
 parseFieldAndGetClause obj fieldName = do

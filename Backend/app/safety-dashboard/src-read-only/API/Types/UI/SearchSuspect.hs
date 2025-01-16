@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.SearchSuspect where
@@ -10,14 +9,20 @@ import qualified Domain.Types.Suspect
 import qualified Domain.Types.SuspectFlagRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
-data CheckSuspectStatusHistoryResp = CheckSuspectStatusHistoryResp {suspectStatusHistory :: [API.Types.UI.SearchSuspect.StatusHistory]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data CheckSuspectStatusHistoryResp = CheckSuspectStatusHistoryResp {suspectStatusHistory :: [StatusHistory]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SearchSuspectReq = SearchSuspectReq {dl :: Kernel.Prelude.Maybe Data.Text.Text, voterId :: Kernel.Prelude.Maybe Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SearchSuspectReq = SearchSuspectReq {dl :: Kernel.Prelude.Maybe Data.Text.Text, voterId :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SearchSuspectReqList = SearchSuspectReqList {suspectReqList :: [API.Types.UI.SearchSuspect.SearchSuspectReq]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SearchSuspectReqList = SearchSuspectReqList {suspectReqList :: [SearchSuspectReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SearchSuspectResp = SearchSuspectResp
   { createdAt :: Kernel.Prelude.UTCTime,
@@ -33,7 +38,8 @@ data SearchSuspectResp = SearchSuspectResp
     updatedAt :: Kernel.Prelude.UTCTime,
     voterId :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StatusHistory = StatusHistory
   { adminApproval :: Kernel.Prelude.Maybe Domain.Types.SuspectFlagRequest.AdminApproval,
@@ -50,6 +56,9 @@ data StatusHistory = StatusHistory
     updatedAt :: Kernel.Prelude.UTCTime,
     voterId :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SuspectsList = SuspectsList {summary :: API.Types.UI.Notification.Summary, suspects :: [API.Types.UI.SearchSuspect.SearchSuspectResp]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SuspectsList = SuspectsList {summary :: API.Types.UI.Notification.Summary, suspects :: [SearchSuspectResp]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

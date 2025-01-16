@@ -1,11 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SpecialOccasion where
 
 import Data.Aeson
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -15,7 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data SpecialOccasion = SpecialOccasion
   { businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
-    date :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    date :: Kernel.Prelude.Maybe Data.Time.Day,
     dayOfWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Text,

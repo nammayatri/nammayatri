@@ -27,8 +27,11 @@ where
 
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
+import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationReason as DTCR
+import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequestForDriver as Domain
@@ -45,6 +48,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -68,6 +73,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
@@ -79,7 +85,8 @@ data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
 data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
-    userReallocationEnabled :: Maybe Bool
+    userReallocationEnabled :: Maybe Bool,
+    cancellationReason :: Maybe Text
   }
   deriving (Show)
 
@@ -97,38 +104,43 @@ cancel ::
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
+    transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
       QRide.updateStatus ride.id SRide.CANCELLED
       when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
-    bookingCR <- buildBookingCancellationReason
+    (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
+    let currentLocation = getCoordinates <$> mbLocation
+    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-
-    disToPickup <- getDistanceToPickup booking mbRide
-
+    when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
-        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
+        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just $ ride.id.getId) ride.vehicleVariant
 
         whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
 
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      fork "incrementCancelledCount based on nammatag" $ do
+        rideTags <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR
+        when (validDriverCancellation `elem` rideTags) $ do
+          let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
+          void $ SCR.incrementCancelledCount ride.driverId windowSize
 
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     cancellationCharge <- do
       case mbRide of
         Just ride -> do
-          transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
           case (transporterConfig.canAddCancellationFee, ride.cancellationFeeIfCancelled) of
             (False, _) -> return Nothing
             (True, Just cancellationCharges) -> return $ Just PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}
@@ -155,23 +167,24 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason = do
+    buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
-            rideId = Nothing,
+            rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = Nothing,
-            driverId = Nothing,
+            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
+            driverId = (.driverId) <$> mbRide,
             additionalInfo = Nothing,
-            driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing,
+            driverCancellationLocation = currentLocation,
+            driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             ..
           }
 
-getDistanceToPickup :: SRB.Booking -> Maybe SRide.Ride -> Flow (Maybe Meters)
+getDistanceToPickup :: SRB.Booking -> Maybe SRide.Ride -> Flow (Maybe Meters, Maybe DriverLocation)
 getDistanceToPickup booking mbRide = do
   case mbRide of
     Just ride -> do
@@ -182,9 +195,12 @@ getDistanceToPickup booking mbRide = do
             logError ("Failed to fetch Driver Location with error : " <> show err)
             return Nothing
           Right locations -> return $ listToMaybe locations
-      forM mbLocation $ \location -> do
-        driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-    _ -> return Nothing
+      case mbLocation of
+        Just location -> do
+          distance <- driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+          return (Just distance, Just location)
+        Nothing -> return (Nothing, Nothing)
+    _ -> return (Nothing, Nothing)
 
 getCancellationCharges :: SRB.Booking -> Flow (Maybe PriceAPIEntity)
 getCancellationCharges booking = do
@@ -192,7 +208,7 @@ getCancellationCharges booking = do
   if transporterConfig.canAddCancellationFee
     then do
       mbRide <- QRide.findActiveByRBId booking.id
-      distanceToPickup <- getDistanceToPickup booking mbRide
+      (distanceToPickup, _) <- getDistanceToPickup booking mbRide
       customerCancellationChargesCalculation booking mbRide distanceToPickup
     else return Nothing
 
@@ -247,7 +263,7 @@ cancelSearch _merchantId searchTry = do
   QDQ.setInactiveBySRId searchTry.requestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,

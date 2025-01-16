@@ -1,0 +1,43 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Price: Kernel.Types.Common
+
+QuoteBreakup:
+  derives: "Show"
+
+  fields:
+    id: Id QuoteBreakup
+    quoteId: Text
+    title: Text
+    price: Price
+
+  beamFields:
+    price:
+      priceValue: HighPrecMoney
+      priceCurrency: Maybe Currency
+
+  toTType:
+    priceValue: ((.amount) price)|E
+    priceCurrency: (Just $ (.currency) price)|E
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice priceCurrency priceValue|E
+
+  queries:
+    findAllByQuoteIdT:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: quoteId
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+
+  sqlType:
+    priceCurrency: character varying(255)

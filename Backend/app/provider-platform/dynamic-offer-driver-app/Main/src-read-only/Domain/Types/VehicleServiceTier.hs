@@ -1,14 +1,14 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.VehicleServiceTier where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -16,10 +16,12 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleServiceTier = VehicleServiceTier
   { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    allowedVehicleVariant :: [Domain.Types.Vehicle.Variant],
-    autoSelectedVehicleVariant :: [Domain.Types.Vehicle.Variant],
-    defaultForVehicleVariant :: [Domain.Types.Vehicle.Variant],
+    allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    defaultForVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -32,8 +34,12 @@ data VehicleServiceTier = VehicleServiceTier
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     priority :: Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,

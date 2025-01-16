@@ -29,7 +29,6 @@ import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Queries.SystemConfigs as QSC
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
 import Kernel.Types.Error
@@ -41,8 +40,8 @@ import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import Servant
-import "dynamic-offer-driver-app" Storage.Beam.SystemConfigs ()
 import System.Environment (lookupEnv)
+import SystemConfigsOverride as QSC hiding (id)
 
 startKafkaConsumer :: IO ()
 startKafkaConsumer = do
@@ -62,14 +61,16 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
     let flowRt = flowRt' {L._httpClientManagers = managers}
     runFlow
       flowRt
-      ( prepareConnectionRider
-          ( ConnectionConfigRider
-              { esqDBCfg = appCfg.esqDBCfg,
-                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = appCfg.hedisClusterCfg
-              }
-          )
-          appCfg.kvConfigUpdateFrequency
+      ( ( prepareConnectionRider
+            ( ConnectionConfigRider
+                { esqDBCfg = appCfg.esqDBCfg,
+                  esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                  hedisClusterCfg = appCfg.hedisClusterCfg
+                }
+            )
+            appCfg.kvConfigUpdateFrequency
+        )
+          >> L.setOption KBT.KafkaConn appEnv.kafkaProducerTools
       )
     flowRt'' <- runFlowR flowRt appEnv $ do
       fork

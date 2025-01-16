@@ -11,13 +11,13 @@ try {
 } catch (err) {}
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED"];
+const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds",  "addToLogList"])
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION", "USER_FAVOURITE_DRIVER", "FROM_METRO_COINS", "TO_METRO_COINS"]);
 
 console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
 if (window.JBridge.firebaseLogEventWithParams){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
+    return !blackListFunctions.has(fnName)
   }).forEach(fnName => {
       window.JBridgeProxy = window.JBridgeProxy || {};
       window.JBridgeProxy[fnName] = window.JBridge[fnName];
@@ -27,14 +27,19 @@ if (window.JBridge.firebaseLogEventWithParams){
           params = arguments[1].split("/").splice(6).join("/");
         }
         let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+        if (window.decodeAppConfig) {
+          shouldLog = window.decodeAppConfig.logFunctionCalls ? window.decodeAppConfig.logFunctionCalls : shouldLog;
         }
         if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+          window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
+        try{
+          const result = window.JBridgeProxy[fnName](...arguments);
+          return result;
+        }catch(e){
+          console.error(e);
+          return;
+        }
       };
     });
 }
@@ -155,6 +160,11 @@ function callInitiateResult () {
 }
 
 function refreshFlow(){
+  const dontCallRefresh = (window.JBridge.getKeysInSharedPref("DONT_CALL_REFRESH") == "true");
+  if (dontCallRefresh) {
+    window.JBridge.setKeysInSharedPrefs("DONT_CALL_REFRESH", "false");
+    return;
+  }
   const currentDate = new Date();
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
   const token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
@@ -188,10 +198,13 @@ function checkForReferral(viewParam, eventType) {
 
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
+  const JOSFlags = window.JOS.getJOSflags();
   const clientPaylod = JSON.parse(payload);
   const clientId = clientPaylod.payload.clientId;
   const appName = clientPaylod.payload.appName;
+  window.loadDynamicModule = clientPaylod.payload.loadDynamicModule;
   window.appName = appName;
+  window.isCUGUser = JOSFlags.isCUGUser;
   if (_event == "initiate") {
     console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
     if (clientId == "yatriprovider") {
@@ -234,7 +247,6 @@ window.onMerchantEvent = function (_event, payload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
     try {
@@ -282,6 +294,11 @@ window.onMerchantEvent = function (_event, payload) {
         if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
+      } else if (parsedPayload.payload.action == "process_hv_resp" && parsedPayload.payload.callback && parsedPayload.payload.hv_response) {
+        console.log(parsedPayload.payload.callback);
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.hv_response);
+      } else if (parsedPayload.payload.action == "gl_process" && parsedPayload.payload.callback && parsedPayload.payload.value) {
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.value);
       } else {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
       }
@@ -324,6 +341,7 @@ window.callUICallback = function () {
 };
 
 window.onResumeListeners = [];
+window.internetListeners = {};
 
 window.onPause = function () {
   console.error("onEvent onPause");
@@ -411,6 +429,8 @@ window["onEvent'"] = function (_event, args) {
     }
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
+  }else if(_event === "onReloadApp") {
+    purescript.onEvent(_event)();
   }
 }
 

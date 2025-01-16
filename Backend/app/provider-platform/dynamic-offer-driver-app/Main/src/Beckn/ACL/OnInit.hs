@@ -14,10 +14,10 @@
 
 module Beckn.ACL.OnInit where
 
-import qualified Beckn.ACL.Common as Common
-import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
@@ -61,9 +61,9 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation Nothing,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
+          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]

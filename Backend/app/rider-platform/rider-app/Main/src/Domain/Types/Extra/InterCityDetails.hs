@@ -1,7 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.InterCityDetails where
 
@@ -24,6 +21,7 @@ data InterCityDetailsAPIEntity = InterCityDetailsAPIEntity
     kmPerPlannedExtraHour :: Distance,
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
     perDayMaxHourAllowance :: Hours,
+    perDayMaxAllowanceInMins :: Maybe Minutes,
     tollCharges :: Maybe PriceAPIEntity,
     roundTrip :: Maybe Bool
   }

@@ -15,6 +15,7 @@
 
 module Storage.Queries.Coins.CoinHistory where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Person as SP
@@ -22,6 +23,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.DriverCoins.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinHistory as BeamDC
 
@@ -56,6 +58,16 @@ getTotalCoins (Id driverId) timeDiffFromUtc = do
             [ Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime),
               Se.Is BeamDC.expirationAt $ Se.Eq Nothing
             ]
+        ]
+    ]
+
+getCoinsByEventFunction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> DriverCoinsFunctionType -> Maybe Text -> m (Maybe CoinHistory)
+getCoinsByEventFunction (Id driverId) eventFunction entityId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.driverId $ Se.Eq $ driverId,
+          Se.Is BeamDC.eventFunction $ Se.Eq $ eventFunction,
+          Se.Is BeamDC.entityId $ Se.Eq entityId
         ]
     ]
 
@@ -100,7 +112,7 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     Nothing
     Nothing
 
-updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> CoinStatus -> m ()
+updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> DCoins.CoinStatus -> m ()
 updateStatusOfCoins id coinsRemainingValue newStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -136,7 +148,9 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             expirationAt = expirationAt,
             status = status,
             coinsUsed = coinsUsed,
-            bulkUploadTitle = bulkUploadTitle
+            bulkUploadTitle = bulkUploadTitle,
+            entityId = entityId,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' BeamDC.CoinHistory CoinHistory where
@@ -153,5 +167,7 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
         BeamDC.expirationAt = expirationAt,
         BeamDC.status = status,
         BeamDC.coinsUsed = coinsUsed,
-        BeamDC.bulkUploadTitle = bulkUploadTitle
+        BeamDC.bulkUploadTitle = bulkUploadTitle,
+        BeamDC.entityId = entityId,
+        BeamDC.vehicleCategory = vehicleCategory
       }

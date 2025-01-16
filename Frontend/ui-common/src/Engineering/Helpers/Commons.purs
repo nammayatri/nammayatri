@@ -21,15 +21,16 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
+import Common.Types.App (Version(..),GlobalPayload(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, CalendarMonth)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (Fn2, Fn3)
+import Data.Function.Uncurried (Fn2, Fn3, runFn3)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
 import Data.Int (fromString, toNumber)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
+import DecodeUtil
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, attempt, launchAff)
 import Effect.Aff.AVar (new)
@@ -93,7 +94,9 @@ foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastYears :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getPastMonths :: Int -> Array CalendarMonth
 foreign import getDayName :: String -> String
 foreign import getFutureDate :: String -> Int -> String
 foreign import setEventTimestamp :: String -> Effect Unit
@@ -107,8 +110,8 @@ foreign import toStringJSON :: forall a. a -> String
 foreign import getMarkerCallback :: forall action. Fn2 (action -> Effect Unit) (String -> action) String
 foreign import splitString :: Fn3 String String Int String
 
-foreign import isTrue :: forall a. a -> Boolean
-
+foreign import isTrue :: forall a. a -> Boolean 
+foreign import convertTo2DArray :: forall w. Array String -> Array(Array String)
 foreign import parseSecondsOfDayToUTC :: Int -> String
 foreign import getMidnightUTC :: Unit -> String
 foreign import convertDateTimeConfigToUTCImpl :: EffectFn6 Int Int Int Int Int Int String
@@ -116,7 +119,11 @@ foreign import getUTCAfterNSecondsImpl :: Fn2 String Int String
 foreign import getUTCAfterNHoursImpl :: Fn2 String Int String
 foreign import compareUTCDateImpl :: Fn2 String String Int
 foreign import jBridgeMethodExists :: String -> Boolean
+foreign import getDateMinusNDays :: Fn2 String Int String
 
+foreign import getUTCBeforeNSecondsImpl :: Fn2 String Int String
+
+foreign import loadWebViewWithURL :: EffectFn2 String String Unit
 
 os :: String
 os = getOs unit
@@ -196,6 +203,11 @@ standardRunTime =
 
 readFromRef :: forall st. Ref st → FlowBT String st st
 readFromRef ref = lift $ lift $ doAff $ liftEffect $ read ref
+
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 writeToRef :: forall st. st → Ref st → FlowBT String st Unit
 writeToRef d ref = lift $ lift $ doAff $ liftEffect $ write d ref
@@ -331,3 +343,6 @@ getUTCAfterNHours = runFn2 getUTCAfterNHoursImpl
 
 compareUTCDate :: String -> String -> Int
 compareUTCDate = runFn2 compareUTCDateImpl
+
+getUTCBeforeNSeconds :: String -> Int -> String 
+getUTCBeforeNSeconds = runFn2 getUTCBeforeNSecondsImpl

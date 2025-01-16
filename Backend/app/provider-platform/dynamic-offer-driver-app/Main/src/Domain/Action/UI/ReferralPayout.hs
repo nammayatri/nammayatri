@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
-import Data.OpenApi (ToSchema)
-import Data.Text hiding (filter, map)
+import Data.Text hiding (elem, filter, map)
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
@@ -16,7 +12,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Plan as DPlan
-import qualified Domain.Types.Vehicle as DV
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -27,25 +23,20 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
-import qualified Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Price (Currency (..))
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
-import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Auth
 import Tools.Error
 import qualified Tools.Payout as TP
 
@@ -65,8 +56,8 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
   driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   dInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   mbVehicle <- QVeh.findById personId
-  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let dailyEarnings = map parseDailyEarnings earnings
   mbRegistrationOrder <- maybe (return Nothing) QOrder.findById (Id <$> dInfo.payoutRegistrationOrderId)
   return $
@@ -86,7 +77,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
           activatedItems = earning.activatedValidRides,
           earningDate = earning.merchantLocalDate,
           referrals = earning.referralCounts,
-          status = earning.payoutStatus,
+          status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }
 
@@ -101,7 +92,7 @@ postPayoutDeleteVpa (mbPersonId, _merchantId, _merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
-  void $ DrInfo.updatePayoutVpa Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
+  void $ DrInfo.updatePayoutVpaAndStatus Nothing Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
   pure Kernel.Types.APISuccess.Success
 
 getPayoutRegistration ::
@@ -114,11 +105,11 @@ getPayoutRegistration ::
 getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbVehicle <- QVeh.findById personId
-  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
   let (fee, cgst, sgst) = (payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst)
-  clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, cgst, sgst) DFee.PAYOUT_REGISTRATION INR Nothing
+  clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, Just cgst, Just sgst) DFee.PAYOUT_REGISTRATION INR Nothing False
   DrInfo.updatePayoutRegistrationOrderId (Just clearDuesRes.orderId.getId) personId
   pure clearDuesRes
 
@@ -131,12 +122,13 @@ postPayoutCreateOrder ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
+  void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   let serviceName = DEMSC.PayoutService PT.Juspay
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
   pure Kernel.Types.APISuccess.Success
 
 getPayoutOrderStatus ::
@@ -145,19 +137,23 @@ getPayoutOrderStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
     Data.Text.Text ->
     m Payout.PayoutOrderStatusResp
   )
-getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) mbDailyStatsId orderId = do
+getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  _payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId) -- validation Of OrderId
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId}
+  payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
+  mbVehicle <- QVeh.findById personId
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
       serviceName = DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
-  whenJust mbDailyStatsId $ \dStatsId -> do
-    Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
-      let dPayoutStatus = DAP.castPayoutOrderStatus statusResp.status
-      QDS.updatePayoutStatusById dPayoutStatus dStatsId
+  when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
+    whenJust payoutOrder.entityIds $ \dStatsIds -> do
+      forM_ dStatsIds $ \dStatsId -> do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
+          let dPayoutStatus = DAP.castPayoutOrderStatus statusResp.status
+          QDS.updatePayoutStatusById dPayoutStatus dStatsId
   pure statusResp

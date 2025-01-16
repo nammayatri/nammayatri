@@ -30,4 +30,6 @@ data OnUpdateEventType
   | PHONE_CALL_REQUEST
   | STOP_ARRIVED
   | TOLL_CROSSED
+  | ESTIMATED_END_TIME_RANGE_UPDATED
+  | PARCEL_IMAGE_UPLOADED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

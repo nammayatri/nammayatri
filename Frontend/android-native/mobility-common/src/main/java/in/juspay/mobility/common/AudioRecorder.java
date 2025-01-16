@@ -26,7 +26,7 @@ public class AudioRecorder {
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         recorder.setOutputFile(fileName);
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
         try {
             recorder.prepare();
         } catch (Exception e) {

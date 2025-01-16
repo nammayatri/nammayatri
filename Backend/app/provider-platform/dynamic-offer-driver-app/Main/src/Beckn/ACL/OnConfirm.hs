@@ -14,11 +14,11 @@
 
 module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import qualified Domain.Action.Beckn.Confirm as DConfirm
@@ -33,7 +33,7 @@ bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy = do
+buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy =
   Spec.ConfirmReqMessage
     { confirmReqMessageOrder = tfOrder res pricing becknConfig mbFarePolicy
     }
@@ -62,13 +62,13 @@ tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
     [ Spec.Fulfillment
-        { fulfillmentAgent = tfAgent res,
+        { fulfillmentAgent = Nothing,
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
+          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
@@ -122,22 +122,3 @@ tfCancellationTerms res =
         cancellationTermFulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
-
-tfAgent :: DConfirm.DConfirmResp -> Maybe Spec.Agent
-tfAgent res =
-  case res.rideInfo of
-    Just rideInfo -> do
-      let driverName = maybe (Just rideInfo.driver.firstName) (\ln -> Just rideInfo.driver.firstName <> Just " " <> Just ln) rideInfo.driver.lastName
-      return $
-        Spec.Agent
-          { agentContact = Nothing,
-            agentPerson =
-              Just
-                Spec.Person
-                  { personId = Nothing,
-                    personImage = Nothing,
-                    personName = driverName,
-                    personTags = Nothing
-                  }
-          }
-    Nothing -> Nothing

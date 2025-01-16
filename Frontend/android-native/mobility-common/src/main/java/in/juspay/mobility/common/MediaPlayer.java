@@ -26,8 +26,11 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
+
+import in.juspay.mobility.common.cropImage.CropImageActivity;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,6 +53,9 @@ import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
 public class MediaPlayer {
     public boolean isUploadPopupOpen = false;
+    public int height = 0;
+    public int width = 0;
+    public boolean showToAspectRatio = false;
     public ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public MediaPlayerView.AudioRecorder audioRecorder = null;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
@@ -84,7 +90,7 @@ public class MediaPlayer {
         return null;
     }
 
-    public void uploadFile() { 
+    public void uploadFile(int imageAspectHeight, int imageAspectWidth, boolean showAccordingToAspectRatio, @Nullable Boolean canChooseFromFile) {
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
@@ -100,7 +106,10 @@ public class MediaPlayer {
                         Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
                         chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
                         isUploadPopupOpen = true;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                        height = imageAspectHeight;
+                        width = imageAspectWidth;
+                        showToAspectRatio = showAccordingToAspectRatio;
+                        bridgeComponents.getActivity().startActivityForResult((canChooseFromFile != null && canChooseFromFile.equals(false) ? takePicture : chooser), IMAGE_CAPTURE_REQ_CODE, null);
                     }
                 } else {
                     if (bridgeComponents.getActivity() != null) {
@@ -115,11 +124,10 @@ public class MediaPlayer {
         return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
-    public boolean startAudioRecording() {
+    public boolean startAudioRecording(String fileName) {
         if (isMicrophonePermissionEnabled()) {
             audioRecorder = new MediaPlayerView.AudioRecorder();
-            audioRecorder.startRecording(bridgeComponents.getContext());
-            System.out.println("Started recording");
+            audioRecorder.startRecording(bridgeComponents.getContext(), fileName);
             return true;
         } else {
             if (bridgeComponents.getActivity() != null) {
@@ -166,7 +174,7 @@ public class MediaPlayer {
                 } else {
                     Thread thread = new Thread(() -> {
                         try {
-                            String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            String base64 = MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", "mp3", bridgeComponents.getContext().getCacheDir());
                             tempMp3.deleteOnExit();
@@ -211,7 +219,7 @@ public class MediaPlayer {
                 if (source.startsWith("http")) {
                     Thread thread = new Thread(() -> {
                         try {
-                            String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            String base64 = MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", source.substring(source.length()-3), context.getCacheDir());
                             tempMp3.deleteOnExit();

@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.RideRelatedNotificationConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking
+import Domain.Types.Common ()
 import qualified Domain.Types.RideRelatedNotificationConfig
 import Kernel.External.Encryption
 import Kernel.Prelude

@@ -1,11 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Issue where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import qualified IssueManagement.Common
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -37,3 +37,5 @@ type Issue = IssueT Identity
 $(enableKVPG ''IssueT ['id] [['bookingId], ['customerId], ['ticketId]])
 
 $(mkTableInstances ''IssueT "issue")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''IssueT)

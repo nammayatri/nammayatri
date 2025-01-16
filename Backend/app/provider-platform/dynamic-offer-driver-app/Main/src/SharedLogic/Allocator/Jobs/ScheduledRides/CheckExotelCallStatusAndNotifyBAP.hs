@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyB
 
 import qualified Data.HashMap.Strict as HMS
 import Domain.Types.CallStatus as DCallStatus
+import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Types (SchedulerFlow)
@@ -27,6 +28,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.Queries.Booking as QBooking
@@ -47,15 +50,17 @@ checkExotelCallStatusAndNotifyBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    EventStreamFlow m r
   ) =>
   Job 'CheckExotelCallStatusAndNotifyBAP ->
   m ExecutionResult
 checkExotelCallStatusAndNotifyBAP Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let rideId = jobData.rideId
-  callStatus <- QCallStatus.findByEntityId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
-  handleCallStatus callStatus rideId
+  let mOpCityId = jobData.merchantOperatingCityId
+  callStatus <- QCallStatus.findOneByEntityId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
+  handleCallStatus callStatus rideId mOpCityId
 
 handleCallStatus ::
   ( EncFlow m r,
@@ -69,22 +74,25 @@ handleCallStatus ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    EventStreamFlow m r
   ) =>
   DCallStatus.CallStatus ->
   Id DRide.Ride ->
+  Maybe (Id MOC.MerchantOperatingCity) ->
   m ExecutionResult
-handleCallStatus callStatus rideId = do
+handleCallStatus callStatus rideId mOpCityId = do
+  let mOpCityId' = maybe "UNKNOWN_MERCHANT" getId mOpCityId
+  deploymentVersion <- asks (.version)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound $ getId rideId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ getId ride.bookingId)
   case callStatus.callAttempt of
     Just DCallStatus.Resolved ->
       return Complete
     Just DCallStatus.Failed -> do
-      -- Exotel Call Erros
-      CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return Complete
     Just DCallStatus.Attempted -> do
+      fork "updating in prometheus" $ incrementCounter mOpCityId' "call_attempt" deploymentVersion.getDeploymentVersion
       -- attempted to call or unregistered Call Stuck
       CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return Complete

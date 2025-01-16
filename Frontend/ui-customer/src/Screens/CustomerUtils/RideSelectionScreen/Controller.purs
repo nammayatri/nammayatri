@@ -37,7 +37,7 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
@@ -115,7 +115,7 @@ eval (IndividualRideCardActionController (IndividualRideCardController.OnClick i
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
-      exit $ SelectRide state  { selectedItem = Just selectedRide}
+      exit $ SelectRide state  { selectedItem = Just selectedRide, prestoListArrayItems = [], itemsRides = []}
     Nothing -> continue state
 
 eval (DontKnowRide (PrimaryButton.OnClick)) state = do
@@ -123,7 +123,23 @@ eval (DontKnowRide (PrimaryButton.OnClick)) state = do
       selectedItem = Nothing
   }
 
-eval BackPressed state = exit $ GoBack state
+eval BackPressed state = exit $ 
+  GoBack state { 
+    "data" { 
+      selectedOptionId = Nothing 
+    }
+    , prestoListArrayItems = []
+    , itemsRides = []
+    , selectedCategory {
+        categoryName = ""
+      , categoryImageUrl = Nothing
+      , categoryAction = Nothing
+      , categoryId = ""
+      , isRideRequired = false
+      , maxAllowedRideAge = Nothing
+    }
+    , selectedItem = Nothing
+  }
 
 eval (ScrollStateChanged scrollState) state = do
   case scrollState of
@@ -157,8 +173,8 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
   void $ pure $ setRefreshing "2000031" false
   case status of
     "success" -> do
-                  let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
-                  let bufferCardData = myRideListTransformer state.data.isSrcServiceable (rideList  ^. _list) state.data.config
+                  let bufferCardDataPrestoList = myRideListTransformerProp (rideList ^. _list) state.selectedCategory
+                  let bufferCardData = myRideListTransformer state.data.isSrcServiceable (rideList  ^. _list) state.data.config (Just state.selectedCategory)
                   void $ pure $ setRefreshing "2000031" false
                   let loaderBtnDisabled = length (rideList ^. _list )== 0
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
@@ -169,17 +185,3 @@ eval Refresh state = updateAndExit state{props{ receivedResponse = false, loader
 
 eval _ state = update state
 
-getTitle :: String -> String
-getTitle category  = 
-  case category of
-    "APP_RELATED"        -> getString APP_RELATED_ISSUE_PAGE_NAME
-    "RIDE_RELATED"       -> getString RIDE_RELATED_ISSUE_PAGE_NAME
-    "DRIVER_RELATED"     -> getString DRIVER_RELATED_ISSUE_PAGE_NAME
-    "LOST_AND_FOUND"     -> getString LOST_AND_FOUND_ISSUE_PAGE_NAME
-    "SOS"                -> getString SOS_ISSUE_PAGE_NAME
-    "FARE_DISCREPANCY"    -> getString FARE_DISCREPANCIES_ISSUE_PAGE_NAME
-    "PAYMENT_RELATED"    -> getString PAYMENT_RELATED_ISSUE_PAGE_NAME
-    "ACCOUNT_RELATED"    -> getString ACCOUNT_RELATED_ISSUE_PAGE_NAME
-    "OTHER"              -> getString OTHER_ISSUES
-    "SAFETY"             -> getString SAFETY_ISSUE_PAGE_NAME
-    _                    -> "Issue"

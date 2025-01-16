@@ -14,7 +14,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client (CallServerAPI (..), CallServerAPI', clientWithMerchantAndCity) where
+module Tools.Client (CallServerAPI (..), CallServerAPI', clientWithMerchantAndCity, DashboardClient) where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
@@ -95,3 +95,9 @@ clientWithMerchantAndCity ::
   Proxy api ->
   Client Euler.EulerClient (ApiWithMerchantAndCity api)
 clientWithMerchantAndCity _ = Euler.client (Proxy @(ApiWithMerchantAndCity api))
+
+type DashboardClient apis m r b c =
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    CallServerAPI apis m r b c
+  )

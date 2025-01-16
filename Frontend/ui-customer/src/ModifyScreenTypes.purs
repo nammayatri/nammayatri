@@ -18,15 +18,21 @@ module ModifyScreenState where
 import Accessor (_lat, _lon)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.BackTrack (modifyState, getState)
-import Prelude (Unit, bind, ($))
+import Engineering.Helpers.BackTrack (getState)
+import Presto.Core.Types.Language.Flow (Flow(..), modifyState)
+import Prelude
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
-import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..))
+import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..), HomeScreenState)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Common.Types.App as CTA
+import Control.Monad.Trans.Class (lift)
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
-modifyScreenState st =
+modifyScreenState st = void $ lift $ lift $ modifyScreenStateFlow st
+
+modifyScreenStateFlow :: ScreenType -> Flow GlobalState GlobalState
+modifyScreenStateFlow st =
   case st of
     TicketingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ ticketingScreen = a state.ticketingScreen}) 
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
@@ -58,12 +64,25 @@ modifyScreenState st =
     RentalScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { rentalScreen = a state.rentalScreen })
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    SelectFaqScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {selectFaqScreen = a state.selectFaqScreen})
+    FaqScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {faqScreen = a state.faqScreen})
     MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
     MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
     MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
     MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
     GlobalFlowCacheType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalFlowCache = a state.globalFlowCache})
     PickupInstructionsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {pickupInstructionsScreen = a state.pickupInstructionsScreen})
+    DriverProfileScreenCommonStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {riderDriverProfileScreen = a state.riderDriverProfileScreen})
+    RiderRideCompletedScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {riderRideCompletedScreen = a state.riderRideCompletedScreen})
+    DataFetchScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {dataExplainWithFetch = a state.dataExplainWithFetch})
+    FavouriteDriverTripsStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {favouriteDriverListScreen = a state.favouriteDriverListScreen})
+    ParcelDeliveryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {parcelDeliveryScreen = a state.parcelDeliveryScreen})
+    RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
+    SelectContactsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {selectContactsScreen = a state.selectContactsScreen})
+    BusTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {busTicketBookingScreen = a state.busTicketBookingScreen})
+    BusTrackingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {busTrackingScreen = a state.busTrackingScreen})
+    AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
+    SelectBusRouteScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { selectBusRouteScreen = a state.selectBusRouteScreen })
 
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
@@ -79,6 +98,7 @@ updateRepeatRideDetails state = do
     , savedLocations = homeScreen.data.savedLocations
     , destinationAddress = state.destinationAddress 
     , famousDestinations = homeScreen.data.famousDestinations
+    , manuallySharedFollowers = homeScreen.data.manuallySharedFollowers
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
@@ -101,12 +121,46 @@ updateRepeatRideDetails state = do
     }
     })
 
+updateSafetyScreenState :: HomeScreenState -> Int -> Boolean -> Boolean -> FlowBT String Unit
+updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
+  modifyScreenState
+        $ NammaSafetyScreenStateType
+            ( \nammaSafetyScreen ->
+                nammaSafetyScreen
+                  { props
+                    { triggeringSos = false
+                    , timerValue = defaultTimerValue
+                    , showTestDrill = showtestDrill
+                    , showShimmer = true
+                    , confirmTestDrill = false
+                    , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                    , checkPastRide = state.props.currentStage == HomeScreen
+                    , isAudioRecordingActive = false
+                    , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
+                    , showMenu = false
+                    , recordedAudioUrl = Nothing
+                    , audioRecordingStatus = CTA.NOT_RECORDING
+                    , recordingTimer = "00 : 00"
+                    , defaultCallPopup = false
+                    }
+                  , data
+                    { rideId = state.data.driverInfoCardState.rideId
+                    , vehicleDetails = state.data.driverInfoCardState.registrationNumber
+                    }
+                  }
+            )
 
 data FlowState = HelpAndSupportScreenFlow 
                | IssueReportChatScreenFlow
                | RideSelectionScreenFlow
+               | SelectFaqScreenFlow
+               | FaqScreenFlow
                | HomeScreenFlow
                | ActivateSafetyScreenFlow
                | TripDetailsScreenFlow
                | ContactUsScreenFlow
                | MyRidesScreenFlow
+               | GoToFavouritesScreenFlow
+               | ChangeLanguageScreenFlow
+               | RiderRideCompleted
+               | RiderRideEndScreen

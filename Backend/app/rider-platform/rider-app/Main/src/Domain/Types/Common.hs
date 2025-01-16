@@ -1,24 +1,25 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+{-# OPTIONS_GHC -Wno-orphans #-}
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+module Domain.Types.Common
+  ( module Domain.Types,
+  )
+where
 
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as Enums
+import Domain.Types
+import qualified Domain.Types.VehicleCategory as DTVC
+import qualified Domain.Types.VehicleVariant as DTVV
+import Tools.Beam.UtilsTH
 
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Domain.Types.Common where
-
-import Data.Aeson
-import Data.OpenApi
-import Kernel.Prelude
-
-data UsageSafety = Safe | Unsafe
-
-data TravelMode = Metro | Bus | Walk | Taxi
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq)
+$(mkBeamInstancesForEnumAndList ''MultimodalTravelMode)
+$(mkBeamInstancesForEnum ''FareProductType)
+$(mkBeamInstancesForEnumAndList ''ServiceTierType)
+$(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)
+$(mkBeamInstancesForEnumAndList ''DTVC.VehicleCategory)
+$(mkBeamInstancesForEnumAndList ''Enums.VehicleCategory)
+$(mkBeamInstancesForEnum ''TripCategory)
+$(mkBeamInstancesForEnum ''TripParty)
+$(mkBeamInstancesForEnumAndList ''Spec.VehicleCategory)
+$(mkBeamInstancesForEnumAndList ''Spec.ServiceTierType)
+$(mkBeamInstancesForEnumAndList ''Spec.Network)

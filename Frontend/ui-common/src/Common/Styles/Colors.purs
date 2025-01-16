@@ -19,6 +19,9 @@ black650 = "#868B98"
 black700 :: Color
 black700 = "#6D7280"
 
+black712 :: Color
+black712 = "#806D7280"
+
 black9000 :: Color
 black9000 = "#CC2C2F3A"
 
@@ -81,6 +84,9 @@ yellow900 = "#FCC32C"
 
 yellow600 :: Color
 yellow600 = "#FCF6E7"
+
+yellowOpacity23 :: Color
+yellowOpacity23 = "#3BFCC32C"
 
 shadowGray :: Color
 shadowGray = "#D1D5DB"
@@ -219,6 +225,9 @@ yellowOpacity10 = "#1AFCC32C"
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
 
+redOpacity30 :: Color
+redOpacity30 = "#4DE55454"
+
 redOpacity20 :: Color
 redOpacity20 = "#33E55454"
 
@@ -347,6 +356,9 @@ mountainFig = "#373B49"
 blueGreen :: Color
 blueGreen = "#42B8BA"
 
+blueGreenBg :: Color 
+blueGreenBg = "#E8F5F6"
+
 azureine :: Color
 azureine = "#0157D8"
 
@@ -400,3 +412,9 @@ indianRed8 = "#14E55454"
 
 lightBlue80 :: Color
 lightBlue80 = "#CC80B2FF"
+
+surfaceRed :: Color
+surfaceRed = "#FDEAEA"
+
+limeGreen :: Color 
+limeGreen = "#3AA215"

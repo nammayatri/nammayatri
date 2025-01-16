@@ -3,6 +3,9 @@ let rootDir = env:GIT_ROOT_PATH
 let outputPrefixDashboardReadOnly =
       rootDir ++ "/Backend/app/dashboard/rider-dashboard/src-read-only/"
 
+let outputPrefixDashboard =
+      rootDir ++ "/Backend/app/dashboard/rider-dashboard/src/"
+
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/app/dashboard/CommonAPIs/src-read-only/"
 
@@ -22,6 +25,8 @@ let outputPath =
           outputPrefixCommonApisReadOnly ++ "API/Types/RiderPlatform"
       , _extraApiRelatedTypes =
           outputPrefixCommonApis ++ "Dashboard/RiderPlatform"
+      , _extraApiRelatedCommonTypes =
+          outputPrefixCommonApis ++ "Dashboard/Common"
       , _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _cachedQueries =
@@ -30,19 +35,28 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
       , _beamTable = outputPrefixDashboardReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefixRiderApp ++ "Domain/Action/Dashboard"
+      , _domainHandlerDashboard =
+          outputPrefixDashboard ++ "Domain/Action/RiderPlatform"
       , _domainType = outputPrefixDashboardReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixRiderAppReadOnly ++ "API/Action/Dashboard"
       , _servantApiDashboard =
           outputPrefixDashboardReadOnly ++ "API/Action/RiderPlatform"
-      , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
+      , _servantApiClient =
+          outputPrefixDashboardReadOnly ++ "API/Client/RiderPlatform"
+      , _sql = [ { _1 = migrationPath, _2 = "atlas_bap_dashboard" } ]
       , _purescriptFrontend = ""
       }
 
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | API_TREE
+      | API_TREE_DASHBOARD
+      | API_TREE_COMMON
+      | API_TREE_CLIENT
       | API_TYPES
       | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
       | BEAM_QUERIES
       | CACHED_QUERIES
       | BEAM_TABLE
@@ -145,7 +159,6 @@ let defaultImports =
           [ "EulerHS.Prelude"
           , "Servant"
           , "Tools.Auth.Api"
-          , "Tools.Auth.Merchant"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
           ]
@@ -156,7 +169,6 @@ let defaultImports =
           , "Kernel.Types.Id"
           , "Kernel.Types.Beckn.Context"
           , "RiderPlatformClient.DynamicOfferDriver"
-          , "SharedLogic.Transaction"
           ]
         , _packageImports =
           [ { _importType = ImportType.QUALIFIED
@@ -171,10 +183,37 @@ let defaultImports =
         , _generationType = GeneratorType.SERVANT_API_DASHBOARD
         }
       , { _simpleImports =
-          [ "EulerHS.Prelude hiding (id)"
+          [ "EulerHS.Prelude"
+          , "Tools.Auth.Api"
+          , "Tools.Auth.Merchant"
+          , "Kernel.Utils.Common"
+          , "Storage.Beam.CommonInstances ()"
+          ]
+        , _qualifiedImports =
+          [ "Domain.Types.Person"
+          , "Kernel.Prelude"
+          , "Kernel.Types.Id"
+          , "Kernel.Types.Beckn.Context"
+          , "SharedLogic.Transaction"
+          ]
+        , _packageImports =
+          [ { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Environment"
+            }
+          ]
+        , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
+        }
+      , { _simpleImports =
+          [ "EulerHS.Prelude hiding (id, state)"
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"
+          , "Kernel.Types.Common"
           ]
         , _qualifiedImports =
           [ "Kernel.Prelude"
@@ -184,9 +223,74 @@ let defaultImports =
           , "Kernel.Types.Id"
           , "EulerHS.Types"
           , "Kernel.Types.APISuccess"
+          , "Kernel.Storage.Esqueleto"
+          , "Data.Singletons.TH"
           ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
+        }
+      , { _simpleImports = [ "Servant" ]
+        , _qualifiedImports =
+          [ "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Beckn.Context"
+          , "Kernel.Types.Id"
+          ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.API_TREE
+        }
+      , { _simpleImports = [ "Servant" ]
+        , _qualifiedImports =
+          [ "Kernel.Types.Beckn.Context", "Kernel.Types.Id" ]
+        , _packageImports =
+          [ { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Environment"
+            }
+          ]
+        , _generationType = GeneratorType.API_TREE_DASHBOARD
+        }
+      , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
+        , _qualifiedImports =
+          [ "Kernel.Storage.Esqueleto"
+          , "Text.Show"
+          , "Text.Read"
+          , "Dashboard.Common"
+          , "Data.List"
+          , "Data.Singletons.TH"
+          ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.API_TREE_COMMON
+        }
+      , { _simpleImports = [ "Kernel.Prelude", "Servant" ]
+        , _qualifiedImports = [ "Kernel.Types.Beckn.City" ]
+        , _packageImports =
+          [ { _importType = ImportType.QUALIFIED
+            , _importPackageName = "rider-app"
+            , _importModuleName = "API.Dashboard"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.ServerName"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Tools.Auth.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Tools.Client"
+            }
+          ]
+        , _generationType = GeneratorType.API_TREE_CLIENT
         }
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
@@ -252,12 +356,31 @@ let defaultConfigs =
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_HANDLER
+        , GeneratorType.DOMAIN_HANDLER_DASHBOARD
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
         , GeneratorType.SERVANT_API_DASHBOARD
+        , GeneratorType.API_TREE
+        , GeneratorType.API_TREE_DASHBOARD
+        , GeneratorType.API_TREE_COMMON
+        , GeneratorType.API_TREE_CLIENT
+        , GeneratorType.SQL
         ]
+      , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
       , _apiKind = ApiKind.DASHBOARD
-      , _clientFunction = None
+      , _serverName = None Text
+      , _endpointPrefix = Some "Rider"
+      , _folderName = None Text
+      , _migrationParams =
+        [ { _migrationName = "localAccessForRoleId"
+          , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"
+          }
+        ]
       }
 
-in  { defaultConfigs, ClientName, outputPrefixRiderApp }
+in  { defaultConfigs
+    , ClientName
+    , outputPrefixRiderApp
+    , outputPrefixRiderAppReadOnly
+    , GeneratorType
+    }

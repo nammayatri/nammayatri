@@ -33,6 +33,7 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
             reasonCode = reasonCode,
             reasonStage = reasonStage,
             rideId = Kernel.Types.Id.Id <$> rideId,
+            riderId = Kernel.Types.Id.Id <$> riderId,
             source = source,
             updatedAt = updatedAt'
           }
@@ -52,6 +53,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.reasonCode = reasonCode,
         Beam.reasonStage = reasonStage,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
+        Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.source = source,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

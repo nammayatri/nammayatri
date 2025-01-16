@@ -50,9 +50,9 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import Tools.Error
 
 getDistance ::
@@ -134,7 +134,7 @@ snapToRoad ::
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
 getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
@@ -155,7 +155,7 @@ snapToRoadWithFallback ::
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback rectifyDistantPointsFailureUsing merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback rectifyDistantPointsFailureUsing handler
+snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback rectifyDistantPointsFailureUsing handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
@@ -164,14 +164,14 @@ snapToRoadWithFallback rectifyDistantPointsFailureUsing merchantId merchantOpera
       pure $ transporterConfig.snapToRoadConfidenceThreshold
 
     getProvidersList = do
-      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
       when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
       pure snapToRoadProvidersList
 
     getProviderConfig provider = do
       merchantMapsServiceConfig <-
-        QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService provider) merchantOperatingCityId
+        QOMSC.findByServiceAndCity (DOSC.MapsService provider) merchantOperatingCityId
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
       case merchantMapsServiceConfig.serviceConfig of
         DOSC.MapsServiceConfig msc -> pure msc
@@ -182,10 +182,10 @@ getServiceConfigForRectifyingSnapToRoadDistantPointsFailure ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m MapsServiceConfig
-getServiceConfigForRectifyingSnapToRoadDistantPointsFailure merchantId merchantOpCityId = do
-  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+getServiceConfigForRectifyingSnapToRoadDistantPointsFailure _merchantId merchantOpCityId = do
+  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure) merchantOpCityId
+    QOMSC.findByServiceAndCity (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show orgMapsConfig.rectifyDistantPointsFailure))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> return msc
@@ -199,10 +199,10 @@ runWithServiceConfig ::
   Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
-  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
+  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
+    QOMSC.findByServiceAndCity (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req

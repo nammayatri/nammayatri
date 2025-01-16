@@ -100,6 +100,9 @@ updateChats issueId chats = do
     [Set BeamIR.chats chats, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueId)]
 
+findByBecknIssueId :: BeamFlow m r => Text -> m (Maybe IssueReport)
+findByBecknIssueId becknIssueId = findOneWithKV [Is BeamIR.becknIssueId $ Eq (Just becknIssueId)]
+
 instance FromTType' BeamIR.IssueReport IssueReport where
   fromTType' BeamIR.IssueReportT {..} = do
     pure $
@@ -117,6 +120,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             merchantId = Id <$> merchantId,
+            becknIssueId = becknIssueId,
             ..
           }
 
@@ -140,5 +144,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamIR.chats = chats,
-        BeamIR.merchantId = getId <$> merchantId
+        BeamIR.merchantId = getId <$> merchantId,
+        BeamIR.becknIssueId = becknIssueId
       }

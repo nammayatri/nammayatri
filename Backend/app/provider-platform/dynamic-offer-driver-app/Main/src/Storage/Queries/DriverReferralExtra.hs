@@ -1,26 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverReferralExtra where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverReferral
-import qualified Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverReferral as Beam
 import qualified Storage.Beam.DriverReferral as BeamDR
-import Storage.Queries.OrphanInstances.DriverReferral
+import Storage.Queries.OrphanInstances.DriverReferral ()
 
 -- Extra code goes here --
 

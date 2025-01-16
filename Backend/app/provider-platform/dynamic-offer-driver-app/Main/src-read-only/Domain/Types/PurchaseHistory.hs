@@ -1,10 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.PurchaseHistory where
 
 import Data.Aeson
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -20,6 +20,7 @@ data PurchaseHistory = PurchaseHistory
     merchantOptCityId :: Kernel.Prelude.Text,
     numCoins :: Kernel.Prelude.Int,
     title :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

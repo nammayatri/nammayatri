@@ -10,38 +10,60 @@
 
 module Storage.Queries.FarePolicy.FarePolicyInterCityDetails where
 
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
+import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPICDPS
+import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as QueriesFPICDPS
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyInterCityDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyInterCityDetails -> m ()
-create = createWithKV
+create farePolicyInterCityDetails = do
+  mapM_ QueriesFPICDPS.create (map (fst farePolicyInterCityDetails,) (NE.toList (snd farePolicyInterCityDetails).pricingSlabs))
+  createWithKV farePolicyInterCityDetails
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
-delete farePolicyId = deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
+delete farePolicyId = do
+  QueriesFPICDPS.delete farePolicyId
+  deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   fromTType' farePolicyInterCityDetails = do
-    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails
+    fullFPICDPS <- QueriesFPICDPS.findAll' (KTI.Id farePolicyInterCityDetails.farePolicyId)
+    fPICDPS <- fromMaybeM (InternalError "No pricing slab found for intercity") (NE.nonEmpty fullFPICDPS) -- check it
+    pure . Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
 
 fromTTypeFarePolicyInterCityDetails ::
   BeamFPRD.FarePolicyInterCityDetails ->
+  NonEmpty BeamFPICDPS.FullFarePolicyInterCityDetailsPricingSlabs ->
   Domain.FullFarePolicyInterCityDetails
-fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} =
+fromTTypeFarePolicyInterCityDetails BeamFPRD.FarePolicyInterCityDetailsT {..} fPICDPS =
   ( KTI.Id farePolicyId,
-    Domain.FPInterCityDetails {..}
+    Domain.FPInterCityDetails
+      { pricingSlabs = snd <$> fPICDPS,
+        waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              },
+        ..
+      }
   )
 
 instance ToTType' BeamFPRD.FarePolicyInterCityDetails Domain.FullFarePolicyInterCityDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPInterCityDetails {..}) =
     BeamFPRD.FarePolicyInterCityDetailsT
       { farePolicyId = farePolicyId,
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         ..
       }

@@ -1,19 +1,14 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DocumentVerificationConfigExtra where
 
 import Domain.Types.DocumentVerificationConfig
 import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import Sequelize as Se
 import qualified Storage.Beam.DocumentVerificationConfig as BeamODC
-import Storage.Queries.OrphanInstances.DocumentVerificationConfig
+import Storage.Queries.OrphanInstances.DocumentVerificationConfig ()
 import Storage.Queries.Transformers.DocumentVerificationConfig
 
 -- Extra code goes here --

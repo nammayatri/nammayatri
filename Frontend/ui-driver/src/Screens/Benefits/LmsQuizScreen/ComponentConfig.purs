@@ -26,7 +26,7 @@ import Services.API (LmsModuleRes(..))
 import Components.PrimaryButton as PrimaryButton
 import JBridge as JB
 import Engineering.Helpers.Commons (screenWidth)
-import Language.Strings (getStringFromLocal)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Language.Types (STR(..))
 import Components.PopUpModal as PopUpModal
 import Language.Strings (getString)
@@ -40,12 +40,12 @@ quizDoneButtonConfig label state isRetryButtonVisible =
   PrimaryButton.config
   { textConfig {
       text = case label of
-             "QUIZ_DONE" -> getStringFromLocal state.props.selectedLanguage DONE
-             "RETAKE_QUIZ" -> getStringFromLocal state.props.selectedLanguage RETAKE_QUIZ
-             "CLOSE_QUIZ" -> getStringFromLocal state.props.selectedLanguage CLOSE
-             "NEXT_QUESTION" -> getStringFromLocal state.props.selectedLanguage NEXT
-             "CONFIRM_QUESTION" -> getStringFromLocal state.props.selectedLanguage CONFIRM
-             "RETRY_QUESTION" -> (getStringFromLocal state.props.selectedLanguage RETRY_STR) <> " "
+             "QUIZ_DONE" -> StringsV2.getString state.props.selectedLanguage DONE
+             "RETAKE_QUIZ" -> StringsV2.getString state.props.selectedLanguage RETAKE_QUIZ
+             "CLOSE_QUIZ" -> StringsV2.getString state.props.selectedLanguage CLOSE
+             "NEXT_QUESTION" -> StringsV2.getString state.props.selectedLanguage NEXT
+             "CONFIRM_QUESTION" -> StringsV2.getString state.props.selectedLanguage CONFIRM
+             "RETRY_QUESTION" -> (StringsV2.getString state.props.selectedLanguage RETRY_STR) <> " "
              _ -> ""
     , color = case label of
                "RETRY_QUESTION" -> Color.black700
@@ -80,7 +80,7 @@ exitPopupConfig state =
       optionButtonOrientation = "VERTICAL",
 
       primaryText {
-        text = (getStringFromLocal state.props.selectedLanguage EXIT_THE_QUIZ)
+        text = (StringsV2.getString state.props.selectedLanguage EXIT_THE_QUIZ)
       , margin = (Margin 0 20 0 20)
       , accessibilityHint = "Do you wish to exit quiz?"
         },
@@ -88,7 +88,7 @@ exitPopupConfig state =
         visibility = GONE
         },
       option1 {
-        text = (getStringFromLocal state.props.selectedLanguage CANCEL)
+        text = (StringsV2.getString state.props.selectedLanguage CANCEL)
       , enableRipple = true
       , color = Color.yellow900
       , background = Color.black900
@@ -96,7 +96,7 @@ exitPopupConfig state =
       , width = MATCH_PARENT
       },
       option2 {
-        text = (getStringFromLocal state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
+        text = (StringsV2.getString state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
       , enableRipple = true
       , color = Color.black900
       , background = Color.white900

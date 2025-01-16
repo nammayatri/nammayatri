@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.MerchantServiceUsageConfig where
@@ -11,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
@@ -23,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.AadhaarVerificationService,
     autoComplete :: Kernel.External.Maps.Types.MapsService,
+    cancelPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     capturePaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     createEphemeralKeys :: Kernel.External.Payment.Types.PaymentService,
     createPaymentCustomer :: Kernel.External.Payment.Types.PaymentService,
@@ -36,6 +37,9 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,
     getExophone :: Kernel.External.Call.Types.CallService,
+    getFirstPickupRoute :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getFrfsAutocompleteDistances :: Kernel.External.Maps.Types.MapsService,
+    getMultiModalService :: Kernel.External.MultiModal.Types.MultiModalService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: Kernel.External.Maps.Types.MapsService,
     getPlaceName :: Kernel.External.Maps.Types.MapsService,
@@ -56,7 +60,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   }
   deriving (Generic, Show)
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 

@@ -14,7 +14,7 @@
 -}
 module SuggestionUtils where
 
-import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
+import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty, values)
 import Data.Tuple.Nested ((/\))
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, compareUTCDate)
 import Data.Maybe
@@ -40,18 +40,32 @@ import Data.Number(fromString)
 import ConfigProvider
 import Services.API (RideBookingRes(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
-import Data.Foldable (foldl)
+import Data.Foldable (foldl,maximum)
 import Data.Lens((^.))
 import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
 import Data.String as DS
 import Data.Array as DA
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
+import Data.List as DL
+-- import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Accessor (_vehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import RemoteConfig (FamousDestination(..), getFamousDestinations)
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import RemoteConfig as RC
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Debug
+import Data.Array (sort, group, head,groupBy)
+import Data.Foldable (maximumBy)
+import Data.Maybe (Maybe(..))
+import Data.Ord (comparing)
+import Data.Array.NonEmpty as DAN
+import Data.Map as DM
+import JBridge as JB
+import Data.Function.Uncurried (runFn2)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC, compareUTCDate, getCurrentUTC, getMarkerCallback)
+import Data.Tuple (Tuple(..))
+import Mobility.Prelude
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -167,9 +181,12 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
                   }
           updatedTrips = DA.mapMaybe (\item -> transformTrip locationsToExclude $ updateExisting item) trips
+          validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) updatedTrips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
-          sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
+          sortedTrips = sortTripsByScore $ updateVariantInfo validTrips
         in
           if tripExists
           then sortedTrips
@@ -352,6 +369,8 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , frequencyCount : trip.frequencyCount
     , recencyDate : trip.recencyDate
     , locationScore : trip.locationScore
+    , dynamicAction : Nothing
+    , types : Nothing
     }
 
 transformTrip :: Array String -> Trip -> Maybe Trip 
@@ -365,31 +384,34 @@ transformSuggestion locationsToExclude destination = let
     in if shouldInclude then Just destination else Nothing
 
 correctServiceTierName :: Maybe String -> Maybe String
-correctServiceTierName serviceTierName = 
+correctServiceTierName serviceTierName =
   case serviceTierName of
     Just "SUV" -> Just "SUV"
     Just "SEDAN" -> Just "Sedan"
     Just "AUTO_RICKSHAW" -> Just "Auto"
     Just "HATCHBACK" -> Just "Hatchback"
+    Just "DELIVERY_BIKE" -> Just "Bike Parcel"
     _ -> serviceTierName
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
 removeDuplicateTrips trips precision = 
-  let 
-    grouped = DA.groupBy 
-      (\trip1 trip2 -> 
-        (getGeoHash trip1.destLat trip1.destLong precision) 
-        == 
-        (getGeoHash trip2.destLat trip2.destLong precision)
-        && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
-      ) 
-      trips
+  let validTrips = filter (\trip -> 
+          (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong) && (getDistanceBwCordinates trip.sourceLat trip.sourceLong trip.destLat trip.destLong /= 0.0)
+        ) trips
+      grouped = DA.groupBy 
+        (\trip1 trip2 -> 
+          (getGeoHash trip1.destLat trip1.destLong precision) 
+          == 
+          (getGeoHash trip2.destLat trip2.destLong precision)
+          && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
+        ) 
+        validTrips
 
-    maxScoreTrips = map 
-      (maximumBy (comparing (\trip -> trip.locationScore))) 
-      grouped
-  in 
-    catMaybes maxScoreTrips
+      maxScoreTrips = map 
+        (maximumBy (comparing (\trip -> trip.locationScore))) 
+        grouped
+    in 
+      catMaybes maxScoreTrips
 
 isPointWithinXDist :: Trip -> Number -> Number -> Number -> Boolean
 isPointWithinXDist item lat lon thresholdDist =
@@ -463,8 +485,10 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
                 (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ DA.reverse 
                 (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
-      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) sortedTripList
+      validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) sortedTripList 
+      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) validTrips
       filteredDestinations = DA.mapMaybe (\item -> transformSuggestion locationsToExclude item) suggestedDestinations
   in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations : filteredDestinations}
 
@@ -486,12 +510,58 @@ getVariant serviceTier variant =
     Just "AC Mini" -> Just "HATCHBACK"
     Just "XL Cab" -> Just "SUV"
     Just "Non-AC Mini" -> Just "TAXI"
+    Just "Bike Taxi" -> Just "BIKE"
+    Just "XL Plus" -> Just "SUV_PLUS"
+    Just "2 Wheeler" -> Just "DELIVERY_BIKE"
     _ -> variant
 
 fetchFamousDestinations :: LazyCheck -> Array LocationListItemState
 fetchFamousDestinations _ = do
   let destinations = getFamousDestinations $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
   map getFamousCityDestination destinations
+
+
+fetchLocationBasedPreferredVariant :: SourceGeoHash -> SuggestionsMap -> Maybe String
+fetchLocationBasedPreferredVariant sourceGeohash suggestionsMap = 
+  let 
+    mbSuggestion = lookup sourceGeohash suggestionsMap
+    suggestion =  fromMaybe dummySuggestionsObject mbSuggestion
+    monthInSecond = convertMonthsToSeconds 1
+    tripSuggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) suggestion.tripSuggestions
+    sortedRecencyGroup = DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) tripSuggestionsOfLast30days
+    lastFiveTrips  =  getLast5Trips sortedRecencyGroup dummyFreqencyCount 
+    sortedTripList =  ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.serviceTierNameV2))
+  in 
+    case head sortedTripList of 
+      Just (Tuple varient frequency) -> varient 
+      Nothing -> Nothing 
+
+getPreferredVariant :: SuggestionsMap -> Maybe String
+getPreferredVariant suggestionsMap = 
+  let
+    suggestionsMap =  getSuggestionsMapFromLocal FunctionCall
+    suggestionMapValues =  values suggestionsMap
+    suggestions =  suggestionMapValues
+    tripSuggestion  = foldl (\acc item -> acc <> item.tripSuggestions) [] suggestions
+    monthInSecond = convertMonthsToSeconds 1
+    suggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) tripSuggestion
+    sortedRecencyGroup =  DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) suggestionsOfLast30days
+    lastFiveTrips  = getLast5Trips sortedRecencyGroup dummyFreqencyCount 
+    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.serviceTierNameV2))
+  in 
+    case head sortedTripList of 
+      Just (Tuple varient frequency) -> varient 
+      Nothing -> Nothing
+
+
+
+mostFrequentElement :: forall a. (Ord a) => Array a -> Maybe a
+mostFrequentElement arr =
+  let
+    grouped = groupBy (==) arr
+    mbLargestGroup = maximumBy (\x y -> compare (DAN.length y) (DAN.length x)) grouped
+  in 
+    maybe Nothing (\largestGroup -> Just (DAN.head largestGroup)) mbLargestGroup
 
 getFamousCityDestination :: FamousDestination -> LocationListItemState
 getFamousCityDestination (FamousDestination destnData)  = 
@@ -522,4 +592,43 @@ getFamousCityDestination (FamousDestination destnData)  =
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : destnData.dynamic_action
+    , types : Nothing
     }
+
+type FrequencyCount = {
+  frequency :: Int,
+  serviceTierNameV2 :: Array (Tuple (Maybe String) Int)
+}
+
+dummyFreqencyCount :: FrequencyCount 
+dummyFreqencyCount = {
+  frequency: 5, 
+  serviceTierNameV2: []
+}
+
+findAndUpdate :: Array (Tuple (Maybe String) Int) -> Maybe String -> Int -> Array (Tuple (Maybe String) Int)
+findAndUpdate serviceTierList serviceTierNameV2 freq =
+  case DA.find (\(Tuple tierName _) -> tierName == serviceTierNameV2) serviceTierList of
+    Just (Tuple tierName oldFreq) ->
+      map (\(Tuple tn f) -> if tn == serviceTierNameV2 then Tuple tn (f + freq) else Tuple tn f) serviceTierList
+    Nothing ->
+      serviceTierList <> [Tuple serviceTierNameV2 freq]
+
+getLast5Trips :: Array Trip -> FrequencyCount -> FrequencyCount
+getLast5Trips sortedRecencyGroup dummyFrequencyCount = 
+  foldl (\acc item -> 
+    let
+      frequency = fromMaybe 0 item.frequencyCount
+      serviceTierNameV2 = item.serviceTierNameV2 
+      updatedServiceTierNameV2 = if frequency >= acc.frequency then
+        findAndUpdate acc.serviceTierNameV2 serviceTierNameV2 acc.frequency
+      else
+        findAndUpdate acc.serviceTierNameV2 serviceTierNameV2 frequency
+
+      updatedFrequency = if frequency >= acc.frequency then 0 else acc.frequency - frequency  
+
+    in
+      acc { frequency = updatedFrequency, serviceTierNameV2 = updatedServiceTierNameV2 }
+  ) dummyFrequencyCount sortedRecencyGroup
+

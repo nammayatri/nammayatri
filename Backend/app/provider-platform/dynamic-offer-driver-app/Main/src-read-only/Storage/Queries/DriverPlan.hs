@@ -59,6 +59,19 @@ updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge 
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)]]
 
+updateFreeTrialByDriverIdAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+updateFreeTrialByDriverIdAndServiceName isOnFreeTrial driverId serviceName = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.isOnFreeTrial (Kernel.Prelude.Just isOnFreeTrial), Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
+        ]
+    ]
+
 updateLastPaymentLinkSentAtDateByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
@@ -122,6 +135,8 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.coinCovertedToCashLeft coinCovertedToCashLeft,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.enableServiceUsageCharge (Kernel.Prelude.Just enableServiceUsageCharge),
+      Se.Set Beam.isCategoryLevelSubscriptionEnabled isCategoryLevelSubscriptionEnabled,
+      Se.Set Beam.isOnFreeTrial (Kernel.Prelude.Just isOnFreeTrial),
       Se.Set Beam.lastPaymentLinkSentAtIstDate lastPaymentLinkSentAtIstDate,
       Se.Set Beam.mandateId (Kernel.Types.Id.getId <$> mandateId),
       Se.Set Beam.mandateSetupDate mandateSetupDate,
@@ -133,6 +148,7 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.serviceName (Kernel.Prelude.Just serviceName),
       Se.Set Beam.rentedVehicleNumber (Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData),
       Se.Set Beam.totalCoinsConvertedCash totalCoinsConvertedCash,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleCategory vehicleCategory
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

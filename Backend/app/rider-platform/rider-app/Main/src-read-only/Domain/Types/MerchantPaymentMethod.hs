@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -28,7 +27,7 @@ data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   }
   deriving (Generic)
 
-type MerchantPaymentMethod = MerchantPaymentMethodD ('Safe)
+type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
 
 instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 

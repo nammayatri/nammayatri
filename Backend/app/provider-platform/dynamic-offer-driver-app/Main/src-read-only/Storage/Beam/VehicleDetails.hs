@@ -1,13 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.VehicleDetails where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.Vehicle
+import Domain.Types.Common ()
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -19,7 +18,7 @@ data VehicleDetailsT f = VehicleDetailsT
     id :: B.C f Data.Text.Text,
     make :: B.C f Data.Text.Text,
     model :: B.C f Data.Text.Text,
-    vehicleVariant :: B.C f Domain.Types.Vehicle.Variant,
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
     year :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)

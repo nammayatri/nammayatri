@@ -31,6 +31,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -65,6 +66,7 @@ data HandlerEnv = HandlerEnv
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
+    serviceClickhouseEnv :: ClickhouseEnv,
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -104,10 +106,11 @@ data HandlerEnv = HandlerEnv
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     searchRequestExpirationSeconds :: NominalDiffTime,
     s3Env :: S3Env Flow,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
 
@@ -121,9 +124,10 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -142,6 +146,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   let s3Env = buildS3Env s3Config
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
+      serviceClickhouseCfg = driverClickhouseCfg
   return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

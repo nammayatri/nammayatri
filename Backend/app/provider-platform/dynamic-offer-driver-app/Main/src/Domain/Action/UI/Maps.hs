@@ -111,7 +111,8 @@ convertToGetPlaceNameResp placeNameCache =
       addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
       plusCode = placeNameCache.plusCode,
       location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
-      placeId = placeNameCache.placeId
+      placeId = placeNameCache.placeId,
+      source = Nothing
     }
 
 convertResultsRespToPlaceNameCache :: MonadFlow m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
@@ -132,7 +133,7 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
           }
   return res
 
-autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete merchantId merchantOpCityId AutoCompleteReq {..} = do
   merchantCity <- QMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   Maps.autoComplete

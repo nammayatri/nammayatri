@@ -15,6 +15,7 @@
 module SharedLogic.RiderDetails where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RiderDetails as DRD
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,8 +23,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails currency merchantId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
   QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
@@ -50,5 +51,8 @@ getRiderDetails currency merchantId customerMobileCountryCode customerPhoneNumbe
             disputeChancesUsed = 0,
             nightSafetyChecks = nightSafetyCheck,
             firstRideId = Nothing,
-            payoutFlagReason = Nothing
+            payoutFlagReason = Nothing,
+            isDeviceIdExists = Nothing,
+            isFlagConfirmed = Nothing,
+            merchantOperatingCityId = mbMerchantOperatingCityId
           }

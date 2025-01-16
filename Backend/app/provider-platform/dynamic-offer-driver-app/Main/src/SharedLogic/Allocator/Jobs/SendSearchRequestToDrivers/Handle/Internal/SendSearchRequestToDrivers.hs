@@ -21,16 +21,18 @@ import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import Domain.Types.Person (Driver)
+import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
@@ -44,8 +46,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler.Environment
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate
@@ -54,6 +58,8 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.DriverStats as QDriverStats
+import Storage.Queries.RiderDriverCorrelation
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
@@ -69,8 +75,11 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
+    LT.HasLocationService m r,
+    JobCreator r m
   ) =>
+  Bool ->
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -79,8 +88,14 @@ sendSearchRequestToDrivers ::
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+
+  -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
+  -- isAllocatorBatch is false if it is first batch because 1st batch is always triggered from application, not allocator
+  mbSearchReq <- if isAllocatorBatch then pure Nothing else QSR.findById oldSearchReq.id
+  let searchReq = fromMaybe oldSearchReq mbSearchReq
+
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchReq.bapId) Domain.MOBILITY
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
@@ -98,7 +113,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       }
 
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill transporterConfig) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -115,7 +130,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
     let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
-    notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
+    notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
     let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
   where
@@ -127,12 +142,13 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Esq.EsqDBReplicaFlow m r,
         CacheFlow m r
       ) =>
+      DSR.SearchRequest ->
       DFP.FullFarePolicy ->
       Maybe Months ->
       SDP.TripQuoteDetail ->
       DTR.TransporterConfig ->
       m HighPrecMoney
-    getBaseFare farePolicy vehicleAge tripQuoteDetail transporterConfig = do
+    getBaseFare searchReq farePolicy vehicleAge tripQuoteDetail transporterConfig = do
       fareParams <-
         Fare.calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -143,8 +159,11 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
               waitingTime = Nothing,
+              stopWaitingTimes = [],
               actualRideDuration = Nothing,
+              noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedCongestionCharge = Nothing,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
@@ -155,7 +174,8 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
               tollCharges = Nothing,
               vehicleAge = vehicleAge,
               currency = searchReq.currency,
-              distanceUnit = searchReq.distanceUnit
+              distanceUnit = searchReq.distanceUnit,
+              merchantOperatingCityId = Just searchReq.merchantOperatingCityId
             }
       pure $ Fare.fareSum fareParams
 
@@ -171,13 +191,15 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Esq.EsqDBReplicaFlow m r,
         CacheFlow m r
       ) =>
+      DSR.SearchRequest ->
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
       Int ->
       UTCTime ->
       DTR.TransporterConfig ->
+      Maybe (Id RiderDetails) ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -187,10 +209,11 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
-          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
-          getBaseFare farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
+          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
+          getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)
+      isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
@@ -199,6 +222,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 estimateId = Just tripQuoteDetail.estimateOrQuoteId,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
+                fromLocGeohash = searchReq.fromLocGeohash,
                 vehicleAge = dpRes.vehicleAge,
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
@@ -214,6 +238,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 lat = Just dpRes.lat,
                 lon = Just dpRes.lon,
                 createdAt = now,
+                updatedAt = Just now,
                 response = Nothing,
                 driverMinExtraFee = tripQuoteDetail.driverMinFee,
                 driverMaxExtraFee = tripQuoteDetail.driverMaxFee,
@@ -242,8 +267,17 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
                 previousDropGeoHash = dpwRes.previousDropGeoHash,
+                driverTags = Just dpRes.driverTags,
+                customerTags = dpRes.customerTags,
+                poolingLogicVersion = searchReq.poolingLogicVersion,
+                poolingConfigVersion = searchReq.poolingConfigVersion,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
+                renderedAt = Nothing,
+                respondedAt = Nothing,
+                middleStopCount = Just $ length searchReq.stops,
+                upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
+                isFavourite = isFavourite,
                 ..
               }
       pure searchRequestForDriver
@@ -268,7 +302,9 @@ buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
               country = address.country,
               building = address.building,
               areaCode = address.areaCode,
-              fullAddress = address.fullAddress
+              fullAddress = address.fullAddress,
+              instructions = Nothing,
+              extras = Nothing
             },
         ..
       }

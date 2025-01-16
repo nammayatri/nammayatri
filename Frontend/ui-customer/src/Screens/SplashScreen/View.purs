@@ -21,20 +21,22 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (getAssetsBaseUrl)
 import JBridge (lottieAnimationConfig, startLottieProcess)
-import Prelude (Unit, const, discard, pure, void, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), PrestoDOM, ScopedScreen, afterRender, background, clickable, gravity, height, id, linearLayout, lottieAnimationView, width)
+import Prelude 
+import PrestoDOM
 import Screens.SplashScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SplashScreenState)
 import Styles.Colors as Color
+import Helpers.Utils
+import Engineering.Helpers.Commons
+import RemoteConfig as RemoteConfig
 
-screen :: SplashScreenState -> ScopedScreen Action SplashScreenState ScreenOutput
+screen :: SplashScreenState -> Screen Action SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "SplashScreen"
-  , globalEvents: []
+  , globalEvents: [(\push -> pure $ push AfterRender)]
   , eval
-  , parent : Just "SplashScreen"
   }
 
 view ::
@@ -43,23 +45,47 @@ view ::
   SplashScreenState ->
   PrestoDOM (Effect Unit) w
 view push _ =
-  screenAnimation
-    $ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , background Color.black900
-        , gravity CENTER
-        , clickable true
+  relativeLayout
+    [ height $ V $ screenHeight unit
+    , width $ V $ screenWidth unit
+    , background "#111112"
+    , gravity CENTER
+    , clickable true
+    ]
+    [ 
+      relativeLayout
+      [ height $ V $ screenHeight unit
+      , width $ V $ screenWidth unit
+      ][
+        imageView[
+          height $ V $ screenHeight unit
+        , width $ V $ screenWidth unit
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_splash_bg_trans"
         ]
-        [ lottieAnimationView
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , id (getNewIDWithTag "splashLottieAnimation")
-            , afterRender
-                ( \action -> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/splash_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8 }
-                    push action
-                )
-                (const AfterRender)
-            ]
+      , linearLayout [
+          height $ V $ screenHeight unit
+        , width $ V $ screenWidth unit
+        , gravity BOTTOM
+        , padding $ PaddingBottom 50
+        ][
+          imageView[
+            height $ V $ 48
+          , width MATCH_PARENT
+          , gravity CENTER
+          , imageWithFallback $ fetchImage FF_ASSET "ic_powered_by"
+          ]
         ]
+      ]
+    , lottieAnimationView
+        [ height $ V $ screenHeight unit
+        , width $ V $ screenWidth unit
+        , id (getNewIDWithTag "splashLottieAnimation")
+        , afterRender
+            ( \action -> do
+                let bundleLottieConfig = RemoteConfig.getBundleSplashConfig "lazy"
+                void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = bundleLottieConfig.lottieUrl, lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8, cacheEnabled = false }
+                push action
+            )
+            (const AfterRender)
+        ]
+    ]

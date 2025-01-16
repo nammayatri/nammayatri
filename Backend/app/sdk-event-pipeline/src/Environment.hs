@@ -42,6 +42,7 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     riderSDKEventsKafkaTopic :: Text,
     driverSDKEventsKafkaTopic :: Text,
+    metroWebviewEventsKafkaTopic :: Text,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverAppConfig :: DriverAppConfig,
     cacheConfig :: CacheConfig
@@ -61,6 +62,7 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     riderSDKEventsKafkaTopic :: Text,
     driverSDKEventsKafkaTopic :: Text,
+    metroWebviewEventsKafkaTopic :: Text,
     loggerEnv :: LoggerEnv,
     version :: DeploymentVersion,
     coreMetrics :: CoreMetricsContainer,

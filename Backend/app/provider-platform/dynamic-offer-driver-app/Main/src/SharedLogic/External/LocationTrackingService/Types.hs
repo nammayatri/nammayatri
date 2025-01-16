@@ -14,11 +14,12 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
-import qualified Domain.Types.DriverInformation as DI
+import Data.Aeson
+import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.Vehicle (Variant)
+import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -30,15 +31,17 @@ data StartRideReq = StartRideReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Id DM.Merchant,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 data EndRideReq = EndRideReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Id DM.Merchant,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    nextRideId :: Maybe (Id DRide.Ride)
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -46,7 +49,7 @@ data NearByReq = NearByReq
   { lat :: Double,
     lon :: Double,
     onRide :: Maybe Bool,
-    vehicleType :: Maybe Variant,
+    vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
     merchantId :: Id DM.Merchant
   }
@@ -66,7 +69,7 @@ data EndRideRes = EndRideRes
 
 data DriverDetailsReq = DriverDetailsReq
   { driverId :: Id DP.Person,
-    driverMode :: DI.DriverMode
+    driverMode :: DriverMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -75,10 +78,12 @@ data RideDetailsReq = RideDetailsReq
     rideStatus :: DRide.RideStatus,
     merchantId :: Id DM.Merchant,
     driverId :: Id DP.Person,
+    isFutureRide :: Maybe Bool,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show)
 
 newtype DriversLocationReq = DriversLocationReq
   { driverIds :: [Id DP.Person]
@@ -97,3 +102,28 @@ newtype DriverLocationResp = DriverLocationResp
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])
+
+data DriverBlockTillReq = DriverBlockTillReq
+  { merchantId :: Id DM.Merchant,
+    driverId :: Id DP.Person,
+    blockTill :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data RideInfo = Bus
+  { routeCode :: Text,
+    busNumber :: Text,
+    destination :: LatLong
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance ToJSON RideInfo where
+  toJSON (Bus routeCode busNumber destination) =
+    object
+      [ "bus"
+          .= object
+            [ "routeCode" .= routeCode,
+              "busNumber" .= busNumber,
+              "destination" .= destination
+            ]
+      ]

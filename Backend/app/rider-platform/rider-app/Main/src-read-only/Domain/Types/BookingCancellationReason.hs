@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BookingCancellationReason where
@@ -8,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -26,6 +26,7 @@ data BookingCancellationReason = BookingCancellationReason
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     reasonStage :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationStage,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
+    riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     source :: Domain.Types.BookingCancellationReason.CancellationSource,
     updatedAt :: Kernel.Prelude.UTCTime
   }

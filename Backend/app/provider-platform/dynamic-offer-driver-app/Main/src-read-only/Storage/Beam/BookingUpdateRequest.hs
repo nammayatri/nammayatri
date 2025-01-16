@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.BookingUpdateRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BookingUpdateRequest
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -24,6 +23,7 @@ data BookingUpdateRequestT f = BookingUpdateRequestT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     fareParamsId :: B.C f Kernel.Prelude.Text,
     farePolicyId :: B.C f Kernel.Prelude.Text,
+    getRouteReq :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     maxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -32,6 +32,8 @@ data BookingUpdateRequestT f = BookingUpdateRequestT
     oldEstimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     oldFareParamsId :: B.C f Kernel.Prelude.Text,
     oldMaxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    routeInfoResp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    snapToRoadFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     status :: B.C f Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     travelledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),

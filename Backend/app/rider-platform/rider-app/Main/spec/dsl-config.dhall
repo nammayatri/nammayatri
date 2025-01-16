@@ -10,15 +10,18 @@ let migrationPath = rootDir ++ "/Backend/dev/migrations-read-only/rider-app/"
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
       , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
       , _extraCachedQueries = outputPrefix ++ "Storage/CachedQueries/"
       , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
+      , _domainHandlerDashboard = ""
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
       , _servantApiDashboard = ""
+      , _servantApiClient = ""
       , _sql = [ { _1 = migrationPath, _2 = "atlas_app" } ]
       , _purescriptFrontend = ""
       }
@@ -26,8 +29,13 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | API_TREE
+      | API_TREE_DASHBOARD
+      | API_TREE_COMMON
+      | API_TREE_CLIENT
       | API_TYPES
       | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
       | BEAM_QUERIES
       | CACHED_QUERIES
       | BEAM_TABLE
@@ -150,7 +158,7 @@ let defaultImports =
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
-      , { _simpleImports = [ "Data.Aeson" ] : List Text
+      , { _simpleImports = [ "Data.Aeson", "Kernel.Prelude" ] : List Text
         , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
@@ -159,6 +167,7 @@ let defaultImports =
           [ "Kernel.Prelude"
           , "Tools.Beam.UtilsTH"
           , "Kernel.External.Encryption"
+          , "Domain.Types.Common ()"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
         , _packageImports = [] : List PackageImport
@@ -204,6 +213,11 @@ in  { _output = outputPath
       , GeneratorType.SQL
       , GeneratorType.CACHED_QUERIES
       ]
+    , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI
-    , _clientFunction = None Text
+    , _serverName = None Text
+    , _folderName = None Text
+    , _migrationParams =
+        [] : List { _migrationName : Text, _migrationParam : Optional Text }
+    , _endpointPrefix = None Text
     }

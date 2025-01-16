@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Lib.SessionizerMetrics.EventStream where
 
@@ -34,8 +33,10 @@ triggerEvent event = do
   forM_ streamNames $ \stream -> do
     case streamName stream of
       KAFKA_STREAM -> do
-        let KafkaStream matchedConfig = stream.streamConfig
-        fork "updating in kafka" $ streamUpdates event matchedConfig
+        case stream.streamConfig of
+          KafkaStream matchedConfig -> do
+            fork "updating in kafka" $ streamUpdates event matchedConfig
+          _ -> logDebug "Default stream"
       PROMETHEUS_STREAM -> do
         let merchantId = event.merchantId
         let eventType = show event.eventType

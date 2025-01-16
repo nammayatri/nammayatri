@@ -1,13 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.VehicleRegistrationCertificate where
 
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
-import qualified Domain.Types.Vehicle
+import Domain.Types.Common ()
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -35,7 +35,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
+    userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -46,7 +46,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleModelYear :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleSeatBelts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

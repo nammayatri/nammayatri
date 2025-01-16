@@ -19,7 +19,7 @@ import Animation (screenAnimation, screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
 import Components.ChatView.Controller (makeChatComponent')
 import Data.Array (length)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC)
 import Font.Style (bold)
@@ -190,7 +190,7 @@ chatView push state =
   , afterRender push (do
       if state.props.isReversedFlow
       then
-        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) "Bot" (getCurrentUTC "") "Text" 500) true
+        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500) true
       else
         pure ShowOptions
     )

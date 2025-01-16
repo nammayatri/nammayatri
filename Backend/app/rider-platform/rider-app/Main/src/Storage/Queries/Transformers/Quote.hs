@@ -1,7 +1,6 @@
 module Storage.Queries.Transformers.Quote where
 
-import Domain.Types.FarePolicy.FareProductType as DFFP
-import qualified Domain.Types.FarePolicy.FareProductType
+import Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
 import Domain.Types.Quote as DQ
 import qualified Domain.Types.Quote
@@ -19,40 +18,45 @@ import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
 
-getQuoteDetails' :: Domain.Types.Quote.QuoteDetails -> (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)
-getQuoteDetails' quoteDetails =
+fromQuoteDetails :: Domain.Types.Quote.QuoteDetails -> (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)
+fromQuoteDetails quoteDetails =
   let (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
-        DQ.AmbulanceDetails details -> (DFFP.AMBULANCE, Nothing, Nothing, Just $ getId details.id, Nothing)
-        DQ.OneWayDetails details -> (DFFP.ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
-        DQ.RentalDetails rentalDetails -> (DFFP.RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
-        DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
-        DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
-        DQ.InterCityDetails details -> (DFFP.INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
+        DQ.DeliveryDetails details -> (DRIVER_OFFER, Nothing, Nothing, Just $ getId details.id, Nothing) -- for now as FareProductType deprecated, change later accordingly
+        DQ.AmbulanceDetails details -> (AMBULANCE, Nothing, Nothing, Just $ getId details.id, Nothing)
+        DQ.OneWayDetails details -> (ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
+        DQ.RentalDetails rentalDetails -> (RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
+        DQ.DriverOfferDetails driverOffer -> (DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
+        DQ.OneWaySpecialZoneDetails specialZoneQuote -> (ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
+        DQ.InterCityDetails details -> (INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
    in (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId)
 
-getQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Domain.Types.FarePolicy.FareProductType.FareProductType -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
-getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue = case fareProductType of
-  DFFP.ONE_WAY -> do
-    distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
-    pure . DQ.OneWayDetails $
-      DQ.OneWayQuoteDetails
-        { distanceToNearestDriver = distanceToNearestDriver'
-        }
-  DFFP.RENTAL -> do
-    qd <- getRentalDetails rentalDetailsId
-    maybe (throwError (InternalError "No rental details")) return qd
-  DFFP.DRIVER_OFFER -> do
-    qd <- getDriverOfferDetails driverOfferId
-    maybe (throwError (InternalError "No driver offer details")) return qd
-  DFFP.ONE_WAY_SPECIAL_ZONE -> do
-    qd <- getSpecialZoneQuote specialZoneQuoteId
-    maybe (throwError (InternalError "No special zone details")) return qd
-  DFFP.INTER_CITY -> do
-    qd <- getInterCityQuote specialZoneQuoteId
-    maybe (throwError (InternalError "No inter city details")) return qd
-  DFFP.AMBULANCE -> do
-    qd <- getAmbulanceDetails driverOfferId
-    maybe (throwError (InternalError "No driver offer details")) return qd
+toQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, MonadThrow m) => FareProductType -> Maybe TripCategory -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
+toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue =
+  case mbTripCategory of
+    Just tripCategory ->
+      case tripCategory of
+        OneWay OneWayRideOtp -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
+        CrossCity OneWayRideOtp _ -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
+        InterCity _ _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
+        RideShare _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
+        Rental _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
+        Ambulance _ -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+        Delivery _ -> getDeliveryDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+        _ -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+    -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    Nothing ->
+      case fareProductType of
+        ONE_WAY -> do
+          distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
+          pure . DQ.OneWayDetails $
+            DQ.OneWayQuoteDetails
+              { distanceToNearestDriver = distanceToNearestDriver'
+              }
+        RENTAL -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
+        DRIVER_OFFER -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+        ONE_WAY_SPECIAL_ZONE -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
+        INTER_CITY -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
+        AMBULANCE -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
   where
     getRentalDetails rentalDetailsId' = do
       res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
@@ -77,6 +81,10 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
           maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) mbInterCityDetails
         Nothing -> pure Nothing
 
+    getDeliveryDetails driverOfferId' = do
+      res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
+      maybe (pure Nothing) (pure . Just . DQ.DeliveryDetails) res
+
 getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)
 getTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
 
@@ -86,19 +94,19 @@ backfillMOCId mocId merchantId =
     Just mocId' -> pure $ Id mocId'
     Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
 
-getfareProduct :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Domain.Types.FarePolicy.FareProductType.FareProductType
+getfareProduct :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> FareProductType
 getfareProduct (a, _, _, _, _) = a
 
-getDistanceToNearestDriver :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance
+getDistanceToNearestDriver :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance
 getDistanceToNearestDriver (_, a, _, _, _) = a
 
-getRentalDetailsId :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+getRentalDetailsId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getRentalDetailsId (_, _, a, _, _) = a
 
-getDriverOfferId :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+getDriverOfferId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getDriverOfferId (_, _, _, a, _) = a
 
-getSpecialZoneQuoteId :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+getSpecialZoneQuoteId :: (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getSpecialZoneQuoteId (_, _, _, _, a) = a
 
 mkTollChargesInfo :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo

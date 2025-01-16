@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Domain.Types.MediaFile where
 
@@ -24,6 +22,7 @@ data MediaFile = MediaFile
   { id :: Id MediaFile,
     _type :: FileType,
     url :: Text,
+    s3FilePath :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)

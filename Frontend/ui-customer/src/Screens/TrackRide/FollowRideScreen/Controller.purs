@@ -15,20 +15,20 @@
 module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
-import Data.Array (elem, last, length, filter, delete, notElem)
-import Data.Function.Uncurried (runFn3, runFn1)
+import Data.Array (elem, last, length, filter, delete, notElem, any)
+import Data.Function.Uncurried (runFn3, runFn1, runFn4)
 import Data.Int (fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing, maybe)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowRunner, liftFlow)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
-import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
+import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, getLayoutBounds, setMapPadding)
 import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.HomeScreen.ScreenData (dummyDriverInfo)
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
-import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState,NotificationBody)
+import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..), MultiChatReq(..), APISuccessResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Common.Types.App (LazyCheck(..), SosStatus(..), Paths)
 import Components.DriverInfoCard as DriverInfoCard
@@ -59,7 +59,17 @@ import Timers (clearTimerWithId)
 import Storage (getValueToLocalStore)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Control.Monad.Except.Trans (runExceptT)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Transformers.Back.Trans (runBackT)
+import Helpers.API as HelpersAPI
+import Services.API as API
+import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
+import Constants (languageKey)
+import Locale.Utils (getLanguageLocale)
+import Components.DriverInfoCard.Controller as DriverInfoCardController 
 instance showAction :: Show Action where
   show _ = ""
 
@@ -67,9 +77,10 @@ instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
 data ScreenOutput
-  = Exit FollowRideScreenState
+  = Exit FollowRideScreenState Boolean
   | RestartTracking FollowRideScreenState
   | OpenNavigation FollowRideScreenState
+  | GoToDriverProfiles FollowRideScreenState
 
 data Action
   = AfterRender
@@ -94,11 +105,11 @@ data Action
   | InitializeChat
   | ScrollToBottom
   | BackPressed
-  | CallPolice
+  | CallPolice SafetyActionTileView.Action
   | StopAudioPlayer
   | StartAudioPlayer
   | OnAudioCompleted String
-  | NotificationListener String
+  | NotificationListener String NotificationBody
   | DismissOverlay
   | UpdateRoute Route
   | UpdatePeekHeight
@@ -110,9 +121,12 @@ data Action
   | ResetSheetState
   | MessageExpiryTimer Int String String
   | AllChatsLoaded
+  | CallSafetyTeam SafetyActionTileView.Action
+  | DriverInfoCardAction DriverInfoCardController.Action
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
+  DriverInfoCardAction DriverInfoCardController.GoToDriverProfile -> exit $ GoToDriverProfiles state 
   BackPressed -> do 
     case state.data.currentStage of
       ChatWithEM -> continueWithCmd state{data{currentStage = FollowingRide}}
@@ -123,8 +137,8 @@ eval action state = case action of
         ]
       _ -> do
         _ <- pure $ clearAudioPlayer ""
-        let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
-        updateAndExit newState $ Exit newState
+        let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false, chatCallbackInitiated = false} }
+        updateAndExit newState $ Exit newState false
   DismissOverlay -> do
     if isMockDrill state 
       then do
@@ -140,7 +154,7 @@ eval action state = case action of
     else continueWithCmd state [ pure BackPressed]
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
-  NotificationListener notification -> 
+  NotificationListener notification notificationBody -> 
     case notification of
       "SOS_TRIGGERED" -> exit $ RestartTracking state{data{emergencyAudioStatus = STOPPED}, props{isMock = false}}
       "SOS_RESOLVED" -> do
@@ -176,7 +190,7 @@ eval action state = case action of
       then startAudioPlayerCmd [] state { data { emergencyAudioStatus = RESTARTED } }
       else continueWithCmd state [ pure StopAudioPlayer]
   UpdateRoute route -> continue state { data { route = Just route } }
-  CallPolice -> do
+  CallPolice SafetyActionTileView.OnClick -> do
     void $ pure $ performHapticFeedback unit
     pure $ showDialer "112" false
     continue state
@@ -225,8 +239,8 @@ eval action state = case action of
             }
           }
     if driverInfoCardState.status == "CANCELLED" then do
-      void $ pure $ toast $ getString RIDE_CANCELLED
-      exit $ Exit state
+      void $ pure $ EHU.showToast $ getString RIDE_CANCELLED
+      exit $ Exit state{props{chatCallbackInitiated = false}} true
     else if isNothing state.data.driverInfoCardState || (fromMaybe mockDriverInfo state.data.driverInfoCardState).status /= driverInfoCardState.status
       then exit $ RestartTracking newState
       else 
@@ -240,26 +254,28 @@ eval action state = case action of
             else continue newState
   GenericHeaderAC act -> continueWithCmd state [ pure BackPressed ]
   LoadMessages -> do
-    let
-      allMessages = getChatMessages FunctionCall
+    let allMessages = getChatMessages FunctionCall
+        toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+          { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+        transformedMessages = map toChatComponentConfig allMessages
     case (last allMessages) of
       Just value ->
         if STR.null value.message then
           continue state { data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1) }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else if value.sentBy == getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys then
-          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e", lastMessage = value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
+          updateMessagesWithCmd state { data { messages = transformedMessages, chatSuggestionsList = getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e", lastMessage = toChatComponentConfig value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else do
           let
             readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
 
-            unReadMessages = if readMessages == 0 && state.data.currentStage /= ST.ChatWithEM then true else (readMessages < (length allMessages) && state.data.currentStage /= ST.ChatWithEM)
+            unReadMessages = if readMessages == 0 && state.data.currentStage /= ST.ChatWithEM then true else (readMessages < (length transformedMessages) && state.data.currentStage /= ST.ChatWithEM)
 
             suggestions = getSuggestionsfromKey emChatSuggestion value.message
 
             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
 
             showNotification = isChatNotificationDismissed && unReadMessages
-          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value }, props { unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification } }
+          updateMessagesWithCmd state { data { messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value }, props { unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification } }
       Nothing -> continue state { props { canSendSuggestion = true } }
   UpdateMessages message sender timeStamp size -> do
     if not state.props.chatCallbackInitiated then
@@ -281,12 +297,15 @@ eval action state = case action of
     case state.data.currentFollower of
         Nothing -> continue state
         Just follower -> do
-          if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
+          if state.data.config.feature.enableChat then do
             if not state.props.chatCallbackInitiated then continue state else do
               void $ pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
-              continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
+                  toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+                    { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+                  transformedMessages = map toChatComponentConfig allMessages
+              continueWithCmd state {data{messages = transformedMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
                 void $ launchAff $ flowRunner defaultGlobalState $ updateMapPadding state
                 pure $ ResetSheetState]
           else 
@@ -321,7 +340,7 @@ eval action state = case action of
   SendQuickMessage chatSuggestion -> do
     if state.props.canSendSuggestion then do
       _ <- pure $ sendMessage chatSuggestion
-      continue state { props { unReadMessages = false } }
+      triggerFCM state { props { unReadMessages = false } } $ getMessageFromKey emChatSuggestion chatSuggestion (getLanguageLocale languageKey)
     else
       continue state
   RemoveNotification -> continue state { props { showChatNotification = false, isChatNotificationDismissed = true } }
@@ -349,7 +368,8 @@ eval action state = case action of
       if state.data.messageToBeSent /= "" then do
         pure $ sendMessage state.data.messageToBeSent
         pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-        continue state { data { messageToBeSent = "" }, props { sendMessageActive = false } }
+        let message = state.data.messageToBeSent
+        triggerFCM state { data { messageToBeSent = "" }, props { sendMessageActive = false } } message
       else
         continue state
     MessagingView.BackPressed -> do
@@ -362,15 +382,18 @@ eval action state = case action of
     MessagingView.SendSuggestion chatSuggestion ->
       if state.props.canSendSuggestion then do
         _ <- pure $ sendMessage chatSuggestion
-        continue state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } }
+        triggerFCM state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } } $ getMessageFromKey emChatSuggestion chatSuggestion (getLanguageLocale languageKey)
       else
         continue state
     _ -> continue state
   PrimaryButtonAC act -> do
     case act of
-      PrimaryButton.OnClick -> exit $ Exit state
+      PrimaryButton.OnClick -> exit $ Exit state{props{chatCallbackInitiated = false}} true
       _ -> continue state
   ResetSheetState -> continue state { props { sheetState = Nothing } }
+  CallSafetyTeam SafetyActionTileView.OnClick -> do
+    pure $ showDialer state.data.config.safety.safetyTeamNumber false
+    continue state
   _ -> continue state
   
 updateMessagesWithCmd :: FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
@@ -393,7 +416,7 @@ startAudioPlayerCmd array state = do
             when canStartAudio
               $ do
                   push <- getPushFn Nothing "FollowRideScreen"
-                  void $ pure $ runFn3 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted
+                  void $ pure $ runFn4 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted "0"
             pure NoAction
         ] <> array)
 canStartAudioPlayer :: FollowRideScreenState -> Boolean
@@ -475,3 +498,37 @@ clearAlarmStatus currentFollower = do
   let bookingId = if currentFollower.bookingId /= "mock_drill" then "mock_" <> currentFollower.bookingId else currentFollower.bookingId
       _ = removeSOSAlarmStatus bookingId
   unit
+
+triggerFCM :: FollowRideScreenState -> String -> Eval Action ScreenOutput FollowRideScreenState
+triggerFCM state message = do 
+  continueWithCmd state [
+        do
+          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+            $ do
+                push <- liftFlowBT $ getPushFn Nothing "FollowRideScreen"
+                case state.data.currentFollower of
+                  Just follower -> 
+                    maybe (pure unit) (\personId -> do
+                        let requestBody = 
+                              { chatPersonId : personId
+                              , body : message
+                              , title : "Message from " <> 
+                                          if any (_ == (getValueToLocalStore USER_NAME)) ["__failed", ""] 
+                                            then (getString USER) 
+                                            else (getValueToLocalStore USER_NAME)
+                              , source : Just API.TRUSTED_CONTACT
+                              , channelId : Just $ getChatChannelId state
+                              , showNotification : Nothing
+                              }
+                        (_ :: APISuccessResp) <- HelpersAPI.callApiBT $ MultiChatReq requestBody
+                        pure unit) follower.personId
+                  Nothing -> pure unit
+          pure NoAction
+    ]
+
+getChatChannelId :: FollowRideScreenState -> String
+getChatChannelId state = do 
+  let cFollower = fromMaybe dummyFollower state.data.currentFollower
+      customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+      rideId = fromMaybe "" $ state.data.driverInfoCardState <#> _.rideId
+  if cFollower.priority == 0 then rideId else rideId <> "$" <> customerId

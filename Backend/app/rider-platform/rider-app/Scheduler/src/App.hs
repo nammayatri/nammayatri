@@ -38,8 +38,13 @@ import SharedLogic.JobScheduler
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
+import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
+import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
+import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import Storage.Beam.SystemConfigs ()
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
@@ -61,6 +66,12 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSafetyIVR)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCallPoliceApi)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBPP)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSafetyCSAlert)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCustomerRefund)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRidePopupToRider)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . executePaymentIntentJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . cancelExecutePaymentIntentJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . postRideSafetyNotification)
     }
 
 runRiderAppScheduler ::

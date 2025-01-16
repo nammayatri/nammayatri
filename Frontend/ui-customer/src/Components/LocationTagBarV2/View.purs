@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..), Orientation (..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)

@@ -20,19 +20,20 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
-import Helpers.Utils (getStatus, contactSupportNumber)
+import Helpers.Utils (getStatus, contactSupportNumber, getLatestAndroidVersion, getHvErrorMsg)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
+import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>),(<), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||), Unit (..), otherwise, (<$>))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
+import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..), HyperVergeKycResult(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Data.String as DS
+import Data.String.Pattern as DSP
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
@@ -47,6 +48,32 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Effect.Uncurried (runEffectFn8)
+import Effect.Class (liftEffect)
+import Foreign.Generic (decodeJSON)
+import Services.Backend as Remote
+import Data.Function.Uncurried (runFn1)
+import Data.Either(Either(..))
+import Debug
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons as EHC
+import Types.App (defaultGlobalState, GlobalState)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Monad.Trans.Class (lift)
+import Presto.Core.Types.Language.Flow (doAff, Flow)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Except (runExcept)
+import Services.API as API
+import PrestoDOM.Core (getPushFn)
+import Engineering.Helpers.Commons (liftFlow)
+import Common.RemoteConfig (fetchRemoteConfigString)
+import RemoteConfig
+import DecodeUtil (decodeForeignObject)
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
+import Data.Tuple
+import Control.Bind (join)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,6 +85,7 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen REGISTRATION_SCREEN)
       trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
     NoAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "no_action"
+    UpdateApkAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "update_apk_action"
     AppOnboardingNavBarAC act -> case act of
       AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
         GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
@@ -82,6 +110,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_image_clicked" "primary_edit_text"
     ReferralCodeTextChanged str -> pure unit
     EnterReferralCode val -> pure unit
     _ -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal_action" "no_action"
@@ -98,6 +127,8 @@ data ScreenOutput = GoBack
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
+                  | GoToAppUpdatePopUpScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -117,11 +148,18 @@ data Action = BackPressed
             | SupportClick Boolean
             | WhatsAppClick
             | CallButtonClick
-            | ChooseVehicleCategory Int
+            | ChooseVehicleCategory Int ST.VehicleCategory
             | ContinueButtonAction PrimaryButtonController.Action
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
+            | CallHV String String
+            | OnActivityResult String
+            | CallWorkFlow String
+            | UpdateApkAction
+            | StoreDataAction String String
+            | CallHVFlowAction ST.HyperVergeKycResult
+            | InitFlowTxnIdAction
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -131,32 +169,72 @@ eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput Registrati
 eval AfterRender state = continue state
 
 eval BackPressed state = do
-  if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
-  else if state.props.menuOptions then continue state { props { menuOptions = false}}
-  else if state.props.logoutModalView then continue state { props { logoutModalView = false}}
-  else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
-  else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
-  else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
-  else if state.props.manageVehicle then exit $ GoToHomeScreen state
+  let newState = state {props {dontAllowHvRelaunch = false}}
+  if newState.props.enterReferralCodeModal then continue newState { props = newState.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+  else if newState.props.menuOptions then continue newState { props { menuOptions = false}}
+  else if newState.props.logoutModalView then continue newState { props { logoutModalView = false}}
+  else if newState.data.vehicleTypeMismatch then continue newState { data { vehicleTypeMismatch = false}}
+  else if newState.props.confirmChangeVehicle then continue newState { props { confirmChangeVehicle = false}}
+  else if newState.props.contactSupportModal == ST.SHOW then continue newState { props { contactSupportModal = ST.ANIMATING}}
+  else if newState.props.manageVehicle then exit $ GoToHomeScreen newState
   else do
       void $ pure $ JB.minimizeApp ""
-      continue state
+      continue newState 
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
+           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs $ JB.getAppName unit)
+           _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
-          PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
-          AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
-          PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge
+          PROFILE_PHOTO -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallHV hvFlowIds.selfie_flow_id ""] else exit $ DocCapture state item
+          AADHAAR_CARD -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.aadhaar_flow_id] else exit $ DocCapture state item
+          PAN_CARD  -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.pan_flow_id] else exit $ DocCapture state item
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
           _ -> continue state
+
+eval (CallHV workFLowId inputJson) state = 
+  continueWithCmd state {props {dontAllowHvRelaunch = true}}
+    [ do
+        let transactionId = JB.generateSessionId unit
+        push <- getPushFn Mb.Nothing "RegistrationScreen"
+        if EHC.os == "ANDROID" 
+          then do
+            versionCodeAndroid <- JB.getVersionCode
+            if versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) 
+              then pure UpdateApkAction
+            else do
+              void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId false (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
+              pure $ StoreDataAction transactionId workFLowId
+        else pure NoAction
+    ]
+
+
+eval (CallWorkFlow flowId) state =
+  continueWithCmd state {props {dontAllowHvRelaunch = true}}
+    [ do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState
+          $ do
+              resp <- Remote.getLiveSelfie "APPROVED"
+              push <- liftFlow $ getPushFn Mb.Nothing "RegistrationScreen"
+              liftFlow $ case resp of
+                Right (API.GetLiveSelfieResp response) -> do
+                  let imagePath = runFn1 JB.decodeAndStoreImage response.image
+                  case imagePath of
+                    "FAILED" -> do
+                      void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+                      push NoAction
+                    _ -> do
+                      push $ CallHV flowId $ "{\"selfie\":\"" <> imagePath <> "\"}"
+                _ -> push  NoAction
+        pure NoAction
+    ]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
@@ -259,7 +337,8 @@ eval ContactSupport state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval (ChooseVehicleCategory index) state = 
+eval (ChooseVehicleCategory index item) state = do
+  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getVehicleCategorySelectedEvent item)
   continue state { props { selectedVehicleIndex = Mb.Just index } }
 
 eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
@@ -279,8 +358,86 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
+eval (OnActivityResult bundle) state = continueWithCmd state {props {dontAllowHvRelaunch = false}} [do
+  push <- getPushFn Mb.Nothing "RegistrationScreen"
+  void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+  -- bundle is the data returned from the activity
+    case runExcept (decodeJSON bundle :: _ ST.HyperVergeKycResult) of
+      Left _ -> do
+        case runExcept (decodeJSON bundle :: _ ST.HvErrorCode) of 
+          Left _ -> do
+            callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "decode_failed") (Mb.Just "Failed to decode Hyperverge callback payload") state.data.hvFlowId (Mb.Just bundle)
+            void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          Right (ST.HvErrorCode errorCode) -> if errorCode.errorCode == 106
+            then do
+              void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION
+              callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "location_permission_error") (Mb.Just "Location Access Not provided") state.data.hvFlowId (Mb.Just bundle)
+            else do
+              void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "decode_failed") (Mb.Just "Failed to decode Hyperverge callback payload") state.data.hvFlowId (Mb.Just bundle)
+        liftFlow $ push InitFlowTxnIdAction
+      Right (ST.HyperVergeKycResult result) -> do
+        let (Tuple failureReason docType) = getFailureReasonAndDoctype (HyperVergeKycResult result)
+        case result.transactionId, state.data.hvTxnId of
+          Mb.Just tId, _ ->  void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId result.status state.data.hvFlowId failureReason docType (Mb.Just $ show result)
+          _, Mb.Just tId ->  void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId result.status state.data.hvFlowId failureReason docType (Mb.Just $ show result)
+          _, _ -> void $ pure $ spy "Error: " "TxnId of Hyperverge sdk call not found so could not log to backend !!!!!!!"
+        if result.status == (Mb.Just "auto_approved") || result.status == (Mb.Just "auto_declined") || result.status == (Mb.Just "needs_review")
+          then liftFlow $ push $ CallHVFlowAction (ST.HyperVergeKycResult result)
+        else
+          case result.status of
+            Mb.Just "user_cancelled" -> liftFlow $ push InitFlowTxnIdAction
+            _ -> do
+              if result.errorCode == (Mb.Just 106) then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              liftFlow $ push InitFlowTxnIdAction 
+      _ -> liftFlow $ push InitFlowTxnIdAction
+    pure unit
+  pure NoAction
+]
+
+eval UpdateApkAction state = exit $ GoToAppUpdatePopUpScreen state {props {dontAllowHvRelaunch = false}}
+
+eval (StoreDataAction txnId flowId) state = continue state { data { hvFlowId = Mb.Just flowId, hvTxnId = Mb.Just txnId}}
+
+eval InitFlowTxnIdAction state = continue state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}
+
+eval (CallHVFlowAction result) state = exit $ GoToAadhaarPANSelfieUpload (state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}) result
+
 eval _ state = update state
 
+
+callHvLoggerForDecodeFailure :: Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Flow GlobalState Unit
+callHvLoggerForDecodeFailure txnId status mbFailureReason fId result = do
+  let docType = join $ getDocTypeFromWorkFlowId <$> fId
+  case txnId of
+    Mb.Just tId -> void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId status fId mbFailureReason docType result
+    Mb.Nothing -> void $ pure $ spy "Error:" "Decode Failure of callback happened and TxnId of Hyperverge sdk call not found so could not log to backend !!!!!!!"
+  where
+    getDocTypeFromWorkFlowId :: String -> Mb.Maybe String
+    getDocTypeFromWorkFlowId flowId 
+       | DS.contains (DSP.Pattern "pan") flowId = Mb.Just "PanCard"
+       | DS.contains (DSP.Pattern "aadhaar") flowId = Mb.Just "AadhaarCard"
+       | DS.contains (DSP.Pattern "selfie") flowId = Mb.Just "ProfilePhoto"
+       | otherwise = Mb.Nothing
+
+
+getFailureReasonAndDoctype :: HyperVergeKycResult -> Tuple (Mb.Maybe String) (Mb.Maybe String)
+getFailureReasonAndDoctype (HyperVergeKycResult result) = do
+  case result.details of 
+    Mb.Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "ProfilePhoto")
+    Mb.Just (ST.PAN_DETAILS (ST.PanDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "PanCard")
+    Mb.Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "AadhaarCard")
+    _ -> Tuple Mb.Nothing Mb.Nothing
+  where
+    getErrMsgForHV errCode = case result.status of
+      Mb.Just "auto_declined" -> Mb.Just $ getHvErrorMsg errCode
+      Mb.Just "auto_approved" -> Mb.Nothing
+      Mb.Just "needs_review" -> Mb.Nothing
+      Mb.Just "user_cancelled" -> Mb.Just "User cancelled"
+      Mb.Just "error" -> result.errorMessage
+      Mb.Just _ -> Mb.Just "Unknown Status received in OnActivity callback"
+      Mb.Nothing -> Mb.Just "Null Status received in OnActivity callback"
+    
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of
   "VALID" -> COMPLETED
@@ -289,8 +446,22 @@ getStatusValue value = case value of
   "NO_DOC_AVAILABLE" -> NOT_STARTED
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
-  "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
+  "MANUAL_VERIFICATION_REQUIRED" -> MANUAL_VERIFICATION_REQUIRED
   _ -> NOT_STARTED
+
+
+getDefaultAlpha2LanguageCode :: String -> String
+getDefaultAlpha2LanguageCode _ = do
+  let language = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+  case language of
+    "BN_IN" -> "bn"
+    "HI_IN" -> "hi"
+    "KN_IN" -> "kn"
+    "ML_IN" -> "ml"
+    "TA_IN" -> "ta"
+    "TE_IN" -> "te"
+    "FR_FR" -> "fr"
+    _ -> "en"
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 

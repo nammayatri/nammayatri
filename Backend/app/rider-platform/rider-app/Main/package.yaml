@@ -23,9 +23,11 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DerivingStrategies
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -83,6 +85,7 @@ dependencies:
   - uuid
   - wai-extra
   - http-types
+  - http-api-data
   - warp
   - time
   - record-hasfield
@@ -110,6 +113,8 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - cassava
+  - split
   - raw-strings-qq
   - directory
   - filepath
@@ -122,6 +127,13 @@ dependencies:
   - http-client
   - http-client-tls
   - hashable
+  - json-logic-hs
+  - yudhishthira
+  - text-format
+  - scientific
+  - resource-pool
+  - jwt
+  - insert-ordered-containers
 
 ghc-options:
   - -fwrite-ide-info
@@ -157,7 +169,6 @@ library:
     - mobility-core
     - haskell-cac
     - beckn-spec
-    - beckn-services
     - special-zone-a
     - special-zone
     - payment

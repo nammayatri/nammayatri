@@ -19,6 +19,7 @@ import qualified Storage.Queries.Transformers.DriverFee
 instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
   fromTType' (Beam.DriverFeeT {..}) = do
     merchantOperatingCityId' <- Storage.Queries.Transformers.DriverFee.getMerchantOperatingCityId merchantOperatingCityId driverId id
+    vehicleCategory' <- Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId
     pure $
       Just
         Domain.Types.DriverFee.DriverFee
@@ -36,6 +37,7 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
             feeType = feeType,
             feeWithoutDiscount = feeWithoutDiscount,
             govtCharges = Kernel.Types.Common.mkAmountWithDefault govtChargesAmount govtCharges,
+            hasSibling = hasSibling,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
@@ -48,15 +50,22 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
             planMode = planMode,
             planOfferTitle = planOfferTitle,
             platformFee = Storage.Queries.Transformers.DriverFee.mkPlatformFee platformFee cgst sgst (Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency),
+            refundEntityId = refundEntityId,
+            refundedAmount = refundedAmount,
+            refundedAt = refundedAt,
+            refundedBy = refundedBy,
             schedulerTryCount = schedulerTryCount,
             serviceName = fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName,
+            siblingFeeId = Kernel.Types.Id.Id <$> siblingFeeId,
             specialZoneAmount = specialZoneAmount,
             specialZoneRideCount = specialZoneRideCount,
+            splitOfDriverFeeId = Kernel.Types.Id.Id <$> splitOfDriverFeeId,
             stageUpdatedAt = stageUpdatedAt,
             startTime = startTime,
             status = status,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             updatedAt = updatedAt,
+            vehicleCategory = vehicleCategory',
             vehicleNumber = vehicleNumber
           }
 
@@ -78,6 +87,7 @@ instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
         Beam.feeWithoutDiscount = feeWithoutDiscount,
         Beam.govtCharges = Kernel.Prelude.roundToIntegral govtCharges,
         Beam.govtChargesAmount = Kernel.Prelude.Just govtCharges,
+        Beam.hasSibling = hasSibling,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -92,15 +102,22 @@ instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
         Beam.cgst = (.cgst) platformFee,
         Beam.platformFee = (.fee) platformFee,
         Beam.sgst = (.sgst) platformFee,
+        Beam.refundEntityId = refundEntityId,
+        Beam.refundedAmount = refundedAmount,
+        Beam.refundedAt = refundedAt,
+        Beam.refundedBy = refundedBy,
         Beam.schedulerTryCount = schedulerTryCount,
         Beam.serviceName = Just serviceName,
+        Beam.siblingFeeId = Kernel.Types.Id.getId <$> siblingFeeId,
         Beam.specialZoneAmount = specialZoneAmount,
         Beam.specialZoneRideCount = specialZoneRideCount,
+        Beam.splitOfDriverFeeId = Kernel.Types.Id.getId <$> splitOfDriverFeeId,
         Beam.stageUpdatedAt = stageUpdatedAt,
         Beam.startTime = startTime,
         Beam.status = status,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
         Beam.updatedAt = updatedAt,
+        Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
         Beam.vehicleNumber = vehicleNumber
       }

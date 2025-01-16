@@ -11,9 +11,12 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -95,6 +98,7 @@ getServiceNameConfigJSON = \case
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+    Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
@@ -107,6 +111,15 @@ getServiceNameConfigJSON = \case
   Domain.MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.MetroPaymentService Payment.Stripe, toJSON cfg)
+  Domain.BusPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BusPaymentService Payment.Stripe, toJSON cfg)
+  Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Stripe, toJSON cfg)
+  Domain.MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -115,3 +128,8 @@ getServiceNameConfigJSON = \case
     Tokenize.JourneyMonitoringTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.JourneyMonitoring, toJSON cfg)
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
+  Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
+  Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+    MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
+    MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)

@@ -34,6 +34,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
 type API = OnInit.OnInitAPIV2
@@ -59,6 +60,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
               void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId
             handle (errHandler booking) . void . withShortRetry $ do
               confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+              Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
               CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
       else do
         let cancellationReason = "on_init API failure"
@@ -87,7 +89,8 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
         { reasonCode = CancellationReasonCode cancellationReason,
           reasonStage,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
 
 onInitLockKey :: Text -> Text

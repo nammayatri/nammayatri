@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.ReferralPayout where
@@ -22,10 +21,11 @@ data DailyEarning = DailyEarning
     referrals :: Kernel.Prelude.Int,
     status :: Domain.Types.DailyStats.PayoutStatus
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReferralEarningsRes = ReferralEarningsRes
-  { dailyEarnings :: [API.Types.UI.ReferralPayout.DailyEarning],
+  { dailyEarnings :: [DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
     orderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
     payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -33,4 +33,5 @@ data ReferralEarningsRes = ReferralEarningsRes
     totalReferralCount :: Kernel.Prelude.Int,
     vpaId :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

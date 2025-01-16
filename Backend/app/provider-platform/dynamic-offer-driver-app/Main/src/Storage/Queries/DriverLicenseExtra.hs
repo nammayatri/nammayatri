@@ -1,21 +1,16 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverLicenseExtra where
 
 import Domain.Types.DriverLicense
 import Domain.Types.Image
-import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLicense as BeamDL
-import Storage.Queries.OrphanInstances.DriverLicense
+import Storage.Queries.OrphanInstances.DriverLicense ()
 
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()

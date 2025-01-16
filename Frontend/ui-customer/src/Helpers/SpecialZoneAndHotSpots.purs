@@ -61,7 +61,9 @@ mapSpecialZoneGates gates =
   map (\(SA.GateInfoFull item) -> { place: item.name,
                               lat  : (item.point)^._lat,
                               lng : (item.point)^._lon,
-                              address : item.address,
+                              address : if item.address == Just "NULL"
+                                          then Just item.name
+                                          else item.address,
                               city : Nothing,
                               isSpecialPickUp : Just $ isJust item.geoJson
                             }) gates
@@ -70,6 +72,7 @@ getZoneType :: String -> ZoneType
 getZoneType tag =
   case tag of
     "SureMetro" -> METRO
+    "SureWarriorMetro" -> METRO
     "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     "PickupZone" -> SPECIAL_PICKUP
     "SureShoppingMall" -> SHOPPING_MALL

@@ -34,6 +34,10 @@ DriverStats:
     totalPayoutEarnings: HighPrecMoney
     totalValidActivatedRides: Int
     totalReferralCounts: Int
+    totalPayoutAmountPaid: Maybe HighPrecMoney
+    validDriverCancellationTagCount: Int
+    validCustomerCancellationTagCount: Int
+    validCancellationTagsStatsStartDate: Maybe UTCTime
 
   beamFields:
     totalEarnings:
@@ -61,6 +65,8 @@ DriverStats:
     totalValidActivatedRides: Maybe Int
     totalReferralCounts: Maybe Int
     totalPayoutEarnings: Maybe HighPrecMoney
+    validDriverCancellationTagCount: Maybe Int
+    validCustomerCancellationTagCount: Maybe Int
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
@@ -75,6 +81,8 @@ DriverStats:
     totalPayoutEarnings: Storage.Queries.Transformers.DailyStats.getHighPrecMoney|I
     totalValidActivatedRides: Kernel.Prelude.fromMaybe 0|I
     totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
+    validDriverCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
+    validCustomerCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalDistance: getTotalDistance
@@ -92,6 +100,8 @@ DriverStats:
     totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
     totalValidActivatedRides: Kernel.Prelude.Just|I
     totalReferralCounts: Kernel.Prelude.Just|I
+    validDriverCancellationTagCount: Kernel.Prelude.Just|I
+    validCustomerCancellationTagCount: Kernel.Prelude.Just|I
 
   constraints:
     driverId: PrimaryKey
@@ -118,6 +128,21 @@ DriverStats:
       params: [totalReferralCounts]
       where: driverId
 
+    updateTotalPayoutAmountPaid:
+      kvFunction: updateOneWithKV
+      params: [totalPayoutAmountPaid]
+      where: driverId
+
+    updateValidDriverCancellationTagCount:
+      kvFunction: updateOneWithKV
+      params: [validDriverCancellationTagCount]
+      where: driverId
+
+    updateValidCustomerCancellationTagCount:
+      kvFunction: updateOneWithKV
+      params: [validCustomerCancellationTagCount]
+      where: driverId
+
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed
     #   kvFunction: updateOneWithKV
     #   params: [earningsMissedAmount,earningsMissed]
@@ -139,6 +164,8 @@ DriverStats:
     coinCovertedToCashLeft: "0"
     totalCoinsConvertedCash: "0"
     favRiderCount: "0"
+    validDriverCancellationTagCount: "0"
+    validCustomerCancellationTagCount: "0"
 
   extraOperations:
     - EXTRA_QUERY_FILE

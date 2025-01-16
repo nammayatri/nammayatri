@@ -23,3 +23,27 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN partner_org_id character varying(36
 
 ALTER TABLE atlas_app.frfs_search ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.frfs_search ALTER COLUMN merchant_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN route_id character varying(36) ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN skip_booking boolean ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_leg_order integer ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_id text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN convenience_cost integer ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN agency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN pricing_id text ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN line_color_code text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN line_color text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN frequency integer ;

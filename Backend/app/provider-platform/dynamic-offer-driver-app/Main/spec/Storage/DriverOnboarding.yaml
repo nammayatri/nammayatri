@@ -5,8 +5,8 @@ imports:
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
-  Variant: Domain.Types.Vehicle
-  Category: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
+  VehicleCategory: Domain.Types.VehicleCategory
   Value: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
   Image: Domain.Types.Image
@@ -26,7 +26,7 @@ IdfyVerification:
     driverId: Id Person
     requestId: Text
     docType: DocumentType
-    vehicleCategory: Maybe Category
+    vehicleCategory: Maybe VehicleCategory
     status: Text
     issueDateOnDoc: Maybe UTCTime
     driverDateOfBirth: Maybe UTCTime
@@ -131,6 +131,7 @@ DriverLicense:
     classOfVehicles: '[Text]'
     failedRules: '[Text]'
     verificationStatus: VerificationStatus
+    vehicleCategory: Maybe VehicleCategory
     consent: Bool
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
@@ -174,7 +175,7 @@ VehicleRegistrationCertificate:
     pucExpiry: Maybe UTCTime
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
-    vehicleVariant: Maybe Variant
+    vehicleVariant: Maybe VehicleVariant|NoRelation
     failedRules: '[Text]'
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
@@ -194,7 +195,7 @@ VehicleRegistrationCertificate:
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
-    userPassedVehicleCategory: Maybe Category
+    userPassedVehicleCategory: Maybe VehicleCategory
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
@@ -228,6 +229,10 @@ VehicleRegistrationCertificate:
     updateVentilator:
       kvFunction: updateWithKV
       params: [ventilator]
+      where: id
+    updateManufacturing:
+      kvFunction: updateWithKV
+      params: [mYManufacturing]
       where: id
     updateVerificationStatus:
       kvFunction: updateOneWithKV
@@ -287,6 +292,7 @@ Image:
     id: Id Image
     personId: Id Person
     merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     s3Path: Text
     imageType: DocumentType
     failureReason: Maybe DriverOnboardingError
@@ -295,7 +301,6 @@ Image:
     workflowTransactionId: Maybe Text
     reviewerEmail: Maybe Text
     documentExpiry: Maybe UTCTime
-  excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
@@ -342,7 +347,7 @@ DocumentVerificationConfig:
     VehicleClassVariantMap:
       vehicleClass: Text
       vehicleCapacity: Maybe Int
-      vehicleVariant: Variant
+      vehicleVariant: VehicleVariant
       manufacturer: Maybe Text
       manufacturerModel: Maybe Text
       vehicleModel: Maybe Text
@@ -359,7 +364,7 @@ DocumentVerificationConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-    vehicleCategory: Category
+    vehicleCategory: VehicleCategory|NoRelation
     documentType: DocumentType
     title: Text
     description: Maybe Text
@@ -378,11 +383,13 @@ DocumentVerificationConfig:
     isImageValidationRequired: Bool
     doStrictVerifcation: Bool
     order: Int
+    filterForOldApks: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
     isImageValidationRequired: "true"
+    filterForOldApks: false
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
@@ -773,3 +780,32 @@ BackgroundVerification:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
+
+HyperVergeSdkLogs:
+  tableName: hyperverge_sdk_logs
+  fields:
+    txnId: Text
+    hvFlowId: Maybe Text
+    driverId: Id Person
+    docType: Maybe DocumentType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: Maybe Text
+    callbackResponse: Maybe Text
+    failureReason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    txnId: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findAllByDriverIdAndDocType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, docType]
+      orderBy:
+        field: createdAt
+        order: asc

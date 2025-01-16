@@ -28,7 +28,7 @@ import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Screens.Benefits.LmsQuizScreen.Transformer
 import JBridge (toast, toggleBtnLoader)
-import Language.Strings (getStringFromLocal)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Language.Types (STR(..))
 import Components.PopUpModal as PopUpModal
 
@@ -117,7 +117,7 @@ eval (QuizPrimaryButtonActionController label (PrimaryButton.OnClick)) state =
 eval ChangeLanguage state = updateAndExit state $ GoToChangeLanguage state
 
 eval ErrorOccuredAction state = do
-    _ <- pure $ toast $ getStringFromLocal state.props.selectedLanguage UNABLE_TO_CHANGE_LANGUAGE_PLEASE_TRY_AGAIN
+    _ <- pure $ toast $ StringsV2.getString state.props.selectedLanguage UNABLE_TO_CHANGE_LANGUAGE_PLEASE_TRY_AGAIN
     continue state{ props{languageUpdated = false, showShimmer = false}}
 
 eval (UpdateQuestionAccordingToTranslation quizResp) state =

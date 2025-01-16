@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.LmsModuleVideoInformation where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.LmsModuleVideoInformation
 import Kernel.External.Encryption
 import Kernel.Prelude

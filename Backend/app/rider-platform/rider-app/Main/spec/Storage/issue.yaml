@@ -21,6 +21,10 @@ Issue:
     updatedAt : UTCTime
     merchantId : Maybe (Id Merchant)
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   excludedFields: [merchantId, merchantOperatingCityId]
 
   queries:
@@ -39,3 +43,4 @@ Issue:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

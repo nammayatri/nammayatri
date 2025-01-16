@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonExtra
   ( module Storage.Queries.PersonExtra,
     module Reexport,
@@ -10,7 +7,6 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
@@ -24,13 +20,11 @@ import Domain.Types.Merchant hiding (MerchantAPIEntity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import Domain.Types.Vehicle as DV
+import Domain.Types.Vehicle
 import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -82,6 +76,15 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
 findAdminsByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
+findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
+findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
+
+findPersonIdsByPhoneNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> m [Person]
+findPersonIdsByPhoneNumber phoneNumbers = do
+  phoneNumbersHashes <- mapM getDbHash phoneNumbers
+  let mbhashes = Just <$> phoneNumbersHashes
+  findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
+
 findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
 findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
 
@@ -100,8 +103,9 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
@@ -113,6 +117,9 @@ findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified m
                   person.merchantId B.==?. B.val_ (getId merchant.id)
                     B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.like_ person.firstName (B.val_ ("%" <> name <> "%")))) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\middleName -> B.sqlBool_ (B.like_ middleName (B.val_ ("%" <> name <> "%")))) person.middleName) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\lastName -> B.sqlBool_ (B.like_ lastName (B.val_ ("%" <> name <> "%")))) person.lastName) mbNameSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
@@ -253,29 +260,8 @@ data DriverWithRidesCount = DriverWithRidesCount
     ridesCount :: Maybe Int
   }
 
-mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
-mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
-
-fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email = do
-  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email
-  addRidesCount `mapM` mbDriverInfo
-  where
-    addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
-    addRidesCount (person, info, vehicle) = do
-      dbConf <- getMasterBeamConfig
-      resp <-
-        L.runDB dbConf $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\ride -> (B.group_ (BeamR.driverId ride), B.as_ @Int B.countAll_)) $
-                B.filter_' (\(BeamR.RideT {driverId, status}) -> driverId B.==?. B.val_ (getId person.id) B.&&?. B.sqlNot_ (B.sqlBool_ (B.in_ status $ B.val_ <$> [Ride.NEW, Ride.CANCELLED]))) $
-                  B.all_ (BeamCommon.ride BeamCommon.atlasDB)
-      let ridesCount = either (const (Just 0)) (snd <$>) resp
-      pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
-
-fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail = do
+fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId = do
   dbConf <- getMasterBeamConfig
   now <- getCurrentTime
   result <- L.runDB dbConf $
@@ -297,6 +283,7 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dlNumberHash -> driverLicense.licenseNumberHash B.==?. B.val_ (Just dlNumberHash)) mbDlNumberHash
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rcNumberHash -> vehicleRegistrationCertificate.certificateNumberHash B.==?. B.val_ (Just rcNumberHash)) mbRcNumberHash
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\email -> person.email B.==?. B.val_ (Just email)) mbEmail
+                B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\personId -> person.id B.==?. B.val_ (getId personId)) mbPersonId
           )
           do
             person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
@@ -375,32 +362,42 @@ updatePersonRec (Id personId) person = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp = do
+updatePersonVersionsAndMerchantOperatingCity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Person ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp city = do
   let mbDevice = getDeviceFromText mbDevice'
-  when
-    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= mbBackendApp))
-    do
-      now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
-          mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
-          mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
-          mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
-          mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
-          mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
-      updateOneWithKV
-        [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
-          Se.Set BeamP.clientBundleVersion mbBundleVersionText,
-          Se.Set BeamP.clientConfigVersion mbConfigVersionText,
-          Se.Set BeamP.clientOsVersion mbOsVersion,
-          Se.Set BeamP.clientOsType mbOsType,
-          Se.Set BeamP.clientModelName mbModelName,
-          Se.Set BeamP.clientManufacturer mbManufacturer,
-          Se.Set BeamP.backendAppVersion mbBackendApp,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion
+  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
+  when (isBundleDataPresent && isAnyMismatchPresent) $ do
+    now <- getCurrentTime
+    let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
+        mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
+        mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
+        mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
+        mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
+        mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
+        mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
+    updateOneWithKV
+      [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
+        Se.Set BeamP.clientBundleVersion mbBundleVersionText,
+        Se.Set BeamP.clientConfigVersion mbConfigVersionText,
+        Se.Set BeamP.clientOsVersion mbOsVersion,
+        Se.Set BeamP.clientOsType mbOsType,
+        Se.Set BeamP.clientModelName mbModelName,
+        Se.Set BeamP.clientManufacturer mbManufacturer,
+        Se.Set BeamP.backendAppVersion mbBackendApp,
+        Se.Set BeamP.updatedAt now,
+        Se.Set BeamP.merchantOperatingCityId $ Just city.getId
+      ]
+      [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
@@ -476,6 +473,7 @@ updatePersonDetails person = do
       Se.Set BeamP.lastName $ person.lastName,
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
+      Se.Set BeamP.email $ person.email,
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
       Se.Set BeamP.updatedAt now
     ]
@@ -503,4 +501,16 @@ clearDeviceTokenByPersonId personId = do
       Se.Set BeamP.updatedAt now
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updatePersonMobileByFleetRole :: (MonadFlow m, EsqDBFlow m r) => Text -> EncryptedHashed Text -> m ()
+updatePersonMobileByFleetRole personId encMobileNumber = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.mobileNumberEncrypted $ Just $ unEncrypted encMobileNumber.encrypted,
+      Se.Set BeamP.mobileNumberHash $ Just encMobileNumber.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq personId,
+      Se.Is BeamP.role $ Se.Eq Person.FLEET_OWNER
     ]

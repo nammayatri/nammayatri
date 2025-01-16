@@ -51,6 +51,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction
       Se.Set Beam.fulfillmentMethod fulfillmentMethod,
       Se.Set Beam.gateWayRefId gateWayRefId,
       Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.payoutOrderId (Kernel.Types.Id.getId payoutOrderId),
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
@@ -68,6 +69,7 @@ instance FromTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransa
             gateWayRefId = gateWayRefId,
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
             payoutOrderId = Kernel.Types.Id.Id payoutOrderId,
             status = status,
             transactionRef = transactionRef,
@@ -84,6 +86,7 @@ instance ToTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransact
         Beam.gateWayRefId = gateWayRefId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
+        Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.payoutOrderId = Kernel.Types.Id.getId payoutOrderId,
         Beam.status = status,
         Beam.transactionRef = transactionRef,

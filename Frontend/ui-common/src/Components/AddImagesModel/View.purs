@@ -99,7 +99,7 @@ imageListView push state =
         , onClick push $ if state.isLoading then pure NoAction else pure AddImage
         , gravity CENTER
         , alpha if state.isLoading then 0.5 else 1.0
-        , visibility $ boolToVisibility $ not $ length state.images >= 3 || state.isLoading
+        , visibility $ boolToVisibility $ not $ length state.images >= state.noOfImages || state.isLoading
         , background Color.blue600
         , padding (Padding 12 16 16 12)
         , cornerRadius 10.0

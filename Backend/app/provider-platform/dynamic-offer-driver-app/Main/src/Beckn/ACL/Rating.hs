@@ -53,6 +53,8 @@ buildRatingReqV2 subscriber req = do
   let mbRatingValue = readMaybe $ T.unpack ratingValueText
       mbShouldFavDriver = getShouldFavouriteDriver rating
       mbRiderPhoneNum = getRiderPhoneNumber rating
+      mbFilePath = getFilePath rating
+      mbRiderName = getRiderName rating
   ratingValue <- mbRatingValue & fromMaybeM (InvalidRequest "Invalid ratingValue")
   pure
     DRating.DRatingReq
@@ -60,7 +62,9 @@ buildRatingReqV2 subscriber req = do
         ratingValue = ratingValue,
         feedbackDetails = tfFeedbackDetails rating,
         shouldFavDriver = mbShouldFavDriver,
-        riderPhoneNum = mbRiderPhoneNum
+        riderPhoneNum = mbRiderPhoneNum,
+        filePath = mbFilePath,
+        riderName = mbRiderName
       }
 
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]

@@ -25,8 +25,8 @@ module SharedLogic.SyncRide
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -74,7 +74,7 @@ syncUpcomingRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncUpcomingRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "scheduled ride assigned") $ do
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
   pure $ Common.RideSyncRes Common.RIDE_UPCOMING "Success. Sent scheduled ride started update to bap"
 
 -- NEW --
@@ -83,7 +83,7 @@ syncNewRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncNewRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "ride assigned") $ do
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
 fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails

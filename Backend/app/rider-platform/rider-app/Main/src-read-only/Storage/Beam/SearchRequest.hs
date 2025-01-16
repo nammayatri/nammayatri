@@ -1,12 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -20,6 +21,7 @@ import Tools.Beam.UtilsTH
 data SearchRequestT f = SearchRequestT
   { autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoAssignEnabledV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -29,6 +31,7 @@ data SearchRequestT f = SearchRequestT
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
@@ -39,16 +42,29 @@ data SearchRequestT f = SearchRequestT
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    driverIdentifierType :: B.C f (Kernel.Prelude.Maybe Domain.Types.RefereeLink.DriverIdentifierType),
+    driverIdentifierValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedRideDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    estimatedRideStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     maxDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     maxDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    placeNameSource :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f Kernel.Prelude.Text,
     riderPreferredOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption),

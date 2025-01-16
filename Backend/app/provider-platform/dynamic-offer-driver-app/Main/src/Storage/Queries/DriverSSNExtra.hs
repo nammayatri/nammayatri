@@ -1,20 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverSSNExtra where
 
 import Domain.Types.DriverSSN
-import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverSSN as Beam
-import Storage.Queries.OrphanInstances.DriverSSN
+import Storage.Queries.OrphanInstances.DriverSSN ()
 
 -- Extra code goes here --
 

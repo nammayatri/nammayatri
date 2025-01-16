@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Ride where
@@ -10,7 +9,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -39,6 +38,7 @@ data RideE e = Ride
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
+    destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
     driverAlternateNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
@@ -53,9 +53,12 @@ data RideE e = Ride
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     endOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    feedbackSkipped :: Kernel.Prelude.Bool,
     fromLocation :: Domain.Types.Location.Location,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -63,15 +66,19 @@ data RideE e = Ride
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
-    paymentDone :: Kernel.Prelude.Bool,
+    paymentStatus :: Domain.Types.Ride.PaymentStatus,
+    pickupRouteCallCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     safetyCheckStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    safetyJourneyStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.Ride.RideStatus,
+    stops :: [Domain.Types.Location.Location],
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
@@ -82,8 +89,9 @@ data RideE e = Ride
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType,
-    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
+    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
+    wasRideSafe :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic)
 
@@ -112,6 +120,7 @@ instance EncryptedItem Ride where
           clientId = clientId entity,
           clientSdkVersion = clientSdkVersion entity,
           createdAt = createdAt entity,
+          destinationReachedAt = destinationReachedAt entity,
           distanceUnit = distanceUnit entity,
           driverAccountId = driverAccountId entity,
           driverAlternateNumber = driverAlternateNumber_,
@@ -126,9 +135,12 @@ instance EncryptedItem Ride where
           driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
           endOdometerReading = endOdometerReading entity,
           endOtp = endOtp entity,
+          estimatedEndTimeRange = estimatedEndTimeRange entity,
           fare = fare entity,
           favCount = favCount entity,
+          feedbackSkipped = feedbackSkipped entity,
           fromLocation = fromLocation entity,
+          hasStops = hasStops entity,
           id = id entity,
           isAlreadyFav = isAlreadyFav entity,
           isFreeRide = isFreeRide entity,
@@ -136,15 +148,19 @@ instance EncryptedItem Ride where
           merchantOperatingCityId = merchantOperatingCityId entity,
           onlinePayment = onlinePayment entity,
           otp = otp entity,
-          paymentDone = paymentDone entity,
+          paymentStatus = paymentStatus entity,
+          pickupRouteCallCount = pickupRouteCallCount entity,
           rideEndTime = rideEndTime entity,
           rideRating = rideRating entity,
           rideStartTime = rideStartTime entity,
           safetyCheckStatus = safetyCheckStatus entity,
+          safetyJourneyStatus = safetyJourneyStatus entity,
           shortId = shortId entity,
           showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
           startOdometerReading = startOdometerReading entity,
           status = status entity,
+          stops = stops entity,
+          tipAmount = tipAmount entity,
           toLocation = toLocation entity,
           tollConfidence = tollConfidence entity,
           totalFare = totalFare entity,
@@ -156,7 +172,8 @@ instance EncryptedItem Ride where
           vehicleModel = vehicleModel entity,
           vehicleNumber = vehicleNumber entity,
           vehicleServiceTierType = vehicleServiceTierType entity,
-          vehicleVariant = vehicleVariant entity
+          vehicleVariant = vehicleVariant entity,
+          wasRideSafe = wasRideSafe entity
         }
   decryptItem entity = do
     driverAlternateNumber_ <- fmap fst <$> decryptItem (driverAlternateNumber entity)
@@ -177,6 +194,7 @@ instance EncryptedItem Ride where
             clientId = clientId entity,
             clientSdkVersion = clientSdkVersion entity,
             createdAt = createdAt entity,
+            destinationReachedAt = destinationReachedAt entity,
             distanceUnit = distanceUnit entity,
             driverAccountId = driverAccountId entity,
             driverAlternateNumber = driverAlternateNumber_,
@@ -191,9 +209,12 @@ instance EncryptedItem Ride where
             driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
             endOdometerReading = endOdometerReading entity,
             endOtp = endOtp entity,
+            estimatedEndTimeRange = estimatedEndTimeRange entity,
             fare = fare entity,
             favCount = favCount entity,
+            feedbackSkipped = feedbackSkipped entity,
             fromLocation = fromLocation entity,
+            hasStops = hasStops entity,
             id = id entity,
             isAlreadyFav = isAlreadyFav entity,
             isFreeRide = isFreeRide entity,
@@ -201,15 +222,19 @@ instance EncryptedItem Ride where
             merchantOperatingCityId = merchantOperatingCityId entity,
             onlinePayment = onlinePayment entity,
             otp = otp entity,
-            paymentDone = paymentDone entity,
+            paymentStatus = paymentStatus entity,
+            pickupRouteCallCount = pickupRouteCallCount entity,
             rideEndTime = rideEndTime entity,
             rideRating = rideRating entity,
             rideStartTime = rideStartTime entity,
             safetyCheckStatus = safetyCheckStatus entity,
+            safetyJourneyStatus = safetyJourneyStatus entity,
             shortId = shortId entity,
             showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
             startOdometerReading = startOdometerReading entity,
             status = status entity,
+            stops = stops entity,
+            tipAmount = tipAmount entity,
             toLocation = toLocation entity,
             tollConfidence = tollConfidence entity,
             totalFare = totalFare entity,
@@ -221,7 +246,8 @@ instance EncryptedItem Ride where
             vehicleModel = vehicleModel entity,
             vehicleNumber = vehicleNumber entity,
             vehicleServiceTierType = vehicleServiceTierType entity,
-            vehicleVariant = vehicleVariant entity
+            vehicleVariant = vehicleVariant entity,
+            wasRideSafe = wasRideSafe entity
           },
         ""
       )
@@ -233,8 +259,28 @@ instance EncryptedItem' Ride where
 
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PaymentStatus = Completed | NotInitiated | Initiated | Cancelled | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data SosJourneyStatus
+  = Safe
+  | UnexpectedCondition Domain.Types.Ride.UnexpectedConditionStage
+  | IVRCallInitiated
+  | CSAlerted
+  | PoliceMonitoring
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)

@@ -19,17 +19,21 @@ module API.UI
 where
 
 import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
+import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
+import qualified API.Action.UI.WMB as WMB
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -68,6 +72,7 @@ type API =
   "ui"
     :> ( HealthCheckAPI
            :<|> Registration.API
+           :<|> DemandHotspots.API
            :<|> DriverOnboarding.API
            :<|> DriverOnboardingV2.API
            :<|> DriverProfileQuestions.API
@@ -104,15 +109,19 @@ type API =
            :<|> EditBooking.API
            :<|> SocialLogin.API
            :<|> VehicleDetails.API
+           :<|> PriceBreakup.API
            :<|> Tokenization.API
            :<|> FareCalculator.API
            :<|> ReferralPayout.API
+           :<|> SpecialLocationWarrior.API
+           :<|> WMB.API
        )
 
 handler :: FlowServer API
 handler =
   pure "App is UP"
     :<|> Registration.handler
+    :<|> DemandHotspots.handler
     :<|> DriverOnboarding.handler
     :<|> DriverOnboardingV2.handler
     :<|> DriverProfileQuestions.handler
@@ -149,6 +158,9 @@ handler =
     :<|> EditBooking.handler
     :<|> SocialLogin.handler
     :<|> VehicleDetails.handler
+    :<|> PriceBreakup.handler
     :<|> Tokenization.handler
     :<|> FareCalculator.handler
     :<|> ReferralPayout.handler
+    :<|> SpecialLocationWarrior.handler
+    :<|> WMB.handler

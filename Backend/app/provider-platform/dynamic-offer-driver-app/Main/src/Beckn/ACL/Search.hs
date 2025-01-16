@@ -17,10 +17,8 @@ module Beckn.ACL.Search where
 import qualified Beckn.OnDemand.Transformer.Search as TSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 
@@ -31,7 +29,6 @@ buildSearchReqV2 ::
   m DSearch.DSearchReq
 buildSearchReqV2 subscriber req = do
   let context = req.searchReqContext
-  ContextUtils.validateContext Context.SEARCH context
   messageId <- Utils.getMessageId context
   let message = req.searchReqMessage
   TSearch.buildSearchReq messageId subscriber message context

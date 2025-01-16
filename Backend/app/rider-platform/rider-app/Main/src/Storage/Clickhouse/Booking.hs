@@ -18,7 +18,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import Kernel.Prelude
+import Kernel.Prelude as P
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
@@ -51,7 +51,7 @@ bookingTTable =
 
 type Booking = BookingT Identity
 
-$(TH.mkClickhouseInstances ''BookingT)
+$(TH.mkClickhouseInstances ''BookingT 'SELECT_FINAL_MODIFIER)
 
 findAllCompletedRiderBookingsByMerchantInRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -98,8 +98,9 @@ findCountByRiderIdAndStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DP.Person ->
   DB.BookingStatus ->
-  m Int
-findCountByRiderIdAndStatus riderId status = do
+  UTCTime ->
+  m (Maybe Int)
+findCountByRiderIdAndStatus riderId status createdAt = do
   res <-
     CH.findAll $
       CH.select_ (\booking -> CH.aggregate $ CH.count_ booking.id) $
@@ -107,6 +108,65 @@ findCountByRiderIdAndStatus riderId status = do
           ( \booking _ ->
               booking.status CH.==. status
                 CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
+  pure (listToMaybe res)
+
+findAllCancelledBookingIdsByRider ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  m [Id DB.Booking]
+findAllCancelledBookingIdsByRider riderId createdAt = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.notGrouped booking.id) $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. DB.CANCELLED
+                CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. createdAt
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure res
+
+findMaxTimeForCancelledBookingByRiderId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  m UTCTime
+findMaxTimeForCancelledBookingByRiderId riderId createdAt = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.notGrouped $ CH.max (booking.createdAt)) $
+        CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+          CH.filter_
+            ( \booking _ ->
+                booking.status CH.==. DB.CANCELLED
+                  CH.&&. booking.riderId CH.==. riderId
+                  CH.&&. booking.createdAt >=. createdAt
+            )
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  let maxTime = foldr P.max createdAt res
+  pure maxTime
+
+findByRiderIdAndStatus ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  DB.BookingStatus ->
+  UTCTime ->
+  m [UTCTime]
+findByRiderIdAndStatus riderId status createdAt = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.notGrouped $ CH.distinct booking.createdAt) $
+        CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+          CH.filter_
+            ( \booking _ ->
+                booking.status CH.==. status
+                  CH.&&. booking.riderId CH.==. riderId
+                  CH.&&. booking.createdAt >=. createdAt
+            )
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure res

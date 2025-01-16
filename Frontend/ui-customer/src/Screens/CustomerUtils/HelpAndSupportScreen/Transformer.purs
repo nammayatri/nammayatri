@@ -25,7 +25,7 @@ import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..), withinTimeRange)
-import JBridge (showDialer, hideKeyboardOnNavigation, toast, differenceBetweenTwoUTC)
+import JBridge (showDialer, hideKeyboardOnNavigation, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
@@ -133,10 +133,10 @@ myRideListTransform state listRes =
         ( \(RideBookingRes ride) ->
             let
               (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !! 0))
-
+              (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
               baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
-
-              updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+              rideStatus = fromMaybe "" (ride.rideList !! 0 <#> \(RideAPIEntity ride) -> ride.status)
+              updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
 
               config = getAppConfig appConfig
             in
@@ -151,6 +151,8 @@ myRideListTransform state listRes =
                   , status: (ride.status)
                   , isNull: false
                   , rideStartTime: (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A")
+                  , rideStartTimeUTC: fromMaybe "" ride.rideStartTime
+                  , rideEndTimeUTC: fromMaybe "" ride.rideEndTime
                   , rideEndTime: (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A")
                   , vehicleNumber: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleNumber)
                   , rideId: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _id)
@@ -159,6 +161,8 @@ myRideListTransform state listRes =
                   , faresList: updatedFareList
                   , config: config
                   , email: ""
+                  , isLoading: false
+                  , fromScreen: state.data.fromScreen
                   , description: ""
                   , accountStatus: ACTIVE
                   , vehicleVariant: fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleVariant)
@@ -169,6 +173,9 @@ myRideListTransform state listRes =
                   , issueListType: HELP_AND_SUPPORT_SCREEN_MODAL
                   , categories: state.data.categories
                   , merchantExoPhone: ride.merchantExoPhone
+                  , isFaqListEmpty: state.data.isFaqListEmpty
+                  , rideCreatedAt: ride.createdAt
+                  , rideStatus: rideStatus
                   }
               , props:
                   { apiFailure: false
@@ -245,23 +252,35 @@ topicsList state =
   ( if state.data.config.feature.enableSelfServe then
       state.data.categories
     else
-      [ { categoryAction: "CONTACT_US"
+      [ { categoryAction: Just "CONTACT_US"
         , categoryName: getString FOR_OTHER_ISSUES_WRITE_TO_US
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
         , categoryId: "5"
+        , isRideRequired: false
+        , maxAllowedRideAge: Nothing
+        , allowedRideStatuses : Nothing
+        , categoryType: "Category"
         }
-      , { categoryAction: "CALL_SUPPORT"
+      , { categoryAction: Just "CALL_SUPPORT"
         , categoryName: getString CONTACT_SUPPORT
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_help"
+        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_help"
         , categoryId: "6"
+        , isRideRequired: false
+        , maxAllowedRideAge: Nothing
+        , allowedRideStatuses : Nothing
+        , categoryType: "Category"
         }
       ]
   )
     <> if state.data.config.showDeleteAccount then
-        [ { categoryAction: "DELETE_ACCOUNT"
+        [ { categoryAction: Just "DELETE_ACCOUNT"
           , categoryName: getString REQUEST_TO_DELETE_ACCOUNT
-          , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
+          , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
           , categoryId: "7"
+          , isRideRequired: false
+          , maxAllowedRideAge: Nothing
+          , categoryType: "Category"
+          , allowedRideStatuses: Nothing
           }
         ]
       else
@@ -273,20 +292,28 @@ reportsList state =
     <> ( if null state.data.ongoingIssueList then
           []
         else
-          [ { categoryAction: "REPORTED"
-            , categoryName: getString REPORTED <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
-            , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_reported"
+          [ { categoryAction: Just "REPORTED"
+            , categoryName: getString ACTIVE_STR <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
+            , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_reported"
             , categoryId: "1"
+            , isRideRequired: false
+            , maxAllowedRideAge: Nothing
+            , allowedRideStatuses: Nothing
+            , categoryType: "Category"
             }
           ]
       )
     <> ( if null state.data.resolvedIssueList then
           []
         else
-          [ { categoryAction: "CLOSED"
+          [ { categoryAction: Just "CLOSED"
             , categoryName: getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
-            , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_resolved"
+            , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_resolved"
             , categoryId: "2"
+            , isRideRequired: false
+            , maxAllowedRideAge: Nothing
+            , allowedRideStatuses: Nothing
+            , categoryType: "Category"
             }
           ]
       )

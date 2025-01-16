@@ -1,8 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Domain.Types.Extra.Booking
@@ -14,19 +10,8 @@ where
 
 import BecknV2.OnDemand.Enums (PaymentStatus (..))
 import Data.Aeson
-import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.TripTerms as DTripTerms
-import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
-import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 

@@ -1,0 +1,29 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+module: TriggerFCM
+types:
+  TriggerFcmReq :
+    chatPersonId : Id Person
+    body : Text
+    title: Text
+    channelId: Maybe Text
+    source: Maybe MessageSource
+    showNotification: Maybe Bool
+
+  MessageSource:
+    enum: "USER, TRUSTED_CONTACT"
+
+  FCMEntityData:
+    personId : Id Person
+    channelId: Maybe Text
+    source: Maybe MessageSource
+
+apis :
+  - POST :
+      endpoint : /triggerFCM/message
+      auth : TokenAuth
+      request:
+        type: API.Types.UI.TriggerFCM.TriggerFcmReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

@@ -30,8 +30,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Utils.Common
 
-mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe [Spec.Stop]
-mkStops origin mDestination mStartOtp =
+mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> [Location.Location] -> Maybe [Spec.Stop]
+mkStops origin mDestination mStartOtp intermediateStops =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps d = Gps.Gps {lat = d.lat, lon = d.lon}
    in Just $
@@ -60,7 +60,9 @@ mkStops origin mDestination mStartOtp =
                             { authorizationType = Just $ show Enums.OTP,
                               authorizationToken = mStartOtp
                             },
-                  stopTime = Nothing
+                  stopTime = Nothing,
+                  stopId = Just "0",
+                  stopParentStopId = Nothing
                 },
             ( \destination ->
                 Spec.Stop
@@ -78,11 +80,14 @@ mkStops origin mDestination mStartOtp =
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
-                    stopTime = Nothing
+                    stopTime = Nothing,
+                    stopId = Just $ show (length intermediateStops + 1),
+                    stopParentStopId = Just $ show (length intermediateStops)
                   }
             )
               <$> mDestination
           ]
+          <> (map (\(location, order) -> UCommon.mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
 mkPayment _ bapConfig city = do

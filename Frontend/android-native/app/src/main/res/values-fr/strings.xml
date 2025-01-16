@@ -50,4 +50,8 @@
     <string name="call_support">Appeler le support</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"Pas de frais supplémentaires. Pas de pourboire. Pas de frais d'attente."</string>
     <string name="third_party_booking">"Réservation par un tiers"</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
+    <string name="message_from_customer">Message from Customer</string>
+    <string name="round_trip">Aller-retour</string>
 </resources>

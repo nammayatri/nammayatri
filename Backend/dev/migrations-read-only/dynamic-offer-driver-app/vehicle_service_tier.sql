@@ -72,3 +72,327 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_intercity_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_icon_url character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_category text ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN fare_addition_per_km_over_base_service_tier integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN base_vehicle_service_tier boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN stop_fcm_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN stop_fcm_suppress_count integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

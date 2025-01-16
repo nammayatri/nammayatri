@@ -1,0 +1,1 @@
+CREATE INDEX idx_ride_id ON atlas_driver_offer_bpp.rider_details USING btree (first_ride_id);

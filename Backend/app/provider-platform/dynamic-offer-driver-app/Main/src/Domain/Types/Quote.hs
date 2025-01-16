@@ -15,12 +15,13 @@
 
 module Domain.Types.Quote where
 
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SearchRequest
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -46,6 +47,7 @@ data Quote = Quote
     isBlockedRoute :: Maybe Bool,
     tollNames :: Maybe [Text],
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)

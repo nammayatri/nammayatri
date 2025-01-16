@@ -12,7 +12,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking
   Client: Domain.Types.Client
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
@@ -30,15 +30,32 @@ Ride:
     RideStatus:
       enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "HttpInstance"
+
     BPPRide: {}
+
+    UnexpectedConditionStage:
+      enum: "DriverDeviated,UnusualStop,UnsafeArea"
+
+    SosJourneyStatus:
+      enum: "Safe,UnexpectedCondition UnexpectedConditionStage,IVRCallInitiated,CSAlerted,PoliceMonitoring"
+
+    EstimatedEndTimeRange:
+      start: UTCTime
+      end: UTCTime
+
+    PaymentStatus:
+      enum: "Completed,NotInitiated,Initiated,Cancelled,Failed"
+
   fields:
     id: Id Ride
     bppRideId: Id BPPRide
     bookingId: Id Booking
     shortId: ShortId Ride
+    hasStops : Maybe Bool
     merchantId: Maybe (Id Merchant)
     clientId: Maybe (Id Client)
     fromLocation: Location
+    stops: "[Location]"
     toLocation: Maybe Location
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     status: RideStatus
@@ -54,7 +71,7 @@ Ride:
     vehicleModel: Text
     vehicleColor: Maybe Text
     vehicleVariant: VehicleVariant|NoRelation
-    vehicleServiceTierType: Maybe VehicleServiceTierType
+    vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
     endOtp: Maybe Text
     trackingUrl: Maybe BaseUrl
@@ -67,6 +84,7 @@ Ride:
     rideStartTime: Maybe UTCTime
     rideEndTime: Maybe UTCTime
     rideRating: Maybe Int
+    feedbackSkipped: Bool
     allowedEditLocationAttempts: Maybe Int
     allowedEditPickupLocationAttempts: Maybe Int
     driversPreviousRideDropLoc : Maybe LatLong
@@ -84,13 +102,19 @@ Ride:
     backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
-    paymentDone: Bool
+    paymentStatus: PaymentStatus
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
+    safetyJourneyStatus: Maybe SosJourneyStatus
+    destinationReachedAt: Maybe UTCTime
+    estimatedEndTimeRange: Maybe EstimatedEndTimeRange
+    tipAmount: Maybe Price
+    wasRideSafe: Maybe Bool
+    pickupRouteCallCount: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -121,11 +145,13 @@ Ride:
     vehicleVariant: character varying(60)
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
+    tipAmount: numeric(30,2)
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
     toLocation: {}
     fromLocation: {}
+    stops: {}
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -153,10 +179,16 @@ Ride:
     driverAlternateNumber:
       driverAlternateNumberEncrypted: Maybe Text
       driverAlternateNumberHash: Maybe DbHash
+    estimatedEndTimeRange:
+      estimatedEndTimeRangeStart: Maybe UTCTime
+      estimatedEndTimeRangeEnd: Maybe UTCTime
+    tipAmount:
+      tipAmount: Maybe HighPrecMoney
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
+    stops: Storage.Queries.Extra.Transformers.Ride.getStops id hasStops|EM
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM
@@ -170,10 +202,13 @@ Ride:
     driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
+    paymentStatus: Kernel.Prelude.fromMaybe Domain.Types.Ride.Completed paymentStatus|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
+    feedbackSkipped: Kernel.Prelude.fromMaybe False feedbackSkipped|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
+    estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
+    tipAmount: fmap (Kernel.Types.Common.mkPrice currency) tipAmount|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -197,12 +232,16 @@ Ride:
     driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
-    paymentDone: Kernel.Prelude.Just paymentDone|E
+    paymentStatus: Kernel.Prelude.Just paymentStatus|E
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
+    feedbackSkipped: Kernel.Prelude.Just feedbackSkipped|E
     driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
     driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
     driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
+    estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
+    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
+    tipAmount: Kernel.Prelude.fmap (.amount)|I
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -212,10 +251,12 @@ Ride:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     showDriversPreviousRideDropLoc : Maybe Bool
-    paymentDone: Maybe Bool
+    paymentStatus: Maybe PaymentStatus
     onlinePayment: Maybe Bool
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    tipAmount: Maybe HighPrecMoney
+    feedbackSkipped: Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -236,14 +277,35 @@ Ride:
     findRideByRideShortId:
       kvFunction: findOneWithKV
       where: shortId
-    markPaymentDone:
+    markPaymentStatus:
       kvFunction: updateOneWithKV
-      params: [paymentDone]
+      params: [paymentStatus]
       where: id
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled]
       where: id
+    updateDestinationReachedAt:
+      kvFunction: updateOneWithKV
+      params: [destinationReachedAt]
+      where: id
+    updateTipByRideId:
+      kvFunction: updateOneWithKV
+      params: [tipAmount]
+      where: id
+    updateEstimatedEndTimeRange:
+      kvFunction: updateOneWithKV
+      params: [estimatedEndTimeRange]
+      where: id
+    updateFeedbackSkipped:
+      kvFunction: updateOneWithKV
+      params: [feedbackSkipped]
+      where: id
+    updatePickupRouteCallCount:
+      kvFunction: updateOneWithKV
+      params: [pickupRouteCallCount]
+      where: id
+
   excludedDefaultQueries:
     - create
     - createMany
@@ -252,4 +314,6 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+
 

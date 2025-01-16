@@ -12,3 +12,8 @@ ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN name character 
 ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN person_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN priority int NOT NULL default 0;
 ALTER TABLE atlas_app.person_default_emergency_number ADD PRIMARY KEY ( mobile_number_hash, person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_default_emergency_number ADD COLUMN share_trip_with_emergency_contact_option text ;

@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.DriverOnboardingV2 where
@@ -9,7 +8,6 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
-import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -28,21 +26,26 @@ data AadhaarCardReq = AadhaarCardReq
     maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Text,
-    validationStatus :: API.Types.UI.DriverOnboardingV2.ValidationStatus
+    validationStatus :: ValidationStatus
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AirConditionedTier = AirConditionedTier
   { isWorking :: Kernel.Prelude.Bool,
     restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BankAccountLinkResp = BankAccountLinkResp {accountLink :: Servant.Client.Core.BaseUrl, accountUrlExpiry :: Kernel.Prelude.UTCTime, chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,
@@ -51,21 +54,26 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     title :: Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigList = DocumentVerificationConfigList
-  { ambulances :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    autos :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    bikes :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    cabs :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
+  { ambulances :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    autos :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    bikes :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverPanReq = DriverPanReq
   { consent :: Kernel.Prelude.Bool,
@@ -77,10 +85,11 @@ data DriverPanReq = DriverPanReq
     nameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    validationStatus :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.ValidationStatus,
+    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverVehicleServiceTier = DriverVehicleServiceTier
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -93,40 +102,73 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     name :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
-  { airConditioned :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.AirConditionedTier,
+  { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]
+    tiers :: [DriverVehicleServiceTier]
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FarePolicyHour = Peak | NonPeak | Night deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data FarePolicyHour
+  = Peak
+  | NonPeak
+  | Night
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data HVSdkCallLogReq = HVSdkCallLogReq
+  { callbackResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    docType :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hvFlowId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    txnId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RateCardResp = RateCardResp
-  { farePolicyHour :: API.Types.UI.DriverOnboardingV2.FarePolicyHour,
+  { farePolicyHour :: FarePolicyHour,
     perKmRate :: Kernel.Types.Common.PriceAPIEntity,
     perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    rateCardItems :: [API.Types.UI.DriverOnboardingV2.RateCardItem],
-    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    rateCardItems :: [RateCardItem],
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
     totalFare :: Kernel.Types.Common.PriceAPIEntity,
     tripCategory :: Domain.Types.Common.TripCategory
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
+newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ValidationStatus = APPROVED | DECLINED | AUTO_APPROVED | AUTO_DECLINED | NEEDS_REVIEW deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema, Read)
+data ValidationStatus
+  = APPROVED
+  | DECLINED
+  | AUTO_APPROVED
+  | AUTO_DECLINED
+  | NEEDS_REVIEW
+  deriving stock (Eq, Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

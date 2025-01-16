@@ -25,6 +25,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPSS.FullFarePolicySlabsDetailsSlab -> m ()
+create = createWithKV
+
 findAll' ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
@@ -77,9 +80,9 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         baseFareAmount = Just baseFare,
         currency = Just currency,
         distanceUnit = Just distanceUnit,
-        platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
-        platformFeeCgst = DFP.cgst <$> platformFeeInfo,
-        platformFeeSgst = DFP.sgst <$> platformFeeInfo,
+        platformFeeCharge = (.platformFeeCharge) <$> platformFeeInfo,
+        platformFeeCgst = (.cgst) <$> platformFeeInfo,
+        platformFeeSgst = (.sgst) <$> platformFeeInfo,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo

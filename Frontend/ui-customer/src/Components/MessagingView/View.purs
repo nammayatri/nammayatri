@@ -16,25 +16,26 @@ module Components.MessagingView.View where
 import Common.Types.App
 import Animation (translateInXBackwardAnim, translateInXForwardAnim, translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig)
-import Components.MessagingView.Controller (Action(..), Config(..), ChatComponent)
-import Data.Array (mapWithIndex, (!!), length, null)
+import Components.MessagingView.Controller (Action(..), Config(..), ChatComponent, ChatContacts(..))
+import Data.Array (mapWithIndex, (!!), length, null, filter)
 import Data.Function.Uncurried (runFn1)
 import Data.Int as Int
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Maybe (fromMaybe, Maybe(..), isJust)
 import Data.Number (pow)
 import Data.Number as Num
 import Data.String as STR
+import Data.String (take)
 import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginBottom, getNewIDWithTag, screenWidth, screenHeight, os, safeMarginTop, isPreviousVersion, convertUTCtoISC)
 import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys)
+import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
-import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor)
+import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Events (afterRender)
@@ -43,13 +44,15 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (KeyStore(..), getValueToLocalStore)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, noView)
 import Locale.Utils
 import Storage (KeyStore(..))
 import LocalStorage.Cache (getValueFromCache)
 import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
+import Components.MessagingView.Controller as CMC
 
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -66,7 +69,7 @@ view push config =
       if config.isKeyBoardOpen then Tuple "KeyBoardOpenChatView" $ messagingView config push
       else Tuple "KeyBoardCloseChatView" $ messagingView config push
       else 
-        Tuple "AndroidChatView" $ linearLayout
+        Tuple ("AndroidChatView_" <> config.currentChatRecipient.name) $ linearLayout
         [ height $ WRAP_CONTENT
         , width $ MATCH_PARENT
         , clickable $ os == "IOS"
@@ -88,13 +91,22 @@ view push config =
             , chatBodyView config push 
             ]
           ]
-    , Tuple "ChatFooterView" $ linearLayout
+    , Tuple ("ChatFooterView" <> config.currentChatRecipient.name) $ linearLayout
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
       , orientation VERTICAL
       , alignParentBottom "true,-1"
       , adjustViewWithKeyboard "true"
       ][ chatFooterView config push ]
+    , Tuple ("MultiChatView" <> config.currentChatRecipient.name) $ linearLayout 
+      [ height $ MATCH_PARENT
+      , width $ MATCH_PARENT
+      , gravity BOTTOM
+      , visibility $ boolToVisibility $ config.showChatListPopUp 
+      , onClick push $ const ToggleMultiChatPopUp
+      , background Color.blackLessTrans
+      , alignParentBottom "true,-1"
+      ] [ multiChatView config push]
    ]
 
 messagingView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -128,7 +140,7 @@ messagingView config push =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][ Tuple "chatHeaderView" $ chatHeaderView config push
-       , Tuple "chatBodyView" $ chatBodyView config push
+       , Tuple ("chatBodyView_" <> config.currentChatRecipient.name) $ chatBodyView config push
       ]
     ]
   ]
@@ -168,7 +180,7 @@ chatHeaderView config push =
           ]
         ]
       , headerNameView config push
-      , headerActionView config push
+      , if length config.contactList > 1 then  multiChatActionView config push else callActionView config 40 16 push 
       ]
     , linearLayout
       [ width MATCH_PARENT
@@ -181,33 +193,28 @@ chatHeaderView config push =
 headerNameView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerNameView config push =
   let lang = getLanguageLocale languageKey
+      name = config.currentChatRecipient.name
+      recipientName = if config.currentChatRecipient.recipient == CMC.DRIVER then getString DRIVER <> " : " <> name else name
   in
   linearLayout
   [ height WRAP_CONTENT
   , width $ V (((screenWidth unit)/10)* 6)
   , orientation VERTICAL
-  , margin $ MarginLeft 8
+  , margin $ Margin 8 0 0 1
   ] $ [linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , accessibilityHint $ "Chat With : " <> config.userConfig.userName
     , accessibility ENABLE
+    , gravity CENTER
     ][ textView $
-      [ text $ if lang == "HI_IN" then config.userConfig.userName <> " " else getString CHAT_WITH <> " "
+      [ text recipientName
       , color Color.black800
       , ellipsize true
       , singleLine true
-      , margin $ MarginBottom if config.feature.showVehicleDetails then 8 else 0
+      , lineHeight "18"
       , accessibility DISABLE
-      ] <> if lang == "HI_IN" then FontStyle.body15 TypoGraphy else FontStyle.tags TypoGraphy
-    , textView $
-      [ text $ if lang == "HI_IN" then getString CHAT_WITH else config.userConfig.userName
-      , color Color.black800
-      , ellipsize true
-      , singleLine true
-      , accessibility DISABLE
-      , margin $ MarginBottom if config.feature.showVehicleDetails then 8 else 0
-      ] <> if lang == "HI_IN" then FontStyle.tags TypoGraphy else FontStyle.body15 TypoGraphy
+      ] <> FontStyle.body6 TypoGraphy
     ]
   ] <> if config.feature.showVehicleDetails then [vehicleAndOTPAndPriceView config] else []
 
@@ -219,6 +226,7 @@ vehicleAndOTPAndPriceView config =
   , scrollBarX false
   , accessibility DISABLE
   , disableKeyboardAvoidance true
+  , visibility $ boolToVisibility $ config.currentChatRecipient.recipient == CMC.DRIVER
   ][ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -278,30 +286,31 @@ vehicleAndOTPAndPriceView config =
     ]
   ]
 
-headerActionView ::forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-headerActionView config push =
-  linearLayout
+callActionView :: forall w. Config -> Int -> Int -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+callActionView config layoutSize iconSize  push = 
+  linearLayout 
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity RIGHT
-  ][ linearLayout
-     [ height $ V 40
-     , width $ V 40
-     , gravity CENTER
-     , cornerRadius if os == "IOS" then 20.0 else 32.0
-     , clickable true
-     , background $ Color.green200
-     , onClick push $ const $ Call
-     , accessibilityHint "Call Driver : Button"
-     , accessibility ENABLE
-     , rippleColor Color.rippleShade
-     ][ imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
-        , height $ V 16
-        , width $ V 16
-        , accessibility DISABLE
-        ]
-     ]
+  ][
+    linearLayout
+    [ height $ V layoutSize
+    , width $ V layoutSize
+    , gravity CENTER
+    , cornerRadius $ (Int.toNumber layoutSize) / 2.0
+    , clickable true
+    , background $ Color.green200
+    , onClick push $ const Call
+    , accessibilityHint $ "Call " <> config.currentChatRecipient.name
+    , accessibility ENABLE
+    , rippleColor Color.rippleShade
+    ][ imageView
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
+      , height $ V iconSize
+      , width $ V iconSize
+      , accessibility DISABLE
+      ]
+    ]
   ]
 
 chatBodyView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -317,7 +326,8 @@ chatView config push =
   [ weight 1.0
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ MarginBottom $ getChatFooterHeight config
+  , padding $ PaddingBottom $ getChatFooterHeight config
+
   ][scrollView
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -334,7 +344,7 @@ chatView config push =
           , width MATCH_PARENT
           , padding $ PaddingHorizontal 16 16
           , visibility $ boolToVisibility $ config.feature.showAutoGeneratedText
-          ][ chatComponent config push {message : config.autoGeneratedText, sentBy : "Driver", timeStamp : config.rideConfirmedAt , type : "" , delay : 0} false "DRIVER" 1 ]
+          ][ chatComponent config push {message : config.autoGeneratedText, sentBy : "Driver" , timeStamp : config.rideConfirmedAt , type : "" , delay : 0} false "DRIVER" 1 ]
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -347,6 +357,8 @@ chatView config push =
 
 chatFooterView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatFooterView config push =
+  let imageName = if config.feature.sendMessageActive then "ic_send_blue" else "ic_send"
+  in
   linearLayout
   [ height $ WRAP_CONTENT
   , width MATCH_PARENT
@@ -359,46 +371,56 @@ chatFooterView config push =
   , afterRender push $ const $ NoAction
   , padding $ Padding 16 16 16 16
   ][ suggestionsView config push
-   , linearLayout
-      [ height $ V 48
-      , width MATCH_PARENT
-      , padding (PaddingHorizontal 16 8)
-      , cornerRadius 24.0
-      , accessibility DISABLE
-      , gravity CENTER_VERTICAL
-      , background Color.blue600
-      , orientation HORIZONTAL
-      , afterRender push $ const $ NoAction
-      ][ editText $
-         [ weight 1.0
-         , height $ V 48
-         , id (getNewIDWithTag "ChatInputEditText")
-         , background Color.blue600
-         , cornerRadius 24.0
-         , accessibility ENABLE
-         , accessibilityHint $ "Message Driver : Text Input : Select to send message to driver" 
-         , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
-         , singleLine true
-         , hintColor Color.black700
-         , ellipsize true
-         , onChange push $ TextChanged
-         , pattern "[^\n]*,255"
-         ] <> FontStyle.body1 LanguageStyle
-       , linearLayout
-         [ height $ V 36
-         , width $ V 36
-         , gravity CENTER
-         , onClick push $ const $ SendMessage
-         , accessibilityHint "Send Message : Button"
-         , accessibility ENABLE
-         ][ imageView
-            [ imageWithFallback $ if config.feature.sendMessageActive then fetchImage FF_COMMON_ASSET "ic_send_blue" else fetchImage FF_COMMON_ASSET "ic_send"
-            , accessibility DISABLE
-            , height $ V 20 
-            , width $ V 20 
-            ] 
-         ]
-      ]
+   , linearLayout 
+     [ width MATCH_PARENT
+     , height $ V 48
+     ]  [ linearLayout 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , visibility $ boolToVisibility $ length config.contactList > 1
+          ][ if length config.contactList > 1 then callActionView config 48 20 push else noView] 
+       ,  linearLayout
+          [ height $ V 48
+          , weight 1.0
+          , margin $ MarginLeft 16
+          , padding (PaddingHorizontal 16 8)
+          , cornerRadius 24.0
+          , accessibility DISABLE
+          , gravity CENTER_VERTICAL
+          , background Color.blue600
+          , orientation HORIZONTAL
+          , afterRender push $ const $ NoAction
+          ][ editText $
+            [ weight 1.0
+            , height $ V 48
+            , id (getNewIDWithTag "ChatInputEditText")
+            , background Color.blue600
+            , cornerRadius 24.0
+            , accessibility ENABLE
+            , accessibilityHint $ "Message " <> config.currentChatRecipient.name <> " : Text Input : Select to send message to " <>  config.currentChatRecipient.name
+            , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.currentChatRecipient.name) !! 0) <> "..."
+            , singleLine true
+            , hintColor Color.black700
+            , ellipsize true
+            , onChange push $ TextChanged
+            , pattern "[^\n]*,255"
+            ] <> FontStyle.body1 LanguageStyle
+          , linearLayout
+            [ height $ V 36
+            , width $ V 36
+            , gravity CENTER
+            , onClick push $ const $ SendMessage
+            , accessibilityHint "Send Message : Button"
+            , accessibility ENABLE
+            ][ imageView
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET imageName
+                , accessibility DISABLE
+                , height $ V 20 
+                , width $ V 20 
+                ] 
+            ]
+          ]
+        ]
   ]
 
 emptyChatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -489,10 +511,11 @@ chatComponent state push config isLastItem receiver index =
   , onAnimationEnd (\_ -> when isLastItem $ void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true) (const NoAction)
   ][ ((if enableFlexBox then flexBoxLayout else linearLayout) $ 
      [ height MATCH_PARENT
-     , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
+     , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else if state.languageKey == "EN_US" then 35 else 30) ) then MATCH_PARENT else WRAP_CONTENT
      , accessibility DISABLE_DESCENDANT
      , background chatConfig.background
      , cornerRadii chatConfig.cornerRadii
+     , gravity CENTER
      ] <> if enableFlexBox 
             then [justifyContent JUSTIFY_END, flexDirection ROW, flexWrap WRAP, alignItems ALIGN_BASELINE, orientation VERTICAL, padding (Padding 10 6 10 6)] 
             else [margin (MarginBottom 4), padding (Padding 12 12 12 12)])
@@ -546,5 +569,133 @@ getChatFooterHeight config =
 splitString :: String -> String
 splitString str = (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") str)
 
-getCurrentUser :: Boolean -> String
+getCurrentUser :: Boolean -> String   
 getCurrentUser isChatWithEM = if isChatWithEM then getValueFromCache (show CUSTOMER_ID) (getKeyInSharedPrefKeys) else "Customer"
+
+multiChatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+multiChatView config push =
+  linearLayout 
+  [ width MATCH_PARENT 
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ MarginBottom 58
+  , alignParentBottom "true,-1"
+  ] [ linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , padding $ PaddingHorizontal 16 16
+      , margin $ MarginHorizontal 16 16
+      , gravity CENTER
+      , clickable true
+      , orientation VERTICAL
+      , background Color.white900
+      , cornerRadius 24.0
+      ](mapWithIndex (\ind item -> multiChatContactListView config item ind push) (config.contactList))
+  ]
+
+
+multiChatContactListView ::  forall w. Config -> forall w. ChatContacts -> Int -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+multiChatContactListView config item ind push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , orientation VERTICAL
+    ]
+    [ linearLayout 
+      [ gravity CENTER_VERTICAL
+      , width MATCH_PARENT
+      , height WRAP_CONTENT
+      , onClick push $ const $ SwitchChat item
+      , padding $ PaddingVertical 16 16
+      ][  linearLayout
+          [ height $ V 32
+          , width $ V 32
+          , gravity CENTER
+          , cornerRadius 16.0
+          , visibility $ boolToVisibility $ item.recipient /= CMC.DRIVER
+          , background viewDetails.backgroundColor
+          ] [ textView
+              $ [ text $ viewDetails.text'
+                , color viewDetails.textColor
+                , gravity CENTER
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                ]
+              <> FontStyle.body1 TypoGraphy
+          ]
+       , linearLayout 
+          [ background Color.blue600
+          , cornerRadius 20.0
+          , gravity CENTER
+          , visibility $ boolToVisibility $ item.recipient == CMC.DRIVER
+          , width $ V 36
+          , height $ V 36
+          ][  imageView 
+              [ height $ V 24
+              , width $ V 24
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_cropped"
+              ]
+          ]
+       , textView
+          $ [ text $ if item.recipient == CMC.DRIVER then getString DRIVER else item.name
+            , gravity CENTER
+            , color Color.black800
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , margin $ MarginLeft 8
+            ]
+          <> FontStyle.body1 TypoGraphy
+      , linearLayout
+          [ weight 1.0
+          , height WRAP_CONTENT
+          ][]
+
+      , linearLayout 
+        [ width WRAP_CONTENT
+        , height MATCH_PARENT
+        , gravity CENTER
+        ] [ imageView
+            [ height $ V 20
+            , gravity RIGHT
+            , width $ V 20
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+            ]
+        ]
+    ]
+    , linearLayout 
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    , visibility $ boolToVisibility $ ind /= length (config.contactList) - 1 
+    ][]
+  ]
+  where
+  viewDetails = ContactCircle.getContactViewDetails ind item.name
+
+multiChatActionView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+multiChatActionView config push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity RIGHT
+  ][ linearLayout
+     [ height WRAP_CONTENT
+     , width WRAP_CONTENT
+     , gravity CENTER
+     , cornerRadius 32.0
+     , clickable true
+     , padding $ Padding 16 8 16 8
+     , background $ Color.green200
+     , onClick push $ const ToggleMultiChatPopUp 
+     , accessibilityHint "Choose : Button"
+     , accessibility ENABLE
+     , rippleColor Color.rippleShade
+     ][ imageView
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_multichat" 
+        , height $ V 24 
+        , width $ V 24 
+        , accessibility DISABLE
+        ]
+     ]
+  ]

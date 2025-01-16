@@ -22,7 +22,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..),PersonDeliveryDetails(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -47,22 +47,24 @@ import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
- 
+import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
+import Helpers.Utils as HU
 
 ---------------------------------- driverDetailsView ---------------------------------------
-driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView config uid nid =
+driverDetailsView :: forall w. (Action -> Effect Unit) -> DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
+driverDetailsView push config uid nid =
  linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT 
   , padding $ Padding 16 16 16 8
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
+  , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isOtpRideFlow then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
-  , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then config.rideStarted else true
+  , onClick push $ const GoToDriverProfile
+  , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isOtpRideFlow then config.rideStarted else true
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
@@ -90,18 +92,27 @@ driverDetailsView config uid nid =
             , ratingView config
             ]
           ]
-        , textView $
-          [ text config.driverName 
-          , maxLines 2
-          , ellipsize true
-          , accessibility DISABLE
-          , color Color.black800
+        , linearLayout[
+            height WRAP_CONTENT
           , width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , gravity LEFT
-          ] <> FontStyle.body27 TypoGraphy
+          , orientation VERTICAL
+          ][ linearLayout
+             [ height WRAP_CONTENT
+             , width MATCH_PARENT
+             ][ textView $
+                [ text $ config.driverName <> " >"
+                , maxLines 2
+                , ellipsize true
+                , accessibility DISABLE
+                , color Color.blue900
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , gravity LEFT
+                ] <> FontStyle.body27 TypoGraphy
+             ]
+          
         , textView (
-          [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> config.vehicleModel
+          [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> if config.vehicleModel == "Unkown" then HU.getVariantRideType config.vehicleVariant else config.vehicleModel
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE
@@ -115,6 +126,7 @@ driverDetailsView config uid nid =
         , case config.serviceTierName of
             Just name -> ServiceTierCard.view $ serviceTierConfig name
             Nothing -> linearLayout [] []
+        ] 
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -194,21 +206,13 @@ driverDetailsView config uid nid =
                  ]
               ]
             ]
-        ]
-    ]
-  where getVehicleType = case getMerchant FunctionCall of
-                          YATRISATHI -> case config.vehicleVariant of
-                                          "TAXI" -> getEN NON_AC_TAXI
-                                          "SUV"  -> getEN AC_SUV
-                                          _      -> getEN AC_CAB
-                          _          -> case config.vehicleVariant of
-                                        "TAXI_PLUS" -> (getEN AC_TAXI)
-                                        "TAXI" -> (getEN NON_AC_TAXI)
-                                        _ -> ""
+        ]   
+  ]
+    where
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
           if width > 125 then ((width - 125)/2) else 0
-
+        
         serviceTierConfig name = {
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
@@ -261,10 +265,13 @@ getVehicleImage variant vehicleDetail city = do
       else 
         case (getMerchant FunctionCall) of
           YATRISATHI -> case variant of
-                          "SUV" -> "ny_ic_suv_concept"
-                          "TAXI" -> "ic_white_taxi"
+                          "SUV"       -> "ny_ic_suv_concept"
+                          "TAXI"      -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          _     -> "ny_ic_sedan_concept"
+                          "BIKE"      -> "ny_ic_bike_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+                          _           -> "ny_ic_sedan_concept"
           _          -> case variant of
                           "TAXI"      -> "ny_ic_hatchback_concept"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
@@ -273,14 +280,17 @@ getVehicleImage variant vehicleDetail city = do
                           "HATCHBACK" -> "ny_ic_hatchback_concept"
                           "ECO"       -> "ny_ic_hatchback_concept"
                           "COMFY"     -> "ny_ic_sedan_concept"
+                          "BIKE"      -> "ny_ic_bike_concept"
+                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String
       mkAutoImage city = 
         case city of 
           Hyderabad -> "ic_auto_rickshaw_black_yellow"
-          _ | Array.elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ic_auto_rickshaw_black_yellow"
-          _ | Array.elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_black_auto"
+          _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
+          _ | HU.isKeralaCity city -> "ny_ic_black_auto"
           _ -> "ic_auto_rickshaw"
 
 
@@ -289,51 +299,78 @@ getVehicleImage variant vehicleDetail city = do
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
 sourceDestinationView push config = 
   let isNotRentalRide = (config.fareProductType /= FPT.RENTAL)
+      isNotIntercityRide = config.fareProductType /= FPT.INTER_CITY
       bottomMargin = (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then (safeMarginBottom + 36) else 12)
-      dropLocationTextWidth = if config.enableEditDestination && isNotRentalRide then if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65) else V ((screenWidth unit) / 10 * 8)
+      locationTextWidthWhenFeatureEnabled = if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65)
+      locationTextWidthWhenFeatureDisabled = V ((screenWidth unit) / 10 * 8)
+      dropLocationTextWidth = if config.enableEditDestination && isNotRentalRide && config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE then locationTextWidthWhenFeatureEnabled else locationTextWidthWhenFeatureDisabled
+      pickupLocationTextWidth = if config.isEditPickupEnabled && config.rideAccepted && config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && not config.isOtpRideFlow then locationTextWidthWhenFeatureEnabled else locationTextWidthWhenFeatureDisabled
   in 
     PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
-      linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ Margin 16 0 16 bottomMargin
-      , background config.backgroundColor
-      , onAnimationEnd push $ const $ config.onAnimationEnd
-      , cornerRadius 8.0
-      , padding $ Padding 16 12 16 12
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ Margin 16 0 16 (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then safeMarginBottom + 36 else 12)
+  , background config.backgroundColor
+  , onAnimationEnd push $ const $ config.onAnimationEnd
+  , cornerRadius 8.0
+  , padding $ Padding 16 12 16 12
+  ][linearLayout
+    [ orientation HORIZONTAL
+    , height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    ][linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity LEFT
+      , accessibility ENABLE
+      , weight 1.0
+      , accessibilityHint $ "Pickup : " <> config.source
       ][linearLayout
-        [ orientation VERTICAL
-        , height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity LEFT
-        , accessibility ENABLE
-        , accessibilityHint $ "Pickup : " <> config.source
-        ][linearLayout
-          [ orientation HORIZONTAL
-          , gravity CENTER
-          ][imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-            , height $ V 8
-            , width $ V 8
-            ]
-            ,textView $
-            [ text $ getString PICKUP
-            , margin $ MarginLeft 6
-            , color Color.black700
-            ] <> FontStyle.body3 TypoGraphy
-            ]
-          , textView $
-            [ text config.source
-            , maxLines 1
-            , ellipsize true
-            , width $ V ((screenWidth unit) / 10 * 8)
-            , height MATCH_PARENT
-            , gravity LEFT
-            , color Color.black900
-            , margin $ MarginTop 3
-            ] <> FontStyle.body1 TypoGraphy
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ] $
+        [imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+          , height $ V 8
+          , width $ V 8
           ]
+          ,textView $
+          [ text $ getString PICKUP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+          ]
+        , textView $
+          [ text config.source
+          , maxLines 2
+          , ellipsize true
+          , width $ pickupLocationTextWidth
+          , height MATCH_PARENT
+          , gravity LEFT
+          , color Color.black900
+          , margin $ MarginTop 3
+          , visibility $ boolToVisibility $ config.fareProductType /= FPT.DELIVERY
+          ] <> FontStyle.body1 TypoGraphy,
+        senderReceiverNameAndNumberView config.senderDetails pickupLocationTextWidth
+        ]
+      , textView $ 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString EDIT
+        , cornerRadius if os == "IOS" then 20.0 else 32.0
+        , stroke $ "1," <> Color.grey900
+        , padding $ Padding 12 8 12 8
+        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted) && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow
+        , onClick push $ const config.editingPickupLocation
+        , rippleColor Color.rippleShade
+        , accessibility DISABLE
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+        , senderReceiverAddrInstructionView config.senderDetails config.source true
         , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
         , linearLayout
         [
@@ -374,7 +411,9 @@ sourceDestinationView push config =
               , gravity LEFT
               , margin $ MarginTop 3
               , color Color.black900
+              , visibility  $ boolToVisibility $ config.fareProductType /= FPT.DELIVERY
               ] <> FontStyle.body1 TypoGraphy
+            , senderReceiverNameAndNumberView config.receiverDetails dropLocationTextWidth
           ]
             , textView $
               [
@@ -384,11 +423,12 @@ sourceDestinationView push config =
                 , cornerRadius if os == "IOS" then 16.0 else 32.0
                 , stroke $ "1," <> Color.grey900
                 , padding $ Padding 12 8 12 8
-                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide
+                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow && isNotIntercityRide
                 , onClick push $ const config.editingDestinationLoc
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy
-      ] 
+      ],
+      senderReceiverAddrInstructionView config.receiverDetails config.destination false
     ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -525,3 +565,101 @@ sfl height' width' radius' =
     , background Color.grey900
     ][]
   ]
+
+senderReceiverNameAndNumberView :: forall w. Maybe PersonDeliveryDetails -> Length -> PrestoDOM (Effect Unit) w
+senderReceiverNameAndNumberView details' textWidth =
+  case details' of
+    Just details -> 
+      linearLayout[
+        width MATCH_PARENT,
+        height WRAP_CONTENT,
+        orientation VERTICAL
+      ]
+      [
+        textView $
+        [ text details.name
+        , singleLine true
+        , ellipsize true
+        , width $ textWidth
+        , height MATCH_PARENT
+        , gravity LEFT
+        , color Color.black800
+        , margin $ MarginTop 3
+        ] <> FontStyle.body1 TypoGraphy,
+        textView $
+        [
+          text details.phone,
+          ellipsize true,
+          singleLine true,
+          width $ textWidth,
+          height WRAP_CONTENT,
+          gravity LEFT,
+          color Color.black800,
+          margin $ MarginTop 2
+        ] <> FontStyle.tags TypoGraphy
+      ]
+    Nothing -> linearLayout[][]
+
+senderReceiverAddrInstructionView :: forall w. Maybe PersonDeliveryDetails -> String -> Boolean -> PrestoDOM (Effect Unit) w
+senderReceiverAddrInstructionView details' address isSource =
+  case details' of
+    Nothing -> linearLayout[visibility GONE][]
+    Just details ->
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 8
+        , background Color.blue600
+        , cornerRadius 8.0
+        , padding $ Padding 12 8 12 8
+        ]
+        [ linearLayout
+          [ orientation HORIZONTAL
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          ]
+          [ linearLayout
+            [ orientation VERTICAL
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity LEFT
+            , accessibility ENABLE
+            , weight 1.0
+            ]
+            [ linearLayout
+              [ width MATCH_PARENT
+              , orientation HORIZONTAL
+              ]
+              [ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , orientation VERTICAL
+                ]
+                [ textView $
+                  [ text $ details.extras
+                  , maxLines 1
+                  , ellipsize true
+                  , gravity LEFT
+                  , color Color.black800
+                  , margin $ MarginBottom 2
+                  ] <> FontStyle.tags TypoGraphy
+                , textView $
+                  [ text address
+                  , color Color.black700
+                  , maxLines $ if isJust details.instructions then 1 else 2
+                  , ellipsize true
+                  , margin $ MarginBottom 2
+                  ] <> FontStyle.body3 TypoGraphy
+                , textView $
+                  [ textFromHtml $ "<em>" <> (if isSource then getString PICKUP_INSTRUCTION else  getString DROP_INSTRUCTION) <> ": " <> fromMaybe "" details.instructions <> "</em>"
+                  , color Color.black700
+                  , fontStyle $ FontStyle.italic
+                  , visibility $ boolToVisibility $ isJust details.instructions
+                  ] <> FontStyle.body3 TypoGraphy
+                ]
+              ]
+            ]  
+          ]
+        ]

@@ -19,11 +19,7 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
-import Domain.Types.BecknConfig
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -33,7 +29,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.BecknConfig as QBC
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Tools.Metrics as Metrics
 
@@ -50,23 +45,18 @@ onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
-    if isJust dOnConfirmReq
-      then do
-        let onConfirmReq = fromJust dOnConfirmReq
+    case dOnConfirmReq of
+      Just onConfirmReq -> do
         (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq
-        Metrics.finishMetrics Metrics.CONFIRM merchant.name transaction_id booking.merchantOperatingCityId.getId
+        Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name transaction_id booking.merchantOperatingCityId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq
-      else do
-        void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED (Id bookingId)
-        void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING (Id bookingId)
-        void $ DACFOC.callBPPCancel ticketBooking bapConfig Spec.CONFIRM_CANCEL ticketBooking.merchantId
-
+      Nothing -> DOnConfirm.onConfirmFailure bapConfig ticketBooking
   pure Utils.ack
 
 onConfirmLockKey :: Text -> Text

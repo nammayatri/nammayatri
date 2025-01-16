@@ -1,11 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SurgePricing where
 
 import Data.Aeson
-import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Common
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -17,7 +16,7 @@ data SurgePricing = SurgePricing
     id :: Kernel.Types.Id.Id Domain.Types.SurgePricing.SurgePricing,
     sourceHex :: Kernel.Prelude.Text,
     surgeMultiplier :: Kernel.Types.Common.Centesimal,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

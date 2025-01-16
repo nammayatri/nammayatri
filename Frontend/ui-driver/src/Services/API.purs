@@ -19,6 +19,8 @@ import Data.Maybe
 import PaymentPage
 
 import Common.Types.App as CTA
+import Common.Types.App as Common
+import Data.Either
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -31,13 +33,13 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign, Foreign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
-import Presto.Core.Types.API (class RestEndpoint,class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
+import Presto.Core.Types.API (class RestEndpoint,class StandardEncode, ErrorResponse, Method(..), defaultMakeRequestWithoutLogs, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
 import Screens.CustomerReferralTrackerScreen.Types as CRST
@@ -79,7 +81,7 @@ newtype TriggerOTPResp = TriggerOTPResp {
 }
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.triggerOTP "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -124,7 +126,7 @@ newtype User = User
     }
 
 instance makeVerifyTokenReq :: RestEndpoint VerifyTokenRequest where
- makeRequest reqBody@(VerifyTokenRequest token (VerifyTokenReq rqBody)) headers = defaultMakeRequest POST (EP.verifyToken token) headers reqBody Nothing
+ makeRequest reqBody@(VerifyTokenRequest token (VerifyTokenReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.verifyToken token) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericWhatsappOptMethods :: Generic WhatsappOptMethods _
@@ -172,7 +174,7 @@ newtype ResendOTPResp = ResendOTPResp {
 }
 
 instance makeResendOTPReq :: RestEndpoint ResendOTPRequest where
-    makeRequest reqBody@(ResendOTPRequest token) headers = defaultMakeRequest POST (EP.resendOTP token) headers reqBody Nothing
+    makeRequest reqBody@(ResendOTPRequest token) headers = defaultMakeRequestWithoutLogs POST (EP.resendOTP token) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericResendOTPResp :: Generic ResendOTPResp _
@@ -198,11 +200,11 @@ newtype ApiSuccessResult = ApiSuccessResult {
 }
 
 instance makeDriverActiveInactiveReq :: RestEndpoint DriverActiveInactiveReq  where
-    makeRequest reqBody@(DriverActiveInactiveReq status status_n) headers = defaultMakeRequest POST (EP.driverActiveInactiveSilent status status_n) headers reqBody Nothing
+    makeRequest reqBody@(DriverActiveInactiveReq status status_n) headers = defaultMakeRequestWithoutLogs POST (EP.driverActiveInactiveSilent status status_n) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 -- instance makeDriverActiveInactiveSilentReq :: RestEndpoint DriverActiveInactiveReq  where
---     makeRequest reqBody@(DriverActiveInactiveReq status ) headers = defaultMakeRequest POST (EP.driverActiveInactiveSilent status status_n) headers reqBody
+--     makeRequest reqBody@(DriverActiveInactiveReq status ) headers = defaultMakeRequestWithoutLogs POST (EP.driverActiveInactiveSilent status status_n) headers reqBody
     -- decodeResponse = decodeJSON
 --     encodeRequest req = standardEncode req
 
@@ -218,6 +220,17 @@ instance standardEncodeDriverActiveInactiveResp :: StandardEncode DriverActiveIn
 instance showDriverActiveInactiveResp :: Show DriverActiveInactiveResp where show = genericShow
 instance decodeDriverActiveInactiveResp :: Decode DriverActiveInactiveResp where decode = defaultDecode
 instance encodeDriverActiveInactiveResp :: Encode DriverActiveInactiveResp where encode = defaultEncode
+
+newtype ErrorResponseDriverActivity = ErrorResponseDriverActivity { 
+    blockExpiryTime :: String, 
+    blockReason :: String
+}
+
+derive instance genericErrorResponseDriverActivity :: Generic ErrorResponseDriverActivity _
+derive instance newtypeErrorResponseDriverActivity :: Newtype ErrorResponseDriverActivity _
+instance encodeErrorResponseDriverActivity :: Encode ErrorResponseDriverActivity where encode = defaultEncode
+instance decodeErrorResponseDriverActivity :: Decode ErrorResponseDriverActivity where decode = defaultDecode
+instance eqErrorResponseDriverActivity :: Eq ErrorResponseDriverActivity where eq = genericEq
 ----------------------------------------------------------------------------------------------------------------------------START RIDE----------------------------------------------------------------------------------------------------------------------------------------------
 -- StartRide API request, response types
 data StartRideRequest = StartRideRequest String StartRideReq
@@ -279,7 +292,7 @@ instance encodeApiSuccessResult :: Encode ApiSuccessResult where encode = defaul
 
 
 instance makeStartRideReq :: RestEndpoint StartRideRequest where
-    makeRequest reqBody@(StartRideRequest rideId (StartRideReq rqBody)) headers = defaultMakeRequest POST (EP.startRide rideId) headers reqBody Nothing
+    makeRequest reqBody@(StartRideRequest rideId (StartRideReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.startRide rideId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -304,7 +317,7 @@ newtype EndRideResponse = EndRideResponse {
 }
 
 instance makeEndRideReq :: RestEndpoint EndRideRequest where
-    makeRequest reqBody@(EndRideRequest rideId (EndRideReq rqBody)) headers = defaultMakeRequest POST (EP.endRide rideId) headers reqBody Nothing
+    makeRequest reqBody@(EndRideRequest rideId (EndRideReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.endRide rideId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericEndRideReq :: Generic EndRideReq _
@@ -331,7 +344,7 @@ instance encodeEndRideResponse :: Encode EndRideResponse where encode = defaultE
 data ArrivedAtStopRequest = ArrivedAtStopRequest String LatLong
 
 instance makeArrivedStopReq :: RestEndpoint ArrivedAtStopRequest where
-    makeRequest reqBody@(ArrivedAtStopRequest rideId (LatLong rqBody)) headers = defaultMakeRequest POST (EP.arrivedAtStop rideId) headers reqBody Nothing
+    makeRequest reqBody@(ArrivedAtStopRequest rideId (LatLong rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.arrivedAtStop rideId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericArrivedAtStopRequest :: Generic ArrivedAtStopRequest _
@@ -354,7 +367,8 @@ newtype DriverCancelRideResponse = DriverCancelRideResponse {
 newtype DriverCancelRideReq = DriverCancelRideReq
     {
       additionalInfo :: String,
-      reasonCode :: String
+      reasonCode :: String,
+      doCancellationRateBasedBlocking :: Boolean
     }
 
 data DriverCancelRideRequest = DriverCancelRideRequest String DriverCancelRideReq
@@ -366,7 +380,7 @@ instance decodeDriverCancelRideReq :: Decode DriverCancelRideReq where decode = 
 instance encodeDriverCancelRideReq :: Encode DriverCancelRideReq where encode = defaultEncode
 
 instance makeDriverCancelRideReq :: RestEndpoint DriverCancelRideRequest where
-    makeRequest reqBody@(DriverCancelRideRequest rideId (DriverCancelRideReq rqBody)) headers = defaultMakeRequest POST (EP.cancelRide rideId) headers reqBody Nothing
+    makeRequest reqBody@(DriverCancelRideRequest rideId (DriverCancelRideReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.cancelRide rideId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericDriverCancelRideRequest :: Generic DriverCancelRideRequest _
@@ -388,7 +402,7 @@ data LogOutReq = LogOutReq
 
 
 instance makeLogOutReq  :: RestEndpoint LogOutReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.logout "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.logout "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericLogOutReq :: Generic LogOutReq _
@@ -406,7 +420,8 @@ newtype GetDriverInfoReq = GetDriverInfoReq {
 
 newtype DriverInfoReq = DriverInfoReq {
   isAdvancedBookingEnabled :: Maybe Boolean,
-  isInteroperable :: Maybe Boolean
+  isInteroperable :: Maybe Boolean,
+  isCategoryLevelSubscriptionEnabled :: Maybe Boolean
  }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
@@ -433,6 +448,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , bundleVersion         :: Maybe CTA.Version
     , gender                :: Maybe String
     , blocked               :: Maybe Boolean
+    , blockExpiryTime       :: Maybe String
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
@@ -448,9 +464,29 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
-    , canSwitchToRental     :: Boolean
+    , canSwitchToRental     :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
-    , canSwitchToIntercity  :: Maybe Boolean
+    , canSwitchToInterCity  :: Maybe Boolean
+    , payoutVpa             :: Maybe String 
+    , payoutVpaStatus       :: Maybe PayoutVpaStatus
+    , isPayoutEnabled       :: Maybe Boolean
+    , payoutRewardAmount    :: Maybe Int
+    , payoutVpaBankAccount  :: Maybe String
+    , cancellationRateInWindow :: Maybe Int
+    , cancelledRidesCountInWindow :: Maybe Int
+    , assignedRidesCountInWindow :: Maybe Int
+    , windowSize :: Maybe Int
+    , favCount :: Maybe Int
+    , isSubscriptionVehicleCategoryChanged :: Maybe Boolean
+    , isOnFreeTrial :: Maybe Boolean
+    , planMandatoryForCategory :: Maybe Boolean
+    , isSubscriptionCityChanged :: Maybe Boolean
+    , freeTrialDays :: Maybe Int
+    , freeTrialRides :: Maybe Int
+    , totalRidesTaken :: Maybe Int
+    , subscriptionEnabledForVehicleCategory :: Maybe Boolean
+    , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
+    , isSpecialLocWarrior :: Maybe Boolean
     }
 
 
@@ -484,8 +520,19 @@ newtype Vehicle = Vehicle
         serviceTierType  :: Maybe String
     }
 
+data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER
+
+derive instance genericPayoutVpaStatus :: Generic PayoutVpaStatus _
+instance showPayoutVpaStatus :: Show PayoutVpaStatus where show = genericShow
+instance decodePayoutVpaStatus :: Decode PayoutVpaStatus where decode = defaultEnumDecode
+instance encodePayoutVpaStatus :: Encode PayoutVpaStatus where encode = defaultEnumEncode
+instance eqPayoutVpaStatus :: Eq PayoutVpaStatus where eq = genericEq
+instance standardEncodePayoutVpaStatus :: StandardEncode PayoutVpaStatus
+  where
+    standardEncode _ = standardEncode {}
+
 instance makeDriverInfoReq :: RestEndpoint DriverInfoReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.getDriverInfoV2 "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.getDriverInfoV2 "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericDriverInfoReq :: Generic DriverInfoReq _
@@ -495,7 +542,7 @@ instance decodeDriverInfoReq :: Decode DriverInfoReq where decode = defaultDecod
 instance encodeDriverInfoReq :: Encode DriverInfoReq where encode = defaultEncode
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getDriverInfo "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetDriverInfoReq :: Generic GetDriverInfoReq _
@@ -539,7 +586,53 @@ instance standardEncodeGetDriverInfoResp :: StandardEncode GetDriverInfoResp whe
 instance showGetDriverInfoResp :: Show GetDriverInfoResp where show = genericShow
 instance decodeGetDriverInfoResp :: Decode GetDriverInfoResp where decode = defaultDecode
 instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defaultEncode
+
+--------------------------------------------------Upload Driver Profile-----------------------------------------------------------------------
+
+data UploadProfileReq = UploadProfileReq GetUploadProfileReq
+
+newtype GetUploadProfileReq = GetUploadProfileReq {
+  pledges :: Array String,
+  vehicleTags :: Array String,
+  languages :: Array String,
+  aspirations :: Array String,
+  drivingSince :: Maybe Int,
+  hometown :: Maybe String,
+  imageIds :: Array String
+}
+
+derive instance genericUploadProfileReq :: Generic UploadProfileReq _
+instance standardEncodeUploadProfileReq :: StandardEncode UploadProfileReq where standardEncode (UploadProfileReq body) = standardEncode body
+instance showUploadProfileReq :: Show UploadProfileReq where show = genericShow
+instance decodeUploadProfileReq :: Decode UploadProfileReq where decode = defaultDecode
+instance encodeUploadProfileReq :: Encode UploadProfileReq where encode = defaultEncode
+
+derive instance genericGetUploadProfileReq :: Generic GetUploadProfileReq _
+derive instance newtypeGetUploadProfileReq :: Newtype GetUploadProfileReq _
+instance standardEncodeGetUploadProfileReq :: StandardEncode GetUploadProfileReq where standardEncode (GetUploadProfileReq body) = standardEncode body
+instance showGetUploadProfileReq :: Show GetUploadProfileReq where show = genericShow
+instance decodeGetUploadProfileReq :: Decode GetUploadProfileReq where decode = defaultDecode
+instance encodeGetUploadProfileReq :: Encode GetUploadProfileReq where encode = defaultEncode
+
+instance makeUploadProfileReq :: RestEndpoint UploadProfileReq where
+    makeRequest reqBody@(UploadProfileReq (GetUploadProfileReq reqB)) headers = defaultMakeRequestWithoutLogs POST (EP.submitDriverProfile "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data InitiatedAs = AsSender | AsReciever | AsSomeoneElse
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+instance decodeInitiatedAs :: Decode InitiatedAs where decode = defaultEnumDecode
+instance encodeInitiatedAs :: Encode InitiatedAs where encode = defaultEnumEncode
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance standardInitiatedAs :: StandardEncode InitiatedAs
+  where
+  standardEncode AsSender = standardEncode $ show AsSender
+  standardEncode AsReciever = standardEncode $ show AsReciever
+  standardEncode AsSomeoneElse = standardEncode $ show AsSomeoneElse
+  standardEncode _ = standardEncode $ show AsSender
 
 data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
 
@@ -601,8 +694,35 @@ newtype RidesInfo = RidesInfo
       tollConfidence :: Maybe CTA.Confidence,
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
-      isValueAddNP :: Boolean
+      isValueAddNP :: Boolean,
+      parkingCharge :: Maybe Number, 
+      coinsEarned :: Maybe (Array CoinsEarned),
+      roundTrip :: Boolean,
+      returnTime :: Maybe String,
+      senderDetails :: Maybe PersonDetails,
+      receiverDetails :: Maybe PersonDetails
+}
+
+newtype CoinsEarned = CoinsEarned CoinsEarnedType
+
+type CoinsEarnedType = {
+  coins :: Int,
+  eventType :: String
+}
+
+newtype PersonDetails = PersonDetails
+  {
+    name :: String,
+    primaryExophone :: String
   }
+
+derive instance genericPersonDetails :: Generic PersonDetails _
+derive instance newtypePersonDetails :: Newtype PersonDetails _
+instance standardEncodePersonDetails :: StandardEncode PersonDetails where standardEncode (PersonDetails req) = standardEncode req
+instance showPersonDetails :: Show PersonDetails where show = genericShow
+instance eqPersonDetails :: Eq PersonDetails where eq = genericEq
+instance decodePersonDetails :: Decode PersonDetails where decode = defaultDecode
+instance encodePersonDetails :: Encode PersonDetails where encode = defaultEncode
 
 newtype OdometerReading = OdometerReading
   {
@@ -653,8 +773,8 @@ instance decodeStopLocation :: Decode StopLocation where decode = defaultDecode
 instance encodeStopLocation :: Encode StopLocation where encode = defaultEncode
 
 newtype TripCategory = TripCategory
-    {
-      contents :: String,
+    { 
+      contents :: Maybe String,
       tag :: String
     }
 
@@ -676,7 +796,9 @@ newtype LocationInfo = LocationInfo
         lat :: Number,
         city :: Maybe String,
         areaCode :: Maybe String,
-        lon :: Number
+        lon :: Number,
+        instructions :: Maybe String,
+        extras :: Maybe String
       }
 
 data BookingTypes = CURRENT | ADVANCED
@@ -693,7 +815,7 @@ instance standardEncodeBookingTypesMethods :: StandardEncode BookingTypes
   standardEncode _ = standardEncode $ show CURRENT
 
 instance makeGetRidesHistoryReq :: RestEndpoint GetRidesHistoryReq where
-    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status day) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status day) headers reqBody Nothing
+    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status day) headers = defaultMakeRequestWithoutLogs GET (EP.getRideHistory limit offset isActive status day) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetRidesHistoryReq :: Generic GetRidesHistoryReq _
@@ -723,7 +845,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -736,8 +858,17 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
  standardEncode BIKE = standardEncode {}
+ standardEncode AMBULANCE_TAXI = standardEncode {}
+ standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
+ standardEncode AMBULANCE_AC = standardEncode {}
+ standardEncode AMBULANCE_AC_OXY = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+ standardEncode SUV_PLUS = standardEncode {}
+ standardEncode DELIVERY_LIGHT_GOODS_VEHICLE = standardEncode {}
+ standardEncode BUS_NON_AC = standardEncode {}
+ standardEncode BUS_AC = standardEncode {}
 
-data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
+data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
 instance eqStatus :: Eq Status where eq = genericEq
 
@@ -751,7 +882,16 @@ instance standardEncodeStatus :: StandardEncode Status
  standardEncode (INPROGRESS) = standardEncode {}
  standardEncode (COMPLETED) = standardEncode {}
  standardEncode (CANCELLED) = standardEncode {}
+ standardEncode (UPCOMING)  = standardEncode {}
  standardEncode (NOTHING) = standardEncode {}
+
+derive instance genericCoinsEarned :: Generic CoinsEarned _
+derive instance newtypeCoinsEarned :: Newtype CoinsEarned _
+instance standardEncodeCoinsEarned :: StandardEncode CoinsEarned where standardEncode (CoinsEarned req) = standardEncode req
+instance showCoinsEarned :: Show CoinsEarned where show = genericShow
+instance decodeCoinsEarned :: Decode CoinsEarned where decode = defaultDecode
+instance encodeCoinsEarned :: Encode CoinsEarned where encode = defaultEncode
+
 ---------------------------------GET RIDES HISTORY WITHIN DATES---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data GetRidesSummaryListReq = GetRidesSummaryListReq (Array String)
@@ -770,7 +910,7 @@ newtype RidesSummary = RidesSummary
   }
 
 instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq where
-    makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
+    makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequestWithoutLogs POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetRidesSummaryListReq :: Generic GetRidesSummaryListReq _
@@ -802,7 +942,7 @@ newtype OfferRideReq = OfferRideReq {
 
 
 instance makeOfferRideReq :: RestEndpoint OfferRideReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.offerRide "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.offerRide "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericOfferRideReq :: Generic OfferRideReq _
@@ -819,7 +959,10 @@ instance encodeOfferRideReq :: Encode OfferRideReq where encode = defaultEncode
 data UpdateDriverInfoRequest = UpdateDriverInfoRequest UpdateDriverInfoReq
 
 newtype UpdateDriverInfoReq
-  = UpdateDriverInfoReq
+  = UpdateDriverInfoReq UpdateDriverInfoReqEntity
+  
+
+type UpdateDriverInfoReqEntity = 
   { middleName :: Maybe String
   , firstName :: Maybe String
   , lastName :: Maybe String
@@ -836,13 +979,14 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
-  , canSwitchToIntercity :: Maybe Boolean
+  , canSwitchToInterCity :: Maybe Boolean
+  , isSpecialLocWarrior :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
 
 instance makeUpdateDriverInfoReq :: RestEndpoint UpdateDriverInfoRequest where
-    makeRequest reqBody@(UpdateDriverInfoRequest (UpdateDriverInfoReq rqBody)) headers = defaultMakeRequest POST (EP.updateDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody@(UpdateDriverInfoRequest (UpdateDriverInfoReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.updateDriverInfo "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericUpdateDriverInfoRequest :: Generic UpdateDriverInfoRequest _
@@ -877,7 +1021,7 @@ newtype RideCancellationReason = RideCancellationReason {
 }
 
 instance makeListCancelReasonReq :: RestEndpoint ListCancelReasonReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.listCancelReason "" ) headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.listCancelReason "" ) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericListCancelReasonReq :: Generic ListCancelReasonReq _
@@ -931,7 +1075,7 @@ newtype LatLong = LatLong {
 }
 
 instance makeRouteReq :: RestEndpoint RouteReq where
-  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequest POST (EP.getRoute rType) headers reqBody Nothing
+  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequestWithoutLogs POST (EP.getRoute rType) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetRouteReq :: Generic GetRouteReq _
@@ -984,12 +1128,14 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  ventilator :: Maybe Boolean,
+  oxygen :: Maybe Boolean
 }
 
 
 instance makeDriverRCReq :: RestEndpoint DriverRCReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.registerDriverRC "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerDriverRC "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDriverRCReq :: Generic DriverRCReq _
@@ -1014,7 +1160,7 @@ newtype DriverDLReq = DriverDLReq {
 
 
 instance makeDriverDLReq :: RestEndpoint DriverDLReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.registerDriverDL "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerDriverDL "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDriverDLReq :: Generic DriverDLReq _
@@ -1030,6 +1176,8 @@ newtype ValidateImageReq = ValidateImageReq {
   image :: String,
   imageType :: String,
   rcNumber :: Maybe String,
+  validationStatus :: Maybe ValidationStatus,
+  workflowTransactionId :: Maybe String,
   vehicleCategory :: Maybe String
 }
 
@@ -1038,7 +1186,7 @@ newtype ValidateImageRes = ValidateImageRes {
 }
 
 instance makeValidateImageReq :: RestEndpoint ValidateImageReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.validateImage "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.validateImage "") headers reqBody Nothing
   encodeRequest req = defaultEncode req
 
 derive instance genericValidateImageReq :: Generic ValidateImageReq _
@@ -1057,7 +1205,7 @@ instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defau
 
 
 -- DriverRegistrationStatus API request, response types
-data DriverRegistrationStatusReq = DriverRegistrationStatusReq { }
+data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean
 
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
@@ -1085,7 +1233,7 @@ newtype DocumentStatusItem = DocumentStatusItem
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.driverRegistrationStatus "") headers reqBody Nothing
+    makeRequest reqBody@(DriverRegistrationStatusReq queryParam) headers = defaultMakeRequestWithoutLogs GET (EP.driverRegistrationStatus queryParam) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericVehicleDocumentItem :: Generic VehicleDocumentItem _
@@ -1118,7 +1266,7 @@ data ReferDriverReq = ReferDriverReq { value :: String}
 
 
 instance makeReferDriverReq :: RestEndpoint ReferDriverReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.referDriver "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.referDriver "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericReferDriverReq :: Generic ReferDriverReq _
@@ -1143,7 +1291,7 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq where
-    makeRequest reqBody@(DriverProfileStatsReq date) headers = defaultMakeRequest GET (EP.getstatsInfo date) headers reqBody Nothing
+    makeRequest reqBody@(DriverProfileStatsReq date) headers = defaultMakeRequestWithoutLogs GET (EP.getstatsInfo date) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericDriverProfileStatsReq :: Generic DriverProfileStatsReq _
@@ -1174,7 +1322,7 @@ instance encodeDriverArrivedRequest :: Encode DriverArrivedRequest where encode 
 
 
 instance makeDriverArrivedReq :: RestEndpoint DriverArrivedRequest where
-    makeRequest reqBody@(DriverArrivedRequest rideId (DriverArrivedReq rqBody)) headers = defaultMakeRequest POST (EP.driverArrived rideId) headers reqBody Nothing
+    makeRequest reqBody@(DriverArrivedRequest rideId (DriverArrivedReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.driverArrived rideId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericDriverArrivedReq :: Generic DriverArrivedReq _
@@ -1202,7 +1350,7 @@ data FlowStatus = IDLE {}
                 | ON_RIDE {rideId :: String}
 
 instance makeFlowStatusReq :: RestEndpoint FlowStatusReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.flowStatus "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.flowStatus "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericFlowStatusReq :: Generic FlowStatusReq _
@@ -1291,7 +1439,7 @@ data MediaType = Video
                | PortraitVideoLink
 
 instance makeMessageListReq :: RestEndpoint MessageListReq where
-    makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequest GET (EP.messageList limit offset) headers reqBody Nothing
+    makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.messageList limit offset) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericMessageListReq :: Generic MessageListReq _
@@ -1355,7 +1503,7 @@ data MessageSeenReq = MessageSeenReq String
 
 
 instance makeMessageSeenReq :: RestEndpoint MessageSeenReq where
-    makeRequest reqBody@(MessageSeenReq messageId) headers = defaultMakeRequest PUT (EP.messageSeen messageId) headers reqBody Nothing
+    makeRequest reqBody@(MessageSeenReq messageId) headers = defaultMakeRequestWithoutLogs PUT (EP.messageSeen messageId) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericMessageSeenReq :: Generic MessageSeenReq _
@@ -1371,7 +1519,7 @@ data LikeMessageReq = LikeMessageReq String
 
 
 instance makeLikeMessageReq :: RestEndpoint LikeMessageReq where
-    makeRequest reqBody@(LikeMessageReq messageId) headers = defaultMakeRequest PUT (EP.likeMessage messageId) headers reqBody Nothing
+    makeRequest reqBody@(LikeMessageReq messageId) headers = defaultMakeRequestWithoutLogs PUT (EP.likeMessage messageId) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericLikeMessageReq :: Generic LikeMessageReq _
@@ -1391,7 +1539,7 @@ newtype MessageReplyReq = MessageReplyReq {
 
 
 instance makeMessageResponseReq :: RestEndpoint MessageResponseReq where
-    makeRequest reqBody@(MessageResponseReq messageId (MessageReplyReq req)) headers = defaultMakeRequest PUT (EP.messageResponse messageId) headers reqBody Nothing
+    makeRequest reqBody@(MessageResponseReq messageId (MessageReplyReq req)) headers = defaultMakeRequestWithoutLogs PUT (EP.messageResponse messageId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericMessageResponseReq :: Generic MessageResponseReq _
@@ -1416,7 +1564,7 @@ newtype LinkReferralCodeReq = LinkReferralCodeReq {
 
 
 instance makeLinkReferralCodeReq :: RestEndpoint LinkReferralCodeReq where
-    makeRequest reqBody@(LinkReferralCodeReq date) headers = defaultMakeRequest POST (EP.linkReferralCode "") headers reqBody Nothing
+    makeRequest reqBody@(LinkReferralCodeReq date) headers = defaultMakeRequestWithoutLogs POST (EP.linkReferralCode "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericLinkReferralCodeReq :: Generic LinkReferralCodeReq _
@@ -1436,12 +1584,16 @@ newtype GetPerformanceRes = GetPerformanceRes {
     totalActivatedCustomers :: Int,
     totalReferredCustomers :: Int,
     totalReferredDrivers :: Maybe Int,
-    isPayoutEnabled :: Boolean
+    isPayoutEnabled :: Boolean,
+    eligiblePayoutAmount :: Int,
+    lastPayoutAt :: Maybe String,
+    payoutAmountPaid :: Int,
+    payoutVpa :: Maybe String
   }
 }
 
 instance makeGetPerformanceReq :: RestEndpoint GetPerformanceReq where
-    makeRequest reqBody@(GetPerformanceReq date) headers = defaultMakeRequest GET (EP.getPerformance "") headers reqBody Nothing
+    makeRequest reqBody@(GetPerformanceReq date) headers = defaultMakeRequestWithoutLogs GET (EP.getPerformance "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetPerformanceReq :: Generic GetPerformanceReq _
@@ -1470,7 +1622,7 @@ newtype DriverAlternateNumberResp =  DriverAlternateNumberResp  {
 
 
 instance makeDriverAlternateNumberReq :: RestEndpoint DriverAlternateNumberReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.driverAlternateNumber "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.driverAlternateNumber "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -1499,7 +1651,7 @@ newtype DriverAlternateNumberOtpReq = DriverAlternateNumberOtpReq
 
 
 instance makeDriverAlternateNumberOtpReq :: RestEndpoint DriverAlternateNumberOtpReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.verifyAlternateNumberOTP "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.verifyAlternateNumberOTP "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -1527,7 +1679,7 @@ newtype AlternateNumberResendOTPResp = AlternateNumberResendOTPResp
  }
 
 instance makeAlternateNumberResendOTPReq :: RestEndpoint AlternateNumberResendOTPRequest where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.alternateNumberResendOTP "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.alternateNumberResendOTP "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericAlternateNumberResendOTPResp :: Generic AlternateNumberResendOTPResp _
@@ -1550,7 +1702,7 @@ data RemoveAlternateNumberRequest = RemoveAlternateNumberRequest {}
 
 
 instance makeRemoveAlternateNumberReq :: RestEndpoint RemoveAlternateNumberRequest where
-    makeRequest reqBody headers = defaultMakeRequest DELETE (EP.removeAlternateNumber "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs DELETE (EP.removeAlternateNumber "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -1568,11 +1720,15 @@ newtype Category = Category
   { label    :: String
   , logoUrl  :: String
   , category :: String
+  , isRideRequired :: Boolean
   , issueCategoryId :: String
+  , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq where
-    makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequest GET (EP.getCategories language) headers reqBody Nothing
+    makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequestWithoutLogs GET (EP.getCategories language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetCategoriesReq :: Generic GetCategoriesReq _
@@ -1605,7 +1761,7 @@ newtype Option = Option
   }
 
 instance makeGetOptionsReq :: RestEndpoint GetOptionsReq where
-    makeRequest reqBody@(GetOptionsReq categoryId language) headers = defaultMakeRequest GET (EP.getOptions categoryId language) headers reqBody Nothing
+    makeRequest reqBody@(GetOptionsReq categoryId language) headers = defaultMakeRequestWithoutLogs GET (EP.getOptions categoryId language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetOptionsReq :: Generic GetOptionsReq _
@@ -1648,7 +1804,7 @@ newtype ChatDetail = ChatDetail
 newtype PostIssueRes = PostIssueRes { issueReportId :: String }
 
 instance makePostIssueReq :: RestEndpoint PostIssueReq where
-    makeRequest reqBody@(PostIssueReq issueDetails) headers = defaultMakeRequest POST (EP.postIssue "") headers reqBody Nothing
+    makeRequest reqBody@(PostIssueReq issueDetails) headers = defaultMakeRequestWithoutLogs POST (EP.postIssue "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericPostIssueReq :: Generic PostIssueReq _
@@ -1680,7 +1836,7 @@ newtype IssueInfoRes = IssueInfoRes
   }
 
 instance makeIssueInfoReq :: RestEndpoint IssueInfoReq where
-    makeRequest reqBody@(IssueInfoReq issueId) headers = defaultMakeRequest GET (EP.issueInfo issueId) headers reqBody Nothing
+    makeRequest reqBody@(IssueInfoReq issueId) headers = defaultMakeRequestWithoutLogs GET (EP.issueInfo issueId) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericIssueInfoReq :: Generic IssueInfoReq _
@@ -1703,7 +1859,7 @@ newtype CallCustomerRes = CallCustomerRes {
 }
 
 instance makeCallCustomerReq :: RestEndpoint CallCustomerReq where
-  makeRequest reqBody@(CallCustomerReq rideId) headers = defaultMakeRequest POST (EP.callDriverToCustomer rideId) headers reqBody Nothing
+  makeRequest reqBody@(CallCustomerReq rideId) headers = defaultMakeRequestWithoutLogs POST (EP.callDriverToCustomer rideId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericCallCustomerReq :: Generic CallCustomerReq _
@@ -1741,7 +1897,7 @@ newtype IssueReportDriverListItem = IssueReportDriverListItem
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.fetchIssueList "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.fetchIssueList "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericFetchIssueListResp :: Generic FetchIssueListResp _
@@ -1775,7 +1931,7 @@ newtype DeleteIssueReq = DeleteIssueReq String
 
 
 instance makeDeleteIssueReq :: RestEndpoint DeleteIssueReq where
-  makeRequest reqBody@(DeleteIssueReq issueId) headers = defaultMakeRequest DELETE (EP.deleteIssue issueId) headers reqBody Nothing
+  makeRequest reqBody@(DeleteIssueReq issueId) headers = defaultMakeRequestWithoutLogs DELETE (EP.deleteIssue issueId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -1800,7 +1956,7 @@ newtype OTPRideReq = OTPRideReq
 data OTPRideRequest = OTPRideRequest OTPRideReq
 
 instance makeOTPRideReq :: RestEndpoint OTPRideRequest where
-    makeRequest reqBody@(OTPRideRequest (OTPRideReq rqBody)) headers = defaultMakeRequest POST (EP.otpRide "") headers reqBody Nothing
+    makeRequest reqBody@(OTPRideRequest (OTPRideReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.otpRide "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genricOTPRideReq :: Generic OTPRideReq _
@@ -1826,7 +1982,7 @@ newtype OnCallReq = OnCallReq
 
 
 instance makeOnCallReq :: RestEndpoint OnCallReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.onCall "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.onCall "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericOnCallReq :: Generic OnCallReq _
@@ -1840,6 +1996,7 @@ instance encodeOnCallReq :: Encode OnCallReq where encode = defaultEncode
 
 data LeaderBoardReq = DailyRequest String
                     | WeeklyRequest String String
+                    | MonthlyRequest Int
 
 newtype LeaderBoardRes = LeaderBoardRes {
     lastUpdatedAt :: Maybe String
@@ -1857,8 +2014,9 @@ newtype DriversInfo = DriversInfo
   }
 
 instance makeLeaderBoardReq :: RestEndpoint LeaderBoardReq where
-    makeRequest reqBody@(DailyRequest date) headers = defaultMakeRequest GET (EP.leaderBoardDaily date) headers reqBody Nothing
-    makeRequest reqBody@(WeeklyRequest fromDate toDate) headers = defaultMakeRequest GET (EP.leaderBoardWeekly fromDate toDate) headers reqBody Nothing
+    makeRequest reqBody@(DailyRequest date) headers = defaultMakeRequestWithoutLogs GET (EP.leaderBoardDaily date) headers reqBody Nothing
+    makeRequest reqBody@(WeeklyRequest fromDate toDate) headers = defaultMakeRequestWithoutLogs GET (EP.leaderBoardWeekly fromDate toDate) headers reqBody Nothing
+    makeRequest reqBody@(MonthlyRequest month) headers = defaultMakeRequestWithoutLogs GET (EP.leaderBoardMonthly month) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericLeaderBoardReq :: Generic LeaderBoardReq _
@@ -1867,6 +2025,7 @@ instance standardEncodeLeaderBoardReq :: StandardEncode LeaderBoardReq
   where
     standardEncode (DailyRequest _) = standardEncode {}
     standardEncode (WeeklyRequest _ _) = standardEncode {}
+    standardEncode (MonthlyRequest _) = standardEncode {}
 instance decodeLeaderBoardReq :: Decode LeaderBoardReq where decode = defaultDecode
 instance encodeLeaderBoardReq :: Encode LeaderBoardReq where encode = defaultEncode
 
@@ -1894,7 +2053,7 @@ newtype CurrentDateAndTimeRes =  CurrentDateAndTimeRes
 
 
 instance makeCurrentDateAndTimeReq :: RestEndpoint CurrentDateAndTimeReq where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.currentDateAndTime "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.currentDateAndTime "") headers reqBody Nothing
   encodeRequest req = defaultEncode req
 
 derive instance genericCurrentDateAndTimeReq :: Generic CurrentDateAndTimeReq _
@@ -1935,7 +2094,7 @@ newtype Prediction = Prediction {
 }
 
 instance makeAutoCompleteReq :: RestEndpoint AutoCompleteReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.autoComplete "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.autoComplete "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericAutoCompleteReq :: Generic AutoCompleteReq _
@@ -2018,7 +2177,7 @@ instance encodeAddressComponents :: Encode AddressComponents where encode = defa
 newtype GetPlaceNameResp = GetPlaceNameResp (Array PlaceName)
 
 instance makeGetPlaceNameReq :: RestEndpoint GetPlaceNameReq where
- makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequest POST (EP.getPlaceName "") headers reqBody Nothing
+ makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequestWithoutLogs POST (EP.getPlaceName "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetPlaceNameReq :: Generic GetPlaceNameReq _
@@ -2068,7 +2227,7 @@ newtype VehicleDetails = VehicleDetails
     }
 
 instance makeGetAllRcDataReq :: RestEndpoint GetAllRcDataReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getAllRcData "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getAllRcData "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetAllRcDataReq :: Generic GetAllRcDataReq _
@@ -2105,7 +2264,7 @@ newtype MakeRcActiveOrInactiveReq = MakeRcActiveOrInactiveReq {
 
 
 instance makeRcActiveOrInactiveReq :: RestEndpoint MakeRcActiveOrInactiveReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.makeRcActiveOrInactive "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.makeRcActiveOrInactive "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericMakeRcActiveOrInactiveReq :: Generic MakeRcActiveOrInactiveReq _
@@ -2122,7 +2281,7 @@ newtype DeleteRcReq = DeleteRcReq {
 
 
 instance deleteRcReq :: RestEndpoint DeleteRcReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.deleteRc "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.deleteRc "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDeleteRcReq :: Generic DeleteRcReq _
@@ -2142,7 +2301,7 @@ newtype CallDriverToDriverResp = CallDriverToDriverResp
     }
 
 instance makeGetCallDriverToDriverReq :: RestEndpoint CallDriverToDriverReq where
-    makeRequest reqBody@(CallDriverToDriverReq rcNo) headers = defaultMakeRequest GET (EP.callDriverToDriver rcNo) headers reqBody Nothing
+    makeRequest reqBody@(CallDriverToDriverReq rcNo) headers = defaultMakeRequestWithoutLogs GET (EP.callDriverToDriver rcNo) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericCallDriverToDriverReq :: Generic CallDriverToDriverReq _
@@ -2181,6 +2340,10 @@ newtype DriverProfileSummaryRes
   , feedbackBadges :: DriverBadges
   , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
+  , cancellationRateInWindow :: Maybe Int
+  , cancelledRidesCountInWindow :: Maybe Int
+  , assignedRidesCountInWindow :: Maybe Int
+  , windowSize :: Maybe Int
   }
 
 newtype DriverSummary
@@ -2212,7 +2375,7 @@ newtype Badges
   }
 
 instance makeDriverProfileSummaryReq :: RestEndpoint DriverProfileSummaryReq where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.profileSummary "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.profileSummary "") headers reqBody Nothing
   encodeRequest req = defaultEncode req
 
 derive instance genericDriverProfileSummaryReq :: Generic DriverProfileSummaryReq _
@@ -2264,7 +2427,8 @@ newtype CreateOrderRes = CreateOrderRes
     sdk_payload :: PaymentPagePayload,
     id :: String,
     order_id :: String,
-    payment_links :: PaymentLinks
+    payment_links :: PaymentLinks,
+    sdk_payload_json :: Maybe Foreign
   }
 
 
@@ -2276,7 +2440,7 @@ newtype PaymentLinks = PaymentLinks
   }
 
 instance makeCreateOrderReq :: RestEndpoint CreateOrderReq where
- makeRequest reqBody@(CreateOrderReq estimateId) headers = defaultMakeRequest POST (EP.createOrder estimateId) headers reqBody Nothing
+ makeRequest reqBody@(CreateOrderReq estimateId) headers = defaultMakeRequestWithoutLogs POST (EP.createOrder estimateId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericCreateOrderReq :: Generic CreateOrderReq _
@@ -2295,7 +2459,9 @@ instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance showCreateOrderRes :: Show CreateOrderRes where 
+  show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
+    show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
 
@@ -2309,7 +2475,7 @@ newtype OrderStatusRes = OrderStatusRes
   }
 
 instance makeOrderStatusReq :: RestEndpoint OrderStatusReq where
- makeRequest reqBody@(OrderStatusReq orderId) headers = defaultMakeRequest GET (EP.orderStatus orderId) headers reqBody Nothing
+ makeRequest reqBody@(OrderStatusReq orderId) headers = defaultMakeRequestWithoutLogs GET (EP.orderStatus orderId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericOrderStatusReq :: Generic OrderStatusReq _
@@ -2355,7 +2521,7 @@ newtype TxnInfo = TxnInfo {
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE_DRIVERFEE
 
 instance makeGetPaymentHistoryReq :: RestEndpoint GetPaymentHistoryReq where
- makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody Nothing
+ makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequestWithoutLogs GET (EP.paymentHistory from to status) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetPaymentHistoryReq :: Generic GetPaymentHistoryReq _
@@ -2419,7 +2585,7 @@ newtype GenerateAadhaarOTPResp = GenerateAadhaarOTPResp {
 }
 
 instance makeGenerateAadhaarOTPReq :: RestEndpoint GenerateAadhaarOTPReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerAadhaarOTP "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.triggerAadhaarOTP "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericGenerateAadhaarOTPReq :: Generic GenerateAadhaarOTPReq _
@@ -2454,7 +2620,7 @@ newtype VerifyAadhaarOTPResp = VerifyAadhaarOTPResp {
 }
 
 instance makeVerifyAadhaarOTPReq :: RestEndpoint VerifyAadhaarOTPReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.verifyAadhaarOTP "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.verifyAadhaarOTP "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericVerifyAadhaarOTPReq :: Generic VerifyAadhaarOTPReq _
@@ -2481,7 +2647,7 @@ newtype UnVerifiedDataReq = UnVerifiedDataReq {
 
 
 instance makeUnVerifiedDataReq :: RestEndpoint UnVerifiedDataReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.unVerifiedAadhaarData "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.unVerifiedAadhaarData "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericUnVerifiedDataReq :: Generic UnVerifiedDataReq _
@@ -2515,8 +2681,14 @@ newtype PlanEntity = PlanEntity {
   autopayDues :: Number,
   dues :: Array DriverDuesEntity,
   bankErrors :: Array BankError,
-  dueBoothCharges :: Maybe Number
+  dueBoothCharges :: Maybe Number,
+  coinEntity :: Maybe CoinEntity
 }
+
+
+newtype CoinEntity = CoinEntity { 
+  coinDiscountUpto :: Number
+  }
 
 newtype DriverDuesEntity = DriverDuesEntity {
     autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
@@ -2562,7 +2734,7 @@ instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode 
 instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq where
- makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequest GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
+ makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequestWithoutLogs GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericUiPlansReq :: Generic UiPlansReq _
@@ -2600,6 +2772,12 @@ instance showOfferEntity :: Show OfferEntity where show = genericShow
 instance decodeOfferEntity :: Decode OfferEntity where decode = defaultDecode
 instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode 
 
+derive instance genericCoinEntity :: Generic CoinEntity _
+derive instance newtypeCoinEntity :: Newtype CoinEntity _
+instance standardEncodeCoinEntity :: StandardEncode CoinEntity where standardEncode (CoinEntity res) = standardEncode res
+instance showCoinEntity :: Show CoinEntity where show = genericShow
+instance decodeCoinEntity :: Decode CoinEntity where decode = defaultDecode
+instance encodeCoinEntity :: Encode CoinEntity where encode = defaultEncode 
 
 
 -------------------------------------------------- SubscribePlan ------------------------------
@@ -2612,7 +2790,7 @@ newtype SubscribePlanResp = SubscribePlanResp {
 }
 
 instance makeSubscribePlanReq :: RestEndpoint SubscribePlanReq where
-    makeRequest reqBody@(SubscribePlanReq planId) headers = defaultMakeRequest POST (EP.subscribePlan planId) headers reqBody Nothing
+    makeRequest reqBody@(SubscribePlanReq planId) headers = defaultMakeRequestWithoutLogs POST (EP.subscribePlan planId) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericSubscribePlanReq :: Generic SubscribePlanReq _
@@ -2649,7 +2827,7 @@ newtype DuesEntity = DuesEntity {
 
 
 instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq where
- makeRequest reqBody@(PaymentDuesReq dummy) headers = defaultMakeRequest GET (EP.paymentDues dummy) headers reqBody Nothing
+ makeRequest reqBody@(PaymentDuesReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.paymentDues dummy) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericPaymentDuesReq :: Generic PaymentDuesReq _
@@ -2678,7 +2856,7 @@ data ResumeMandateReq = ResumeMandateReq String
 
 
 instance makeResumeMandateReq :: RestEndpoint ResumeMandateReq where
- makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequest PUT (EP.resumeMandate driverId) headers reqBody Nothing
+ makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequestWithoutLogs PUT (EP.resumeMandate driverId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericResumeMandateReq :: Generic ResumeMandateReq _
@@ -2695,7 +2873,7 @@ data SuspendMandateReq = SuspendMandateReq String
 
 
 instance makeSuspendMandateReq :: RestEndpoint SuspendMandateReq where
- makeRequest reqBody@(SuspendMandateReq id) headers = defaultMakeRequest PUT (EP.suspendMandate id) headers reqBody Nothing
+ makeRequest reqBody@(SuspendMandateReq id) headers = defaultMakeRequestWithoutLogs PUT (EP.suspendMandate id) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSuspendMandateReq :: Generic SuspendMandateReq _
@@ -2711,7 +2889,7 @@ newtype SelectPlanReq = SelectPlanReq String
 
 
 instance makeSelectPlanReq :: RestEndpoint SelectPlanReq where
-    makeRequest reqBody@(SelectPlanReq id) headers = defaultMakeRequest PUT (EP.selectPlan id) headers reqBody Nothing
+    makeRequest reqBody@(SelectPlanReq id) headers = defaultMakeRequestWithoutLogs PUT (EP.selectPlan id) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericSelectPlanReq :: Generic SelectPlanReq _
@@ -2730,7 +2908,9 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean,
-  lastPaymentType :: Maybe LastPaymentType
+  lastPaymentType :: Maybe LastPaymentType,
+  askForPlanSwitchByCity :: Maybe Boolean,
+  askForPlanSwitchByVehicle :: Maybe Boolean
 }
 
 newtype MandateData = MandateData {
@@ -2750,7 +2930,7 @@ newtype BankError = BankError {
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq where
- makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequest GET (EP.getCurrentPlan driverId) headers reqBody Nothing
+ makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequestWithoutLogs GET (EP.getCurrentPlan driverId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetCurrentPlanReq :: Generic GetCurrentPlanReq _
@@ -2795,7 +2975,7 @@ type KioskLocationRes = {
 }
 
 instance makeKioskLocationReq :: RestEndpoint KioskLocationReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getKioskLocations "" ) headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getKioskLocations "" ) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericKioskLocationReq :: Generic KioskLocationReq _
@@ -2822,7 +3002,7 @@ newtype PostRideFeedbackReq = PostRideFeedbackReq {
 
 
 instance makePostRideFeedbackReq :: RestEndpoint PostRideFeedbackReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.postRideFeedback "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.postRideFeedback "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -2844,7 +3024,7 @@ newtype GenerateReferralCodeRes = GenerateReferralCodeRes {
 }
 
 instance makeGenerateReferralCodeReq :: RestEndpoint GenerateReferralCodeReq where
-    makeRequest reqBody@(GenerateReferralCodeReq date) headers = defaultMakeRequest POST (EP.generateReferralCode "") headers reqBody Nothing
+    makeRequest reqBody@(GenerateReferralCodeReq date) headers = defaultMakeRequestWithoutLogs POST (EP.generateReferralCode "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGenerateReferralCodeReq :: Generic GenerateReferralCodeReq _
@@ -2925,7 +3105,7 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req where
-    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType) headers = defaultMakeRequest GET (EP.paymentHistoryListV2 limit offset historyType) headers reqBody Nothing
+    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType) headers = defaultMakeRequestWithoutLogs GET (EP.paymentHistoryListV2 limit offset historyType) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -2979,6 +3159,8 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     offerAndPlanDetails :: Maybe String,
     rideTakenOn :: String,
     driverFeeAmount :: Number,
+    gst :: Maybe Number,
+    gstPercentage :: Maybe Number,
     specialZoneRideCount :: Maybe Int,
     totalSpecialZoneCharges :: Maybe Number,
     maxRidesEligibleForCharge :: Maybe Int,
@@ -2987,7 +3169,7 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
 }
 
 instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req where
-    makeRequest reqBody@(HistoryEntryDetailsEntityV2Req id) headers = defaultMakeRequest GET (EP.paymentEntityDetails id) headers reqBody Nothing
+    makeRequest reqBody@(HistoryEntryDetailsEntityV2Req id) headers = defaultMakeRequestWithoutLogs GET (EP.paymentEntityDetails id) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -3050,7 +3232,7 @@ newtype ClearDuesResp = ClearDuesResp {
 }
 
 instance makeClearDuesReq :: RestEndpoint ClearDuesReq where
-    makeRequest reqBody@(ClearDuesReq id) headers = defaultMakeRequest GET (EP.cleardues id) headers reqBody Nothing
+    makeRequest reqBody@(ClearDuesReq id) headers = defaultMakeRequestWithoutLogs GET (EP.cleardues id) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -3073,7 +3255,7 @@ data ActivateDriverGoToReq = ActivateDriverGoToReq String String
 
 
 instance makeActivateDriverGoToReq :: RestEndpoint ActivateDriverGoToReq where
-  makeRequest reqBody@(ActivateDriverGoToReq homeLocationId currentLocation) headers = defaultMakeRequest POST (EP.activateDriverGoTo homeLocationId currentLocation) headers reqBody Nothing
+  makeRequest reqBody@(ActivateDriverGoToReq homeLocationId currentLocation) headers = defaultMakeRequestWithoutLogs POST (EP.activateDriverGoTo homeLocationId currentLocation) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericActivateDriverGoToReq :: Generic ActivateDriverGoToReq _
@@ -3087,7 +3269,7 @@ data DeactivateDriverGoToReq = DeactivateDriverGoToReq
 
 
 instance makeDeactivateDriverGoToReq :: RestEndpoint DeactivateDriverGoToReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.deactivateDriverGoTo "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.deactivateDriverGoTo "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDeactivateDriverGoToReq :: Generic DeactivateDriverGoToReq _
@@ -3107,7 +3289,7 @@ newtype AddHomeLocationReq = AddHomeLocationReq
 
 
 instance makeAddHomeLocationReq :: RestEndpoint AddHomeLocationReq where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.addDriverHomeLocation "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.addDriverHomeLocation "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericAddHomeLocationReq :: Generic AddHomeLocationReq _
@@ -3134,7 +3316,7 @@ newtype DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
 
 
 instance makeGetHomeLocationReq :: RestEndpoint GetHomeLocationReq where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverHomeLocation "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getDriverHomeLocation "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetHomeLocationReq :: Generic GetHomeLocationReq _
@@ -3160,7 +3342,7 @@ newtype DeleteDriverHomeLocationReq = DeleteDriverHomeLocationReq String
 
 
 instance makeDeleteDriverHomeLocationReq :: RestEndpoint DeleteDriverHomeLocationReq where
-  makeRequest reqBody@(DeleteDriverHomeLocationReq id) headers = defaultMakeRequest DELETE (EP.deleteDriverHomeLocation id) headers reqBody Nothing
+  makeRequest reqBody@(DeleteDriverHomeLocationReq id) headers = defaultMakeRequestWithoutLogs DELETE (EP.deleteDriverHomeLocation id) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -3179,7 +3361,7 @@ newtype UpdateHomeLocationReq = UpdateHomeLocationReq {
 
 
 instance makeUpdateHomeLocationReq :: RestEndpoint UpdateHomeLocationReq where
-  makeRequest (UpdateHomeLocationReq req) headers = defaultMakeRequest POST (EP.updateDriverHomeLocation req.qParam) headers req.body Nothing
+  makeRequest (UpdateHomeLocationReq req) headers = defaultMakeRequestWithoutLogs POST (EP.updateDriverHomeLocation req.qParam) headers req.body Nothing
   encodeRequest (UpdateHomeLocationReq req) = standardEncode req.body
 
 derive instance genericUpdateHomeLocationReq :: Generic UpdateHomeLocationReq _
@@ -3201,7 +3383,7 @@ newtype RideRouteResp = RideRouteResp {
 }
 
 instance makeRideRouteReq :: RestEndpoint RideRouteReq where
-  makeRequest reqBody@(RideRouteReq id) headers = defaultMakeRequest POST (EP.rideRoute id) headers reqBody Nothing
+  makeRequest reqBody@(RideRouteReq id) headers = defaultMakeRequestWithoutLogs POST (EP.rideRoute id) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 
@@ -3230,7 +3412,7 @@ newtype CityRes = CityRes {
 data GetCityReq = GetCityReq String
 
 instance makeGetCityReq :: RestEndpoint GetCityReq where
-  makeRequest reqBody@(GetCityReq id) headers = defaultMakeRequest GET (EP.getMerchantIdList id) headers reqBody Nothing
+  makeRequest reqBody@(GetCityReq id) headers = defaultMakeRequestWithoutLogs GET (EP.getMerchantIdList id) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetCityReq :: Generic GetCityReq _
@@ -3297,15 +3479,23 @@ data DriverCoinsFunctionType
   | DriverReferral
   | TwoRidesCompleted
   | FiveRidesCompleted
+  | TenRidesCompleted
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2
+  | RidesCompleted Int
+  | MetroRideCompleted MetroRideType
+
+data MetroRideType
+  = ToMetro
+  | FromMetro
+  | None
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
-    makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
+    makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequestWithoutLogs GET (EP.getCoinTransactions date) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericCoinTransactionReq :: Generic CoinTransactionReq _
@@ -3323,19 +3513,23 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
-  where 
-    decode body =
-      case (typeOf body == "object") of
-        true ->  case (runExcept $ (readProp "tag" body)) of
-                    Right functionType -> defaultEnumDecode $ functionType
-                    _ -> defaultEnumDecode body          
-        false -> defaultEnumDecode body
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where 
+  decode body = 
+    case (typeOf body == "object") of
+      true -> defaultDecode body
+      false -> defaultDecode $ unsafeToForeign {tag : body}
+
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
   where
     standardEncode _ = standardEncode {}
+
+derive instance genericMetroRideType :: Generic MetroRideType _
+instance showMetroRideType :: Show MetroRideType where show = genericShow
+instance decodeMetroRideType :: Decode MetroRideType where decode = defaultEnumDecode
+instance encodeMetroRideType :: Encode MetroRideType where encode = defaultEnumEncode
+instance eqMetroRideType :: Eq MetroRideType where eq = genericEq
 
 derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
 derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _
@@ -3372,7 +3566,7 @@ newtype CoinUsageHistoryItem = CoinUsageHistoryItem
   }
 
 instance makeCoinsUsageReq :: RestEndpoint CoinsUsageReq where
-    makeRequest reqBody@(CoinsUsageReq limit offset) headers = defaultMakeRequest GET (EP.getCoinUsageHistory limit offset) headers reqBody Nothing
+    makeRequest reqBody@(CoinsUsageReq limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.getCoinUsageHistory limit offset) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericCoinsUsageReq :: Generic CoinsUsageReq _
@@ -3402,7 +3596,7 @@ newtype ConvertCoinToCashReq = ConvertCoinToCashReq
 
 
 instance makeConvertCoinToCashReq :: RestEndpoint ConvertCoinToCashReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.convertCoinToCash "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.convertCoinToCash "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericConvertCoinToCashReq :: Generic ConvertCoinToCashReq _
@@ -3425,7 +3619,7 @@ newtype ReferredDriversResp = ReferredDriversResp
  }
 
 instance makeReferredDriversReq :: RestEndpoint ReferredDriversReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.referredDrivers "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.referredDrivers "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericReferredDriversResp :: Generic ReferredDriversResp _
@@ -3444,7 +3638,8 @@ instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where s
 
 newtype DetectCityReq = DetectCityReq {
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  merchantId :: String
 }
 
 newtype DetectCityResp = DetectCityResp {
@@ -3453,7 +3648,7 @@ newtype DetectCityResp = DetectCityResp {
 }
 
 instance makeDetectCityReq :: RestEndpoint DetectCityReq where
-  makeRequest reqBody@(DetectCityReq req) headers = defaultMakeRequest POST (EP.detectCity "") headers reqBody Nothing
+  makeRequest reqBody@(DetectCityReq req) headers = defaultMakeRequestWithoutLogs POST (EP.detectCity "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDetectCityReq :: Generic DetectCityReq _
@@ -3471,12 +3666,32 @@ instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEn
 
 ----------------------------- SDK Events -----------------------------------------------------
 newtype SDKEventsReq = SDKEventsReq {
-  event :: String
+  event :: String,
+  events :: Array EventsPayload
 }
+
+newtype EventsPayload = EventsPayload {
+  eventName :: String,
+  module :: Maybe String,
+  clientType :: String,
+  sessionId :: String,
+  payload :: Maybe String,
+  source :: String,
+  userId :: String,
+  timestamp :: String,
+  vehicleType :: Maybe String,
+  cityId :: Maybe String
+}
+
+derive instance genericEventsPayload :: Generic EventsPayload _
+instance standardEncodeEventsPayload :: StandardEncode EventsPayload where standardEncode (EventsPayload res) = standardEncode res
+instance showEventsPayload :: Show EventsPayload where show = genericShow
+instance decodeEventsPayload :: Decode EventsPayload where decode = defaultDecode
+instance encodeEventsPayload  :: Encode EventsPayload where encode = defaultEncode
 
 
 instance makeSDKEventsReq :: RestEndpoint SDKEventsReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.pushSDKEvents "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.pushSDKEvents "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSDKEventsReq :: Generic SDKEventsReq _
@@ -3499,7 +3714,7 @@ data UploadOdometerImageResp =  UploadOdometerImageResp {
 
 
 instance makeUploadOdometerImageReq :: RestEndpoint UploadOdometerImageReq where
-  makeRequest reqBody@(UploadOdometerImageReq rideId (OdometerImage rqBody)) headers = defaultMakeRequest POST (EP.uploadOdometerImage rideId) headers reqBody Nothing
+  makeRequest reqBody@(UploadOdometerImageReq rideId (OdometerImage rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.uploadOdometerImage rideId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericOdometerImage :: Generic OdometerImage _
@@ -3561,7 +3776,7 @@ data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_C
 data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Int
 
 instance makeGetAllModuleReq :: RestEndpoint GetAllModuleReq where
-    makeRequest reqBody@(GetAllModuleReq language) headers = defaultMakeRequest GET (EP.getAllLmsModules language) headers reqBody Nothing
+    makeRequest reqBody@(GetAllModuleReq language) headers = defaultMakeRequestWithoutLogs GET (EP.getAllLmsModules language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetAllModuleReq :: Generic GetAllModuleReq _
@@ -3676,7 +3891,7 @@ newtype LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
   }
 
 instance makeGetAllVideosReq :: RestEndpoint GetAllVideosReq where
-    makeRequest reqBody@(GetAllVideosReq moduleId language) headers = defaultMakeRequest GET (EP.getAllLmsVideos moduleId language) headers reqBody Nothing
+    makeRequest reqBody@(GetAllVideosReq moduleId language) headers = defaultMakeRequestWithoutLogs GET (EP.getAllLmsVideos moduleId language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetAllVideosReq :: Generic GetAllVideosReq _
@@ -3756,7 +3971,7 @@ newtype LmsQuizHistory = LmsQuizHistory
 data LmsQuestionStatus = CORRECT | INCORRECT
 
 instance makeGetAllQuestionsReq :: RestEndpoint GetAllQuestionsReq where
-    makeRequest reqBody@(GetAllQuestionsReq  moduleId language) headers = defaultMakeRequest GET (EP.getAllLmsQuestions moduleId language) headers reqBody Nothing
+    makeRequest reqBody@(GetAllQuestionsReq  moduleId language) headers = defaultMakeRequestWithoutLogs GET (EP.getAllLmsQuestions moduleId language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetAllQuestionsReq :: Generic GetAllQuestionsReq _
@@ -3854,11 +4069,11 @@ newtype StartVideoUpdateRes = StartVideoUpdateRes ApiSuccessResult
 newtype CompletedVideoUpdateRes = CompletedVideoUpdateRes ApiSuccessResult
 
 instance makeStartVideoUpdateAPIReq :: RestEndpoint StartVideoUpdateAPIReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.markVideoAsStarted "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.markVideoAsStarted "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 instance makeCompletedVideoUpdateAPIReq :: RestEndpoint CompletedVideoUpdateAPIReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.markVideoAsCompleted "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.markVideoAsCompleted "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericStartVideoUpdateAPIReq :: Generic StartVideoUpdateAPIReq _
@@ -3898,7 +4113,7 @@ newtype ValidationResult = ValidationResult
  }
 
 instance makeQuestionConfirmReq :: RestEndpoint QuestionConfirmReq where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.confirmQuestion "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.confirmQuestion "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericQuestionConfirmReq :: Generic QuestionConfirmReq _
@@ -4013,7 +4228,7 @@ newtype ReelVideoThresholdConfig = ReelVideoThresholdConfig
   }
 
 instance makeGetAllReelsVideosReq :: RestEndpoint GetAllReelsVideosReq where
-    makeRequest reqBody@(GetAllReelsVideosReq  reelsKey language) headers = defaultMakeRequest GET (EP.getReelsData reelsKey language) headers reqBody Nothing
+    makeRequest reqBody@(GetAllReelsVideosReq  reelsKey language) headers = defaultMakeRequestWithoutLogs GET (EP.getReelsData reelsKey language) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetAllReelsVideosReq :: Generic GetAllReelsVideosReq _
@@ -4058,7 +4273,7 @@ data DummyRideRequestReq = DummyRideRequestReq String
 
 
 instance makeDummyRideRequestReq :: RestEndpoint DummyRideRequestReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.dummyRideRequest "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.dummyRideRequest "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -4098,7 +4313,7 @@ newtype GateInfoFull = GateInfoFull {
 }
 
 instance makeSpecialLocationFullReq :: RestEndpoint SpecialLocationFullReq where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.specialLocationList "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.specialLocationList "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericSpecialLocationFullReq :: Generic SpecialLocationFullReq _
@@ -4135,12 +4350,15 @@ instance decodeGateInfoFull :: Decode GateInfoFull where decode = defaultDecode
 instance encodeGateInfoFull :: Encode GateInfoFull where encode = defaultEncode
 
 
-data OnboardingDocsReq = OnboardingDocsReq String
+data OnboardingDocsReq = OnboardingDocsReq Boolean Boolean
 
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulances :: Maybe (Array OnboardingDoc),
+  trucks :: Maybe (Array OnboardingDoc),
+  bus :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {
@@ -4156,11 +4374,11 @@ newtype OnboardingDoc = OnboardingDoc {
 }
 
 instance makeOnboardingDocsReq :: RestEndpoint OnboardingDocsReq where
-  makeRequest reqBody@(OnboardingDocsReq qp) headers = defaultMakeRequest GET (EP.onBoardingConfigs qp) headers reqBody Nothing
-  encodeRequest req = standardEncode req
+  makeRequest reqBody@(OnboardingDocsReq makeAadhaarSelfieMandatory onlyVehicle) headers = defaultMakeRequestWithoutLogs GET (EP.onBoardingConfigs makeAadhaarSelfieMandatory onlyVehicle) headers reqBody Nothing
+  encodeRequest req = defaultEncode req
 
 derive instance genericOnboardingDocsReq :: Generic OnboardingDocsReq _
-instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode (OnboardingDocsReq qp) = standardEncode {}
+instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode req = standardEncode req
 instance showOnboardingDocsReq :: Show OnboardingDocsReq where show = genericShow
 instance decodeOnboardingDocsReq :: Decode OnboardingDocsReq where decode = defaultDecode
 instance encodeOnboardingDocsReq  :: Encode OnboardingDocsReq where encode = defaultEncode
@@ -4190,6 +4408,8 @@ data ServiceTierType
   | RENTALS
   | INTERCITY
   | BIKE_TIER
+  | SUV_PLUS_TIER
+  | DELIVERY_BIKE
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4250,6 +4470,8 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
                   "BIKE"         -> except $ Right BIKE_TIER
+                  "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
+                  "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4265,8 +4487,10 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode TAXI = standardEncode "TAXI"
     standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
     standardEncode BIKE_TIER = standardEncode "BIKE"
+    standardEncode DELIVERY_BIKE = standardEncode "DELIVERY_BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
+    standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow
@@ -4315,7 +4539,7 @@ instance decodeUpdateDriverVehicleServiceTierResp :: Decode UpdateDriverVehicleS
 instance encodeUpdateDriverVehicleServiceTierResp  :: Encode UpdateDriverVehicleServiceTierResp where encode = defaultEncode
 
 instance makeUpdateDriverVehicleServiceTierReq :: RestEndpoint UpdateDriverVehicleServiceTierReq where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.updateDriverVehicleServiceTier "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateDriverVehicleServiceTier "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericDriverVehicleServiceTier :: Generic DriverVehicleServiceTier _
@@ -4325,7 +4549,7 @@ instance decodeDriverVehicleServiceTier :: Decode DriverVehicleServiceTier where
 instance encodeDriverVehicleServiceTier  :: Encode DriverVehicleServiceTier where encode = defaultEncode
 
 instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTierReq where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
   encodeRequest req = standardEncode req
   
 data RideStatusPastDaysReq = RideStatusPastDaysReq
@@ -4335,7 +4559,7 @@ newtype RideStatusPastDaysRes = RideStatusPastDaysRes {
 }
 
 instance makeRideStatusPastDaysReq :: RestEndpoint RideStatusPastDaysReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getRideStatusPastDays "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getRideStatusPastDays "") headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 derive instance genericRideStatusPastDaysReq :: Generic RideStatusPastDaysReq _
@@ -4357,7 +4581,7 @@ newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {
 
 
 instance makeUpdateAirConditionUpdateRequest :: RestEndpoint UpdateAirConditionUpdateRequest where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.updateAirConditioned "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateAirConditioned "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericUpdateAirConditionUpdateRequest :: Generic UpdateAirConditionUpdateRequest _
@@ -4383,7 +4607,7 @@ newtype RateCardRespItem = RateCardRespItem {
   }
 
 instance makeGetDriverRateCardReq :: RestEndpoint GetDriverRateCardReq where
-  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier dist) headers = defaultMakeRequest GET (EP.getDriverRateCard vehicleServiceTier dist) headers reqBody Nothing
+  makeRequest reqBody@(GetDriverRateCardReq vehicleServiceTier dist) headers = defaultMakeRequestWithoutLogs GET (EP.getDriverRateCard vehicleServiceTier dist) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetDriverRateCardReq :: Generic GetDriverRateCardReq _
@@ -4451,7 +4675,7 @@ newtype DailyEarnings = DailyEarnings
   }
 
 instance makeReferralEarningsReq :: RestEndpoint ReferralEarningsReq where
-    makeRequest reqBody@(ReferralEarningsReq fromDate toDate) headers = defaultMakeRequest GET (EP.getReferralEarnings fromDate toDate) headers reqBody Nothing
+    makeRequest reqBody@(ReferralEarningsReq fromDate toDate) headers = defaultMakeRequestWithoutLogs GET (EP.getReferralEarnings fromDate toDate) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericReferralEarningsReq :: Generic ReferralEarningsReq _
@@ -4481,7 +4705,7 @@ data DeleteVPAReq = DeleteVPAReq String
 newtype DeleteVPARes = DeleteVPARes ApiSuccessResult
 
 instance makeDeleteVPAReq :: RestEndpoint DeleteVPAReq where
-    makeRequest reqBody@(DeleteVPAReq vpaId) headers = defaultMakeRequest POST (EP.deleteVPA vpaId) headers reqBody Nothing
+    makeRequest reqBody@(DeleteVPAReq vpaId) headers = defaultMakeRequestWithoutLogs POST (EP.deleteVPA vpaId) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericDeleteVPAReq :: Generic DeleteVPAReq _
@@ -4496,6 +4720,28 @@ instance standardEncodeDeleteVPARes :: StandardEncode DeleteVPARes where standar
 instance decodeDeleteVPARes :: Decode DeleteVPARes where decode = defaultDecode
 instance encodeDeleteVPARes :: Encode DeleteVPARes where encode = defaultEncode
 
+--------------------------------- VERIFY VPA REQUEST ---------------------------------------------------------------------------------------------------------------------------
+
+data VerifyVpaReq = VerifyVpaReq String
+
+newtype VerifyVpaRes = VerifyVpaRes ApiSuccessResult
+
+instance makeVerifyVpaReq :: RestEndpoint VerifyVpaReq where
+    makeRequest reqBody@(VerifyVpaReq dummy) headers = defaultMakeRequestWithoutLogs POST (EP.verifyUPI dummy) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericVerifyVpaReq :: Generic VerifyVpaReq _
+instance showVerifyVpaReq :: Show VerifyVpaReq where show = genericShow
+instance standardEncodeVerifyVpaReq :: StandardEncode VerifyVpaReq where standardEncode _ = standardEncode {}
+instance decodeVerifyVpaReq :: Decode VerifyVpaReq where decode = defaultDecode
+instance encodeVerifyVpaReq :: Encode VerifyVpaReq where encode = defaultEncode
+
+derive instance genericVerifyVpaRes :: Generic VerifyVpaRes _
+instance showVerifyVpaRes :: Show VerifyVpaRes where show = genericShow
+instance standardEncodeVerifyVpaRes :: StandardEncode VerifyVpaRes where standardEncode _ = standardEncode {}
+instance decodeVerifyVpaRes :: Decode VerifyVpaRes where decode = defaultDecode
+instance encodeVerifyVpaRes :: Encode VerifyVpaRes where encode = defaultEncode
+
 --------------------------------- GET PAYOUT REGISTER ---------------------------------------------------------------------------------------------------------------------------
 
 data PayoutRegisterReq = PayoutRegisterReq String
@@ -4507,7 +4753,7 @@ newtype PayoutRegisterRes = PayoutRegisterRes
     }
 
 instance makePayoutRegisterReq :: RestEndpoint PayoutRegisterReq where
- makeRequest reqBody@(PayoutRegisterReq val) headers = defaultMakeRequest GET (EP.registerPayout val) headers reqBody Nothing
+ makeRequest reqBody@(PayoutRegisterReq val) headers = defaultMakeRequestWithoutLogs GET (EP.registerPayout val) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericPayoutRegisterReq :: Generic PayoutRegisterReq _
@@ -4521,3 +4767,673 @@ instance standardEncodePayoutRegisterRes :: StandardEncode PayoutRegisterRes whe
 instance showPayoutRegisterRes :: Show PayoutRegisterRes where show = genericShow
 instance decodePayoutRegisterRes :: Decode PayoutRegisterRes where decode = defaultDecode
 instance encodePayoutRegisterRes :: Encode PayoutRegisterRes where encode = defaultEncode
+
+--------------------------------- SdkToken API ---------------------------------------------------------------------------------------------------------------------------
+
+data ServiceName = Gullak | HyperVerge
+
+data GetSdkTokenReq = GetSdkTokenReq String ServiceName
+
+newtype GetSdkTokenResp = GetSdkTokenResp {
+  token :: String,
+  expiry :: Maybe String
+}
+
+instance makeGetSdkTokenReq  :: RestEndpoint GetSdkTokenReq where
+    makeRequest reqBody@(GetSdkTokenReq exp svc) headers = defaultMakeRequestWithoutLogs GET (EP.getSdkToken exp (show svc)) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetSdkTokenReq :: Generic GetSdkTokenReq _
+instance showGetSdkTokenReq :: Show GetSdkTokenReq where show = genericShow
+instance standardEncodeGetSdkTokenReq :: StandardEncode GetSdkTokenReq where standardEncode _ = standardEncode{}
+instance decodeGetSdkTokenReq :: Decode GetSdkTokenReq where decode = defaultDecode
+instance encodeGetSdkTokenReq :: Encode GetSdkTokenReq where encode = defaultEncode
+
+derive instance genericServiceName :: Generic ServiceName _
+instance showServiceName :: Show ServiceName where show = genericShow
+instance decodeServiceName :: Decode ServiceName where decode = defaultEnumDecode
+instance encodeServiceName :: Encode ServiceName where encode = defaultEnumEncode
+instance standardEncodeServiceName :: StandardEncode ServiceName where standardEncode _ = standardEncode {}
+
+
+derive instance genericGetSdkTokenResp :: Generic GetSdkTokenResp _
+derive instance newtypeGetSdkTokenResp :: Newtype GetSdkTokenResp _
+instance standardEncodeGetSdkTokenResp :: StandardEncode GetSdkTokenResp where standardEncode (GetSdkTokenResp rsp) = standardEncode rsp
+instance showGetSdkTokenResp :: Show GetSdkTokenResp where show = genericShow
+instance decodeGetSdkTokenResp :: Decode GetSdkTokenResp where decode = defaultDecode
+instance encodeGetSdkTokenResp :: Encode GetSdkTokenResp where encode = defaultEncode
+
+------------------------------------------------------ Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------------
+
+data GetLiveSelfieReq = GetLiveSelfieReq String
+
+newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: String}
+
+data ValidationStatus = APPROVED | DECLINED | AUTO_APPROVED | AUTO_DECLINED | NEEDS_REVIEW
+
+data VerifiedBy = FRONTEND_SDK | DASHBOARD
+
+newtype PanCardReq = PanCardReq
+  { consent :: Boolean,
+    consentTimestamp :: String,
+    dateOfBirth :: Maybe String,
+    nameOnCard :: Maybe String,
+    imageId1 :: Maybe String,
+    imageId2 :: Maybe String,
+    panNumber :: String,
+    validationStatus :: ValidationStatus, 
+    verifiedBy :: VerifiedBy, 
+    transactionId :: Maybe String,
+    nameOnGovtDB :: Maybe String
+  }
+
+newtype DriverPANResp = DriverPANResp ApiSuccessResult
+
+newtype AadhaarCardReq = AadhaarCardReq
+  { aadhaarBackImageId :: Maybe String,
+    aadhaarFrontImageId :: Maybe String,
+    address :: Maybe String,
+    consent :: Boolean,
+    consentTimestamp :: String,
+    dateOfBirth :: Maybe String,
+    maskedAadhaarNumber :: Maybe String,
+    nameOnCard :: Maybe String,
+    validationStatus :: ValidationStatus,
+    transactionId :: String
+  }
+
+newtype DriverAadhaarResp = DriverAadhaarResp ApiSuccessResult
+
+instance makeGetLiveSelfieReq  :: RestEndpoint GetLiveSelfieReq where
+    makeRequest reqBody@(GetLiveSelfieReq status) headers = defaultMakeRequestWithoutLogs GET (EP.getLiveSelfie (show status)) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetLiveSelfieReq :: Generic GetLiveSelfieReq _
+instance showGetLiveSelfieReq :: Show GetLiveSelfieReq where show = genericShow
+instance standardEncodeGetLiveSelfieReq :: StandardEncode GetLiveSelfieReq where standardEncode _ = standardEncode{}
+instance decodeGetLiveSelfieReq :: Decode GetLiveSelfieReq where decode = defaultDecode
+instance encodeGetLiveSelfieReq :: Encode GetLiveSelfieReq where encode = defaultEncode
+
+derive instance genericGetLiveSelfieResp :: Generic GetLiveSelfieResp _
+derive instance newtypeGetLiveSelfieResp :: Newtype GetLiveSelfieResp _
+instance standardEncodeGetLiveSelfieResp :: StandardEncode GetLiveSelfieResp where standardEncode (GetLiveSelfieResp rsp) = standardEncode rsp
+instance showGetLiveSelfieResp :: Show GetLiveSelfieResp where show = genericShow
+instance decodeGetLiveSelfieResp :: Decode GetLiveSelfieResp where decode = defaultDecode
+instance encodeGetLiveSelfieResp :: Encode GetLiveSelfieResp where encode = defaultEncode
+
+derive instance genericValidationStatus :: Generic ValidationStatus _
+instance showValidationStatus :: Show ValidationStatus where show = genericShow
+instance decodeValidationStatus :: Decode ValidationStatus where decode = defaultEnumDecode
+instance encodeValidationStatus :: Encode ValidationStatus where encode = defaultEnumEncode
+instance standardEncodeValidationStatus :: StandardEncode ValidationStatus where standardEncode _ = standardEncode {}
+
+derive instance genericVerifiedBy :: Generic VerifiedBy _
+instance showVerifiedBy :: Show VerifiedBy where show = genericShow
+instance decodeVerifiedBy :: Decode VerifiedBy where decode = defaultEnumDecode
+instance encodeVerifiedBy :: Encode VerifiedBy where encode = defaultEnumEncode
+instance standardEncodeVerifiedBy :: StandardEncode VerifiedBy where standardEncode _ = standardEncode {}
+
+instance makePanCardReq :: RestEndpoint PanCardReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerPAN "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericPanCardReq :: Generic PanCardReq _
+instance showPanCardReq :: Show PanCardReq where show = genericShow
+instance standardPanCardReq :: StandardEncode PanCardReq where standardEncode (PanCardReq req) = standardEncode req
+instance decodePanCardReq :: Decode PanCardReq where decode = defaultDecode
+instance encodePanCardReq :: Encode PanCardReq where encode = defaultEncode
+
+derive instance genericDriverPANResp :: Generic DriverPANResp _
+derive instance newtypeDriverPANResp :: Newtype DriverPANResp _
+instance standardEncodeDriverPANResp :: StandardEncode DriverPANResp where standardEncode (DriverPANResp body) = standardEncode body
+instance showDriverPANResp :: Show DriverPANResp where show = genericShow
+instance decodeDriverPANResp:: Decode DriverPANResp where decode = defaultDecode
+instance encodeDriverPANResp  :: Encode DriverPANResp where encode = defaultEncode
+
+instance makeAadhaarCardReq :: RestEndpoint AadhaarCardReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerAadhaar "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericAadhaarCardReq :: Generic AadhaarCardReq _
+instance showAadhaarCardReq :: Show AadhaarCardReq where show = genericShow
+instance standardAadhaarCardReq :: StandardEncode AadhaarCardReq where standardEncode (AadhaarCardReq req) = standardEncode req
+instance decodeAadhaarCardReq :: Decode AadhaarCardReq where decode = defaultDecode
+instance encodeAadhaarCardReq :: Encode AadhaarCardReq where encode = defaultEncode
+
+derive instance genericDriverAadhaarResp :: Generic DriverAadhaarResp _
+derive instance newtypeDriverAadhaarResp :: Newtype DriverAadhaarResp _
+instance standardEncodeDriverAadhaarResp :: StandardEncode DriverAadhaarResp where standardEncode (DriverAadhaarResp body) = standardEncode body
+instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericShow
+instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
+instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
+
+-----------------------------------------------------------Fetching Driver Profile--------------------------------------------------
+data DriverProfileDataReq = DriverProfileDataReq Boolean 
+
+newtype DriverProfileDataRes = DriverProfileDataRes
+  {
+    aspirations :: Array String,
+    drivingSince :: Maybe Int,
+    hometown :: Maybe String,
+    otherImages :: Array String,
+    otherImageIds :: Array String,
+    pledges :: Array String,
+    profileImage :: Maybe String,
+    vehicleTags :: Array String
+  }
+
+instance driverProfileDataReq :: RestEndpoint DriverProfileDataReq  where
+ makeRequest reqBody@(DriverProfileDataReq isImages) headers = defaultMakeRequestWithoutLogs GET (EP.getDriverProfile isImages) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericDriverProfileDataReq :: Generic DriverProfileDataReq _
+instance standardEncodeDriverProfileDataReq :: StandardEncode DriverProfileDataReq where standardEncode (DriverProfileDataReq _) = standardEncode {}
+instance decodeDriverProfileDataReq :: Decode DriverProfileDataReq where decode = defaultDecode
+instance encodeDriverProfileDataReq :: Encode DriverProfileDataReq where encode = defaultEncode
+
+derive instance genericDriverProfileDataRes:: Generic DriverProfileDataRes _
+derive instance newtypeDriverProfileDataRes :: Newtype DriverProfileDataRes _
+instance standardEncodeDriverProfileDataRes :: StandardEncode DriverProfileDataRes where standardEncode (DriverProfileDataRes id) = standardEncode id
+instance showDriverProfileDataRes:: Show DriverProfileDataRes where show = genericShow
+instance decodeDriverProfileDataRes :: Decode DriverProfileDataRes where decode = defaultDecode
+instance encodeDriverProfileDataRes :: Encode DriverProfileDataRes where encode = defaultEncode
+------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
+
+data DriverReachedDestinationRequest = DriverReachedDestinationRequest String DriverReachedReq
+
+newtype DriverReachedReq  = DriverReachedReq {
+    lat :: Number
+  , lon :: Number
+  }
+
+
+derive instance genericDriverReachedDestinationRequest :: Generic DriverReachedDestinationRequest _
+instance standardEncodeDriverReachedDestinationRequest :: StandardEncode DriverReachedDestinationRequest where standardEncode (DriverReachedDestinationRequest rideId req) = standardEncode req
+instance showDriverReachedDestinationRequest :: Show DriverReachedDestinationRequest where show = genericShow
+instance decodeDriverReachedDestinationRequest :: Decode DriverReachedDestinationRequest where decode = defaultDecode
+instance encodeDriverReachedDestinationRequest :: Encode DriverReachedDestinationRequest where encode = defaultEncode
+
+
+instance makeDriverReachedReq :: RestEndpoint DriverReachedDestinationRequest where
+    makeRequest reqBody@(DriverReachedDestinationRequest rideId (DriverReachedReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.driverReachedDestination rideId) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericDriverReachedReq :: Generic DriverReachedReq _
+instance showDriverReachedReq :: Show DriverReachedReq where show = genericShow
+instance standardEncodeDriverReachedReq :: StandardEncode DriverReachedReq where standardEncode (DriverReachedReq req) = standardEncode req
+instance decodeDriverReachedReq :: Decode DriverReachedReq where decode = defaultDecode
+instance encodeDriverReachedReq :: Encode DriverReachedReq where encode = defaultEncode
+
+
+------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
+
+data CoinInfoReq = CoinInfoReq 
+
+newtype CoinInfoRes = CoinInfoRes (Array CoinInfo)
+
+newtype CoinInfo = CoinInfo CoinInfoType
+
+type CoinInfoType = {
+  coins :: Int,
+  key :: String,
+  title :: String,
+  description :: String
+}
+
+instance makeCoinInfoReq  :: RestEndpoint CoinInfoReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getCoinInfo "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericCoinInfoReq :: Generic CoinInfoReq _
+instance showCoinInfoReq :: Show CoinInfoReq where show = genericShow
+instance standardEncodeCoinInfoReq :: StandardEncode CoinInfoReq where standardEncode _ = standardEncode{}
+instance decodeCoinInfoReq :: Decode CoinInfoReq where decode = defaultDecode
+instance encodeCoinInfoReq :: Encode CoinInfoReq where encode = defaultEncode
+
+derive instance genericCoinInfoRes :: Generic CoinInfoRes _
+derive instance newtypeCoinInfoRes :: Newtype CoinInfoRes _
+instance standardEncodeCoinInfoRes :: StandardEncode CoinInfoRes where standardEncode (CoinInfoRes rsp) = standardEncode rsp
+instance showCoinInfoRes :: Show CoinInfoRes where show = genericShow
+instance decodeCoinInfoRes :: Decode CoinInfoRes where decode = defaultDecode
+instance encodeCoinInfoRes :: Encode CoinInfoRes where encode = defaultEncode
+
+
+derive instance genericCoinInfo :: Generic CoinInfo _
+instance showCoinInfo :: Show CoinInfo where show = genericShow
+instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
+instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
+instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
+
+--------------------------------------------------------------- Demand Hotspots API response -------------------------------------------------------------
+
+data DemandHotspotsReq = DemandHotspotsReq String
+
+newtype DemandHotspotsResp = DemandHotspotsResp 
+  { createdAt :: String,
+    expiryAt :: String,
+    hotspotsDetails :: Array HotspotsDetails
+  }
+
+newtype HotspotsDetails = HotspotsDetails {
+  frequency :: Int, 
+  location :: LatLong
+}
+
+instance makeDemandHotspotsReq :: RestEndpoint DemandHotspotsReq where
+    makeRequest reqBody@(DemandHotspotsReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.demandHotspots dummy) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericDemandHotspotsReq :: Generic DemandHotspotsReq _
+instance showDemandHotspotsReq :: Show DemandHotspotsReq where show = genericShow
+instance standardEncodeDemandHotspotsReq :: StandardEncode DemandHotspotsReq where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsReq :: Decode DemandHotspotsReq where decode = defaultDecode
+instance encodeDemandHotspotsReq :: Encode DemandHotspotsReq where encode = defaultEncode
+
+derive instance genericDemandHotspotsResp :: Generic DemandHotspotsResp _
+derive instance newtypeDemandHotspotsResp :: Newtype DemandHotspotsResp _
+instance showDemandHotspotsResp :: Show DemandHotspotsResp where show = genericShow
+instance standardEncodeDemandHotspotsResp :: StandardEncode DemandHotspotsResp where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsResp :: Decode DemandHotspotsResp where decode = defaultDecode
+instance encodeDemandHotspotsResp :: Encode DemandHotspotsResp where encode = defaultEncode
+
+derive instance genericHotspotsDetails :: Generic HotspotsDetails _
+derive instance newtypeHotspotsDetails :: Newtype HotspotsDetails _
+instance standardEncodeHotspotsDetails :: StandardEncode HotspotsDetails where standardEncode _ = standardEncode {}
+instance showHotspotsDetails :: Show HotspotsDetails where show = genericShow
+instance decodeHotspotsDetails :: Decode HotspotsDetails where decode = defaultDecode
+instance encodeHotspotsDetails :: Encode HotspotsDetails where encode = defaultEncode
+
+data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String String String
+
+instance makeScheduledBookingListRequest :: RestEndpoint ScheduledBookingListRequest where
+    makeRequest reqBody@(ScheduledBookingListRequest limit offset from to  tripCategory lat lon ) headers = defaultMakeRequestWithoutLogs GET (EP.getScheduledBookingList limit offset  from to  tripCategory lat lon) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericScheduledBookingListRequest :: Generic ScheduledBookingListRequest _
+instance showScheduledBookingListRequest:: Show ScheduledBookingListRequest where show = genericShow
+instance standardEncodeScheduledBookingListRequest:: StandardEncode ScheduledBookingListRequest where standardEncode _ = standardEncode {}
+instance decodeScheduledBookingListRequest :: Decode ScheduledBookingListRequest where decode = defaultDecode
+instance encodeScheduledBookingListRequest:: Encode ScheduledBookingListRequest where encode = defaultEncode
+
+newtype ScheduledBookingListResponse = ScheduledBookingListResponse
+    {
+      bookings :: Array ScheduleBooking
+    }
+
+derive instance genericScheduledBookingListResponse:: Generic ScheduledBookingListResponse _
+instance standardEncodeScheduledBookingListResponse :: StandardEncode ScheduledBookingListResponse where standardEncode (ScheduledBookingListResponse res) = standardEncode res
+instance showScheduledBookingListResponse:: Show ScheduledBookingListResponse where show = genericShow
+instance decodeScheduledBookingListResponse:: Decode ScheduledBookingListResponse where decode = defaultDecode
+instance encodeScheduledBookingListResponse  :: Encode ScheduledBookingListResponse where encode = defaultEncode
+instance eqScheduledBookingListResponse :: Eq ScheduledBookingListResponse where eq = genericEq
+
+newtype ScheduleBooking = ScheduleBooking  
+   {
+    bookingDetails :: BookingAPIEntity,
+    fareDetails ::  Array RateCardItem
+   }
+
+derive instance genericScheduleBooking:: Generic ScheduleBooking _
+instance standardEncodeScheduleBooking :: StandardEncode ScheduleBooking where standardEncode (ScheduleBooking res) = standardEncode res
+instance showScheduleBooking:: Show ScheduleBooking where show = genericShow
+instance decodeScheduleBooking:: Decode ScheduleBooking where decode = defaultDecode
+instance encodeScheduleBooking :: Encode ScheduleBooking where encode = defaultEncode
+instance eqScheduleBooking :: Eq ScheduleBooking where eq = genericEq
+
+newtype BookingAPIEntity = BookingAPIEntity {
+   area :: Area,
+   createdAt :: String,
+   currency :: Currency,
+   disabilityTag :: Maybe String,
+   distanceToPickup :: Maybe Int,
+   estimatedDistance ::Maybe Int,
+   estimatedDuration ::Maybe Int,
+   estimatedFare :: Number ,
+   fareParams :: FareParameters,
+   fromLocation :: Location,
+   id :: String,
+   isAirConditioned ::Maybe Boolean ,
+   isScheduled :: Boolean,
+   maxEstimatedDistance :: Maybe Number,
+   returnTime :: Maybe String,
+   roundTrip :: Maybe Boolean,
+   specialZoneOtpCode :: Maybe String,
+   startTime :: String ,
+   status :: Common.BookingStatus,
+   stopLocationId :: Maybe String,
+   toLocation :: Maybe Location,
+   tollNames :: Maybe (Array String),
+   tripCategory :: CTA.TripCategory,
+   updatedAt :: String,
+  vehicleServiceTier :: ServiceTierType,
+  vehicleServiceTierAirConditioned :: Maybe Number ,
+  vehicleServiceTierName :: String,
+  vehicleServiceTierSeatingCapacity ::  Maybe Int
+}
+derive instance genericBookingAPIEntity:: Generic BookingAPIEntity _
+instance standardBookingAPIEntity:: StandardEncode BookingAPIEntity where standardEncode (BookingAPIEntity res) = standardEncode res
+instance showBookingAPIEntity :: Show BookingAPIEntity where show = genericShow
+instance decodeBookingAPIEntity :: Decode BookingAPIEntity where decode = defaultDecode
+instance encodeBookingAPIEntity :: Encode BookingAPIEntity where encode = defaultEncode
+instance eqBookingAPIEntity :: Eq BookingAPIEntity where eq = genericEq
+
+newtype Location =  Location {
+  address :: LocationAddress,
+  createdAt :: String,
+  id  :: String,
+  lat :: Number,
+  lon :: Number,
+  updatedAt ::String
+
+}
+derive instance genericLocation:: Generic Location _
+instance standardLocation:: StandardEncode Location where standardEncode (Location res) = standardEncode res
+instance showLocation :: Show Location where show = genericShow
+instance decodeLocation:: Decode Location where decode = defaultDecode
+instance encodeLocation :: Encode Location where encode = defaultEncode
+instance eqLocation :: Eq Location where eq = genericEq
+
+newtype LocationAddress  = LocationAddress {
+  area :: Maybe String,
+  areaCode :: Maybe String,
+  building :: Maybe String,
+  city :: Maybe String,
+  country ::Maybe String,
+  state :: Maybe String,
+  street :: Maybe String,
+  fullAddress :: Maybe String,
+  door :: Maybe String
+}
+derive instance genericLocationAddress:: Generic LocationAddress _
+instance standardLocationAddress:: StandardEncode LocationAddress where standardEncode (LocationAddress res) = standardEncode res
+instance showLocationAddress :: Show LocationAddress where show = genericShow
+instance decodeLocationAddress:: Decode LocationAddress where decode = defaultDecode
+instance encodeLocationAddress :: Encode LocationAddress where encode = defaultEncode
+instance eqLocationAddress :: Eq LocationAddress where eq = genericEq
+
+
+data Area = Default | Drop String | Pickup String
+
+derive instance genericArea :: Generic Area _
+instance standardEncodeArea :: StandardEncode Area where standardEncode _ = standardEncode {}
+instance showArea :: Show Area where show = genericShow
+instance decodeArea :: Decode Area 
+  where decode body =
+          case (runExcept $ (readProp "tag" body) >>= decode) of
+              Right tag -> case tag of
+                                "Pickup" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                              Right content -> except $ Right $ Pickup content
+                                              Left _  -> except $ Right $ Default
+                                "Drop" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                              Right content ->except $ Right $ Drop content
+                                              Left _  -> except $ Right $ Default
+                                _ -> except $ Right $ Default
+              Left err     -> except $ Right $ Default
+instance encodeArea  :: Encode Area where encode = defaultEncode
+instance eqArea :: Eq Area where eq = genericEq
+
+data Currency  = INR | USD | EUR 
+
+derive instance genericCurrency :: Generic Currency  _
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
+instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
+
+newtype FareParameters = FareParameters {
+  baseFare :: Number,
+  congestionCharge :: Maybe Number,
+  currency :: Currency,
+  customerCancellationDues :: Maybe Number,
+  customerExtraFee :: Maybe Number,
+  driverSelectedFare :: Maybe Number,
+  fareParametersDetails ::FareParametersDetails,
+  govtCharges :: Maybe Number,
+  id ::String,
+  nightShiftCharge :: Maybe Number,
+  nightShiftRateIfApplies :: Maybe Number,
+  parkingCharge :: Maybe Number,
+  rideExtraTimeFare:: Maybe Number,
+  serviceCharge::Maybe Number,
+  tollCharges:: Maybe Number,
+  updatedAt ::String,
+  waitingCharge :: Maybe Number
+
+}
+derive instance genericFareParameters:: Generic FareParameters _
+instance standardFareParameters :: StandardEncode FareParameters where standardEncode (FareParameters res) = standardEncode res
+instance showFareParameters :: Show FareParameters where show = genericShow
+instance decodeFareParameters :: Decode FareParameters where decode = defaultDecode
+instance encodeFareParameters :: Encode FareParameters where encode = defaultEncode
+instance eqFareParameters :: Eq FareParameters where eq = genericEq
+
+newtype FareParametersDetails = FareParametersDetails {
+  contents :: Content,
+  tag :: Maybe String
+}
+derive instance genericFareParametersDetails:: Generic FareParametersDetails _
+instance standardFareParametersDetails :: StandardEncode FareParametersDetails where standardEncode (FareParametersDetails res) = standardEncode res
+instance showFareParametersDetails:: Show FareParametersDetails where show = genericShow
+instance decodeFareParametersDetails :: Decode FareParametersDetails where decode = defaultDecode
+instance encodeFareParametersDetails:: Encode FareParametersDetails where encode = defaultEncode
+instance eqFareParametersDetails :: Eq FareParametersDetails where eq = genericEq
+
+
+newtype Content  = Content {
+  currency :: Currency,
+  deadKmFare :: Maybe Int,
+  distBasedFare :: Maybe Int,
+  distanceUnit :: Maybe String,
+  extraDistance :: Maybe Int,
+  extraDuration :: Maybe Int,
+  timeBasedFare :: Maybe Int
+}
+
+derive instance genericContent:: Generic Content _
+instance standardContent :: StandardEncode Content where standardEncode (Content res) = standardEncode res
+instance showContent:: Show Content where show = genericShow
+instance decodeContent :: Decode Content where decode = defaultDecode
+instance encodeContent:: Encode Content where encode = defaultEncode
+instance eqContent :: Eq Content where eq = genericEq
+
+newtype RateCardItem  = RateCardItem{
+  price :: Int,
+  priceWithCurrency :: CTA.Price,
+  title :: TitleTag
+}
+derive instance genericRateCardItem:: Generic RateCardItem _
+instance standardRateCardItem :: StandardEncode RateCardItem where standardEncode (RateCardItem res) = standardEncode res
+instance showRateCardItem:: Show RateCardItem where show = genericShow
+instance decodeRateCardItem :: Decode RateCardItem where decode = defaultDecode
+instance encodeRateCardItem:: Encode RateCardItem where encode = defaultEncode
+instance eqRateCardItem:: Eq RateCardItem where eq = genericEq
+
+data TitleTag = SERVICE_CHARGE 
+              | GOVERNMENT_CHARGE 
+              | NIGHT_SHIFT_START_TIME_IN_SECONDS 
+              | NIGHT_SHIFT_END_TIME_IN_SECONDS 
+              | MIN_FARE 
+              | PER_HOUR_CHARGE 
+              | PER_MINUTE_CHARGE 
+              | UNPLANNED_PER_KM_CHARGE 
+              | PER_HOUR_DISTANCE_KM 
+              | PLANNED_PER_KM_CHARGE 
+              | DEAD_KILOMETER_FARE 
+              | WAITING_CHARGE_PER_MIN 
+              | FREE_WAITING_TIME_IN_MINUTES 
+              | NIGHT_SHIFT_CHARGE 
+              | CONSTANT_NIGHT_SHIFT_CHARGE
+              | WAITING_CHARGE_RATE_PER_MIN
+
+derive instance genericTitleTag :: Generic TitleTag   _
+instance showTitleTag :: Show TitleTag  where show = genericShow
+instance decodeTitleTag :: Decode TitleTag  
+   where decode body = case unsafeFromForeign body of 
+                    "SERVICE_CHARGE"                     ->  except $ Right SERVICE_CHARGE
+                    "GOVERNMENT_CHARGE"                  ->  except $ Right GOVERNMENT_CHARGE
+                    "NIGHT_SHIFT_START_TIME_IN_SECONDS"  ->  except $ Right NIGHT_SHIFT_START_TIME_IN_SECONDS
+                    "NIGHT_SHIFT_END_TIME_IN_SECONDS "   ->  except $ Right NIGHT_SHIFT_END_TIME_IN_SECONDS
+                    "MIN_FARE"                           ->  except $ Right MIN_FARE
+                    "PER_HOUR_CHARGE"                    ->  except $ Right PER_HOUR_CHARGE
+                    "PER_MINUTE_CHARGE"                  ->  except $ Right PER_MINUTE_CHARGE
+                    "UNPLANNED_PER_KM_CHARGE"            ->  except $ Right UNPLANNED_PER_KM_CHARGE
+                    "PER_HOUR_DISTANCE_KM"               ->  except $ Right PER_HOUR_DISTANCE_KM
+                    "PLANNED_PER_KM_CHARGE"              ->  except $ Right PLANNED_PER_KM_CHARGE
+                    "DEAD_KILOMETER_FARE"                ->  except $ Right DEAD_KILOMETER_FARE
+                    "WAITING_CHARGE_PER_MIN"             ->  except $ Right WAITING_CHARGE_PER_MIN
+                    "FREE_WAITING_TIME_IN_MINUTES"       ->  except $ Right FREE_WAITING_TIME_IN_MINUTES
+                    "NIGHT_SHIFT_CHARGE"                 ->  except $ Right NIGHT_SHIFT_CHARGE
+                    "CONSTANT_NIGHT_SHIFT_CHARGE"        ->  except $ Right CONSTANT_NIGHT_SHIFT_CHARGE
+                    "WAITING_CHARGE_RATE_PER_MIN"        ->  except $ Right WAITING_CHARGE_RATE_PER_MIN
+                    _                                    ->  except $ Right SERVICE_CHARGE
+
+instance encodeTitleTag:: Encode TitleTag  where encode = defaultEnumEncode
+instance eqTitleTag :: Eq TitleTag  where eq = genericEq
+instance standardTitleTag :: StandardEncode TitleTag   where standardEncode _ = standardEncode {}
+
+
+data ScheduleBookingAcceptReq = ScheduleBookingAcceptReq String 
+
+newtype ScheduleBookingAcceptRes = ScheduleBookingAcceptRes ApiSuccessResult
+
+instance makeScheduleBookingAcceptReq  :: RestEndpoint ScheduleBookingAcceptReq where
+    makeRequest reqBody@(ScheduleBookingAcceptReq bookingId) headers = defaultMakeRequestWithoutLogs POST (EP.scheduleBookingAccept bookingId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericScheduleBookingAcceptReq :: Generic ScheduleBookingAcceptReq _
+instance showScheduleBookingAcceptReq :: Show ScheduleBookingAcceptReq where show = genericShow
+instance standardEncodeScheduleBookingAcceptReq :: StandardEncode ScheduleBookingAcceptReq where standardEncode (ScheduleBookingAcceptReq bookingId) = standardEncode{}
+instance decodeScheduleBookingAcceptReq :: Decode ScheduleBookingAcceptReq where decode = defaultDecode
+instance encodeScheduleBookingAcceptReq :: Encode ScheduleBookingAcceptReq where encode = defaultEncode
+
+derive instance genericScheduleBookingAcceptRes :: Generic ScheduleBookingAcceptRes _
+derive instance newtypeScheduleBookingAcceptRes :: Newtype ScheduleBookingAcceptRes _
+instance standardEncodeScheduleBookingAcceptRes :: StandardEncode ScheduleBookingAcceptRes where standardEncode (ScheduleBookingAcceptRes req) = standardEncode req
+instance showScheduleBookingAcceptRes :: Show ScheduleBookingAcceptRes where show = genericShow
+instance decodeScheduleBookingAcceptRes :: Decode ScheduleBookingAcceptRes where decode = defaultDecode
+instance encodeScheduleBookingAcceptRes :: Encode ScheduleBookingAcceptRes where encode = defaultEncode
+
+
+
+------------------------------------------------------ HyperVerge Sdk Calls logging -----------------------------------------------------------------------------
+
+newtype HVSdkCallLogReq = HVSdkCallLogReq
+  { callbackResponse :: Maybe String,
+    docType :: Maybe String,
+    failureReason :: Maybe String,
+    hvFlowId :: Maybe String,
+    status :: Maybe String,
+    txnId :: String
+  }
+
+newtype HVSdkCallLogResp = HVSdkCallLogResp ApiSuccessResult
+
+instance makeHVSdkCallLogReq :: RestEndpoint HVSdkCallLogReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateHVSdkCallLog "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericHVSdkCallLogReq :: Generic HVSdkCallLogReq _
+instance showHVSdkCallLogReq :: Show HVSdkCallLogReq where show = genericShow
+instance standardHVSdkCallLogReq :: StandardEncode HVSdkCallLogReq where standardEncode (HVSdkCallLogReq req) = standardEncode req
+instance decodeHVSdkCallLogReq :: Decode HVSdkCallLogReq where decode = defaultDecode
+instance encodeHVSdkCallLogReq :: Encode HVSdkCallLogReq where encode = defaultEncode
+
+derive instance genericHVSdkCallLogResp :: Generic HVSdkCallLogResp _
+derive instance newtypeHVSdkCallLogResp :: Newtype HVSdkCallLogResp _
+instance standardEncodeHVSdkCallLogResp :: StandardEncode HVSdkCallLogResp where standardEncode (HVSdkCallLogResp body) = standardEncode body
+instance showHVSdkCallLogResp :: Show HVSdkCallLogResp where show = genericShow
+instance decodeHVSdkCallLogResp:: Decode HVSdkCallLogResp where decode = defaultDecode
+instance encodeHVSdkCallLogResp  :: Encode HVSdkCallLogResp where encode = defaultEncode
+
+-------------- METRO WARRIOR 
+
+newtype UpdateSpecialLocWarriorInfoReq = UpdateSpecialLocWarriorInfoReq {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLocId :: Maybe String,
+  preferredSecondarySpecialLocIds :: Array String,
+  driverId :: String
+}
+
+newtype SpecialLocWarriorInfoRes = SpecialLocWarriorInfoRes {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLoc :: Maybe SpecialLocationWarrior,
+  preferredSecondarySpecialLocIds :: Array String
+}
+
+newtype SpecialLocationWarrior = SpecialLocationWarrior
+  { id :: String,
+    locationName :: String,
+    category :: String,
+    linkedLocations :: Array SpecialLocation
+  }
+
+newtype SpecialLocation = SpecialLocation
+  { id :: String,
+    locationName :: String,
+    category :: String
+  }
+
+derive instance genericUpdateSpecialLocWarriorInfoReq :: Generic UpdateSpecialLocWarriorInfoReq _
+derive instance newtypeUpdateSpecialLocWarriorInfoReq :: Newtype UpdateSpecialLocWarriorInfoReq _
+instance standardEncodeUpdateSpecialLocWarriorInfoReq :: StandardEncode UpdateSpecialLocWarriorInfoReq where standardEncode (UpdateSpecialLocWarriorInfoReq req) = standardEncode req
+instance showUpdateSpecialLocWarriorInfoReq :: Show UpdateSpecialLocWarriorInfoReq where show = genericShow
+instance decodeUpdateSpecialLocWarriorInfoReq :: Decode UpdateSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeUpdateSpecialLocWarriorInfoReq :: Encode UpdateSpecialLocWarriorInfoReq where encode = defaultEncode
+
+derive instance genericSpecialLocWarriorInfoRes :: Generic SpecialLocWarriorInfoRes _
+derive instance newtypeSpecialLocWarriorInfoRes :: Newtype SpecialLocWarriorInfoRes _
+instance standardEncodeSpecialLocWarriorInfoRes :: StandardEncode SpecialLocWarriorInfoRes where standardEncode (SpecialLocWarriorInfoRes req) = standardEncode req
+instance showSpecialLocWarriorInfoRes :: Show SpecialLocWarriorInfoRes where show = genericShow
+instance decodeSpecialLocWarriorInfoRes :: Decode SpecialLocWarriorInfoRes where decode = defaultDecode
+instance encodeSpecialLocWarriorInfoRes :: Encode SpecialLocWarriorInfoRes where encode = defaultEncode
+
+derive instance genericSpecialLocationWarrior :: Generic SpecialLocationWarrior _
+derive instance newtypeSpecialLocationWarrior :: Newtype SpecialLocationWarrior _
+instance standardEncodeSpecialLocationWarrior :: StandardEncode SpecialLocationWarrior where standardEncode (SpecialLocationWarrior req) = standardEncode req
+instance showSpecialLocationWarrior :: Show SpecialLocationWarrior where show = genericShow
+instance decodeSpecialLocationWarrior :: Decode SpecialLocationWarrior where decode = defaultDecode
+instance encodeSpecialLocationWarrior :: Encode SpecialLocationWarrior where encode = defaultEncode
+
+derive instance genericSpecialLocation :: Generic SpecialLocation _
+derive instance newtypeSpecialLocation :: Newtype SpecialLocation _
+instance standardEncodeSpecialLocation :: StandardEncode SpecialLocation where standardEncode (SpecialLocation res) = standardEncode res
+instance showSpecialLocation :: Show SpecialLocation where show = genericShow
+instance decodeSpecialLocation :: Decode SpecialLocation where decode = defaultDecode
+instance encodeSpecialLocation :: Encode SpecialLocation where encode = defaultEncode
+
+instance makeUpdateSpecialLocWarriorInfoReq  :: RestEndpoint UpdateSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(UpdateSpecialLocWarriorInfoReq req) headers = defaultMakeRequestWithoutLogs POST (EP.updateMetroWarriorInfo req.driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+instance makeGetSpecialLocWarriorInfoReq  :: RestEndpoint GetSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(GetSpecialLocWarriorInfoReq driverId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroWarriorInfo driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+data GetSpecialLocWarriorInfoReq = GetSpecialLocWarriorInfoReq String
+
+derive instance genericGetSpecialLocWarriorInfoReq :: Generic GetSpecialLocWarriorInfoReq _
+instance standardEncodeGetSpecialLocWarriorInfoReq :: StandardEncode GetSpecialLocWarriorInfoReq where standardEncode _ = standardEncode {}
+instance showGetSpecialLocWarriorInfoReq :: Show GetSpecialLocWarriorInfoReq where show = genericShow
+instance decodeGetSpecialLocWarriorInfoReq :: Decode GetSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeGetSpecialLocWarriorInfoReq :: Encode GetSpecialLocWarriorInfoReq where encode = defaultEncode
+
+data SpecialLocationListCategoryReq = SpecialLocationListCategoryReq String
+instance makeSpecialLocationListCategoryReq :: RestEndpoint SpecialLocationListCategoryReq where
+  makeRequest reqBody@(SpecialLocationListCategoryReq category) headers = defaultMakeRequestWithoutLogs GET (EP.specialLocationListCategory category) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericSpecialLocationListCategoryReq :: Generic SpecialLocationListCategoryReq _
+instance standardEncodeSpecialLocationListCategoryReq :: StandardEncode SpecialLocationListCategoryReq where standardEncode _ = standardEncode {}
+instance showSpecialLocationListCategoryReq :: Show SpecialLocationListCategoryReq where show = genericShow
+instance decodeSpecialLocationListCategoryReq :: Decode SpecialLocationListCategoryReq where decode = defaultDecode
+instance encodeSpecialLocationListCategoryReq  :: Encode SpecialLocationListCategoryReq where encode = defaultEncode
+
+newtype SpecialLocationListRes = SpecialLocationListRes (Array SpecialLocation)
+
+derive instance genericSpecialLocationListRes :: Generic SpecialLocationListRes _
+derive instance newtypeSpecialLocationListRes :: Newtype SpecialLocationListRes _
+instance standardEncodeSpecialLocationListRes :: StandardEncode SpecialLocationListRes where standardEncode (SpecialLocationListRes res) = standardEncode res
+instance showSpecialLocationListRes :: Show SpecialLocationListRes where show = genericShow
+instance decodeSpecialLocationListRes :: Decode SpecialLocationListRes where decode = defaultDecode
+instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where encode = defaultEncode

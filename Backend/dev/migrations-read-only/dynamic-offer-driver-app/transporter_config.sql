@@ -234,3 +234,118 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dummy_show_driv
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cached_devices_os_for_search_request text[]  default '{}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_window integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_calculation_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_buffer_of_vehicle json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upwards_recompute_buffer_percentage integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_geo_hash_percision integer  default 5;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_search_repeat_limit integer  default 10;
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_distance_threshold_for_referral_payout DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_distance_threshold_for_referral_payout DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_white_listed_geohash text[]  default ARRAY[]::TEXT[];
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_black_listed_geohash text[]  default ARRAY[]::TEXT[];
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_min_rides_for_nudging integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_min_rides_for_blocking integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides_for_nudging integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides_for_blocking integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_weekly integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_daily integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_condition_cooldown_time_hours integer  default 168;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_condition_cooldown_time_hours integer  default 24;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_driven_search_req_expiry integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN otp_ride_start_restriction_radius integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_list_scheduled_booking_api boolean  default false;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN issue_breach_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recent_scheduled_bookings_safe_limit integer  default 50;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_distance_for_stop_fcm double precision  default 100;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recompute_distance_thresholds json  default '[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]' :: json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_threshold_for_pass_through_destination int ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN end_ride_distance_threshold double precision  default 100;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_threshold integer ;

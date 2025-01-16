@@ -180,38 +180,37 @@ shareAndReferView push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , margin $ MarginBottom 15
-  ][ sharePillView push ShareAndRefer state (getString SHARE_AND_REFER) "ny_ic_share_grey"
-   , sharePillView push ShowQR state (getString SHOW_APP_QR) "ny_ic_qr_code"
+  , padding $ PaddingHorizontal 16 16
+  , gravity CENTER
+  ][ sharePillView push ShareAndRefer state (getString SHARE_AND_REFER) "ny_ic_share_grey" (MarginRight 8)
+   , sharePillView push ShowQR state (getString SHOW_APP_QR) "ny_ic_qr_code" (MarginRight 0)
   ]
 
-sharePillView :: forall w. (Action -> Effect Unit) -> Action -> ST.ReferralScreenState -> String -> String -> PrestoDOM (Effect Unit) w
-sharePillView push action state text' image' =
+sharePillView :: forall w. (Action -> Effect Unit) -> Action -> ST.ReferralScreenState -> String -> String -> Margin -> PrestoDOM (Effect Unit) w
+sharePillView push action state text' image' margin' =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , gravity CENTER
   , weight 1.0
   , onClick push (const action)
-  ][  linearLayout
+  , cornerRadius if EHC.os == "IOS" then 15.0 else 100.0
+  , padding $ Padding 16 5 16 5
+  , background Color.white900
+  , gravity CENTER_VERTICAL
+  , margin margin'
+  ][  imageView
+      [ height $ V 20
+      , width $ V 20
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET image'
+      ]
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , padding $ Padding 20 5 20 5
-      , cornerRadius if EHC.os == "IOS" then 15.0 else 100.0
-      , background Color.white900
-      ][  imageView
-          [ height $ V 20
-          , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET image'
-          ]
-        , textView $
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , color Color.black900
-          , text text'
-          , padding $ PaddingLeft 10
-          ] <> FontStyle.body24 TypoGraphy
-       ]
+      , color Color.black900
+      , text text'
+      , padding $ PaddingLeft 10
+      ] <> FontStyle.body24 TypoGraphy
    ]
 
 seperatorView :: forall w. PrestoDOM (Effect Unit) w

@@ -39,15 +39,23 @@ findAllByEntityIdAndOrder entityId order =
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
     Nothing
 
+upsert :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LocationMapping -> m ()
+upsert mapping = do
+  allEntityIdAndOrder <- findAllWithKVAndConditionalDB [Se.And [Se.Is BeamLM.entityId $ Se.Eq mapping.entityId, Se.Is BeamLM.order $ Se.Eq mapping.order, Se.Is BeamLM.version $ Se.Eq latestTag]] Nothing
+  when (null allEntityIdAndOrder) $ createWithKV mapping
+
 getLatestStartByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestStartByEntityId entityId = do
-  findOneWithKV
+  -- Switched from findOneWithKV to findAllWithKVAndConditionalDB to fix the issue of not getting the latest mapping.
+  findAllWithKVAndConditionalDB
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
+    Nothing
+    <&> listToMaybe
 
 getLatestEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestEndByEntityId entityId =
@@ -58,8 +66,24 @@ getLatestEndByEntityId entityId =
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    (Just (Se.Desc BeamLM.createdAt))
+    (Just (Se.Desc BeamLM.order))
     <&> listToMaybe
+
+getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+getLatestStopsByEntityId entityId = do
+  stops <- getLatestStopsByEntityId' entityId
+  pure $ safeInit stops
+
+getLatestStopsByEntityId' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+getLatestStopsByEntityId' entityId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
+    (Just (Se.Asc BeamLM.order))
 
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 maxOrderByEntity entityId = do

@@ -2,6 +2,7 @@ module BecknV2.FRFS.Utils where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
@@ -150,3 +151,26 @@ validateCoreVersion context = do
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
   unless (version == supportedVersion) $
     throwError Error.UnsupportedCoreVer
+
+frfsVehicleCategoryToBecknVehicleCategory :: Spec.VehicleCategory -> BecknSpec.VehicleCategory
+frfsVehicleCategoryToBecknVehicleCategory = \case
+  Spec.BUS -> BecknSpec.BUS
+  Spec.METRO -> BecknSpec.METRO
+
+getAndValidateCancellationParams :: [Spec.QuotationBreakupInner] -> Spec.OrderStatus -> Either Text (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney)
+getAndValidateCancellationParams quoteBreakup orderStatus = do
+  baseFare <- findCancellationParams Spec.BASE_FARE & maybe (Left "CancellationParams baseFare not found") Right
+  let refundAmount = findCancellationParams Spec.REFUND
+      cancellationCharges = findCancellationParams Spec.CANCELLATION_CHARGES
+  when
+    ( (isNothing refundAmount || isNothing cancellationCharges)
+        && (orderStatus == Spec.CANCELLED || orderStatus == Spec.SOFT_CANCELLED)
+    )
+    $ Left "Missing cancellation params refundAmount or cancellationChargs"
+  Right (baseFare, refundAmount, cancellationCharges)
+  where
+    findCancellationParams :: Spec.CancellationParams -> Maybe HighPrecMoney
+    findCancellationParams titleToFind =
+      case find (\qb -> qb.quotationBreakupInnerTitle == Just (show titleToFind)) quoteBreakup of
+        Just qb -> qb.quotationBreakupInnerPrice >>= parseMoney
+        Nothing -> Nothing

@@ -31,7 +31,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -41,7 +41,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>), void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
@@ -62,7 +62,7 @@ screen initialState =
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
                       else do
-                        _ <- JB.storeCallBackLocateOnMap push UpdateLocation
+                        void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "AddNewAddressScreen")
                         pure (pure unit))]
   , eval : \action state -> do
         let _ = spy "AddNewAddressScreenState action " action
@@ -487,6 +487,8 @@ bottomBtnsData state =
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -515,7 +517,8 @@ bottomBtnsData state =
     , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
-
+  , dynamicAction : Nothing
+  , types : Nothing
     }
 
   ]

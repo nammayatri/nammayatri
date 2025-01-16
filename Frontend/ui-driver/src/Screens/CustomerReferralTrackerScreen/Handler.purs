@@ -33,9 +33,10 @@ customerReferralTrackerScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ CustomerReferralTrackerScreen.screen state.customerReferralTrackerScreen
   case act of
-    GoBack -> do
+    GoBack state -> do
       modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> initData)
-      App.BackT $ pure App.GoBack
+      if state.props.fromDeepLink then App.BackT $ App.NoBack <$> pure HOME_SCREEN_FROM_REFERRAL_TRACKER
+      else App.BackT $ pure App.GoBack
     AddUPI updatedState -> do 
       modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_UPI_FLOW updatedState)

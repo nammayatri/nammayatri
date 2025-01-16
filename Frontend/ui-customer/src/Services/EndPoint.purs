@@ -15,7 +15,7 @@
 
 module Types.EndPoint where
 
-import Prelude ((<>),show, (==))
+import Prelude ((<>),show, (==),(&&),(/=))
 import Data.Maybe (maybe, Maybe(..), fromMaybe)
 import Services.Config (getBaseUrl)
 import Data.String
@@ -52,7 +52,10 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
+getRoute routeType = (getBaseUrl "10") <> case routeType of
+                                                "trip" -> "/trip/route"
+                                                "intercity" -> "/route"
+                                                _ -> "/pickup/route" 
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"
@@ -82,6 +85,9 @@ rideBookingList limit offset isActive status clientId =
     status
 ridebooking :: String ->  String
 ridebooking bookingId  = (getBaseUrl "17") <> "/rideBooking/"<> bookingId
+
+ridebookingStatus :: String ->  String
+ridebookingStatus bookingId  = (getBaseUrl "17") <> "/rideBooking/v2/"<> bookingId
 
 currentListCaseProduct :: String ->  String
 currentListCaseProduct dummyString = (getBaseUrl "18") <> "/productInstance?limit=1&type=\"RIDEORDER\""
@@ -139,6 +145,7 @@ cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "
 
 emergencyContacts :: String -> String
 emergencyContacts dummy = (getBaseUrl "36") <> "/profile/defaultEmergencyNumbers"
+
 userSos :: String -> String
 userSos _ = (getBaseUrl "36") <> "/sos/create"
 
@@ -163,8 +170,8 @@ personStats dummy = (getBaseUrl "41") <> "/personStats"
 ticketPlaces :: String -> String
 ticketPlaces dummy = (getBaseUrl "42") <> "/ticket/places"
 
-ticketPlaceServices :: String -> String
-ticketPlaceServices placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services"
+ticketPlaceServices :: String -> String -> String
+ticketPlaceServices placeId date = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services?date=" <> date
 
 ticketPlaceBook :: String -> String
 ticketPlaceBook placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/book"
@@ -188,13 +195,17 @@ postIssue language = (getBaseUrl "41") <> "/issue?language=" <> language
 uploadFile :: String -> String
 uploadFile dummy = (getBaseUrl "42") <> "/issue/upload"
 
-getOptions :: String -> String -> String -> String -> String
-getOptions categoryId optionId issueReportId language = 
-  if (optionId == "") 
-    then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language
-    else if (issueReportId == "")
-      then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&language=" <> language
-      else (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&issueReportId=" <> issueReportId <> "&language=" <> language
+getOptions :: String -> String -> String -> String -> String -> String
+getOptions categoryId optionId rideId issueReportId language = 
+  getBaseUrl "43" <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language <> rideIdQueryParam <> optionIdQueryParam
+  where
+    rideIdQueryParam = if null rideId then "" else "&rideId=" <> rideId
+    optionIdQueryParam = 
+      if null optionId then "" 
+      else "&optionId=" <> optionId <> issueReportIdQueryParam
+    issueReportIdQueryParam = 
+      if null issueReportId then "" 
+      else "&issueReportId=" <> issueReportId
 
 issueInfo :: String -> String -> String
 issueInfo issueId language = (getBaseUrl "44") <> "/issue/" <> issueId <> "/info?language=" <> language
@@ -214,8 +225,8 @@ updateEmergencySettings dummy = (getBaseUrl "48") <> "/profile/updateEmergencySe
 updateSafeRide :: String -> String
 updateSafeRide sosId = (getBaseUrl "49") <> "/sos/markRideAsSafe/" <> sosId
 
-updateSosVideo :: String -> String
-updateSosVideo sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/addVideo"
+updateSosMedia :: String -> String
+updateSosMedia sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/upload"
 
 getSosDetails :: String -> String
 getSosDetails rideId = (getBaseUrl "51") <> "/sos/getDetails/" <> rideId
@@ -232,14 +243,17 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
-getMetroStations :: String -> String
-getMetroStations city = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\"" <> "&city=" <> city  
+getMetroStations :: String -> String -> String -> String -> String -> String
+getMetroStations vehicleType city routeCode endStationCode location = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && endStationCode/= "") then "&endStationCode=" <> endStationCode else "")<> "&location=" <> location
 
-searchMetro :: String -> String
-searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+frfsSearch :: String -> String
+frfsSearch vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
 
-getMetroQuotes :: String -> String
-getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
+getBusRoutes :: String -> String -> String -> String
+getBusRoutes city startStationCode endStationCode = (getBaseUrl "47") <> "/frfs/routes?vehicleType=\"BUS\"" <> "&city=" <> city <> "&startStationCode=" <> startStationCode <> "&endStationCode=" <> endStationCode
+
+frfsQuotes :: String -> String
+frfsQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
 
 confirmMetroQuote :: String -> String
 confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"
@@ -247,8 +261,13 @@ confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/
 getMetroBookingStatus :: String -> String
 getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
 
-getMetroBookingList :: String -> String
-getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
+getMetroBookingList :: String -> Maybe String -> Maybe String -> String
+getMetroBookingList vehicleType limit offset = 
+  (getBaseUrl "52")
+    <>  (case limit, offset of
+          Just limit', Just offset' -> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\"" <> "&limit=" <> limit' <> "&offset=" <> offset'
+          _, _ -> "/frfs/booking/list?vehicleType=\"" <> vehicleType <> "\""
+        )
 
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
@@ -279,6 +298,7 @@ rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
 
 addOrEditStop :: Boolean -> String -> String 
 addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 
+
 editLocation :: String -> String
 editLocation rideId = (getBaseUrl "58") <> "/ride/" <> rideId <> "/edit/location"
 
@@ -289,5 +309,59 @@ confirmEditLocResult :: String -> String
 confirmEditLocResult bookingUpdateRequestId = (getBaseUrl "60") <> "/edit/result/" <> bookingUpdateRequestId <> "/confirm"
 
 
-getMetroBookingConfig :: String -> String
-getMetroBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
+getFRFSBookingConfig :: String -> String
+getFRFSBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
+
+getEmergencyContactsTrackingStatus :: String -> String
+getEmergencyContactsTrackingStatus rideId = (getBaseUrl "59") <> "/followRide/ECStatus/" <> rideId
+
+getManuallySharedRideDetails :: String -> String
+getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rideId <> "/customerDetails"
+
+multiChat :: String -> String 
+multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
+
+getFavouriteDriverList :: String
+getFavouriteDriverList = ((getBaseUrl "58") <> "/driver/favorites") 
+
+getFavouriteDriverTrips :: String -> String -> String -> Maybe String -> Maybe String -> String
+getFavouriteDriverTrips limit offset isActive status clientId = 
+  maybe 
+    ((getBaseUrl "16") <> "/rideBooking/favourites/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    (\rideStatus ->
+      let clientIdStr = (fromMaybe "" clientId)
+      in
+        if null clientIdStr
+          then (getBaseUrl "41") <> "/rideBooking/favourites/list?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus
+          else (getBaseUrl "41") <> "/rideBooking/favourites/list?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus <> "&clientId=" <> clientIdStr)
+    status
+
+removeFavouriteDriver :: String -> String
+removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+busAutoComplete :: String -> String -> String -> Maybe String -> String -> Maybe String -> String
+busAutoComplete vehicleType city location input limit offset = 
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <> 
+  "&limit=" <> limit <> "&offset=" <> (fromMaybe "0" offset) <>
+  maybe "" (\i -> "&input=" <> i) input
+
+trackRouteBus :: String -> String 
+trackRouteBus route = (getBaseUrl "61") <> "/track/"<>route <> "/vehicles"
+
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/generateOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/verifyOtp"
+
+-- unVerifiedAadhaarData :: String -> String
+-- unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+
+frfsRoute :: String -> String -> String -> String
+frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> routeCode <> "?vehicleType=" <> show vehicleType <> "&city=" <> city
+
+confirmMetroQuoteV2 :: String -> String
+confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"

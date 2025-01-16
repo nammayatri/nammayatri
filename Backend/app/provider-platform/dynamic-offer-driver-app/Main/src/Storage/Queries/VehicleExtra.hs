@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.VehicleExtra where
 
 import Data.Either (fromRight)
@@ -8,19 +5,16 @@ import qualified Database.Beam as B
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
-import Storage.Queries.OrphanInstances.Vehicle
+import Storage.Queries.OrphanInstances.Vehicle ()
 
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Vehicle -> m ()
@@ -65,7 +59,7 @@ findByAnyOf registrationNoM vehicleIdM =
         )
     ]
 
-findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.VehicleVariant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id merchantId') = do
   dbConf <- getMasterBeamConfig
   vehicles <-

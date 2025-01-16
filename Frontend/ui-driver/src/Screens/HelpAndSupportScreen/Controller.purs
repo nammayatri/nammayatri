@@ -24,7 +24,6 @@ import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
 import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
-import Services.Config (getSupportNumber)
 import JBridge (showDialer, differenceBetweenTwoUTC, openUrlInApp)
 import Helpers.Utils (getTime,getCurrentUTC,toStringJSON, contactSupportNumber)
 import Data.Array (foldr,cons,filter,reverse)
@@ -190,7 +189,9 @@ eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
     else pure unit
    continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
   
+  
 eval _ state = update state
+
 
 getIssueTitle :: IssueOptions -> String
 getIssueTitle menuOption =

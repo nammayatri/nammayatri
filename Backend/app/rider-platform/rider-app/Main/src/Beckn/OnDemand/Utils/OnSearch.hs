@@ -18,6 +18,7 @@ import Beckn.ACL.Common (getTagV2')
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Maybe (listToMaybe)
@@ -25,11 +26,13 @@ import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
-import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.SearchRequest
+import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (parseBaseUrl, roundToIntegral)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
@@ -79,7 +82,7 @@ isValidItem fulfillments item =
   let fulfId = item.itemFulfillmentIds >>= listToMaybe
    in any (\f -> f.fulfillmentId == fulfId) fulfillments
 
-getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
 
 getServiceTierName :: Spec.Item -> Maybe Text
@@ -143,6 +146,12 @@ getTotalFareRange item currency = do
     getPriceField :: (Spec.Price -> Maybe Text) -> (Spec.Price -> Maybe Text) -> Spec.Price -> Maybe Text
     getPriceField f1 f2 price = f1 price <|> f2 price
 
+buildQuoteBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.QuoteBreakupInfo]
+buildQuoteBreakupList item currency = do
+  let tagListRateCard = getTagListRateCardFromItem item
+      breakups = maybe [] (map (buildQuoteBreakUpItem currency)) tagListRateCard
+  return (catMaybes breakups)
+
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item currency = do
   let tagListRateCard = getTagListRateCardFromItem item
@@ -167,6 +176,18 @@ buildEstimateBreakUpItem currency tag = do
   (title, value) <- getDetailsFromTag tag currency
   pure
     OnSearch.EstimateBreakupInfo
+      { title = title,
+        price = OnSearch.BreakupPriceInfo {..}
+      }
+
+buildQuoteBreakUpItem ::
+  Currency ->
+  Spec.Tag ->
+  Maybe OnSearch.QuoteBreakupInfo
+buildQuoteBreakUpItem currency tag = do
+  (title, value) <- getDetailsFromTag tag currency
+  pure
+    OnSearch.QuoteBreakupInfo
       { title = title,
         price = OnSearch.BreakupPriceInfo {..}
       }
@@ -205,6 +226,26 @@ getestimatedPickupDuration item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
   return parsedTagValue
+
+getSmartTipSuggestion :: Spec.Item -> Maybe HighPrecMoney
+getSmartTipSuggestion item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.SMART_TIP_SUGGESTION item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
+  return parsedTagValue
+
+getTipOptions :: Spec.Item -> Maybe [Int]
+getTipOptions item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TIP_OPTIONS item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe [Int]
+  return parsedTagValue
+
+getSmartTipReason :: Spec.Item -> Maybe Text
+getSmartTipReason item = Utils.getTagV2 Tag.INFO Tag.SMART_TIP_REASON item.itemTags
+
+getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
+getVehicleIconUrl item = do
+  tagValueStr <- Utils.getTagV2 Tag.VEHICLE_INFO Tag.VEHICLE_ICON_URL item.itemTags
+  parseBaseUrl tagValueStr
 
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item currency = do
@@ -286,6 +327,11 @@ getPlannedPerKmRateRoundTrip tagGroups currency = do
 getPerDayMaxHourAllowance :: Maybe [Spec.TagGroup] -> Maybe Hours
 getPerDayMaxHourAllowance tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
+  readMaybe $ T.unpack tagValue
+
+getPerDayMaxAllowanceInMins :: Maybe [Spec.TagGroup] -> Maybe Minutes
+getPerDayMaxAllowanceInMins tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_ALLOWANCE_IN_MINS tagGroups
   readMaybe $ T.unpack tagValue
 
 getDeadKilometerFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
@@ -372,3 +418,9 @@ getIsBlockedRoute item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
   return parsedTagValue
+
+validateOnSearchContext :: (HasFlowEnv m r '["_version" ::: Text], MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Spec.Context -> SearchRequest -> m ()
+validateOnSearchContext context searchReq = do
+  ContextUtils.validateContext Context.ON_SEARCH context
+  bppId <- Common.getContextBppId context
+  Common.validateSubscriber bppId searchReq.merchantId searchReq.merchantOperatingCityId

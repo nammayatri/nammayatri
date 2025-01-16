@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.EditBooking where
 
 import API.Types.UI.EditBooking
 import qualified Data.Geohash as DG
-import Data.OpenApi (ToSchema)
 import Data.Text as T
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.LocationMapping as DLM
@@ -24,7 +20,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
@@ -35,7 +30,6 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSR
-import Tools.Auth
 
 postEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -63,11 +57,12 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           throwError $ InvalidRequest "You have an upcoming ride near your current drop location."
         else do
           QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
+          ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
+          QR.updateIsPickupOrDestinationEdited (Just True) ride.id
           searchReq <- QSR.findByTransactionIdAndMerchantId booking.transactionId bookingUpdateReq.merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> bookingUpdateReq.merchantId.getId)
           QSR.updateIsReallocationEnabled (Just False) searchReq.id
           dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
           dropLocMapBooking <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-          ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
           dropLocMapRide <- SLM.buildDropLocationMapping dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
           QLM.create dropLocMapBooking
           QLM.create dropLocMapRide

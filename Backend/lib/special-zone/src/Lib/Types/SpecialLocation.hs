@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Types.SpecialLocation where
 
@@ -30,13 +29,20 @@ import Kernel.Utils.GenericPretty
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
 
+data Merchant
+
+data MerchantOperatingCity
+
 data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
     locationName :: Text,
     category :: Text,
-    merchantOperatingCityId :: Maybe Text,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     gates :: [GatesInfo], --TODO: deprecate this later
     geom :: Maybe Text,
+    linkedLocationsIds :: [Id SpecialLocation],
+    locationType :: SpecialLocationType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -45,9 +51,14 @@ data SpecialLocation = SpecialLocation
 data GatesInfo = GatesInfo
   { point :: LatLong,
     name :: Text,
-    address :: Maybe String
+    address :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data SpecialLocationType
+  = Open
+  | Closed
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 data Area
   = Pickup (Id SpecialLocation)

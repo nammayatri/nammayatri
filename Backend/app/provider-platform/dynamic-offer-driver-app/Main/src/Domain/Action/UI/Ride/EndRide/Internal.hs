@@ -34,10 +34,14 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getEndDateMonth,
     makeDriverLeaderBoardKey,
     getMonth,
+    pickedWaypointsForEditDestination,
+    pickNWayPoints,
   )
 where
 
+import qualified Data.List as DL
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
@@ -48,6 +52,7 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -57,14 +62,17 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
+import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig
-import qualified Domain.Types.Vehicle as DV
-import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as Variant
+import qualified Domain.Types.VendorFee as DVF
+import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import Kernel.Prelude hiding (forM_, whenJust)
+import Kernel.Prelude hiding (find, forM_, map, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -80,8 +88,10 @@ import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -92,8 +102,9 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.CachedQueries.Plan as CQP
+import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -107,12 +118,15 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.VendorFee as QVF
+import qualified Storage.Queries.VendorSplitDetails as QVSD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 endRideTransaction ::
@@ -121,12 +135,12 @@ endRideTransaction ::
     EncFlow m r,
     MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int,
     EventStreamFlow m r,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    LT.HasLocationService m r
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -138,29 +152,29 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
+  QDI.updateHasRideStarted driverId False
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  QDriverStats.updateIdleTime driverId
-  QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
   when (thresholdConfig.subscription) $ do
-    maxShards <- asks (.maxShards)
     let serviceName = YATRI_SUBSCRIPTION
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams maxShards driverInfo booking serviceName
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking mbRiderDetails thresholdConfig
-  updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
+  let validRide = isValidRide ride
+  sendReferralFCM validRide ride mbRiderDetails thresholdConfig
+  when validRide $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do
@@ -191,50 +205,54 @@ sendReferralFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    Esq.EsqDBReplicaFlow m r
   ) =>
+  Bool ->
   Ride.Ride ->
-  SRB.Booking ->
   Maybe RD.RiderDetails ->
   TransporterConfig ->
   m ()
-sendReferralFCM ride booking mbRiderDetails transporterConfig = do
-  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
   now <- getCurrentTime
-  let shouldUpdateRideComplete =
-        case minTripDistanceForReferralCfg of
-          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
-          Nothing -> True
+  let shouldUpdateRideComplete = validRide && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
   whenJust mbRiderDetails $ \riderDetails -> do
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
-      when shouldUpdateRideComplete $
-        QRD.updateHasTakenValidRide True (Just now) riderDetails.id
+      when shouldUpdateRideComplete $ QRD.updateHasTakenValidRide True (Just now) riderDetails.id
       case riderDetails.referredByDriver of
         Just referredDriverId -> do
-          let referralMessage = "Congratulations!"
-          let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
+            let referralMessage = "Congratulations!"
+                referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            logDebug "Driver Referral Coin Event"
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
-          let mobileNumberHash = (.hash) riderDetails.mobileNumber
-          localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-          mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-          (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
-          QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-          when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+            fork "DriverToCustomerReferralCoin Event : " $ do
+              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant
+          mbVehicle <- QV.findById referredDriverId
+          let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+          payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
+          when (isNothing riderDetails.firstRideId && payoutConfig.isPayoutEnabled) $ do
+            let mobileNumberHash = (.hash) riderDetails.mobileNumber
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+            QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
+            when (isValidRideForPayout && isConsideredForPayout riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig
         Nothing -> pure ()
   where
-    updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" driver.language
+    isConsideredForPayout riderDetails = maybe False (\referredAt -> referredAt >= getDefaultTime) riderDetails.referredAt
+    updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig = do
+      driverInfo <- QDI.findById (cast referredDriverId) >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+      when (isNothing driverInfo.payoutVpa) do
+        mbMerchantPN_ <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_VPA_ALERT" Nothing Nothing driver.language
+        whenJust mbMerchantPN_ $ \merchantPN_ -> do
+          let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN_.title
+              entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN_.body}
+          notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType -- Sending PN to Add Vpa
+      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" Nothing Nothing driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
-        let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
-        notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
-      mbVehicle <- QV.findById referredDriverId
-      let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+        let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
+            entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN.body}
+        notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
@@ -252,6 +270,8 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
                     totalEarnings = 0.0,
                     numRides = 0,
                     totalDistance = 0,
+                    tollCharges = 0.0,
+                    bonusEarnings = 0.0,
                     merchantLocalDate = utctDay localTime,
                     currency = ride.currency,
                     distanceUnit = ride.distanceUnit,
@@ -262,27 +282,36 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    cancellationCharges = 0.0,
+                    tipAmount = 0.0,
+                    totalRideTime = 0,
+                    merchantId = ride.merchantId,
+                    merchantOperatingCityId = Just $ ride.merchantOperatingCityId
                   }
           QDailyStats.create dailyStatsOfDriver'
 
     fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats = do
       availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
-      let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
-          isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
-          isMaxReferralExceeded = maybe False ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
-          isMultipleOrNoDeviceIdExists = isJust riderDetails.payoutFlagReason
+      let isMaxReferralExceeded = maybe True ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
+          isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
-            case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of
-              (Just _, _, _, _) -> Just RD.CustomerExistAsDriver
-              (_, False, _, _) -> Just RD.MinRideDistanceInvalid
-              (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
-              (_, _, _, False) -> Just RD.ExceededMaxReferral
+            case (listToMaybe availablePersonWithNumber, validRide, isMaxReferralExceeded) of
+              (Just _, _, _) -> Just RD.CustomerExistAsDriver
+              (_, False, _) -> Just RD.RideConstraintInvalid
+              (_, _, False) -> Just RD.ExceededMaxReferral
               _ -> riderDetails.payoutFlagReason
-      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && not isMultipleOrNoDeviceIdExists
+      let isValid = null availablePersonWithNumber && validRide && not isMultipleDeviceIdExists
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
+
+getDefaultTime :: UTCTime
+getDefaultTime = defaultTime
+  where
+    day = fromGregorian 2024 7 26
+    time = secondsToDiffTime 0
+    defaultTime = UTCTime day time
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do
@@ -456,8 +485,48 @@ getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
 -- for distance api we can't pick more than 10 waypoints
 pickWaypoints :: [a] -> [a]
 pickWaypoints waypoints = do
-  let step = length waypoints `div` 10
+  let step = length waypoints `div` 7
   take 7 $ foldr (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list) [] $ zip [1 ..] waypoints
+
+-- here pickNWayPoints is used to pick n waypoints from the list of waypoints
+pickNWayPoints :: Int -> [a] -> [a]
+pickNWayPoints number waypoints
+  | null waypoints = []
+  | number <= 1 = [last waypoints]
+  | otherwise = do
+    let len = length waypoints
+        step = len `div` number
+        pickedPoints =
+          take (number - 1) $
+            foldr
+              (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list)
+              []
+              (zip [1 ..] waypoints)
+    pickedPoints ++ [last waypoints]
+
+pickedWaypointsForEditDestination :: [(LatLong, Bool)] -> [LatLong]
+pickedWaypointsForEditDestination waypoints =
+  let n = length waypoints -- Total number of waypoints
+      chunks = breakOnTrueInclude waypoints
+      remainingPicks = 7 :: Int
+      weightedChunks =
+        [pickNWayPoints (max 1 (remainingPicks * length chunk `div` n)) chunk | chunk <- chunks]
+   in concat weightedChunks
+
+breakOnTrueInclude :: [(LatLong, Bool)] -> [[LatLong]]
+breakOnTrueInclude [] = []
+breakOnTrueInclude latlongs =
+  -- take elements until we find a true an
+  foldr
+    ( \(latlong, bool') acc ->
+        if bool'
+          then [latlong] : acc
+          else case acc of
+            [] -> [[latlong]]
+            (x : xs) -> (latlong : x) : xs
+    )
+    []
+    latlongs
 
 safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
@@ -477,79 +546,119 @@ createDriverFee ::
   Maybe HighPrecMoney ->
   Currency ->
   DFare.FareParameters ->
-  Int ->
   DI.DriverInformation ->
   SRB.Booking ->
   ServiceNames ->
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams maxShards driverInfo booking serviceName = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
-  let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-  let (platformFee, cgst, sgst, isSpecialZoneCharge) = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> (0, 0, 0, False)
-        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
-        DFare.RentalDetails _ -> (0, 0, 0, False)
-        DFare.InterCityDetails _ -> (0, 0, 0, False)
-        DFare.AmbulanceDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, False)
-  let totalDriverFee = govtCharges + platformFee + cgst + sgst
-  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge
-  vehicle <- QV.findById driverId
-  let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
-  let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
-  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge) $ do
-    numRides <- case lastDriverFee of
-      Just ldFee ->
-        if now >= ldFee.startTime && now < ldFee.endTime
-          then do
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
-            return (ldFee.numRides + 1)
-          else do
-            QDF.create driverFee
-            return 1
-      Nothing -> do
-        QDF.create driverFee
-        return 1
-    plan <- getPlan mbDriverPlan serviceName merchantOpCityId
-    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
-    scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
-  where
-    isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge =
-      if isSpecialZoneCharge
-        then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
-        else freeTrialDaysLeft <= 0
+createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
+  unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    freeTrialDaysLeft' <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+    let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
+    (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
+      DFP.SlabBased -> case newFareParams.fareParametersDetails of
+        DFare.SlabDetails fpDetails -> return (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+        _ -> return (0, 0, 0, False)
+      DFP.Subscription -> return (0, 0, 0, False)
+      DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
+      _ -> return (0, 0, 0, False)
+    let totalDriverFee = govtCharges + platformFee + cgst + sgst
+    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    vehicle <- QV.findById driverId
+    let currentVehicleCategory = vehicle >>= (.category)
+    subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+    let isPlanMandatoryForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
+    (mbDriverPlan, isOnFreeTrial) <- getPlanAndPushToDefualtIfEligible transporterConfig subscriptionConfig freeTrialDaysLeft' isSpecialZoneCharge isPlanMandatoryForVariant currentVehicleCategory
+    let enableCityBasedFeeSwitch = fromMaybe False $ subscriptionConfig <&> (.enableCityBasedFeeSwitch)
+    driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge currentVehicleCategory subscriptionConfig
+    lastElderSiblingDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName merchantOpCityId driverFee.startTime driverFee.endTime enableCityBasedFeeSwitch
+    restSiblingDriverFee <- do
+      case lastElderSiblingDriverFee of
+        Just lESDriverFee -> do
+          if lESDriverFee.hasSibling == Just True
+            then QDF.findAllChildsOFDriverFee merchantOpCityId driverFee.startTime driverFee.endTime DF.ONGOING serviceName [lESDriverFee.id] enableCityBasedFeeSwitch
+            else return []
+        Nothing -> return []
+    let lastDriverFee = DL.find (\dfee -> (Just dfee.vehicleCategory) == currentVehicleCategory) (restSiblingDriverFee <> catMaybes [lastElderSiblingDriverFee])
+    let isEnableForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
+    let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && isPlanMandatoryForVariant && isJust mbDriverPlan)) && isEnableForVariant
+    when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge) $ do
+      numRides <- case lastDriverFee of
+        Just ldFee ->
+          if now >= ldFee.startTime && now < ldFee.endTime
+            then do
+              QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
+              return (ldFee.numRides + 1)
+            else do
+              createWithMbSibling driverFee lastElderSiblingDriverFee ldFee
+              return 1
+        Nothing -> do
+          createWithMbSibling driverFee lastElderSiblingDriverFee driverFee
+          return 1
+      fork "Updating vendor fees" $
+        when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
+          let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
+          vendorSplitDetails <- QVSD.findAllByAreaCityAndVariant (fromMaybe Default booking.area) merchantOpCityId vehicleVariant
+          let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
+              vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> Bool -> m (Maybe DriverPlan)
-    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' isSpecialZoneCharge = do
+          case lastDriverFee of
+            Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
+            _ -> QVF.createMany vendorFees
+
+      plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
+      fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
+      scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
+  where
+    mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
+
+    isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
+      let notOnFreeTrial = not isOnFreeTrial
+      if isSpecialZoneCharge
+        then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || notOnFreeTrial
+        else notOnFreeTrial
+
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Maybe SubscriptionConfig -> Int -> Bool -> Bool -> Maybe DVC.VehicleCategory -> m (Maybe DriverPlan, Bool)
+    getPlanAndPushToDefualtIfEligible transporterConfig mbSubsConfig freeTrialDaysLeft' isSpecialZoneCharge planMandatory currentVehicleCategory = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
-      let planMandatory = transporterConfig.isPlanMandatory
-          chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
-          isEligibleForDefaultPlanAfterFreeTrial = freeTrialDaysLeft' <= 0 && planMandatory && transporterConfig.allowDefaultPlanAllocation
-          isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
+      (isOnFreeTrial', _) <- do
+        case mbSubsConfig of
+          Just subsConfig -> Plan.isOnFreeTrial driverId subsConfig freeTrialDaysLeft' mbDriverPlan'
+          Nothing -> return (True, Nothing)
+      let chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
+          isEligibleForDefaultPlanAfterFreeTrial = (not isOnFreeTrial') && planMandatory && transporterConfig.allowDefaultPlanAllocation
+          isEligibleForDefaultPlanBeforeFreeTrial = isOnFreeTrial' && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do
           case (isSpecialZoneCharge, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
-            (True, True, _) -> assignDefaultPlan
-            (_, _, True) -> assignDefaultPlan
-            _ -> return mbDriverPlan'
-        else return mbDriverPlan'
-    assignDefaultPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m (Maybe DriverPlan)
-    assignDefaultPlan = do
-      plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
-      case plans of
-        (plan' : _) -> do
-          newDriverPlan <- Plan.mkDriverPlan plan' (driverId, merchantId, merchantOpCityId)
-          QDPlan.create newDriverPlan
-          Plan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
-          QDI.updatPayerVpa Nothing (cast driverId)
-          return $ Just newDriverPlan
-        _ -> return Nothing
+            (True, True, _) -> (,isOnFreeTrial') <$> assignDefaultPlan currentVehicleCategory
+            (_, _, True) -> (,isOnFreeTrial') <$> assignDefaultPlan currentVehicleCategory
+            _ -> return (mbDriverPlan', isOnFreeTrial')
+        else return (mbDriverPlan', isOnFreeTrial')
+    assignDefaultPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DVC.VehicleCategory -> m (Maybe DriverPlan)
+    assignDefaultPlan currentVehicleCategory = do
+      case currentVehicleCategory of
+        Just vc -> do
+          plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName vc False
+          case plans of
+            (plan' : _) -> do
+              newDriverPlan <- Plan.mkDriverPlan plan' (driverId, merchantId, merchantOpCityId)
+              QDPlan.create newDriverPlan
+              Plan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
+              QDI.updatPayerVpa Nothing (cast driverId)
+              return $ Just newDriverPlan
+            _ -> return Nothing
+        Nothing -> return Nothing
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
-scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now = do
+    createWithMbSibling :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DF.DriverFee -> Maybe DF.DriverFee -> DF.DriverFee -> m ()
+    createWithMbSibling driverFee lastElderSiblingDriverFee ldFee = do
+      let elderSiblingId = if (lastElderSiblingDriverFee <&> (.id)) == Just ldFee.id then Nothing else lastElderSiblingDriverFee <&> (.id)
+      whenJust elderSiblingId $ \elderSiblingId' -> QDF.updateHasSiblingInDriverFee elderSiblingId'
+      let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
+      QDF.create driverFeeToCreate
+
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
+scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   void $
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
@@ -560,7 +669,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
           case isDfCaclculationJobScheduled of
             ----- marker ---
             Nothing -> do
-              createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
+              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
                 CalculateDriverFeesJobData
                   { merchantId = merchantId,
                     merchantOperatingCityId = Just merchantOpCityId,
@@ -571,6 +680,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
                     scheduleManualPaymentLink = Just True,
                     scheduleDriverFeeCalc = Just True,
                     createChildJobs = Just True,
+                    recalculateManualReview = Nothing,
                     endTime = driverFee.endTime
                   }
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
@@ -598,8 +708,10 @@ mkDriverFee ::
   TransporterConfig ->
   Maybe SRB.Booking ->
   Bool ->
+  Maybe DVC.VehicleCategory ->
+  Maybe SubscriptionConfig ->
   m DF.DriverFee
-mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge currentVehicleCategory subsConfig = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -607,12 +719,12 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
       platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee {fee = platformFee, cgst, sgst, currency} else DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency}
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
-      isPlanMandatory = transporterConfig.isPlanMandatory
+      isPlanMandatory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subsConfig >>= (.executionEnabledForVehicleCategories))
       totalFee = platformFee + cgst + sgst
       (specialZoneRideCount, specialZoneAmount) = specialZoneMetricsIntialization totalFee
       numRides = if serviceName == YATRI_SUBSCRIPTION then 1 else 0
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId
+  plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId Nothing currentVehicleCategory
   return $
     DF.DriverFee
       { status = DF.ONGOING,
@@ -636,8 +748,8 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         feeWithoutDiscount = Nothing, -- Only for NY rn
         overlaySent = False,
         amountPaidByCoin = Nothing,
-        planId = Nothing,
-        planMode = Nothing,
+        planId = plan <&> (.id),
+        planMode = plan <&> (.paymentMode),
         notificationRetryCount = 0,
         badDebtDeclarationDate = Nothing,
         badDebtRecoveryDate = Nothing,
@@ -647,6 +759,14 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         merchantOperatingCityId = transporterConfig.merchantOperatingCityId,
         startTime = fromMaybe startTime startTime',
         endTime = fromMaybe endTime endTime',
+        refundEntityId = Nothing,
+        refundedAmount = Nothing,
+        refundedAt = Nothing,
+        refundedBy = Nothing,
+        vehicleCategory = fromMaybe DVC.AUTO_CATEGORY currentVehicleCategory,
+        hasSibling = Just False,
+        siblingFeeId = Nothing,
+        splitOfDriverFeeId = Nothing,
         ..
       }
   where
@@ -658,12 +778,16 @@ getPlan ::
   Maybe DriverPlan ->
   ServiceNames ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Bool ->
+  Maybe DVC.VehicleCategory ->
   m (Maybe Plan)
-getPlan mbDriverPlan serviceName merchantOpCityId = do
+getPlan mbDriverPlan serviceName merchantOpCityId recalculateManualReview mbVehicleCategory = do
   case mbDriverPlan of
-    Just dp -> CQP.findByIdAndPaymentModeWithServiceName dp.planId dp.planType serviceName
+    Just dp -> do
+      let planType = if fromMaybe False recalculateManualReview then MANUAL else dp.planType
+      CQP.findByIdAndPaymentModeWithServiceName dp.planId planType serviceName
     Nothing -> do
-      plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
+      plans <- maybe (pure []) (\vc -> CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName vc False) mbVehicleCategory
       case plans of
         [] -> pure Nothing
         [pl] -> pure (Just pl)

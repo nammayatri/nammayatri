@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Person where
 
 import qualified Data.Time
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -21,6 +20,7 @@ import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
+    androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedAt :: B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime),
@@ -32,9 +32,11 @@ data PersonT f = PersonT
     clientModelName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
+    customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     defaultPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
@@ -48,6 +50,7 @@ data PersonT f = PersonT
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     firstName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     followsRide :: B.C f Kernel.Prelude.Bool,
+    frequentLocGeohashes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     gender :: B.C f Domain.Types.Person.Gender,
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
@@ -56,6 +59,7 @@ data PersonT f = PersonT
     id :: B.C f Kernel.Prelude.Text,
     identifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     identifierType :: B.C f Domain.Types.Person.IdentifierType,
+    informPoliceSos :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f Kernel.Prelude.Bool,
     isValidRating :: B.C f Kernel.Prelude.Bool,
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
@@ -69,6 +73,7 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

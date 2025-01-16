@@ -22,3 +22,14 @@ ALTER TABLE atlas_driver_offer_bpp.rating ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN is_favourite boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN media_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN merchant_id character varying(36) ;

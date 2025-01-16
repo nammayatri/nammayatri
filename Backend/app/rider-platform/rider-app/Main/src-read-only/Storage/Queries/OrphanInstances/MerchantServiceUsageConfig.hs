@@ -6,7 +6,11 @@ module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
+import qualified Kernel.External.Payment.Types
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +23,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
         Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig
           { aadhaarVerificationService = aadhaarVerificationService,
             autoComplete = autoComplete,
+            cancelPaymentIntent = fromMaybe Kernel.External.Payment.Types.Stripe cancelPaymentIntent,
             capturePaymentIntent = capturePaymentIntent,
             createEphemeralKeys = createEphemeralKeys,
             createPaymentCustomer = createPaymentCustomer,
@@ -32,6 +37,9 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getDistancesForCancelRide = getDistancesForCancelRide,
             getDistancesForScheduledRides = getDistancesForScheduledRides,
             getExophone = getExophone,
+            getFirstPickupRoute = getFirstPickupRoute,
+            getFrfsAutocompleteDistances = fromMaybe Kernel.External.Maps.Types.OSRM getFrfsAutocompleteDistances,
+            getMultiModalService = fromMaybe Kernel.External.MultiModal.Types.OTPTransit getMultiModalService,
             getPickupRoutes = getPickupRoutes,
             getPlaceDetails = getPlaceDetails,
             getPlaceName = getPlaceName,
@@ -56,6 +64,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
     Beam.MerchantServiceUsageConfigT
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
         Beam.autoComplete = autoComplete,
+        Beam.cancelPaymentIntent = Kernel.Prelude.Just cancelPaymentIntent,
         Beam.capturePaymentIntent = capturePaymentIntent,
         Beam.createEphemeralKeys = createEphemeralKeys,
         Beam.createPaymentCustomer = createPaymentCustomer,
@@ -69,6 +78,9 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getDistancesForCancelRide = getDistancesForCancelRide,
         Beam.getDistancesForScheduledRides = getDistancesForScheduledRides,
         Beam.getExophone = getExophone,
+        Beam.getFirstPickupRoute = getFirstPickupRoute,
+        Beam.getFrfsAutocompleteDistances = Kernel.Prelude.Just getFrfsAutocompleteDistances,
+        Beam.getMultiModalService = Kernel.Prelude.Just getMultiModalService,
         Beam.getPickupRoutes = getPickupRoutes,
         Beam.getPlaceDetails = getPlaceDetails,
         Beam.getPlaceName = getPlaceName,

@@ -26,7 +26,7 @@ import Components.SettingSideBar.Controller as SettingSideBar
 import ModifyScreenState (modifyScreenState, FlowState(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-import Common.Types.App (LazyCheck(..), CategoryListType)
+import Common.Types.App (LazyCheck(..), CategoryListType(..))
 import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
 import Data.Array as DA
 import Data.String as DS 
@@ -42,9 +42,12 @@ import Data.Maybe
 import Components.ChatView (makeChatComponent')
 import Screens.HelpAndSupportScreen.Transformer(reportIssueMessageTransformer)
 import Engineering.Helpers.Commons (getCurrentUTC)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.HelpAndSupportScreen.ScreenData
 import Components.IssueView (IssueInfo)
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Debug (spy)
+import Language.Strings (getString)
+import Language.Types
 
 helpAndSupportScreen :: FlowBT String FlowState
 helpAndSupportScreen = do
@@ -53,8 +56,10 @@ helpAndSupportScreen = do
   if DA.null helpAndSupportScreenState.data.categories then do 
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
-    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
+    filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "Category") response.categories
+    let isFaqListEmpty' = DA.null $ DA.filter (\(Category catObj) -> catObj.categoryType == "FAQ") response.categories
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) filteredCategories
+    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories', isFaqListEmpty = isFaqListEmpty'} } )
   else pure unit
   modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ReportIssueChatScreenData.HelpAndSupportScreenEntry }})
   (GlobalState updatedGlobalState) <- getState
@@ -71,20 +76,21 @@ helpAndSupportScreen = do
     GoToHelpAndSupportScreen updatedState -> goToHelpAndSupportScreenHanlder updatedState
     GoToRideSelectionScreen selectedCategory updatedState -> goToRideSelectionScreenHandler selectedCategory updatedState
     GoToChatScreen selectedCategory updatedState -> goToChatScreenHandler selectedCategory updatedState
+    GoToSelectFaqScreen selectedIssue updatedState -> goToSelectFaqScreenHandler selectedIssue updatedState
     GoToOldChatScreen selectedIssue updatedState-> goToOldChatScreenHandler selectedIssue updatedState
 
 
 goBackHandler :: HelpAndSupportScreenState -> FlowBT String FlowState
 goBackHandler updatedState =  do 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  App.BackT $ App.BackPoint <$> (pure HomeScreenFlow)
+  App.BackT $ App.BackPoint <$> (pure $ if updatedState.data.fromScreen == "RideCompleted" then RiderRideCompleted else HomeScreenFlow)
 
 
 goHomeHandler :: HelpAndSupportScreenState -> FlowBT String FlowState
 goHomeHandler updatedState = do 
   modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBar.CLOSED}}}) 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  App.BackT $ App.BackPoint <$> (pure HomeScreenFlow)
+  App.BackT $ App.BackPoint <$> (pure $ HomeScreenFlow)
 
 
 goToSupportScreenHandler :: String -> HelpAndSupportScreenState -> FlowBT String FlowState
@@ -109,11 +115,15 @@ goToTripDetailsHandler state = do
       , vehicleVariant = state.data.vehicleVariant
       , selectedItem {
           status = state.data.status
+        , rideCreatedAt = state.data.rideCreatedAt
+        , rideStatus = state.data.rideStatus
         , faresList = state.data.faresList 
         , date = state.data.date
         , bookingId = state.data.bookingId
         , rideStartTime = state.data.rideStartTime
+        , rideStartTimeUTC = state.data.rideStartTimeUTC
         , rideEndTime = state.data.rideEndTime
+        , rideEndTimeUTC = state.data.rideEndTimeUTC
         , rideId = state.data.rideId
         , vehicleNumber = state.data.vehicleNumber
         , time = state.data.time
@@ -131,7 +141,8 @@ goToTripDetailsHandler state = do
       , destination = state.data.destination
       , driverName = state.data.driverName
       , totalAmount = state.data.totalAmount
-      ,rating = state.data.rating
+      , rating = state.data.rating
+      , categories = DA.filter (\(category) -> category.categoryType == "Category") state.data.categories
       }
     , props {
         fromMyRides = ST.HelpAndSupport
@@ -193,7 +204,9 @@ goToRideSelectionScreenHandler selectedCategory updatedState = do
   modifyScreenState $ RideSelectionScreenStateType (
     \rideHistoryScreen -> rideHistoryScreen {
       data {
-        offsetValue = 0
+        offsetValue = 0,
+        selectedOptionId = Nothing,
+        entryPoint = RideSelectionScreenData.HelpAndSupportScreenEntry
       },
       selectedCategory = selectedCategory
     } 
@@ -205,10 +218,10 @@ goToChatScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT
 goToChatScreenHandler selectedCategory updatedState =  do
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState) 
   let language = fetchLanguage $ getLanguageLocale languageKey
-  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
   let 
-    options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
-    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
+    options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = optionObj.option}) getOptionsRes.options
+    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
     chats' = map (
       \(Message currMessage) -> Chat {
         chatId : currMessage.id,
@@ -216,14 +229,12 @@ goToChatScreenHandler selectedCategory updatedState =  do
         timestamp : getCurrentUTC ""
       }
     ) getOptionsRes.messages
-    categoryName = getTitle selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (
     \updatedState ->  updatedState {
       data {
         chats = chats'
-      , categoryName = categoryName
-      , categoryId = selectedCategory.categoryId
+      , selectedCategory = selectedCategory {categoryName = getString REPORT_AN_ISSUE}
       , options = options'
       , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{
           messages = messages'
@@ -233,6 +244,19 @@ goToChatScreenHandler selectedCategory updatedState =  do
   )
   App.BackT $ App.BackPoint <$> (pure $ IssueReportChatScreenFlow)
 
+goToSelectFaqScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState
+goToSelectFaqScreenHandler selectedCategory updatedState = do 
+  modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+  modifyScreenState $ SelectFaqScreenStateType (
+    \updatedState ->  updatedState {
+      data {
+        categoryName = getString FAQ
+      }
+    }
+  )
+  App.BackT $ App.BackPoint <$> (pure SelectFaqScreenFlow )
+
+
 
 goToOldChatScreenHandler :: IssueInfo -> HelpAndSupportScreenState -> FlowBT String FlowState
 goToOldChatScreenHandler selectedIssue updatedState = do 
@@ -241,8 +265,7 @@ goToOldChatScreenHandler selectedIssue updatedState = do
   (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language selectedIssue.issueReportId
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) issueInfoRes.options
-    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
-    categoryName = getTitle issueInfoRes.categoryLabel
+    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) currMessage.title currMessage.actionText (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
     showStillHaveIssue' = case (DA.last issueInfoRes.chats) of
       Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
       Nothing -> false 
@@ -252,8 +275,16 @@ goToOldChatScreenHandler selectedIssue updatedState = do
       data {
         entryPoint = ReportIssueChatScreenData.OldChatEntry
         , showStillHaveIssue = showStillHaveIssue'
-        , categoryId = issueInfoRes.categoryId
-        , categoryName = categoryName
+        , selectedCategory = {
+              categoryName : getString REPORT_AN_ISSUE
+            , categoryImageUrl : Nothing
+            , categoryAction : Nothing
+            , categoryId : issueInfoRes.categoryId
+            , isRideRequired : false
+            , maxAllowedRideAge : Nothing
+            , allowedRideStatuses : Nothing
+            , categoryType: "Category"
+        }
         , options = options'
         , issueId = Just selectedIssue.issueReportId
         , issueReportShortId = issueInfoRes.issueReportShortId

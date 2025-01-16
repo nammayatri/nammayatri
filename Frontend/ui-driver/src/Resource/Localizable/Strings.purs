@@ -22,21 +22,15 @@ import Common.Types.App (LazyCheck(..))
 import Prelude (($))
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
 import Data.Maybe (Maybe(..))
-import Resources.Localizable.BN (getBN)
-import Resources.Localizable.EN (getEN)
-import Resources.Localizable.HI (getHI)
-import Resources.Localizable.KN (getKN)
-import Resources.Localizable.ML (getML)
-import Resources.Localizable.TA (getTA)
-import Resources.Localizable.FR (getFR)
-import Resources.Localizable.TE (getTE)
 import Locale.Utils
 import Prelude
+import Data.String as DS
+import Resource.Localizable.StringsV2 as StringsV2
 
 getString :: STR -> String
 getString key = 
   let language = getLanguageLocale languageKey
-  in getStringFromConfigOrLocal language key
+  in  getStringFromConfigOrLocal language key
 
 getStringEnToHi :: STR -> String
 getStringEnToHi key = 
@@ -44,7 +38,7 @@ getStringEnToHi key =
   in case language of
     "EN_US" -> 
       if getMerchant FunctionCall == YATRISATHI 
-        then getStringFromLocal "HI_IN" key 
+        then StringsV2.getString "HI_IN" key 
         else getStringFromConfigOrLocal language key
     _ -> getStringFromConfigOrLocal language key
     
@@ -52,19 +46,10 @@ getStringFromConfigOrLocal :: String -> STR -> String
 getStringFromConfigOrLocal language key = 
   case (getStringFromConfig key Just Nothing) of
     Just value -> value
-    Nothing    -> getStringFromLocal language key
-
-getStringFromLocal :: String -> STR -> String
-getStringFromLocal language key = 
-  case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "TA_IN" -> getTA key
-    "TE_IN" -> getTE key
-    "FR_FR" -> getFR key
-    _       -> getEN key
+    Nothing    -> StringsV2.getString language key
 
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals
+
+getStringWithoutNewLine :: STR -> String
+getStringWithoutNewLine str = DS.replace (DS.Pattern "\n") (DS.Replacement " ") $ getString str

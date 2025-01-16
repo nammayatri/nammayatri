@@ -38,7 +38,8 @@ instance FromTType' Beam.Notification Domain.Types.Notification.Notification whe
             sourceAmount = sourceAmount,
             status = status,
             txnDate = txnDate,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId
           }
 
 instance ToTType' Beam.Notification Domain.Types.Notification.Notification where
@@ -62,5 +63,6 @@ instance ToTType' Beam.Notification Domain.Types.Notification.Notification where
         Beam.sourceAmount = sourceAmount,
         Beam.status = status,
         Beam.txnDate = txnDate,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }

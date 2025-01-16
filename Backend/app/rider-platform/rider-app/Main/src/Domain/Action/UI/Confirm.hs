@@ -19,11 +19,13 @@ module Domain.Action.UI.Confirm
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map as M
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics
@@ -36,7 +38,9 @@ import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
@@ -49,14 +53,22 @@ confirm ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    SchedulerFlow r,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe Bool ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId = do
+confirm personId quoteId paymentMethodId isAdvanceBookingEnabled = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
+    QSR.updateAdvancedBookingEnabled (Just isAdvanceBookingEnabled') quote.requestId
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
@@ -67,10 +79,12 @@ cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => DRB.Booking -> m
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
+  otherRelatedParties <- Notify.getAllOtherRelatedPartyPersons booking
   _ <- QRideB.updateStatus booking.id DRB.CANCELLED
+  _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- QBCR.upsert bookingCancellationReason
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing otherRelatedParties
   where
     buildBookingCancellationReason = do
       now <- getCurrentTime
@@ -86,6 +100,7 @@ cancelBooking booking = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            riderId = Just booking.riderId,
             createdAt = now,
             updatedAt = now
           }

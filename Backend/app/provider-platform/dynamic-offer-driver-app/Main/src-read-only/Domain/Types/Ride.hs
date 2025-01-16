@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Ride where
@@ -14,7 +13,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -38,6 +37,8 @@ data Ride = Ride
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
+    deliveryFileIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
+    destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -49,15 +50,19 @@ data Ride = Ride
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
     estimatedTollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedTollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
     fromLocation :: Domain.Types.Location.Location,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDriverSpecialLocWarrior :: Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isPickupOrDestinationEdited :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfDeviation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -66,14 +71,18 @@ data Ride = Ride
     numberOfSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
+    passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
+    rideTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
+    stops :: [Domain.Types.Location.Location],
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
@@ -91,9 +100,11 @@ data Ride = Ride
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

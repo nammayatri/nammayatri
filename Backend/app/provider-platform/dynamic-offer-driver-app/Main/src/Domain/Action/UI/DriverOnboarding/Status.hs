@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -27,6 +25,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Control.Monad.Extra as Extra
+import Data.List (intersect)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
@@ -38,8 +37,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -100,8 +100,8 @@ data StatusRes = StatusRes
 
 data VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: Text,
-    userSelectedVehicleCategory :: DVeh.Category,
-    verifiedVehicleCategory :: Maybe DVeh.Category,
+    userSelectedVehicleCategory :: DVC.VehicleCategory,
+    verifiedVehicleCategory :: Maybe DVC.VehicleCategory,
     isVerified :: Bool,
     isActive :: Bool,
     vehicleModel :: Maybe Text,
@@ -147,8 +147,8 @@ data RCDetails = RCDetails
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -193,8 +193,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
       return $
         VehicleDocumentItem
           { registrationNo,
-            userSelectedVehicleCategory = fromMaybe (maybe DVeh.CAR getCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
-            verifiedVehicleCategory = getCategory <$> processedVehicle.vehicleVariant,
+            userSelectedVehicleCategory = fromMaybe (maybe DVC.CAR DV.castVehicleVariantToVehicleCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
+            verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
             isVerified = False,
             isActive,
             vehicleModel = processedVehicle.vehicleModel,
@@ -215,8 +215,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
             return $
               [ VehicleDocumentItem
                   { registrationNo = vehicle.registrationNo,
-                    userSelectedVehicleCategory = getCategory vehicle.variant,
-                    verifiedVehicleCategory = Just $ getCategory vehicle.variant,
+                    userSelectedVehicleCategory = DV.castVehicleVariantToVehicleCategory vehicle.variant,
+                    verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
                     isVerified = True,
                     isActive = True,
                     vehicleModel = Just vehicle.model,
@@ -242,7 +242,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
             isUnlinked <- case rc of
               Just rc_ -> DRAQuery.findUnlinkedRC personId rc_.id
               Nothing -> pure []
-            if (isJust $ find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
+            if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
               then return []
               else do
                 documents <-
@@ -250,10 +250,10 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                     (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
                     message <- documentStatusMessage status mbReason docType mbUrl language
                     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
-                return $
+                return
                   [ VehicleDocumentItem
                       { registrationNo,
-                        userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
+                        userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReq.vehicleCategory,
                         verifiedVehicleCategory = Nothing,
                         isVerified = False,
                         isActive = False,
@@ -267,14 +267,19 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   vehicleDocuments <-
-    vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) vehicleDoc.documents
-      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
-      when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
-      mbVehicle <- Vehicle.findById personId -- check everytime
-      when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
-        activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
-      if allVehicleDocsVerified then return $ VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+    case mDL >>= (.vehicleCategory) of
+      Just vehicleCategory -> do
+        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+        let vehicleDocumentVerificationConfigs = vehicleDocumentTypes `intersect` ((.documentType) <$> documentVerificationConfigs)
+        if null vehicleDocumentVerificationConfigs
+          then do
+            allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+            when allDriverDocsVerified $ do
+              enableDriver merchantOpCityId personId mDL
+              DIQuery.updateOnboardingVehicleCategory (Just vehicleCategory) personId
+            return []
+          else getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
+      _ -> getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -285,8 +290,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM (convertDLToDLDetails merchantOperatingCity) allDlImgs
         allRCDetails <- mapM (convertRCToRCDetails merchantOperatingCity) allRCImgs
-        return $ (Just allDLDetails, Just allRCDetails)
-      _ -> return $ (Nothing, Nothing)
+        return (Just allDLDetails, Just allRCDetails)
+      _ -> return (Nothing, Nothing)
 
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -304,6 +309,16 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
         vehicleRegistrationCertificateDetails = rcDetails
       }
   where
+    getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL = do
+      vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
+        allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+        allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+        when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
+        mbVehicle <- Vehicle.findById personId -- check everytime
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
+          void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
+        if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+
     convertDLToDLDetails merchantOperatingCity dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $
@@ -353,12 +368,12 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
 
-checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Flow Bool
-checkIfDocumentValid merchantOperatingCityId docType category status = do
+checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVC.VehicleCategory -> ResponseStatus -> Maybe Bool -> Flow Bool
+checkIfDocumentValid merchantOperatingCityId docType category status makeSelfieAadhaarPanMandatory = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
   case mbVerificationConfig of
     Just verificationConfig -> do
-      if verificationConfig.isMandatory
+      if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
         then case status of
           VALID -> return True
           MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification

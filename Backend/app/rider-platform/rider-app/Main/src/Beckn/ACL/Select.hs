@@ -36,6 +36,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
 buildSelectReqV2 ::
@@ -44,7 +45,10 @@ buildSelectReqV2 ::
   m Spec.SelectReq
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dSelectRes.merchant.id "MOBILITY" moc.id
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
       transactionId = dSelectRes.searchRequest.id.getId
@@ -71,7 +75,7 @@ tfOrder res endLoc isValueAddNP bapConfig =
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
-      orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP
+      orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP res.searchRequest.stops
       orderCreatedAt = Nothing
       orderUpdatedAt = Nothing
    in Spec.Order
@@ -80,15 +84,15 @@ tfOrder res endLoc isValueAddNP bapConfig =
           ..
         }
 
-tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> Spec.Fulfillment
-tfFulfillment res startLoc endLoc isValueAddNP =
+tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> [Location.Location] -> Spec.Fulfillment
+tfFulfillment res startLoc endLoc isValueAddNP stops =
   let fulfillmentAgent = Nothing
       fulfillmentTags = Nothing
       fulfillmentState = Nothing
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
-      fulfillmentType = Just $ show Enums.DELIVERY
-      fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
+      fulfillmentType = UCommonV2.tripCategoryToFulfillmentType <$> res.tripCategory
+      fulfillmentStops = UCommon.mkStops' (Just startLoc) stops (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
         { fulfillmentStops = fulfillmentStops,
@@ -141,7 +145,9 @@ mkItemTags res =
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
       itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
-   in itemTags'''
+      itemTags'''' = mkDeviceIdTagGroup res : itemTags'''
+      itemTags''''' = mkDisabilityDisableTagGroup res : itemTags''''
+   in itemTags'''''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =
@@ -224,6 +230,44 @@ mkAutoAssignEnabledTagGroup res =
           ]
     }
 
+mkDeviceIdTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkDeviceIdTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.DEVICE_ID_INFO,
+              descriptorName = Just "Device Id Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.DEVICE_ID_FLAG,
+                        descriptorName = Just "Multiple or No Device Id Exists",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = show <$> res.isMultipleOrNoDeviceIdExist
+              },
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.TO_UPDATE_DEVICE_ID,
+                        descriptorName = Just "Is Device Id Update Required",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.toUpdateDeviceIdInfo
+              }
+          ]
+    }
+
 mkAdvancedBookingEnabledTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkAdvancedBookingEnabledTagGroup res =
   Spec.TagGroup
@@ -247,6 +291,33 @@ mkAdvancedBookingEnabledTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = Just $ show res.isAdvancedBookingEnabled
+              }
+          ]
+    }
+
+mkDisabilityDisableTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkDisabilityDisableTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.CUSTOMER_INFO,
+              descriptorName = Just "Disability Disable Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.CUSTOMER_DISABILITY_DISABLE,
+                        descriptorName = Just "Disability Disable Flag",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = (Just . T.pack . show) =<< res.disabilityDisable
               }
           ]
     }

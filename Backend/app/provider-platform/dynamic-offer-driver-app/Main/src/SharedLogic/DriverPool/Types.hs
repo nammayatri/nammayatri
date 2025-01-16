@@ -11,38 +11,26 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module SharedLogic.DriverPool.Types
-  ( PoolCalculationStage (..),
-    CalculateGoHomeDriverPoolReq (..),
-    CancellationScoreRelatedConfig (..),
-    DriverPoolResult (..),
-    DriverPoolResultCurrentlyOnRide (..),
-    DriverPoolWithActualDistResult (..),
-    DriverPoolWithActualDistResultWithFlags (..),
-    DriverSearchBatchInput (..),
-    TripQuoteDetail (..),
-    PoolType (..),
-    PoolRadiusStep,
-    PoolBatchNum,
-    castServiceTierToVariant,
-    castVariantToServiceTier,
-  )
-where
+module SharedLogic.DriverPool.Types where
 
-import qualified Domain.Types.Common as DTC
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import Data.Default.Class
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
+import Domain.Types.Common as DI (DriverMode (..))
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores)
+import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleVariant as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -90,13 +78,13 @@ data DriverPoolResult = DriverPoolResult
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     distanceToPickup :: Meters,
     -- durationToPickup :: Seconds,
-    variant :: Vehicle.Variant,
+    variant :: Vehicle.VehicleVariant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
     lat :: Double,
     lon :: Double,
-    mode :: Maybe DI.DriverMode,
+    mode :: Maybe DriverMode,
     vehicleAge :: Maybe Months,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
@@ -105,15 +93,45 @@ data DriverPoolResult = DriverPoolResult
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe Maps.LatLong
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    customerTags :: Maybe A.Value,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+
+-- Used for Tagging logic testing
+instance Default DriverPoolResult where
+  def =
+    DriverPoolResult
+      { driverId = "",
+        language = Nothing,
+        driverDeviceToken = Nothing,
+        distanceToPickup = Meters 0,
+        variant = Vehicle.AUTO_RICKSHAW,
+        serviceTier = DVST.AUTO_RICKSHAW,
+        serviceTierDowngradeLevel = 0,
+        isAirConditioned = Nothing,
+        lat = 0.0,
+        lon = 0.0,
+        mode = Just DI.ONLINE,
+        vehicleAge = Nothing,
+        clientSdkVersion = Nothing,
+        clientBundleVersion = Nothing,
+        clientConfigVersion = Nothing,
+        clientDevice = Nothing,
+        backendConfigVersion = Nothing,
+        backendAppVersion = Nothing,
+        latestScheduledBooking = Nothing,
+        latestScheduledPickup = Nothing,
+        customerTags = Nothing,
+        driverTags = A.emptyObject
+      }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   { driverId :: Id Driver,
     language :: Maybe Maps.Language,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    variant :: Vehicle.Variant,
+    variant :: Vehicle.VehicleVariant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
@@ -123,7 +141,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     previousRideDropLon :: Double,
     distanceToPickup :: Meters,
     distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DI.DriverMode,
+    mode :: Maybe DriverMode,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
     vehicleAge :: Maybe Months,
@@ -132,9 +150,13 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe Maps.LatLong
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+
+data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
@@ -145,14 +167,53 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
     specialZoneExtraTip :: Maybe HighPrecMoney,
+    searchTags :: Maybe A.Value,
+    tripDistance :: Maybe Meters,
     isForwardRequest :: Bool,
     previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+-- Used for Tagging logic testing
+instance Default DriverPoolWithActualDistResult where
+  def =
+    DriverPoolWithActualDistResult
+      { driverPoolResult = def,
+        actualDistanceToPickup = Meters 0,
+        actualDurationToPickup = Seconds 0,
+        keepHiddenForSeconds = Seconds 0,
+        intelligentScores = def,
+        isPartOfIntelligentPool = False,
+        pickupZone = False,
+        specialZoneExtraTip = Nothing,
+        searchTags = Nothing,
+        tripDistance = Nothing,
+        isForwardRequest = False,
+        previousDropGeoHash = Nothing,
+        goHomeReqId = Nothing
+      }
+
 instance HasCoordinates DriverPoolWithActualDistResult where
   getCoordinates r = getCoordinates r.driverPoolResult
+
+instance Default IntelligentScores where
+  def =
+    IntelligentScores
+      { acceptanceRatio = Nothing,
+        actualPickupDistanceScore = Nothing,
+        availableTime = Nothing,
+        cancellationRatio = Nothing,
+        driverSpeed = Nothing,
+        rideFrequency = Nothing,
+        rideRequestPopupDelayDuration = 0
+      }
+
+data TaggedDriverPoolInput = TaggedDriverPoolInput
+  { drivers :: [DriverPoolWithActualDistResult],
+    needOnRideDrivers :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
@@ -172,7 +233,8 @@ data TripQuoteDetail = TripQuoteDetail
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
     driverParkingCharge :: Maybe HighPrecMoney,
-    estimateOrQuoteId :: Text
+    estimateOrQuoteId :: Text,
+    eligibleForUpgrade :: Bool
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput
@@ -182,44 +244,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
-    isRepeatSearch :: Bool
+    isRepeatSearch :: Bool,
+    isAllocatorBatch :: Bool
   }
-
-castServiceTierToVariant :: DVST.ServiceTierType -> Vehicle.Variant
-castServiceTierToVariant = \case
-  DVST.SEDAN -> Vehicle.SEDAN
-  DVST.HATCHBACK -> Vehicle.HATCHBACK
-  DVST.TAXI -> Vehicle.TAXI
-  DVST.SUV -> Vehicle.SUV
-  DVST.TAXI_PLUS -> Vehicle.TAXI_PLUS
-  DVST.AUTO_RICKSHAW -> Vehicle.AUTO_RICKSHAW
-  DVST.PREMIUM_SEDAN -> Vehicle.PREMIUM_SEDAN
-  DVST.BLACK -> Vehicle.BLACK
-  DVST.BLACK_XL -> Vehicle.BLACK_XL
-  DVST.BIKE -> Vehicle.BIKE
-  DVST.AMBULANCE_TAXI -> Vehicle.AMBULANCE_TAXI
-  DVST.AMBULANCE_TAXI_OXY -> Vehicle.AMBULANCE_TAXI_OXY
-  DVST.AMBULANCE_AC -> Vehicle.AMBULANCE_AC
-  DVST.AMBULANCE_AC_OXY -> Vehicle.AMBULANCE_AC_OXY
-  DVST.AMBULANCE_VENTILATOR -> Vehicle.AMBULANCE_VENTILATOR
-  DVST.SUV_PLUS -> Vehicle.SUV_PLUS
-  _ -> Vehicle.SEDAN
-
-castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
-castVariantToServiceTier = \case
-  Vehicle.SEDAN -> DVST.SEDAN
-  Vehicle.HATCHBACK -> DVST.HATCHBACK
-  Vehicle.TAXI -> DVST.TAXI
-  Vehicle.SUV -> DVST.SUV
-  Vehicle.TAXI_PLUS -> DVST.TAXI_PLUS
-  Vehicle.PREMIUM_SEDAN -> DVST.PREMIUM_SEDAN
-  Vehicle.BLACK -> DVST.BLACK
-  Vehicle.BLACK_XL -> DVST.BLACK_XL
-  Vehicle.AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW
-  Vehicle.BIKE -> DVST.BIKE
-  Vehicle.AMBULANCE_TAXI -> DVST.AMBULANCE_TAXI
-  Vehicle.AMBULANCE_TAXI_OXY -> DVST.AMBULANCE_TAXI_OXY
-  Vehicle.AMBULANCE_AC -> DVST.AMBULANCE_AC
-  Vehicle.AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
-  Vehicle.AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
-  Vehicle.SUV_PLUS -> DVST.SUV_PLUS

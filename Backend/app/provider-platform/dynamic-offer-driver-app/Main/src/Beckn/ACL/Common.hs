@@ -18,36 +18,15 @@ import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Common
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
+import Domain.Types
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
-
-castVariant :: Variant.Variant -> Common.VehicleVariant
-castVariant Variant.SEDAN = Common.SEDAN
-castVariant Variant.HATCHBACK = Common.HATCHBACK
-castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-castVariant Variant.TAXI = Common.TAXI
-castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
-castVariant Variant.PREMIUM_SEDAN = Common.PREMIUM_SEDAN
-castVariant Variant.BLACK = Common.BLACK
-castVariant Variant.BLACK_XL = Common.BLACK_XL
-castVariant Variant.BIKE = Common.BIKE
-castVariant Variant.AMBULANCE_TAXI = Common.AMBULANCE_TAXI
-castVariant Variant.AMBULANCE_TAXI_OXY = Common.AMBULANCE_TAXI_OXY
-castVariant Variant.AMBULANCE_AC = Common.AMBULANCE_AC
-castVariant Variant.AMBULANCE_AC_OXY = Common.AMBULANCE_AC_OXY
-castVariant Variant.AMBULANCE_VENTILATOR = Common.AMBULANCE_VENTILATOR
-castVariant Variant.SUV_PLUS = Common.SUV_PLUS
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP
@@ -98,7 +77,7 @@ makeLocation DLoc.Location {..} =
             }
     }
 
-mkItemId :: Text -> DVST.ServiceTierType -> Text
+mkItemId :: Text -> ServiceTierType -> Text
 mkItemId providerId serviceTier = providerId <> "_" <> show serviceTier
 
 type TagGroupCode = Text
@@ -135,7 +114,8 @@ filterRequiredBreakups fParamsType breakup = do
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
                  "CANCELLATION_CHARGES",
-                 "PARKING_CHARGE"
+                 "PARKING_CHARGE",
+                 "NIGHT_SHIFT_CHARGE"
                ]
     DFParams.Slab ->
       title
@@ -186,17 +166,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE"
                ]
-    DFParams.Ambulance -> True
-
--- Fix these tage properly
-mkFulfillmentType :: DCT.TripCategory -> Text
-mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
-  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental _ -> "RENTAL"
-  DCT.InterCity _ _ -> "INTER_CITY"
-  DCT.Ambulance _ -> "AMBULANCE_FLOW"
-  _ -> "DELIVERY"
+    _ -> True
 
 tfContact :: Maybe Text -> Maybe Spec.Contact
 tfContact phoneNum =

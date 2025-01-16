@@ -71,7 +71,7 @@ import Utils.Common.Cac.KeyNameConstants
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
@@ -116,7 +116,8 @@ cancelRideHandle =
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    doCancellationRateBasedBlocking :: Maybe Bool
   }
 
 data CancelRideResp = CancelRideResp
@@ -226,7 +227,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
 
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
-          fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
+          fork "DriverRideCancelledCoin Event : " $ do
+            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just ride.id.getId) ride.vehicleVariant
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
@@ -241,7 +243,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
       logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
 
-  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation
+  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
@@ -258,6 +260,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = ride.distanceUnit,
+            merchantOperatingCityId = Just ride.merchantOperatingCityId,
             ..
           }
 
@@ -279,6 +282,7 @@ driverDistanceToPickup booking tripStartPos tripEndPos = do
         { origin = tripStartPos,
           destination = tripEndPos,
           travelMode = Just Maps.CAR,
-          distanceUnit = booking.distanceUnit
+          distanceUnit = booking.distanceUnit,
+          sourceDestinationMapping = Nothing
         }
   return $ distRes.distance

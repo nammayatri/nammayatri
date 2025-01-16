@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module IssueManagement.Domain.Types.Issue.IssueCategory where
 
 import Data.OpenApi
@@ -20,9 +18,11 @@ data IssueCategory = IssueCategory
     isActive :: Bool,
     isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     label :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    igmCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
 

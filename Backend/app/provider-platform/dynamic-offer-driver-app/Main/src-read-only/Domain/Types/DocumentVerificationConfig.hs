@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DocumentVerificationConfig where
@@ -7,7 +6,8 @@ module Domain.Types.DocumentVerificationConfig where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -20,6 +20,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doStrictVerifcation :: Kernel.Prelude.Bool,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
@@ -32,7 +33,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     supportedVehicleClasses :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses,
     title :: Kernel.Prelude.Text,
-    vehicleCategory :: Domain.Types.Vehicle.Category,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleClassCheckType :: Domain.Types.DocumentVerificationConfig.VehicleClassCheckType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
@@ -75,7 +76,7 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleClass :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 

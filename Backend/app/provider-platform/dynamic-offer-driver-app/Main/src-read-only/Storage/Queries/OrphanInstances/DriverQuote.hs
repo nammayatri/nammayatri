@@ -7,6 +7,7 @@ import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverQuote
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -16,7 +17,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
-import qualified SharedLogic.DriverPool.Types
 import qualified Storage.Beam.DriverQuote as Beam
 import Storage.Queries.Transformers.DriverQuote
 
@@ -61,7 +61,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             tripCategory = fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Data.Time.localTimeToUTC Data.Time.utc updatedAt,
             validTill = Data.Time.localTimeToUTC Data.Time.utc validTill,
-            vehicleServiceTier = fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
+            vehicleServiceTier = fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
           }

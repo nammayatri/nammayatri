@@ -1,48 +1,46 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller 
-
-import PrestoDOM 
-import Components.Banner.View as Banner
-import Components.Banner as BannerConfig
-import Data.Functor (map)
-import PrestoDOM.Animation as PrestoAnim
-import Animation (fadeIn,fadeInWithDelay) as Anim
-import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
-import Common.Styles.Colors as Color
-import Components.SelectListModal as CancelRidePopUp
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null, any, (..),head)
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
-import Components.PrimaryButton as PrimaryButton
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties (cornerRadii)
-import Language.Types (STR(..))
-import Common.Types.App 
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Halogen.VDom.DOM.Prop (Prop)
-import Components.PopUpModal as PopUpModal
-import JBridge as JB
-import Data.Function.Uncurried (runFn1)
-import Mobility.Prelude
+import Common.Types.App
+import Components.RideCompletedCard.Controller
 import ConfigProvider
-import Mobility.Prelude (boolToVisibility)
-import Engineering.Helpers.Commons as EHC
+import Data.Functor
 import Data.Maybe
-import JBridge(renderBase64Image)
-import Storage (getValueToLocalStore, KeyStore(..))
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
-import Engineering.Helpers.Utils as Utils
-import Data.Number (fromString)
-import Data.Int (ceil)
+import Mobility.Prelude
+import PrestoDOM
 import PrestoDOM.List
+
+import Animation (fadeIn, fadeInWithDelay) as Anim
+import Animation as Anim
 import CarouselHolder as CarouselHolder
-import Language.Strings (getString)
-import Debug
+import Common.Styles.Colors as Color
+import Components.Banner as BannerConfig
+import Components.Banner.View as Banner
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.SelectListModal as CancelRidePopUp
+import Data.Array (mapWithIndex, length, (!!), null, any, (..), head)
+import Data.Function.Uncurried (runFn1)
+import Data.Int (ceil)
+import Data.Number (fromString)
 import Data.String as DS
+import Effect (Effect)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as Utils
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import JBridge (renderBase64Image)
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Mobility.Prelude (boolToVisibility)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -87,13 +85,13 @@ topGradientView config push =
       radii = if config.isDriver then 16.0 else 0.0
     
 
-tollTextVew :: forall w. Toll -> PrestoDOM (Effect Unit) w
-tollTextVew config = 
+additionalChargesView :: forall w. AdditionalCharges -> PrestoDOM (Effect Unit) w
+additionalChargesView config = 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ MarginHorizontal 16 16
+  , margin $ MarginBottom 8
   , visibility config.visibility
   ][
     imageView[
@@ -248,7 +246,12 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
-        , tollTextVew config.toll
+        , linearLayout [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , orientation VERTICAL
+          ] $ additionalChargesView <$> config.additionalCharges
         , pillView config push
       ]
 
@@ -270,7 +273,6 @@ pillView config push =
         [ width $ V 20
         , height $ V 20
         , imageWithFallback config.topCard.infoPill.image 
-        , visibility config.topCard.infoPill.imageVis
         , margin $ MarginRight 12
         ]
     , textView $
@@ -330,7 +332,7 @@ bottomCardView config push =
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerSideBottomCardsView config push = 
-  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else Padding 16 16 16 16
+  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else PaddingBottom 16
   in 
     scrollView[
       width MATCH_PARENT,
@@ -344,7 +346,12 @@ customerSideBottomCardsView config push =
       , background Color.white900
       , gravity CENTER
       ]
-      [ if config.showRentalRideDetails then rentalTripDetailsView config push
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , visibility $ boolToVisibility config.showSafetyCenter
+        ] $ map (\elem -> pillActionView push elem) config.customerBottomCard.actionPills
+      , if config.showRentalRideDetails || config.showIntercityRideDetails then tripDetailsView config push
         else rideCustomerExperienceView config push 
       ]
     ]
@@ -652,6 +659,7 @@ needHelpPillView config push =
     , rippleColor Color.rippleShade
     , accessibility ENABLE
     , accessibilityHint $ "Need help : Button"
+    , visibility $ boolToVisibility $ not config.showSafetyCenter
     ][imageView [
         width $ V 16
       , height $ V 16
@@ -664,7 +672,31 @@ needHelpPillView config push =
       ] <> FontStyle.tags TypoGraphy
     ]
 
-
+pillActionView :: forall w. (Action -> Effect Unit) -> PillActionConfig -> PrestoDOM (Effect Unit) w
+pillActionView push pillConfig =
+  linearLayout
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , background Color.blue600
+    , gravity CENTER
+    , padding $ Padding 10 12 10 12
+    , cornerRadius if os == "IOS" then 20.0 else 24.0
+    , onClick push $ const pillConfig.action
+    , margin $ Margin 0 20 (if pillConfig.useMarginRight then 12 else 0) 20
+    , rippleColor Color.rippleShade
+    , accessibility ENABLE
+    , accessibilityHint $ pillConfig.text <> " : Button"
+    ][imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback pillConfig.image
+      , margin $ MarginRight 8
+      ]
+     , textView $ [
+        text pillConfig.text
+      , color Color.black700
+      ] <> FontStyle.tags TypoGraphy
+    ]
 
 ------------------------------------- Driver Side Bottom Cards View --------------------------------------------------------------------------------------------------------------------------------------------------------------
 driverSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -694,6 +726,7 @@ getViewsByOrder config item push =
     BADGE_CARD -> badgeCardView config push
     DRIVER_BOTTOM_VIEW -> driverFareBreakUpView config push
     RENTAL_RIDE_VIEW -> rentalRideInfoView push config
+    COINS_EARNED_VIEW -> coinsEarnedView config.coinsEarned
 
 
 ------------------------------------ (Driver Card 1) rideEndBannerView -------------------------------------------------------------------------------------------------------------------------
@@ -718,7 +751,9 @@ driverUpiQrCodeView config push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  ][ if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
+  ][ if config.showIntercityDetails then intercityRideInfoView  push config else  dummyTextView
+  ,  if config.showIntercityDetails then parkingChargesTextView push config else dummyTextView
+  ,  if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
   , linearLayout 
     [
       height WRAP_CONTENT
@@ -763,13 +798,14 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
-          height $ V 165
-        , width $ V 165
-        , margin $ MarginVertical 8 13
-        , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-      ]
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ]
+        $ imageView
+            [ height $ V 165
+            , width $ V 165
+            , margin $ MarginVertical 8 13
+            , id $ getNewIDWithTag config.driverUpiQrCard.id
+            , qr (Qr config.driverUpiQrCard.paymentVpa 165 0)
+            ]
     ]
   ]
 
@@ -785,7 +821,7 @@ noVpaView config =
     , cornerRadius 16.0
     , gravity CENTER
     , padding $ Padding 16 16 16 16
-    , margin $ MarginBottom 24
+    , margin $ MarginVertical 10 10
     ][
         imageView
         [ height $ V 24
@@ -918,8 +954,8 @@ contactSupportPopUpView config push =
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
 
-rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rentalTripDetailsView config push =
+tripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
       fareDiff = config.topCard.finalAmount - config.topCard.initialAmount
   in 
@@ -973,6 +1009,7 @@ rentalTripDetailsView config push =
       , separatorView
       , rentalTripRowView config push TotalFare
       ]
+    , if config.showIntercityRideDetails then showIntercityFareDetailsView config else dummyTextView
     ]
   
   where 
@@ -983,6 +1020,37 @@ rentalTripDetailsView config push =
       , margin $ MarginTop 16
       , background Color.grey700
       ][]
+
+showIntercityFareDetailsView :: forall w. Config -> PrestoDOM (Effect Unit) w 
+showIntercityFareDetailsView config = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , margin $ MarginTop 16
+      , orientation VERTICAL
+      ][
+        textView  $ [
+          width MATCH_PARENT,
+          height WRAP_CONTENT,
+          margin $ MarginBottom 16,
+          text $ config.interCityTextConfig.headerText,
+          accessibility ENABLE,
+          accessibilityHint "Please pay parking or other charges incurred during the trip directly to the driver",
+          color Color.black700
+        ]<> FontStyle.body1 TypoGraphy
+      ,  textView  $ [
+          width MATCH_PARENT,
+          height WRAP_CONTENT,
+          text $ config.interCityTextConfig.bottomText,
+          accessibility ENABLE,
+          accessibilityHint "Toll and State permit charges are not included and have to be paid to the driver separately.",
+          color Color.black700
+        ]<> FontStyle.body1 TypoGraphy
+      ]
 
 rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
 rentalTripRowView config push description =
@@ -1166,7 +1234,53 @@ rentalRideInfoView push config =
             , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) "" (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
           ]]
       else [])
-    
+
+
+intercityRideInfoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+intercityRideInfoView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginVertical 14 24
+  , background Color.white900
+  , stroke $ "2," <> Color.grey800
+  
+  ][  
+    linearLayout 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation   VERTICAL 
+      ][  infoCardView config ("HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime "" config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
+        , infoCardView config ("HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance "" config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
+      ]
+  ]
+
+parkingChargesTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+parkingChargesTextView  push config = 
+ linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginVertical 14 24
+  , background Color.white900
+  , stroke $ "2," <> Color.grey800
+  ][  
+    textView [
+      height WRAP_CONTENT
+     ,width WRAP_CONTENT
+     ,text $ config.parkingCharges.parkingChargesTitle
+    ]
+   ,textView [
+      height WRAP_CONTENT
+     ,width WRAP_CONTENT
+     ,text $ config.parkingCharges.parkingChargesDescription
+    ]
+  ]
 
 getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> String -> (InfoCardConfig)
 getRentalRideInfoCardOdometerView config image renderImage heading headingInfo' heading' subHeading1  = 
@@ -1306,7 +1420,7 @@ sosButtonView config push =
   , cornerRadius if os == "IOS" then 18.0 else 25.0
   , background Color.black150
   , padding $ Padding 8 8 8 8
-  , visibility $ boolToVisibility $ (not config.topCard.topPill.visible) && config.showSafetyCenter
+  , visibility GONE  -- Not required now.
   , onClick push $ const GoToSOS
   ]
   [ imageView
@@ -1323,4 +1437,45 @@ sosButtonView config push =
         , visibility GONE
         ]
       <> FontStyle.body6 TypoGraphy
+  ]
+
+
+coinsEarnedView :: forall w. CoinsEarnedConfigType -> PrestoDOM (Effect Unit) w
+coinsEarnedView coinsEarned = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background Color.white900
+  , cornerRadius 16.0
+  ][
+    linearLayout [
+      height WRAP_CONTENT
+    , orientation VERTICAL
+    , padding $ Padding 14 20 4 20
+    , gravity CENTER_VERTICAL
+    ][
+      textView $ [
+        text coinsEarned.title
+      , color Color.black800
+      ] <> FontStyle.body25 TypoGraphy
+    , textView $ [
+        text coinsEarned.subTitle
+      , color Color.black700 
+      ] <> FontStyle.body6 TypoGraphy
+    ]
+  , linearLayout [height WRAP_CONTENT, weight 1.0] []
+  , linearLayout [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadius 16.0
+    ][
+      imageView [
+        height $ V 85
+      , width $ V 165
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_metro_coins_earned"
+      , gravity RIGHT
+      , cornerRadius 16.0
+      ]
+    ]
   ]

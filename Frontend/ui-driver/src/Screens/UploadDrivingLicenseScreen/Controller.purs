@@ -17,7 +17,7 @@ module Screens.UploadDrivingLicenseScreen.Controller where
 
 import Data.Maybe
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), UploadFileConfig(..))
 import Components.GenericMessageModal as GenericMessageModal
 import Components.OnboardingHeader as OnboardingHeaderController
 import Components.PopUpModal.Controller as PopUpModal
@@ -50,6 +50,7 @@ import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import JBridge as JB
+import Engineering.Helpers.Events as EHE
 
 
 instance showAction :: Show Action where
@@ -90,9 +91,11 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "dl_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "dl_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "dl_number_text_image_clicked" "primary_edit_text"
     PrimaryEditTextActionControllerReEnter act -> case act of
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_image_clicked" "primary_edit_text"
     CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "call_back_image_upload"
     DatePicker (label) resp year month date -> do
       if label == "DATE_OF_BIRTH" then trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "date_of_birth"
@@ -176,6 +179,13 @@ data Action = BackPressed Boolean
             | BottomDrawerListAC BottomDrawerList.Action
             | WhatsAppClick
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
                  if state.props.validateProfilePicturePopUp then do 
@@ -192,7 +202,7 @@ eval (BackPressed flag) state = do
   if(state.props.validateProfilePicturePopUp) then do
       if (state.props.fileCameraOption) then continueWithCmd (state {props{clickedButtonType = "front", validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadImage]
       else continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} [do
-            _ <- liftEffect $ uploadFile false
+            _ <- liftEffect $ uploadFile uploadFileConfig true
             pure NoAction]
   else if state.props.imageCaptureLayoutView then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
   else if state.props.fileCameraPopupModal then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
@@ -210,11 +220,14 @@ eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state 
 eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if isJust state.data.dateOfIssue then  exit $ ValidateDataCall state
-  else if (state.props.openHowToUploadManual == false) then 
+  else if (not state.props.openHowToUploadManual) then do
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_clicked") 
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_page_loaded")
     continue state {props {openHowToUploadManual = true}}
   else
     continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile false
+     let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_photo_clicked")
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
@@ -285,6 +298,7 @@ eval (DatePicker (label) resp year month date) state = do
     "SELECTED" -> case label of
                     "DATE_OF_BIRTH" -> do
                       let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
+                          _ = EHE.addEvent (EHE.defaultEventObject "dl_dob_entered") {payload = ""}
                       continue state {data = state.data { dob = fullDate, dobView = dateView }
                                                         , props {isDateClickable = true }}
                     "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
@@ -322,12 +336,12 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
      updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
    else 
      continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
-     void $ liftEffect $ uploadFile false
+     void $ liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
  
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}} [do
-     void $ liftEffect $ uploadFile false
+     void $ liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do

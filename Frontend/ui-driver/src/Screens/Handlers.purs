@@ -61,5 +61,13 @@ import Screens.Benefits.LmsVideoScreen.Handler (lmsVideoScreen) as UI
 import Screens.Benefits.LmsQuizScreen.Handler (lmsQuizScreen) as UI
 import Screens.DocumentCaptureScreen.Handler (documentCaptureScreen) as UI
 import Screens.DocumentDetailsScreen.Handler (documentDetailsScreen) as UI
+import Screens.DriverCompleteProfileScreen.Handler (driverCompleteProfileScreen) as UI
 import Screens.RateCardScreen.Handler (rateCardScreen) as UI
 import Screens.CustomerReferralTrackerScreen.Handler (customerReferralTrackerScreen) as UI
+import Screens.CancellationRateScreen.Handler (cancellationRateScreen) as UI
+import Screens.HotspotScreen.Handler (hotspotScreen) as UI
+import Screens.RideRequestScreen.Handler (rideRequestScreen) as UI
+import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
+import Screens.ScheduledRideAcceptedScreen.Handler (scheduledRideAcceptedScreen) as UI
+import Screens.UploadParcelImageScreen.Handler (uploadParcelImageScreen) as UI
+import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI

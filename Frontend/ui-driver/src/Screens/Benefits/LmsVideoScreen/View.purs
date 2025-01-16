@@ -41,7 +41,7 @@ import Data.Array ((..))
 import PrestoDOM.Properties(cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Locale.Utils
-import Language.Strings (getStringFromLocal)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Language.Types (STR(..))
 import Services.API (LmsTranslatedModuleInfoRes(..), LmsModuleRes(..))
 import Data.Maybe (Maybe(..), maybe)
@@ -136,7 +136,7 @@ customHeaderView push state =
             , margin $ Margin 0 0 3 0
            ]
           ,textView $
-           [ text $ getStringFromLocal state.props.selectedLanguage (getKeyAccordingtoSelectedLanguage state.props.selectedLanguage)
+           [ text $ StringsV2.getString state.props.selectedLanguage (getKeyAccordingtoSelectedLanguage state.props.selectedLanguage)
            , color Color.blue800
            , ellipsize true
            , maxLines 1
@@ -322,7 +322,7 @@ videoInformation push state index (LmsVideoRes video) =
       , color Color.black800
       ] <> FontStyle.body6 LanguageStyle
   ] <> if video.videoCompletionStatus == ENTITY_COMPLETED then [statusPillView push state "COMPLETED" (Margin 0 4 0 0)]
-       else if index == 0 then [videoCardPillView push state (getStringFromLocal state.props.selectedLanguage WATCH_NOW)]
+       else if index == 0 then [videoCardPillView push state (StringsV2.getString state.props.selectedLanguage WATCH_NOW)]
        else [])
 
 
@@ -376,7 +376,7 @@ quizCardView push state isLocked =
           , gravity CENTER_VERTICAL
           , padding $ Padding 12 12 12 12
           ]([ textView $
-              [ text $ getStringFromLocal state.props.selectedLanguage TAKE_A_QUIZ
+              [ text $ StringsV2.getString state.props.selectedLanguage TAKE_A_QUIZ
               , color $ Color.black800
               , maxLines 1
               , ellipsize true
@@ -409,10 +409,10 @@ quizCardView push state isLocked =
   where
     getDataAccToQuizStatus :: Boolean -> {buttonText :: String, margin :: Margin}
     getDataAccToQuizStatus videosPending = case videosPending, state.data.videosScreenData.quizStatus of
-      _, ENTITY_COMPLETED -> {buttonText : getStringFromLocal state.props.selectedLanguage PLAY_AGAIN, margin : Margin 0 0 0 24}
-      _, ENTITY_NOT_STARTED -> {buttonText : getStringFromLocal state.props.selectedLanguage PLAY_NOW, margin : Margin 0 24 0 0}
-      false, ENTITY_INCOMPLETE -> {buttonText : getStringFromLocal state.props.selectedLanguage PLAY_NOW, margin : Margin 0 24 0 0}
-      true, ENTITY_INCOMPLETE -> {buttonText : getStringFromLocal state.props.selectedLanguage PLAY_NOW, margin : Margin 0 0 0 24}
+      _, ENTITY_COMPLETED -> {buttonText : StringsV2.getString state.props.selectedLanguage PLAY_AGAIN, margin : Margin 0 0 0 24}
+      _, ENTITY_NOT_STARTED -> {buttonText : StringsV2.getString state.props.selectedLanguage PLAY_NOW, margin : Margin 0 24 0 0}
+      false, ENTITY_INCOMPLETE -> {buttonText : StringsV2.getString state.props.selectedLanguage PLAY_NOW, margin : Margin 0 24 0 0}
+      true, ENTITY_INCOMPLETE -> {buttonText : StringsV2.getString state.props.selectedLanguage PLAY_NOW, margin : Margin 0 0 0 24}
 
 statusPillView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> String -> Margin -> PrestoDOM (Effect Unit) w
 statusPillView push state status pillMargin =
@@ -450,7 +450,7 @@ statusPillView push state status pillMargin =
 
     mkProperty :: STR -> String -> Number -> Boolean -> String -> String -> {text :: String, textColor :: String, cornerRadius :: Number, shouldImageBeVisible :: Boolean, pillBackgroundColor :: String, pillImage :: String}
     mkProperty str textColor cornerRadius shouldImageBeVisible pillBackgroundColor pillImage =
-      { text : getStringFromLocal state.props.selectedLanguage str,
+      { text : StringsV2.getString state.props.selectedLanguage str,
         textColor : textColor,
         cornerRadius : cornerRadius,
         shouldImageBeVisible : shouldImageBeVisible,
@@ -472,10 +472,10 @@ headerInformationView push state infoType =
   ] <> FontStyle.body20 LanguageStyle
   where
     gethInfoViewProperty = case infoType of
-      "VIDEOS_PENDING" -> {text: getStringFromLocal state.props.selectedLanguage WATCH_ALL_VIDEOS_TO_LEARN, textColor: Color.black700, backgroundColor: Color.blue600 }
-      "QUIZ_INCOMPLETE" -> {text: getStringFromLocal state.props.selectedLanguage PLAY_QUIZ_TO_COMPLETE_YOUR_TRAINING, textColor: Color.black700, backgroundColor: Color.blue600 }
-      "TRAINING_COMPLETED" -> {text: getStringFromLocal state.props.selectedLanguage TRAINING_COMPLETED <> " 🎉", textColor: Color.white900, backgroundColor: Color.green900 }
-      "VIDEO_WATCHED_TILE" -> {text: getStringFromLocal state.props.selectedLanguage WATCHED, textColor: Color.black700, backgroundColor: Color.blue600 }
+      "VIDEOS_PENDING" -> {text: StringsV2.getString state.props.selectedLanguage WATCH_ALL_VIDEOS_TO_LEARN, textColor: Color.black700, backgroundColor: Color.blue600 }
+      "QUIZ_INCOMPLETE" -> {text: StringsV2.getString state.props.selectedLanguage PLAY_QUIZ_TO_COMPLETE_YOUR_TRAINING, textColor: Color.black700, backgroundColor: Color.blue600 }
+      "TRAINING_COMPLETED" -> {text: StringsV2.getString state.props.selectedLanguage TRAINING_COMPLETED <> " 🎉", textColor: Color.white900, backgroundColor: Color.green900 }
+      "VIDEO_WATCHED_TILE" -> {text: StringsV2.getString state.props.selectedLanguage WATCHED, textColor: Color.black700, backgroundColor: Color.blue600 }
       _ -> {text: "", textColor: Color.white900, backgroundColor: Color.transparent}
 
 errorView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
@@ -491,12 +491,12 @@ errorView push state =
      , imageWithFallback $ fetchImage FF_ASSET "ny_failed"
      ]
   ,  textView $
-     [ text $ getStringFromLocal state.props.selectedLanguage UH_OH_SOMETHING_WENT_WRONG -- "Uh oh! Something went wrong"
+     [ text $ StringsV2.getString state.props.selectedLanguage UH_OH_SOMETHING_WENT_WRONG -- "Uh oh! Something went wrong"
      , color Color.black900
      , margin $ MarginTop 33
      ] <> FontStyle.h2 TypoGraphy 
   ,  textView $
-     [ text $ getStringFromLocal state.props.selectedLanguage PLEASE_TRY_AGAIN
+     [ text $ StringsV2.getString state.props.selectedLanguage PLEASE_TRY_AGAIN
      , color Color.black700
      , margin $ MarginTop 12
      ] <> FontStyle.paragraphText TypoGraphy

@@ -16,7 +16,7 @@ module Screens.DocumentCaptureScreen.ScreenData where
 
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: ST.DocumentCaptureScreenState
 initData =
@@ -27,7 +27,7 @@ initData =
       , vehicleCategory : Nothing
       , docId : ""
       , linkedRc : Nothing
-      , cityConfig : dummyCityConfig
+      , cityConfig : defaultCityConfig
       }
   , props:
       { validateDocModal : false,

@@ -15,15 +15,22 @@
 
 module Screens.NoInternetScreen.Handler where
 
-import Prelude (bind, ($), pure, (<$>))
+import Prelude
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (showScreen)
+import PrestoDOM.Core.Types.Language.Flow (showScreen, initUIWithNameSpace, showScreenWithNameSpace)
 import Screens.NoInternetScreen.View as NoInternetScreen
 import Data.Maybe
 import Screens.NoInternetScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
+import Presto.Core.Types.Language.Flow (Flow)
+import Engineering.Helpers.Commons as EHC
+import PrestoDOM.Core (terminateUI)
+import Presto.Core.Types.Language.Flow (getState) as Flow
+import Engineering.Helpers.Utils as EHU
+import DecodeUtil as DU
+import JBridge as JB
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
 noInternetScreen triggertype= do
@@ -34,3 +41,23 @@ noInternetScreen triggertype= do
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)
     LocationCallBack updatedState -> App.BackT $ App.NoBack <$> (pure TURN_ON_GPS)
     InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure CHECK_INTERNET)
+
+
+noInternetScreen' :: Flow GlobalState Unit
+noInternetScreen' = do 
+  void $ EHU.toggleLoader false
+  (GlobalState state) <- Flow.getState
+  void $ EHC.liftFlow $ initUIWithNameSpace "NoInternetScreen" Nothing
+  let 
+    screen = NoInternetScreen.screen state.noInternetScreen "INTERNET_ACTION"
+    scopedScreen = { 
+      initialState : screen.initialState
+      , view : screen.view
+      , name : screen.name  
+      , globalEvents : screen.globalEvents
+      , eval : screen.eval
+      , parent : Just "NoInternetScreen"}
+  void $ showScreenWithNameSpace scopedScreen 
+  let _ = DU.setKeyInWindow "noInternetCount" 0
+  EHC.liftFlow $ terminateUI $ Just "NoInternetScreen"
+  EHC.liftFlow $ JB.triggerReloadApp "lazy"

@@ -23,9 +23,9 @@ initData =
   , props:
       { isBtnActive: false
       , downgraded: false
-      , canSwitchToRental: false
+      , canSwitchToRental: Nothing
       , acExplanationPopup: false
-      , canSwitchToIntercity : Nothing
+      , canSwitchToInterCity : Nothing
       , fromDeepLink : false
       , showRateCard : false
       , rateCardLoaded : false

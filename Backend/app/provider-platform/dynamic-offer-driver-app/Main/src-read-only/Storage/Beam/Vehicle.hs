@@ -1,14 +1,15 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Vehicle where
 
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceTierType
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -17,8 +18,9 @@ import Tools.Beam.UtilsTH
 data VehicleT f = VehicleT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     capacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
+    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     color :: B.C f Kernel.Prelude.Text,
+    downgradeReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
     energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -29,9 +31,9 @@ data VehicleT f = VehicleT
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
-    selectedServiceTiers :: B.C f [Domain.Types.ServiceTierType.ServiceTierType],
+    selectedServiceTiers :: B.C f [Domain.Types.Common.ServiceTierType],
     size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    variant :: B.C f Domain.Types.Vehicle.Variant,
+    variant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
     vehicleClass :: B.C f Kernel.Prelude.Text,
     vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

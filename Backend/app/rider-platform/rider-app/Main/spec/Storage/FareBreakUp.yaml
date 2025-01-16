@@ -57,7 +57,7 @@ FareBreakup:
       where:
         and: [id]
     findAllByEntityIdAndEntityType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where:
         and: [entityId, entityType]
 

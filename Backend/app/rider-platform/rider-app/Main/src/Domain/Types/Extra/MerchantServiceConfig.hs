@@ -1,14 +1,7 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Types.Extra.MerchantServiceConfig where
 
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
@@ -16,16 +9,17 @@ import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
+import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
 
@@ -39,9 +33,14 @@ data ServiceName
   | NotificationService Notification.NotificationService
   | PaymentService Payment.PaymentService
   | MetroPaymentService Payment.PaymentService
+  | BusPaymentService Payment.PaymentService
+  | BbpsPaymentService Payment.PaymentService
+  | MultiModalPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
+  | PayoutService Payout.PayoutService
+  | MultiModalService MultiModal.MultiModalService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -56,9 +55,14 @@ instance Show ServiceName where
   show (NotificationService s) = "Notification_" <> show s
   show (PaymentService s) = "Payment_" <> show s
   show (MetroPaymentService s) = "MetroPayment_" <> show s
+  show (BusPaymentService s) = "BusPayment_" <> show s
+  show (BbpsPaymentService s) = "BbpsPayment_" <> show s
+  show (MultiModalPaymentService s) = "MultiModalPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
+  show (PayoutService s) = "Payout_" <> show s
+  show (MultiModalService s) = "MultiModal_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -97,6 +101,18 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "MetroPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (BusPaymentService v1, r2)
+                 | r1 <- stripPrefix "BusPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (BbpsPaymentService v1, r2)
+                 | r1 <- stripPrefix "BbpsPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MultiModalPaymentService v1, r2)
+                 | r1 <- stripPrefix "MultiModalPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -107,6 +123,14 @@ instance Read ServiceName where
                ]
             ++ [ (IncidentReportService v1, r2)
                  | r1 <- stripPrefix "IncidentReport_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (PayoutService v1, r2)
+                 | r1 <- stripPrefix "Payout_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MultiModalService v1, r2)
+                 | r1 <- stripPrefix "MultiModal_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
@@ -123,9 +147,14 @@ data ServiceConfigD (s :: UsageSafety)
   | NotificationServiceConfig !NotificationServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
   | MetroPaymentServiceConfig !PaymentServiceConfig
+  | BusPaymentServiceConfig !PaymentServiceConfig
+  | BbpsPaymentServiceConfig !PaymentServiceConfig
+  | MultiModalPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
+  | PayoutServiceConfig !PayoutServiceConfig
+  | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

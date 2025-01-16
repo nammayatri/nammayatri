@@ -1,13 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.FarePolicy.FareProductType
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -54,12 +54,14 @@ data QuoteT f = QuoteT
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType
+    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, B.Beamable)
 

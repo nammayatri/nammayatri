@@ -25,7 +25,7 @@ import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Vehicle as Vehicle
+import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
@@ -60,7 +60,7 @@ data ImageValidateRequest = ImageValidateRequest
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
     workflowTransactionId :: Maybe Text,
-    vehicleCategory :: Maybe Vehicle.Category
+    vehicleCategory :: Maybe VehicleCategory
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -164,7 +164,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
+  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -174,7 +174,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
       docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
       return $ maybe True (.isImageValidationRequired) docConfigs
     _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory)
       return $ maybe True (.isImageValidationRequired) docConfigs
   if isImageValidationRequired && isNothing validationStatus
     then do
@@ -254,13 +254,14 @@ mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person.Person ->
   Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   Text ->
   DVC.DocumentType ->
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   Maybe Documents.VerificationStatus ->
   Maybe Text ->
   m Domain.Image
-mkImage personId_ merchantId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
+mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -277,7 +278,8 @@ mkImage personId_ merchantId s3Path documentType_ mbRcId verificationStatus work
         reviewerEmail = Nothing,
         documentExpiry = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        merchantOperatingCityId = mbMerchantOpCityId
       }
 
 getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text

@@ -18,20 +18,20 @@ import Servant
 import "lib-dashboard" Tools.Auth
 
 type API =
-  ( DashboardAuth ('DASHBOARD_ADMIN) :> "add" :> "flagCategory" :> ReqBody ('[JSON]) API.Types.UI.FlaggedCategory.AddFlagCategoryReq
+  ( DashboardAuth 'DASHBOARD_ADMIN :> "add" :> "flagCategory" :> ReqBody '[JSON] API.Types.UI.FlaggedCategory.AddFlagCategoryReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('DASHBOARD_ADMIN)
+      :<|> DashboardAuth 'DASHBOARD_ADMIN
       :> "delete"
       :> "flagCategory"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FlaggedCategory.DeleteFlagCategoryReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('DASHBOARD_USER)
+      :<|> DashboardAuth 'DASHBOARD_USER
       :> "list"
       :> "flagCategory"
       :> QueryParam
@@ -41,7 +41,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FlaggedCategory.FlagCategoryList
   )
 
@@ -54,5 +54,5 @@ postAddFlagCategory a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.FlaggedCatego
 postDeleteFlagCategory :: (TokenInfo -> API.Types.UI.FlaggedCategory.DeleteFlagCategoryReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDeleteFlagCategory a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.FlaggedCategory.postDeleteFlagCategory a2 a1
 
-getListFlagCategory :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.UI.FlaggedCategory.FlagCategoryList)
+getListFlagCategory :: (TokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.UI.FlaggedCategory.FlagCategoryList)
 getListFlagCategory a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.FlaggedCategory.getListFlagCategory a3 a2 a1

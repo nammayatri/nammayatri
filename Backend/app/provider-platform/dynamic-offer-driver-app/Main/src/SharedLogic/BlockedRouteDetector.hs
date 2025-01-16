@@ -56,14 +56,14 @@ checkRouteServiceability :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r)
 checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteIdx, customerPrefferedSearchRoutePoints, customerPrefferedSearchRouteDistance, customerPrefferedSearchRouteDuration) routes = do
   let route' =
         if null routes
-          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints]
+          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) Nothing (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints]
           else routes
   blockedRoutes <- B.runInReplica $ findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId
   return $ getServiceableRoute route' 0 blockedRoutes
   where
     getServiceableRoute _ _ [] = defaultCustomerPrefferedRouteServiceability False
     getServiceableRoute [] _ _ = defaultCustomerPrefferedRouteServiceability True
-    getServiceableRoute ((Maps.RouteInfo (Just duration) (Just distance) _ _ _ points) : rs) idx blockedRoutes = do
+    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points) : rs) idx blockedRoutes = do
       if isRouteServiceable points blockedRoutes
         then
           RouteServiceability

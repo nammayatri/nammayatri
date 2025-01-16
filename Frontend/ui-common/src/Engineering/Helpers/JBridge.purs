@@ -29,6 +29,7 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, Fiber, Aff, launchAff)
+import PrestoDOM.Core (isScreenActive)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried
@@ -74,6 +75,7 @@ foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
 foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
+foreign import emitJOSEventWithCb :: forall action. Fn4 String JOSEventInnerPayload (action -> Effect Unit) (String -> action) Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
@@ -82,7 +84,7 @@ foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
--- foreign import getManufacturerName :: Unit -> String
+foreign import getManufacturerName :: Unit -> String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
@@ -101,7 +103,7 @@ foreign import removeMarker :: String -> Unit
 foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Boolean -> Effect Unit
+foreign import uploadFile :: UploadFileConfig -> Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
@@ -166,6 +168,7 @@ foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
 -- foreign import removeAllPolylines :: String -> Unit
+foreign import removeAllPolygons :: String -> Unit
 foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
@@ -212,23 +215,25 @@ foreign import clearNoInternetAction :: Unit -> Effect Unit
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit
-foreign import clearFocus :: EffectFn1 String Unit
+foreign import clearFocusFunction :: String -> Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
 foreign import saveAudioFile :: EffectFn1 String String
-foreign import uploadMultiPartData :: EffectFn3 String String String Unit
+foreign import uploadMultiPartData :: EffectFn5 String String String String String Unit
 foreign import startAudioRecording :: EffectFn1 String Boolean
 foreign import stopAudioRecording :: EffectFn1 String String
 foreign import differenceBetweenTwoUTC :: Fn2 String String Int
 
 foreign import differenceBetweenTwoUTCInMinutes :: Fn2 String String Int
+foreign import getSecondsFromUTCTime :: Fn1 String Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
 foreign import launchInAppRatingPopup :: Unit -> Effect Unit
 foreign import getExtendedPath :: Locations -> Locations
 foreign import generateSessionId :: Unit -> String
-
+foreign import cleanOnResumeCallback :: Effect Unit
+foreign import cleanOnPauseCallback :: Effect Unit
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
@@ -246,7 +251,7 @@ foreign import extractReferrerUrl :: Unit -> Effect Unit
 foreign import launchDateSettings :: String -> Unit
 foreign import startLottieProcess :: LottieAnimationConfig -> Unit
 foreign import methodArgumentCount :: String -> Int
-foreign import hideLoader :: Effect Unit
+foreign import hideLoader ::String -> Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
@@ -257,14 +262,15 @@ foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
-foreign import getLocationPermissionStatus :: Fn1 Unit String 
-foreign import pauseYoutubeVideo :: Unit -> Unit 
-foreign import releaseYoutubeView :: Unit -> Unit 
-foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import getLocationPermissionStatus :: Fn1 Unit String
+foreign import pauseYoutubeVideo :: Unit -> Unit
+foreign import releaseYoutubeView :: Unit -> Unit
+foreign import storeCallBackLocateOnMap :: EffectFn2 (String -> String -> String -> Effect Unit) ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit) Unit
+foreign import storeCallbackHotspotMap :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> String -> action) Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
 foreign import downloadMLTranslationModel :: EffectFn1 String Unit
-foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
+foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
 foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
 foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
@@ -276,23 +282,42 @@ foreign import askRequestedPermissionsWithCallback :: forall action. Array Strin
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import drawCircleOnMap :: EffectFn1 CircleConfig Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
-foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
-foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
-foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) ( Int -> Int -> String -> action) Unit
+foreign import startAudioPlayer :: forall action. Fn4 String (action -> Effect Unit) (String -> action) String Unit
+foreign import datePickerImpl :: forall action. EffectFn5 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Number Number Unit
+foreign import timePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) ( Int -> Int -> String -> action) Number Unit
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
-foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
+foreign import triggerCallBackQueue :: EffectFn1 String  Unit
+foreign import updateQueue :: EffectFn4 String String String (String -> String -> String -> Effect Unit) Unit
+foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit
 foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+foreign import getCircleCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> action) Unit
 
 foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
+foreign import getAndroidId :: Unit -> String
+foreign import getAppName :: Unit -> String
+foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) ShakeListenerConfig Unit
+foreign import unregisterShakeListener :: Unit -> Unit
+foreign import registerShakeListener :: Unit -> Unit
+foreign import fetchFilesFromFolderPath :: String -> Array String
+foreign import isPackageInstalled :: String -> Boolean
+foreign import requestUninstallPackage :: String -> Boolean
+foreign import storeOnPauseCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
+foreign import launchCustomTab :: forall action. EffectFn2 String action  Unit
+foreign import getMedianUTCTime :: Fn2 String String String
+foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
+foreign import pickContact :: EffectFn1 String Boolean
+foreign import getResourceIdentifier :: String -> String -> Int
+foreign import executeJS :: Fn2 (Array String) String String
 
-type SliderConfig = { 
+type SliderConfig = {
   id :: String,
   sliderConversionRate :: Number,
   sliderMinValue :: Int,
@@ -325,6 +350,16 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+clearFocus :: EffectFn1 String Unit
+clearFocus = mkEffectFn1 $ \id -> pure $ clearFocusFunction id
+
+foreign import initHVSdk :: forall action. EffectFn8 String String String Boolean String String (String -> action) (action -> Effect Unit) Unit
+foreign import decodeAndStoreImage :: Fn1 String String
+foreign import convertAudioToBase64 :: Fn1 String String
+foreign import encodeToBase64 :: forall action. EffectFn5 String Int (String -> Maybe String) (Maybe String) (action -> Effect Unit) (Effect String)
+foreign import isSdkTokenExpired :: Fn1 String Boolean
+foreign import makeSdkTokenExpiry :: Fn1 Int String
+foreign import getEpochTime :: Fn1 String Number
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
@@ -337,8 +372,8 @@ getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (Stri
 getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
 
 
-timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
-timePickerWithoutTimeout = runEffectFn2 timePickerImpl
+timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Number -> Effect Unit
+timePickerWithoutTimeout = runEffectFn3 timePickerImpl
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -459,14 +494,14 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 --             liftFlow (toggleLoaderImpl flag)
 --         Nothing -> liftFlow (toggleLoaderImpl flag)
 
-removeAllPolylines :: String -> Unit 
+removeAllPolylines :: String -> Unit
 removeAllPolylines str = removeAllPolylinesImpl markersToRemove
-  where 
+  where
     removeAllPolylinesImpl :: Array String -> Unit
     removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
-    
-    markersToRemove :: Array String   
-    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", ""]
+
+    markersToRemove :: Array String
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", "ny_ic_bike_nav_on_map","ny_ic_bike_pickup_nav_on_map", "", "ny_ic_suv_plus_nav_on_map", "ny_ic_bike_delivery_nav_on_map"]
 
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
@@ -475,11 +510,11 @@ setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 setEnvInNativeSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
 
-datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
-datePickerWithTimeout = runEffectFn3 datePickerImpl
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Number -> Number -> Effect Unit
+datePickerWithTimeout = runEffectFn5 datePickerImpl
 
-timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
-timePickerWithTimeout = runEffectFn2 timePickerImpl
+timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Number -> Effect Unit
+timePickerWithTimeout = runEffectFn3 timePickerImpl
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
 -- onEventWithCB obj = doAff do
@@ -506,7 +541,10 @@ type LocateOnMapConfig = {
   , locationName :: String
   , locateOnMapPadding :: LocateOnMapPadding
   , enableMapClickListener :: Boolean
+  , editPickUpThreshold :: Number
+  , editPickupLocation :: Boolean
   , thresholdDistToSpot :: Int
+  , circleConfig :: CircleConfig
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -518,13 +556,15 @@ locateOnMapConfig = {
   , points : []
   , zoomLevel : Constant.zoomLevel
   , labelId : ""
+  , editPickUpThreshold : 100.0
+  , editPickupLocation : false
   , markerCallbackForTags : []
   , markerCallback : ""
   , specialZoneMarkerConfig : {
         showLabel : false
       , showLabelActionImage : false
       , labelImage : ""
-      , labelMaxWidth : if os == "IOS" then 140 else 400 
+      , labelMaxWidth : Constant.locateOnMapLabelMaxWidth
       , labelActionImage : ""
       , theme : "LIGHT"
       , spotIcon : "ny_ic_zone_pickup_marker_green"
@@ -536,6 +576,7 @@ locateOnMapConfig = {
   , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
   , enableMapClickListener : false
   , thresholdDistToSpot : 3
+  , circleConfig : defaultCircleConfig
 }
 
 type ShowMarkerConfig = {
@@ -581,7 +622,7 @@ type SpecialZoneMarkerConfig = {
 }
 
 type MarkerImageConfig = {
-  image :: String, 
+  image :: String,
   height :: Int,
   width :: Int
 }
@@ -591,6 +632,36 @@ defaultMarkerImageConfig = {
   image : "",
   height : 28,
   width : 28
+}
+
+type ActionImageConfig = {
+  image :: String,
+  height :: Int,
+  width :: Int,
+  orientation :: String,
+  background :: String,
+  padding :: EdgeInsets,
+  layoutMargin :: EdgeInsets,
+  layoutPadding :: EdgeInsets
+}
+
+type EdgeInsets = {
+    left :: Int
+  , top :: Int
+  , right :: Int
+  , bottom :: Int
+}
+
+defaultActionImageConfig :: ActionImageConfig
+defaultActionImageConfig = {
+    image : ""
+  , height : 30
+  , width : 30
+  , orientation : "VERTICAL"
+  , background : ""
+  , padding : dummyMarkerEdgeInsets
+  , layoutMargin : dummyMarkerEdgeInsets
+  , layoutPadding : dummyMarkerEdgeInsets
 }
 
 type MarkerConfig = {
@@ -622,6 +693,15 @@ type MarkerConfig = {
   , markerSizeHeight :: Number
   , anchorV :: Number
   , anchorU :: Number
+  , actionImage :: ActionImageConfig
+}
+
+dummyMarkerEdgeInsets :: EdgeInsets
+dummyMarkerEdgeInsets = {
+  left : -1,
+  top : -1,
+  right : -1,
+  bottom : -1
 }
 
 defaultMarkerConfig :: MarkerConfig
@@ -654,14 +734,48 @@ defaultMarkerConfig = {
   , markerSizeHeight : 40.0 --- use in case of ios
   , useDestPoints : true
   , usePosition : false
+  , actionImage : defaultActionImageConfig
 }
+
+type CircleConfig = {
+  radius :: Number,
+  primaryStrokeColor :: String,
+  fillColor :: String,
+  strokeWidth :: Int,
+  secondaryStrokeColor :: String,
+  circleId :: String,
+  centerLat :: Number,
+  centerLon :: Number,
+  showPrimaryStrokeColor :: Boolean,
+  strokePattern :: String,
+  isCircleClickable :: Boolean
+}
+
+defaultCircleConfig :: CircleConfig
+defaultCircleConfig = {
+  radius : 0.0,
+  primaryStrokeColor : "#00FFFFFF",
+  fillColor : "#00FFFFFF",
+  strokeWidth : 0,
+  secondaryStrokeColor : "#00FFFFFF",
+  circleId : "",
+  centerLat : 0.0,
+  centerLon : 0.0,
+  showPrimaryStrokeColor : true,
+  strokePattern : "NORMAL",
+  isCircleClickable : false
+}
+
+data StrokePattern = NORMAL | DASHED | DOTTED
+derive instance genericStrokePattern :: Generic StrokePattern _
+instance showStrokePattern :: Show StrokePattern where show = genericShow
 
 type AnimationConfig = {
   animationType :: String,
   animationDuration :: String
 }
 
-defaultAnimationConfig :: AnimationConfig 
+defaultAnimationConfig :: AnimationConfig
 defaultAnimationConfig = {
     animationType : "NONE"
   , animationDuration : "0"
@@ -710,7 +824,7 @@ type SuggestionDefinitions = Array
 
 type UpdateRouteConfig = {
     json :: Locations
-  , destMarker :: String
+  , destMarkerConfig :: MarkerConfig
   , eta :: String
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
@@ -718,6 +832,7 @@ type UpdateRouteConfig = {
   , autoZoom :: Boolean
   , pureScriptID :: String
   , polylineKey :: String
+  , locationName :: String
 }
 
 type InAppNotificationPayload = {
@@ -733,6 +848,18 @@ type InAppNotificationPayload = {
   durationInMilliSeconds :: Int,
   showLoader :: Boolean
 }
+
+type JOSEventInnerPayload = { -- Added this to make the events payload generic
+  param1 :: String,
+  param2 :: String
+}
+
+josEventInnerPayload :: JOSEventInnerPayload
+josEventInnerPayload = {
+  param1 : "",
+  param2 : ""
+}
+
 
 inAppNotificationPayload :: InAppNotificationPayload
 inAppNotificationPayload = {
@@ -752,7 +879,7 @@ inAppNotificationPayload = {
 updateRouteConfig :: UpdateRouteConfig
 updateRouteConfig = {
     json : {points: []}
-  , destMarker : ""
+  , destMarkerConfig : defaultMarkerConfig
   , eta : ""
   , srcMarker : ""
   , specialLocation : mapRouteConfig
@@ -760,23 +887,24 @@ updateRouteConfig = {
   , autoZoom : true
   , pureScriptID : ""
   , polylineKey : ""
+  , locationName : ""
 }
 
 mapRouteConfig :: MapRouteConfig
 mapRouteConfig = {
-      sourceSpecialTagIcon: "", 
-      destSpecialTagIcon: "", 
-      vehicleSizeTagIcon: 0, 
-      isAnimation: false, 
+      sourceSpecialTagIcon: "",
+      destSpecialTagIcon: "",
+      vehicleSizeTagIcon: 0,
+      isAnimation: false,
       autoZoom : true,
       dashUnit : 1,
       gapUnit : 0,
       polylineAnimationConfig: {
-        color: "", 
-        draw: 0, 
-        fade: 0, 
+        color: "",
+        draw: 0,
+        fade: 0,
         delay: 0
-      } 
+      }
   }
 
 -- type Point = Array Number
@@ -822,6 +950,7 @@ displayBase64ImageConfig = {
   , id : ""
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
+  , adjustViewBounds : true
 }
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 
@@ -845,7 +974,7 @@ type RouteConfig = {
 }
 
 mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> Maybe (Array MarkerConfig) -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs routeType style isActual key mapRouteConfig = 
+mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs routeType style isActual key mapRouteConfig =
   routeConfig{
     locations = normalRoute,
     routeType = routeType,
@@ -854,18 +983,18 @@ mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs 
     mapRouteConfig = mapRouteConfig,
     startMarkerConfig = startMarkerConfig,
     endMarkerConfig = endMarkerConfig,
-    stopMarkerConfigs = fromMaybe [] mbStopMarkerConfigs, 
+    stopMarkerConfigs = fromMaybe [] mbStopMarkerConfigs,
     routeKey = show key
   }
 
 mkDrawRouteConfig :: Array RouteConfig -> String -> DrawRouteConfig
-mkDrawRouteConfig routeConfigs pureScriptID = 
+mkDrawRouteConfig routeConfigs pureScriptID =
   { routeConfigs : routeConfigs,
     pureScriptID : pureScriptID
   }
 
 
-routeConfig :: RouteConfig 
+routeConfig :: RouteConfig
 routeConfig = {
   locations : {points: []},
   style : "LineString",
@@ -897,19 +1026,38 @@ data DatePicker = DatePicker String Int Int Int
 data TimePicker = TimePicker Int Int String
 
 data CloseAction = SELECTED | DISMISSED | CANCELLED
-
 derive instance genericCloseAction :: Generic CloseAction _
 instance showCloseAction :: Show CloseAction where show = genericShow
 
-showDateTimePicker ∷ forall action. (action → Effect Unit) → (String → Int → Int → Int → String → Int → Int → action) → Aff Unit
-showDateTimePicker push action = do
-  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
-  let (DatePicker dateResp year month day) = datePicker
-  if dateResp == show SELECTED then do
-    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker $> nonCanceler
+showDateTimePicker ∷ forall action. (action → Effect Unit) -> (String → Int → Int → Int → String → Int → Int → action) -> Maybe String -> Maybe String -> Boolean -> Boolean -> Aff Unit
+showDateTimePicker push action maybePrevDate maybeMaxDate openDatePicker openTimePicker = do
+  let
+    prevDate =  case maybePrevDate of
+                  Nothing -> -1.0
+                  Just date -> getEpochTime date
+    maxDate =  case maybeMaxDate of
+                  Nothing -> -1.0
+                  Just date -> getEpochTime date
+  if openDatePicker && openTimePicker then do
+    datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 prevDate maxDate $> nonCanceler
+    let (DatePicker dateResp year month day) = datePicker
+    if dateResp == show SELECTED then do
+      timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker prevDate $> nonCanceler
+      let (TimePicker hour minute timeResp) = timePicker
+      liftEffect $ push $ action dateResp year month day timeResp hour minute
+    else
+      liftEffect $ push $ action dateResp year month day "" 0 0
+  else if openDatePicker then do
+    datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 prevDate maxDate $> nonCanceler
+    let (DatePicker dateResp year month day) = datePicker
+    liftEffect $ push $ action dateResp year month day "" 0 0
+  else if openTimePicker then do
+    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker prevDate $> nonCanceler
     let (TimePicker hour minute timeResp) = timePicker
-    liftEffect $ push $ action dateResp year month day timeResp hour minute
-  else liftEffect $ push $ action dateResp year month day "" 0 0
+    liftEffect $ push $ action "" 0 0 0 timeResp hour minute
+  else
+    liftEffect $ push $ action "" 0 0 0 "" 0 0
+
 
 renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Effect Unit
 renderSlider = runEffectFn3 renderSliderImpl
@@ -922,8 +1070,39 @@ type UpdateSliderConfig = {
 }
 
 
-data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
+data RouteKeysType  = DEFAULT | RENTAL | ADVANCED | DELIVERY_DESTINATION
 
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow
 instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
+
+encodeToBase64Type :: String -> Int ->  Aff (Maybe String)
+encodeToBase64Type url delay =  makeAff (\cb -> runEffectFn5 encodeToBase64 url delay (Just) (Nothing) ((cb <<< Right)) $> nonCanceler)
+
+type ShakeListenerConfig = {
+  shakeAccelerationThreshold :: Number,
+  consecutiveShakeInterval :: Int,
+  shakeCountResetTime :: Int
+}
+
+defaultShakeListenerConfig :: ShakeListenerConfig
+defaultShakeListenerConfig = {
+  shakeAccelerationThreshold : 4.0,
+  consecutiveShakeInterval : 500,
+  shakeCountResetTime : 3000
+}
+
+handleLocateOnMapCallback :: String -> ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit)
+handleLocateOnMapCallback screenName = (\push key lat lon -> do
+                  isSuccess <- handleCallback screenName key lat lon push
+                  when (not isSuccess) $ runEffectFn4 updateQueue key lat lon (handleLocateOnMapCallback screenName push))
+  where
+  handleCallback :: String -> String -> String -> String -> (String -> String -> String -> Effect Unit) -> Effect Boolean
+  handleCallback screenName key lat lon push = do
+    isActive <- isScreenActive "default" screenName
+    when isActive $ do push key lat lon
+    pure isActive
+
+foreign import triggerReloadApp :: String ->Effect Unit
+
+foreign import rsEncryption :: String -> String

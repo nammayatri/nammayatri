@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Domain.Types.UtilsTH where

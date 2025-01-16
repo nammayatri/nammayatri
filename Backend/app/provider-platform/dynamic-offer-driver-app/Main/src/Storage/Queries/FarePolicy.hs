@@ -20,7 +20,7 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
@@ -89,7 +89,8 @@ create farePolicy = do
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       QueriesFPPD.create (farePolicy.id, fPPD)
-    SlabsDetails _ -> pure () -- will do later :(
+    SlabsDetails fPSD ->
+      mapM_ (\fps -> QueriesFPSDS.create (farePolicy.id, fps)) (toList fPSD.slabs)
     AmbulanceDetails _ -> pure () -- can be done with slabs
     RentalDetails fPRD -> do
       QueriesFPRD.create (farePolicy.id, fPRD)
@@ -113,7 +114,9 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
         BeamFP.serviceChargeAmount = serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
+        BeamFP.perStopCharge = perStopCharge,
         BeamFP.tollCharges = tollCharges,
+        BeamFP.tipOptions = tipOptions,
         BeamFP.currency = Just currency,
         BeamFP.distanceUnit = Just distanceUnit,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
@@ -129,8 +132,12 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
         BeamFP.cancellationFarePolicyId = getId <$> cancellationFarePolicyId,
+        BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.createdAt = createdAt,
-        BeamFP.updatedAt = updatedAt
+        BeamFP.updatedAt = updatedAt,
+        BeamFP.merchantId = getId <$> merchantId,
+        BeamFP.merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        ..
       }
 
 instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
@@ -204,7 +211,9 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
             { id = Id id,
               serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
               parkingCharge = parkingCharge,
+              perStopCharge = perStopCharge,
               tollCharges = tollCharges,
+              tipOptions = tipOptions,
               currency = fromMaybe INR currency,
               distanceUnit = fromMaybe Meter distanceUnit,
               nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
@@ -219,6 +228,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               driverExtraFeeBounds = nonEmpty fDEFB,
               farePolicyDetails,
               perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
+              additionalCongestionCharge = 0,
               congestionChargeMultiplier = congestionCharge,
               perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
               cardCharge =
@@ -229,7 +239,11 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
                     },
               description = description,
               cancellationFarePolicyId = Id <$> cancellationFarePolicyId,
+              platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
               createdAt = createdAt,
-              updatedAt = updatedAt
+              updatedAt = updatedAt,
+              merchantId = Id <$> merchantId,
+              merchantOperatingCityId = Id <$> merchantOperatingCityId,
+              ..
             }
     Nothing -> return Nothing

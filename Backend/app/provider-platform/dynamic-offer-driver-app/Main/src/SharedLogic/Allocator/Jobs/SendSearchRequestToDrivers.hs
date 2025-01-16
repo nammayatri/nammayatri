@@ -18,8 +18,8 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import Domain.Types as DTC
 import Domain.Types.Booking (BookingStatus (..))
-import Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -34,8 +34,10 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPoolConfig
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -51,6 +53,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import Tools.Utils
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
@@ -85,24 +88,34 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance (Just (TransactionId (Id searchReq.transactionId)))
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance (Just (TransactionId (Id searchReq.transactionId))) searchReq
   goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
-  tripQuoteDetails <- do
+  tripQuoteDetailsWithoutUpgrades <- do
     let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
     estimateIds `forM` \estimateId -> do
       if DTC.isDynamicOfferTrip searchTry.tripCategory
         then do
           estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
-          let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-              driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
-              driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-          SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId
+          buildEstimateTripQuoteDetails searchTry searchReq estimate
         else do
           quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
           let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
               driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
               driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
-          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId
+          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId False
+
+  tripQuoteDetails <-
+    case tripQuoteDetailsWithoutUpgrades of
+      [tripQuoteDetail] ->
+        -- allow upgrade for one way regular rides only if Auto is selected and rider is eligible for upgrade
+        case (tripQuoteDetail.tripCategory, tripQuoteDetail.vehicleServiceTier, isRiderEligibleForCabUpgrade searchReq) of
+          (OneWay OneWayOnDemandDynamicOffer, AUTO_RICKSHAW, True) -> do
+            upgradeEstimates <- QEst.findEligibleForCabUpgrade searchReq.id True
+            upgradeTripQuoteDetails <- upgradeEstimates `forM` buildEstimateTripQuoteDetails searchTry searchReq
+            return $ tripQuoteDetailsWithoutUpgrades <> upgradeTripQuoteDetails
+          _ -> return tripQuoteDetailsWithoutUpgrades
+      _ -> return tripQuoteDetailsWithoutUpgrades
+
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -111,10 +124,17 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             tripQuoteDetails,
             customerExtraFee = searchTry.customerExtraFee,
             messageId = searchTry.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            isAllocatorBatch = True
           }
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
+  where
+    buildEstimateTripQuoteDetails searchTry searchReq estimate = do
+      let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+          driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
+          driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
+      SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId estimate.eligibleForUpgrade
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -152,11 +172,9 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
+          getNextDriverPoolBatch = (if driverPoolConfig.poolSortingType == DriverPoolConfig.Tagged && driverPoolConfig.enableUnifiedPooling == Just True then UI.getNextDriverPoolBatch else I.getNextDriverPoolBatch) driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
-          createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
               { incrementTaskCounter = Metrics.incrementTaskCounter driverSearchBatchInput.merchant.name,

@@ -27,6 +27,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Function
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
+import qualified Data.Time as T
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
@@ -34,8 +35,8 @@ import Kernel.Prelude
 import Kernel.Types.Flow
 import Kernel.Utils.Common hiding (id)
 import qualified Streamly.Internal.Data.Fold as SF
+import qualified Streamly.Internal.Data.Stream.IsStream as S
 import Streamly.Internal.Data.Stream.Serial (SerialT)
-import qualified Streamly.Prelude as S
 
 runConsumer :: L.FlowRuntime -> AppEnv -> ConsumerType -> Consumer.KafkaConsumer -> IO ()
 runConsumer flowRt appEnv consumerType kafkaConsumer = do
@@ -46,15 +47,22 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     LOCATION_UPDATE -> locationUpdateConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
-  readMessages kafkaConsumer
+updateCustomerStatsConsumer flowRt appEnv kafkaConsumer = do
+  readMesssageWithWaitAndTimeRange kafkaConsumer appEnv
+    & S.chunksOf appEnv.kafkaReadBatchSize addToList
     & S.mapM updateCustomerStatsWithFlow
+    & S.delay (fromIntegral $ appEnv.kafkaReadBatchDelay.getSeconds)
     & S.drain
   where
-    updateCustomerStatsWithFlow (messagePayload, personId, _) =
-      runFlowR flowRt appEnv . withLogTag personId $
+    addToList = SF.mkFold step start extract
+      where
+        step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
+        start = SF.Partial []
+        extract = reverse
+    updateCustomerStatsWithFlow events = do
+      runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (PSProcessor.updateCustomerStats messagePayload personId)
+          >>= flip withLogTag (mapM (\(eventPayload, personId) -> withLogTag ("updating-person-stats-personId:" <> personId) $ PSProcessor.updateCustomerStats eventPayload personId) events)
 
 broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 broadcastMessageConsumer flowRt appEnv kafkaConsumer =
@@ -116,9 +124,10 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
 locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 locationUpdateConsumer flowRt appEnv kafkaConsumer = do
   let batchSize = maybe 100 (\healthCheckAppCfg -> fromIntegral healthCheckAppCfg.batchSize) appEnv.healthCheckAppCfg
+  let enabledMerchantCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
   readMessages kafkaConsumer
     & S.chunksOf batchSize addToList
-    & S.mapM processRealtimeLocationUpdates'
+    & S.mapM (processRealtimeLocationUpdates' enabledMerchantCityIds)
     & S.drain
   where
     addToList ::
@@ -132,10 +141,10 @@ locationUpdateConsumer flowRt appEnv kafkaConsumer = do
         step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
         start = SF.Partial []
         extract = reverse . DL.nubBy ((==) `on` snd)
-    processRealtimeLocationUpdates' locationUpdate =
+    processRealtimeLocationUpdates' enabledMerchantCityIds locationUpdate =
       runFlowR flowRt appEnv . withLogTag "pushing location batch to redis" $
         generateGUID
-          >>= flip withLogTag (LCProcessor.processLocationData locationUpdate)
+          >>= flip withLogTag (LCProcessor.processLocationData enabledMerchantCityIds locationUpdate)
 
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>
@@ -147,6 +156,39 @@ readMessages kafkaConsumer = do
   S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
   where
     pollMessageR kc = S.repeatM (Consumer.pollMessage kc (Consumer.Timeout 500))
+
+    -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
+    decodeRecord =
+      (A.decode . LBS.fromStrict <=< Consumer.crValue)
+        &&& (pure . decodeUtf8 <=< Consumer.crKey)
+        &&& id
+
+    -- remove maybe messages and convert to tuple
+    removeMaybeFromTuple (mbMessage, (mbMessageKey, cr)) =
+      (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey
+
+readMesssageWithWaitAndTimeRange ::
+  (FromJSON message, ConvertUtf8 messageKey ByteString) =>
+  Consumer.KafkaConsumer ->
+  AppEnv ->
+  SerialT IO (message, messageKey, ConsumerRecordD)
+readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
+  let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
+  let records = S.mapMaybe hush eitherRecords
+  S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
+  where
+    pollMessageR kc = S.repeatM $ do
+      currentHour <- liftIO getCurrentHour
+      let shouldPoll = maybe True (\(start, end) -> start <= currentHour && end > currentHour) timeRange
+      if shouldPoll
+        then Consumer.pollMessage kc (Consumer.Timeout 500)
+        else pure (Left $ Consumer.KafkaError "TIME CAME TO AN END FOR ME!!")
+
+    timeRange = (,) <$> appEnv.consumerStartTime <*> appEnv.consumerEndTime
+
+    getCurrentHour = do
+      (T.UTCTime _date secTillNow) <- T.getCurrentTime
+      return $ div (T.diffTimeToPicoseconds secTillNow) 3600000000000000
 
     -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
     decodeRecord =

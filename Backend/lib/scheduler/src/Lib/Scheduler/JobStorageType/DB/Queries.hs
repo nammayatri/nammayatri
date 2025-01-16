@@ -15,7 +15,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
@@ -26,7 +25,7 @@ import Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Types.Common (EsqDBFlow, Log, MonadFlow, MonadTime (getCurrentTime))
+import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
@@ -55,7 +54,9 @@ instance (JobProcessor t) => FromTType'' BeamST.SchedulerJob (AnyJob t) where
             currErrors = currErrors,
             status = status,
             jobInfo = anyJobInfo,
-            parentJobId = Id parentJobId
+            parentJobId = Id parentJobId,
+            merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId
           }
 
 instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
@@ -72,31 +73,59 @@ instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
         BeamST.maxErrors = maxErrors,
         BeamST.currErrors = currErrors,
         BeamST.status = status,
-        BeamST.parentJobId = getId parentJobId
+        BeamST.parentJobId = getId parentJobId,
+        BeamST.merchantId = getId <$> merchantId,
+        BeamST.merchantOperatingCityId = getId <$> merchantOperatingCityId
       }
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> Int -> JobContent e -> m ()
-createJob uuid maxShards jobData = do
+createJob ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  Int ->
+  JobContent e ->
+  m ()
+createJob merchantId merchantOperatingCityId uuid maxShards jobData = do
   void $
-    ScheduleJob.createJob @t @e @m uuid createWithKVScheduler maxShards $
+    ScheduleJob.createJob @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobIn :: forall t (e :: t) m r. (Log m, JobFlow t e, JobCreator r m) => Text -> NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn uuid inTime maxShards jobData = do
+createJobIn ::
+  forall t (e :: t) m r.
+  (Log m, JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  NominalDiffTime ->
+  Int ->
+  JobContent e ->
+  m ()
+createJobIn merchantId merchantOperatingCityId uuid inTime maxShards jobData = do
   void $
-    ScheduleJob.createJobIn @t @e @m uuid createWithKVScheduler inTime maxShards $
+    ScheduleJob.createJobIn @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler inTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
-createJobByTime uuid byTime maxShards jobData = do
+createJobByTime ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  Text ->
+  UTCTime ->
+  Int ->
+  JobContent e ->
+  m ()
+createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
   void $
-    ScheduleJob.createJobByTime @t @e @m uuid createWithKVScheduler byTime maxShards $
+    ScheduleJob.createJobByTime @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler byTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -141,7 +170,7 @@ getReadyTask :: (MonadThrow m, Log m) => m [(AnyJob t, BS.ByteString)]
 getReadyTask = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
 
 updateStatus ::
-  (MonadFlow m, EsqDBFlow m r) =>
+  (JobMonad r m) =>
   JobStatus ->
   Id AnyJob ->
   m ()

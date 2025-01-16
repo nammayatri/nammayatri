@@ -75,8 +75,16 @@ modifyScreenState st =
     LmsVideoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsVideoScreen = a state.lmsVideoScreen})
     LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
     DocumentDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {documentDetailsScreen = a state.documentDetailsScreen})
+    DriverCompleteProfileScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverCompleteProfileScreen = a state.driverCompleteProfileScreen})
     RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
     CustomerReferralTrackerScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {customerReferralTrackerScreen = a state.customerReferralTrackerScreen})
+    CancellationRateScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {cancellationRateScreen = a state.cancellationRateScreen})
+    HotspotScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { hotspotScreen = a state.hotspotScreen })
+    RideRequestScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideRequestScreen = a state.rideRequestScreen})
+    RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
+    ScheduleRideAcceptedScreenStateType a  -> modifyState (\(GlobalState state) -> GlobalState $ state {scheduledRideAcceptedScreen = a state.scheduledRideAcceptedScreen})
+    UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
+    MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
@@ -142,7 +150,7 @@ updateStage stage = do
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
           _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
-          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
+          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData { props { showParcelIntroductionPopup = state.props.showParcelIntroductionPopup } })
         ChatWithCustomer -> do
           pure unit
         _ -> modifyScreenState $ HomeScreenStateType (\state -> state { props { currentStage = stage'} })

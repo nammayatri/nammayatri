@@ -1,13 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Estimate where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -37,6 +37,7 @@ data EstimateT f = EstimateT
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -58,20 +59,25 @@ data EstimateT f = EstimateT
     requestId :: B.C f Kernel.Prelude.Text,
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.Estimate.EstimateStatus,
+    tipOptions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     maxTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     minTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    vehicleVariant :: B.C f Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
     waitingChargePerMin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     waitingChargePerMinAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)
   }

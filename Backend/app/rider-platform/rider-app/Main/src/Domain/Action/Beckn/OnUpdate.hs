@@ -34,10 +34,14 @@ module Domain.Action.Beckn.OnUpdate
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
     PhoneCallRequestEventReq (..),
+    DestinationReachedReq (..),
+    EstimatedEndTimeRangeReq (..),
+    ParcelImageFileUploadReq (..),
   )
 where
 
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
@@ -66,6 +70,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
+import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -73,6 +78,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QEBooking
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -80,13 +86,16 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data OnUpdateReq
   = OUScheduledRideAssignedReq Common.RideAssignedReq
@@ -106,6 +115,9 @@ data OnUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
   | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUEditDestError EditDestErrorReq
+  | OUDestinationReachedReq DestinationReachedReq
+  | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
+  | OUParcelImageFileUploadReq ParcelImageFileUploadReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -126,6 +138,9 @@ data ValidatedOnUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
   | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
+  | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
+  | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
+  | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -225,8 +240,7 @@ data ValidatedQuoteRepetitionReq = ValidatedQuoteRepetitionReq
     bppRideId :: Id DRide.BPPRide,
     cancellationSource :: DBCR.CancellationSource,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
-    searchReq :: DSR.SearchRequest
+    ride :: DRide.Ride
   }
 
 data NewMessageReq = NewMessageReq
@@ -326,6 +340,40 @@ data ValidatedPhoneCallRequestEventReq = ValidatedPhoneCallRequestEventReq
     person :: DPerson.Person
   }
 
+data DestinationReachedReq = DestinationReachedReq
+  { bppRideId :: Id DRide.BPPRide,
+    destinationReachedTime :: UTCTime
+  }
+
+data ValidatedDestinationReachedReq = ValidatedDestinationReachedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    destinationReachedTime :: UTCTime
+  }
+
+data EstimatedEndTimeRangeReq = EstimatedEndTimeRangeReq
+  { bppRideId :: Id DRide.BPPRide,
+    estimatedEndTimeRangeStart :: UTCTime,
+    estimatedEndTimeRangeEnd :: UTCTime
+  }
+
+data ValidatedEstimatedEndTimeRangeReq = ValidatedEstimatedEndTimeRangeReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    estimatedEndTimeRange :: DRide.EstimatedEndTimeRange
+  }
+
+data ParcelImageFileUploadReq = ParcelImageFileUploadReq
+  { bppRideId :: Id DRide.BPPRide,
+    isParcelImageUploaded :: Bool
+  }
+
+data ValidatedParcelImageFileUploadReq = ValidatedParcelImageFileUploadReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    isParcelImageUploaded :: Bool
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -345,7 +393,8 @@ onUpdate ::
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedOnUpdateReq ->
   m ()
@@ -362,6 +411,7 @@ onUpdate = \case
     void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     Notify.notifyOnBookingReallocated booking
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
   OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
@@ -375,7 +425,10 @@ onUpdate = \case
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId}
+    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+    -- make all the booking parties inactive during rellocation
+    QBPL.makeAllInactiveByBookingId booking.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
@@ -393,34 +446,49 @@ onUpdate = \case
     newIsScheduled <-
       if booking.isScheduled
         then do
-          merchant <- QCM.findById searchReq.merchantId >>= fromMaybeM (MerchantNotFound searchReq.merchantId.getId)
-          return $ merchant.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+          merchant <- QCM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+          return $ merchant.scheduleRideBufferTime `addUTCTime` now < booking.startTime
         else return False
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
         newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+        flowStatus = if newIsScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = addUTCTime 180 now, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
     void $ SQQ.createQuote newQuote
+    -- make all the booking parties inactive during rellocation
+    oldBookingParties <- QBPL.findAllActiveByBookingId booking.id
+    newBookingParties <-
+      mapM
+        ( \bp -> do
+            partyId <- generateGUID
+            return bp{id = partyId, bookingId = bookingId}
+        )
+        oldBookingParties
+    QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
+    void $ QBPL.createMany newBookingParties
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    QPFS.clearCache searchReq.riderId -- do we need to clear cache here?
+    void $ QPFS.updateStatus booking.riderId flowStatus
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-    if riderConfig.incidentReportSupport
-      then do
-        logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
-        maxShards <- asks (.maxShards)
-        let scheduleAfter = riderConfig.ivrTriggerDelay
-            safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
-        logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
-        createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
-      else logError $ "Incident Report Service not available for merchantOperatingCityId : " <> show merchantOperatingCityId
+    void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
+    safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
+    let triggerIVRFlow
+          | riderConfig.useUserSettingsForSafetyIVR = safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure
+          | otherwise = True
+    when triggerIVRFlow $ do
+      logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
+      let scheduleAfter = riderConfig.ivrTriggerDelay
+          safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
+      logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
+      createJobIn @_ @'SafetyIVR (Just booking.merchantId) (Just merchantOperatingCityId) scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
-    QRB.updateStop booking Nothing
+    QRB.updateStop booking Nothing Nothing
     Notify.notifyOnStopReached booking ride
   OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..} -> do
     let currentPointLat = (.lat) <$> currentPoint
@@ -444,21 +512,35 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
-    Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
+    Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" person.language
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" person.language
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
-      else Notify.notifyOnTripUpdate booking ride errorCode errorMessage
+      else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
+  OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
+    QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
+    allBookingParty <- QBPL.findAllActiveByBookingId booking.id
+    let allBookingPartyIds = map (.partyId) allBookingParty
+    allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+    Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
+  OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
+    QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
+  OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
+    when isParcelImageUploaded $ do
+      allBookingParty <- QBPL.findAllActiveByBookingId booking.id
+      let allBookingPartyIds = map (.partyId) allBookingParty
+      allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+      Notify.notifyToAllBookingParties allParty booking.tripCategory "PARCEL_IMAGE_UPLOADED"
 
 validateRequest ::
   ( CacheFlow m r,
@@ -511,7 +593,6 @@ validateRequest = \case
     return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
   OUQuoteRepetitionReq QuoteRepetitionReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     return $ OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..}
   OUSafetyAlertReq SafetyAlertReq {..} -> do
@@ -530,6 +611,7 @@ validateRequest = \case
       DRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
       DRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
       DRB.AmbulanceDetails _ -> throwError $ InvalidRequest "Stops are not present in ambulance rides"
+      DRB.DeliveryDetails _ -> throwError $ InvalidRequest "Stops are not present in delivery rides"
       DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
@@ -560,6 +642,22 @@ validateRequest = \case
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
     ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId >>= fromMaybeM (RideDoesNotExist $ " with bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
+  OUDestinationReachedReq DestinationReachedReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..}
+  OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    let estimatedEndTimeRange = DRide.EstimatedEndTimeRange {start = estimatedEndTimeRangeStart, end = estimatedEndTimeRangeEnd}
+    return $ OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..}
+  OUParcelImageFileUploadReq ParcelImageFileUploadReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
@@ -581,6 +679,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }

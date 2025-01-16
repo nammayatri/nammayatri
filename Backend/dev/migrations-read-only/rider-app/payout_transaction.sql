@@ -12,3 +12,8 @@ ALTER TABLE atlas_app.payout_transaction ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN transaction_ref text NOT NULL;
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payout_transaction ADD PRIMARY KEY ( id, transaction_ref);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_transaction ADD COLUMN merchant_operating_city_id text ;

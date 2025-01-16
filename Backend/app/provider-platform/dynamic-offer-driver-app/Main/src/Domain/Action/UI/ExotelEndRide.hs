@@ -40,10 +40,6 @@ callBasedEndRide ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters),
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EncFlow m r,

@@ -1,12 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.RiderConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Extra.RiderConfig
+import qualified Domain.Types.UtilsTH
 import qualified Email.Types
 import qualified IssueManagement.Common
 import Kernel.External.Encryption
@@ -18,16 +18,24 @@ import Tools.Beam.UtilsTH
 data RiderConfigT f = RiderConfigT
   { appUrl :: B.C f Kernel.Prelude.Text,
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
+    avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
+    driverReferredSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    dynamicLogicUpdatePassword :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
+    executePaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),
     exotelStatusCheckSchedulerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    feedbackAlertRatingThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
@@ -35,15 +43,29 @@ data RiderConfigT f = RiderConfigT
     kaptureConfig :: B.C f IssueManagement.Common.KaptureConfig,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    makeMultiModalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maximumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metroBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    minRidesToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minRidesToShowCancellationRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    payoutReferralStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    postRideSafetyNotificationDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
+    sensitiveWords :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    sensitiveWordsForExactMatch :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
+    thresholdCancellationPercentageToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
+    useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -60,3 +82,5 @@ type RiderConfig = RiderConfigT Identity
 $(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''RiderConfigT "rider_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''RiderConfigT)

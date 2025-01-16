@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.BookingLocation where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -18,9 +17,12 @@ data BookingLocationT f = BookingLocationT
     city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     door :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    extras :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    instructions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ward :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f Kernel.Prelude.Double,

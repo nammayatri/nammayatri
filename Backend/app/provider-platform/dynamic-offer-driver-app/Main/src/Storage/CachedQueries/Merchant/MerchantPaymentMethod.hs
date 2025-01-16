@@ -17,6 +17,7 @@ module Storage.CachedQueries.Merchant.MerchantPaymentMethod
   ( create,
     findAllByMerchantOpCityId,
     findByIdAndMerchantOpCityId,
+    clearCache,
   )
 where
 
@@ -50,3 +51,7 @@ cacheMerchantPaymentMethods merchantId cfg = do
 
 makeMerchantIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOpCityId-" <> id.getId
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantIdKey merchantOperatingCityId)

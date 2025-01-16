@@ -18,7 +18,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (publicTransportBapPrefix)
 import Kernel.Types.Cache
 import Kernel.Types.Common

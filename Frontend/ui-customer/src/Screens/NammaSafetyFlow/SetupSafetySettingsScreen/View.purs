@@ -69,7 +69,7 @@ screen initialState =
                       let errMessage = if err.code == 400 
                                           then err.response.errorMessage 
                                           else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                      void $ pure $ JB.toast errMessage
+                      void $ pure $ EHU.showToast errMessage
             pure $ pure unit
         )
       ]
@@ -209,7 +209,7 @@ settingUpContentView config state push =
                       , height WRAP_CONTENT
                       , visibility $ boolToVisibility $ state.props.setupStage == ST.SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
                       ]
-                      [ recommendContactsToInstallView state.props.appName
+                      [ recommendContactsToInstallView state.props.appName true
                       ]
                   ]
                 ]

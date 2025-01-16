@@ -26,7 +26,7 @@ deleteByEntityIdAndEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => 
 deleteByEntityIdAndEntityType entityId entityType = do deleteWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]]
 
 findAllByEntityIdAndEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.FareBreakup.FareBreakupEntityType -> m [Domain.Types.FareBreakup.FareBreakup])
-findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]]
+findAllByEntityIdAndEntityType entityId entityType = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.bookingId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]] Nothing
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup -> m (Maybe Domain.Types.FareBreakup.FareBreakup))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

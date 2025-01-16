@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Consumer.AvailabilityTime.Types where
 
@@ -44,10 +43,12 @@ data RideStatus
 data LocationUpdates = LocationUpdates
   { r_id :: Maybe Text,
     ts :: UTCTime,
+    mocid :: Maybe Text,
     st :: Maybe UTCTime,
     pt :: LatLong,
     acc :: Maybe Double,
     ride_status :: RideStatus,
+    speed :: Maybe Double,
     da :: Maybe Bool,
     mode :: Maybe Text,
     m_id :: Text

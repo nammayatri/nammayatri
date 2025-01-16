@@ -19,14 +19,16 @@ module Lib.DriverScore.Types
 where
 
 import Data.Time
+import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude hiding (Show)
-import Kernel.Prelude (Show)
+import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
@@ -56,14 +58,18 @@ data DriverRideRequest
       }
   | OnDriverCancellation
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person,
+        driver :: DP.Person,
         rideFare :: Maybe HighPrecMoney,
         currency :: Currency,
-        distanceUnit :: DistanceUnit
+        distanceUnit :: DistanceUnit,
+        doCancellationRateBasedBlocking :: Maybe Bool,
+        rideTags :: [Text]
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        ride :: DR.Ride
+        ride :: DR.Ride,
+        booking :: DB.Booking,
+        driverInfo :: DI.DriverInformation,
+        fareParameter :: Maybe FareParameters
       }
-  deriving (Show)

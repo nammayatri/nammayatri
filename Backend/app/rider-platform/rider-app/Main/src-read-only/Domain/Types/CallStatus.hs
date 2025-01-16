@@ -1,10 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.CallStatus where
 
 import Data.Aeson
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Ride
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
@@ -23,6 +23,7 @@ data CallStatus = CallStatus
     dtmfNumberUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     status :: Kernel.External.Call.Interface.Types.CallStatus,

@@ -45,3 +45,37 @@ ALTER TABLE atlas_app.frfs_quote ALTER COLUMN merchant_id SET NOT NULL;
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN event_discount_amount double precision ;
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounted_tickets integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_id character varying(36) ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_short_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_long_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_description text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_provider_code text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN bpp_delayed_interest integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_stations_json text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounts_json text ;
+

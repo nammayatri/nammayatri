@@ -42,7 +42,9 @@ type RideSelectionScreenData = {
     offsetValue :: Int,
     loadMoreText :: Boolean,
     isSrcServiceable :: Boolean,
-    config :: AppConfig
+    config :: AppConfig,
+    selectedOptionId :: Maybe String,
+    entryPoint :: RideSelectionScreenEntry
   }
 
 type RideSelectionScreenProps = {
@@ -54,7 +56,7 @@ type RideSelectionScreenProps = {
   optionsVisibility :: Boolean
 }
 
-
+data RideSelectionScreenEntry = FaqScreenEntry | HelpAndSupportScreenEntry
 
 -- ############################### Data ###############################
 
@@ -75,13 +77,19 @@ initData =
       , loadMoreText: true
       , isSrcServiceable : true
       , config : getAppConfig appConfig
+      , selectedOptionId : Nothing
+      , entryPoint : HelpAndSupportScreenEntry
       }
   , prestoListArrayItems: []
   , selectedCategory : {
         categoryName : ""
-      , categoryImageUrl : ""
-      , categoryAction : ""
+      , categoryImageUrl : Nothing
+      , categoryAction : Nothing
       , categoryId : ""
+      , isRideRequired : false
+      , categoryType: ""
+      , maxAllowedRideAge : Nothing
+      , allowedRideStatuses : Nothing
     }
   , selectedItem : Nothing
   }
@@ -101,6 +109,8 @@ dummyBookingDetails =
     , lon: 0.0
     , placeId : Nothing
     , ward : Nothing
+    , extras : Nothing
+    , instructions : Nothing
     }
 
 dummyIndividualCard :: IndividualRideCardState
@@ -163,4 +173,6 @@ dummyIndividualCard = {
   , estimatedFare : 0
   , showDestination : ""
   , rideScheduledTime : ""
+  , rideCreatedAt : ""
+  , rideStatus : ""
 }

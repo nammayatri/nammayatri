@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverQuote where
@@ -16,8 +15,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -56,9 +54,9 @@ data DriverQuote = DriverQuote
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show)
 

@@ -6,7 +6,8 @@ module Storage.Queries.Plan (module Storage.Queries.Plan, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,19 +39,21 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName = do
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.planType $ Se.Eq planType,
-          Se.Is Beam.serviceName $ Se.Eq serviceName
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleCategory $ Se.Eq (Kernel.Prelude.Just vehicleCategory),
+          Se.Is Beam.isDeprecated $ Se.Eq isDeprecated
         ]
     ]
 
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentMode serviceName vehicleVariant = do
   findAllWithKV
     [ Se.And
@@ -58,6 +61,20 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentM
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.serviceName $ Se.Eq serviceName,
           Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+        ]
+    ]
+
+findByMerchantOpCityIdTypeServiceNameVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
+          Se.Is Beam.paymentMode $ Se.Eq paymentMode,
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleCategory $ Se.Eq (Kernel.Prelude.Just vehicleCategory),
+          Se.Is Beam.isDeprecated $ Se.Eq isDeprecated
         ]
     ]
 
@@ -78,7 +95,8 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
-    [ Se.Set Beam.basedOnEntity basedOnEntity,
+    [ Se.Set Beam.allowStrikeOff (Kernel.Prelude.Just allowStrikeOff),
+      Se.Set Beam.basedOnEntity basedOnEntity,
       Se.Set Beam.cgstPercentage cgstPercentage,
       Se.Set Beam.description description,
       Se.Set Beam.eligibleForCoinDiscount eligibleForCoinDiscount,
@@ -86,6 +104,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.frequency frequency,
       Se.Set Beam.isDeprecated isDeprecated,
       Se.Set Beam.isOfferApplicable isOfferApplicable,
+      Se.Set Beam.listingPriority listingPriority,
       Se.Set Beam.maxAmount maxAmount,
       Se.Set Beam.maxCreditLimit maxCreditLimit,
       Se.Set Beam.maxMandateAmount maxMandateAmount,
@@ -99,6 +118,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,
       Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
+      Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

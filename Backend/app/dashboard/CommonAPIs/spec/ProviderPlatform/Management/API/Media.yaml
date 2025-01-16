@@ -1,0 +1,21 @@
+imports:
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+
+importPackageOverrides:
+  IssueManagement.Domain.Types.MediaFile: shared-services
+
+module: Media
+apiPrefix: media
+helperApiPrefix: ""
+
+apis:
+  - GET: # GetImageAPI
+      endpoint: /media/image/{imageId}
+      auth: ApiAuthV2
+      params:
+        imageId: Id MediaFile
+      response:
+        type: GetImageResponse
+types:
+  GetImageResponse:
+    - imageBase64: Text

@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Clickhouse.Booking as CHB
+import qualified Storage.Clickhouse.Person as CHP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
@@ -77,11 +78,11 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
-updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> m ()
-updateTotalRidesCounters riderId = do
-  totalRidesCount <- getTotalRidesCount riderId Nothing
-  let totalRidesCount' = totalRidesCount + 1
-  void $ QP.updateTotalRidesCount riderId (Just totalRidesCount')
+updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
+updateTotalRidesCounters rider = do
+  totalRidesCount <- getTotalRidesCountForEndRide rider
+  whenJust totalRidesCount $ \count' -> do
+    QP.updateTotalRidesCount rider.id (Just (count' + 1))
 
 updateTotalRidesInWindowCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
@@ -89,14 +90,12 @@ updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCritical
   where
     incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
 
-getTotalRidesCount :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Maybe DSR.SearchRequest -> m Int
-getTotalRidesCount riderId mSearchReq =
-  case mSearchReq >>= DSR.totalRidesCount of
-    Nothing -> do
-      totalRidesCount <- CHB.findCountByRiderIdAndStatus riderId BT.COMPLETED
-      QP.updateTotalRidesCount riderId (Just totalRidesCount)
-      pure totalRidesCount
-    Just totalCount -> pure totalCount
+getTotalRidesCountForEndRide :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m (Maybe Int)
+getTotalRidesCountForEndRide rider
+  | Just totalRidesCount <- rider.totalRidesCount = pure (Just totalRidesCount)
+  | otherwise = do
+    totalCount <- CHP.findTotalRidesCountByPersonId rider.id
+    maybe (pure Nothing) (pure $ CHB.findCountByRiderIdAndStatus rider.id BT.COMPLETED rider.createdAt) totalCount
 
 getRidesCountInWindow ::
   (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
@@ -132,9 +131,7 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
         MoreSearching -> do
           searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
           pure $ searchCount >= mc.fraudSearchCountThreshold
-        TotalRides -> do
-          totalRidesCount :: Int <- getTotalRidesCount riderId mSearchReq
-          pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold
+        TotalRides -> pure $ maybe False (\count' -> count' <= mc.fraudBookingTotalCountThreshold && count' > 0) (mSearchReq >>= DSR.totalRidesCount)
         TotalRidesInWindow -> do
           windowValueList <- SWC.getCurrentWindowValues (mkRideWindowCountKey mc.id.getId riderId.getId) mc.fraudRideCountWindow
           let timeInterval = SWC.convertPeriodTypeToSeconds mc.fraudRideCountWindow.periodType

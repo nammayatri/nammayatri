@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverStats where
@@ -27,6 +26,7 @@ data DriverStats = DriverStats
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
+    totalPayoutAmountPaid :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     totalPayoutEarnings :: Kernel.Types.Common.HighPrecMoney,
     totalRatingScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalRatings :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -34,6 +34,9 @@ data DriverStats = DriverStats
     totalRides :: Kernel.Prelude.Int,
     totalRidesAssigned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalValidActivatedRides :: Kernel.Prelude.Int,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    validCancellationTagsStatsStartDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    validCustomerCancellationTagCount :: Kernel.Prelude.Int,
+    validDriverCancellationTagCount :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

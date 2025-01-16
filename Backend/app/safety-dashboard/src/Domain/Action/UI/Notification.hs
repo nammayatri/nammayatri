@@ -1,14 +1,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Notification where
 
 import API.Types.UI.Notification
-import qualified API.Types.UI.Notification
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
-import Data.OpenApi (ToSchema)
-import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified "lib-dashboard" Domain.Types.Person
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
@@ -16,14 +11,12 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Storage.Queries.Notification as SQN
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import Tools.Error
-import "lib-dashboard" Tools.Error
 
 buildTransaction ::
   ( MonadFlow m

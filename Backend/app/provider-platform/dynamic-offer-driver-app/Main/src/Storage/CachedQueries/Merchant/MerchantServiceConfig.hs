@@ -16,9 +16,10 @@
 module Storage.CachedQueries.Merchant.MerchantServiceConfig
   ( create,
     findAllMerchantOpCityId,
-    findByMerchantIdAndServiceWithCity,
+    findByServiceAndCity,
     findOne,
     clearCache,
+    clearCacheById,
     cacheMerchantServiceConfig,
     upsertMerchantServiceConfig,
   )
@@ -26,7 +27,6 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig
 import Kernel.Prelude
@@ -54,16 +54,15 @@ cacheMerchantServiceConfigForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceConfig:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantIdAndServiceWithCity ::
+findByServiceAndCity ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  Id Merchant ->
   ServiceName ->
   Id DMOC.MerchantOperatingCity ->
   m (Maybe MerchantServiceConfig)
-findByMerchantIdAndServiceWithCity id serviceName opCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceWithCityKey id serviceName opCityId) >>= \case
+findByServiceAndCity serviceName opCityId =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeServiceAndCityKey serviceName opCityId) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
-    Nothing -> flip whenJust (cacheMerchantServiceConfig opCityId) /=<< Queries.findByMerchantIdAndServiceWithCity id serviceName opCityId
+    Nothing -> flip whenJust (cacheMerchantServiceConfig opCityId) /=<< Queries.findByServiceAndCity serviceName opCityId
 
 -- FIXME this is temprorary solution for backward compatibility
 findOne :: (CacheFlow m r, EsqDBFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
@@ -81,20 +80,24 @@ cacheOneServiceConfig orgServiceConfig = do
 cacheMerchantServiceConfig :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> MerchantServiceConfig -> m ()
 cacheMerchantServiceConfig merchantOperatingCity orgServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdAndServiceWithCityKey orgServiceConfig.merchantId (getServiceName orgServiceConfig.serviceConfig) merchantOperatingCity
+  let idKey = makeServiceAndCityKey (getServiceName orgServiceConfig.serviceConfig) merchantOperatingCity
   Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) orgServiceConfig) expTime
 
-makeMerchantIdAndServiceWithCityKey :: Id Merchant -> ServiceName -> Id DMOC.MerchantOperatingCity -> Text
-makeMerchantIdAndServiceWithCityKey id serviceName opCityId = "driver-offer:CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":ServiceName-" <> show serviceName <> ":OpCity-" <> opCityId.getId
+makeServiceAndCityKey :: ServiceName -> Id DMOC.MerchantOperatingCity -> Text
+makeServiceAndCityKey serviceName opCityId = "driver-offer:CachedQueries:MerchantServiceConfig:ServiceName-" <> show serviceName <> ":OpCity-" <> opCityId.getId
 
 makeServiceNameKey :: ServiceName -> Text
 makeServiceNameKey serviceName = "driver-offer:CachedQueries:MerchantServiceConfig:ServiceName-" <> show serviceName
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> ServiceName -> Id DMOC.MerchantOperatingCity -> m ()
-clearCache merchantId serviceName opCity = do
-  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdAndServiceWithCityKey merchantId serviceName opCity)
+clearCache :: Hedis.HedisFlow m r => ServiceName -> Id DMOC.MerchantOperatingCity -> m ()
+clearCache serviceName opCity = do
+  Hedis.withCrossAppRedis $ Hedis.del (makeServiceAndCityKey serviceName opCity)
   Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> Id DMOC.MerchantOperatingCity -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
+
+clearCacheById :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+clearCacheById opCity = do
+  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)

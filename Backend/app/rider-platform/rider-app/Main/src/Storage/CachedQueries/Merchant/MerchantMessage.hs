@@ -18,6 +18,7 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityId,
     findByMerchantOperatingCityIdAndMessageKey,
     clearCache,
+    clearCacheById,
   )
 where
 
@@ -68,3 +69,7 @@ makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:Merchant
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> m ()
 clearCache merchantOperatingCityId messageKey = do
   Hedis.del (makeMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)

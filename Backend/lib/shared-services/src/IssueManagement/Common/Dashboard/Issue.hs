@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Common.Dashboard.Issue
   ( module IssueManagement.Common.Dashboard.Issue,
@@ -8,52 +7,36 @@ module IssueManagement.Common.Dashboard.Issue
 where
 
 import Data.Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
-import Data.Time
-import IssueManagement.Common
+import qualified IGM.Enums as Spec
+import IssueManagement.Common as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.CacheFlow as Reexport
 import Kernel.Types.Common
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Types.Id
-import Servant hiding (Summary)
-
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data IssueEndpoint
-  = IssueUpdateEndpoint
-  | IssueAddCommentEndpoint
-  | TicketStatusCallBackEndpoint
-  | CreateIssueCategoryEndpoint
-  | UpdateIssueCategoryEndpoint
-  | CreateIssueOptionEndpoint
-  | UpdateIssueOptionEndpoint
-  | UpsertIssueMessageEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
-
-derivePersistField "IssueEndpoint"
 
 ---------------------------------------------------------
 -- issue category list --------------------------------
 
-type IssueCategoryListAPI =
-  "category"
-    :> Get '[JSON] IssueCategoryListRes
-
 data IssueCategoryRes = IssueCategoryRes
   { issueCategoryId :: Id IssueCategory,
     label :: Text,
-    category :: Text
+    category :: Text,
+    logoUrl :: Text,
+    categoryType :: CategoryType,
+    isRideRequired :: Bool,
+    maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -65,15 +48,6 @@ newtype IssueCategoryListRes = IssueCategoryListRes
 ---------------------------------------------------------
 -- issues list --------------------------------------
 
-type IssueListAPI =
-  "list"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "status" IssueStatus
-    :> QueryParam "category" (Id IssueCategory)
-    :> QueryParam "assignee" Text
-    :> Get '[JSON] IssueReportListResponse
-
 data IssueReportListResponse = IssueReportListResponse
   { issues :: [IssueReportListItem],
     summary :: Summary
@@ -84,7 +58,7 @@ data IssueReportListResponse = IssueReportListResponse
 data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
     issueReportShortId :: Maybe (ShortId IssueReport),
-    personId :: Id Person,
+    personId :: Id Common.Person,
     rideId :: Maybe (Id Ride),
     deleted :: Bool,
     category :: Text,
@@ -97,17 +71,6 @@ data IssueReportListItem = IssueReportListItem
 
 ---------------------------------------------------------
 -- issue info --------------------------------
-
-type IssueInfoAPI =
-  Capture "issueId" (Id IssueReport)
-    :> "info"
-    :> Get '[JSON] IssueInfoRes
-
-type IssueInfoAPIV2 =
-  "info"
-    :> QueryParam "issueId" (Id IssueReport)
-    :> QueryParam "issueShortId" (ShortId IssueReport)
-    :> Get '[JSON] IssueInfoRes
 
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
@@ -128,7 +91,7 @@ data IssueInfoRes = IssueInfoRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PersonDetail = PersonDetail
-  { personId :: Id Person,
+  { personId :: Id Common.Person,
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -153,15 +116,8 @@ data AuthorDetail = AuthorDetail
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
----------------------------------------------------------
+------------------------------------------------------
 -- update issue --------------------------------------
-
-type IssueUpdateAPI =
-  Capture "issueId" (Id IssueReport)
-    :> ( "update"
-           :> ReqBody '[JSON] IssueUpdateReq
-           :> Put '[JSON] APISuccess
-       )
 
 data IssueUpdateReq = IssueUpdateReq
   { status :: Maybe IssueStatus,
@@ -172,13 +128,6 @@ data IssueUpdateReq = IssueUpdateReq
 
 instance HideSecrets IssueUpdateReq where
   hideSecrets = identity
-
-type IssueUpdateByUserAPI =
-  Capture "issueId" (Id IssueReport)
-    :> ( "update"
-           :> ReqBody '[JSON] IssueUpdateByUserReq
-           :> Put '[JSON] APISuccess
-       )
 
 data IssueUpdateByUserReq = IssueUpdateByUserReq
   { status :: Maybe IssueStatus,
@@ -194,13 +143,6 @@ instance HideSecrets IssueUpdateByUserReq where
 ---------------------------------------------------------
 -- add comment --------------------------------------
 
-type IssueAddCommentAPI =
-  Capture "issueId" (Id IssueReport)
-    :> ( "comment"
-           :> ReqBody '[JSON] IssueAddCommentReq
-           :> Post '[JSON] APISuccess
-       )
-
 newtype IssueAddCommentReq = IssueAddCommentReq
   { comment :: Text
   }
@@ -209,13 +151,6 @@ newtype IssueAddCommentReq = IssueAddCommentReq
 
 instance HideSecrets IssueAddCommentReq where
   hideSecrets = identity
-
-type IssueAddCommentByUserAPI =
-  Capture "issueId" (Id IssueReport)
-    :> ( "comment"
-           :> ReqBody '[JSON] IssueAddCommentByUserReq
-           :> Post '[JSON] APISuccess
-       )
 
 data IssueAddCommentByUserReq = IssueAddCommentByUserReq
   { comment :: Text,
@@ -227,26 +162,38 @@ data IssueAddCommentByUserReq = IssueAddCommentByUserReq
 instance HideSecrets IssueAddCommentByUserReq where
   hideSecrets = identity
 
-type IssueFetchMediaAPI =
-  "media"
-    :> MandatoryQueryParam "filePath" Text
-    :> Get '[JSON] Text
-
 ---------------------------------------------------------
 -- Ticket Status Call Back --------------------------------------
 
-type TicketStatusCallBackAPI =
-  "kapture"
-    :> "ticketStatus"
-    :> ReqBody '[JSON] TicketStatusCallBackReq
-    :> Post '[JSON] APISuccess
-
 data TicketStatusCallBackReq = TicketStatusCallBackReq
   { ticketId :: Text,
-    status :: Text
+    status :: Text,
+    subStatus :: Maybe Text,
+    queue :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON TicketStatusCallBackReq where
+  parseJSON = withObject "TicketStatusCallBackReq" $ \v ->
+    TicketStatusCallBackReq
+      <$> v .: "ticketId"
+      <*> v .: "status"
+      <*> parseSubStatus v
+      <*> v .:? "queue"
+    where
+      parseSubStatus :: Object -> Parser (Maybe Text)
+      parseSubStatus v = firstJustM (v .:?) ["subStatus", "sub_status", "sub-status"]
+
+      firstJustM :: Monad m => (k -> m (Maybe v)) -> [k] -> m (Maybe v)
+      firstJustM _ [] = return Nothing
+      firstJustM f (x : xs) = do
+        result <- f x
+        case result of
+          Just val -> return $ Just val
+          Nothing -> firstJustM f xs
+
+instance ToJSON TicketStatusCallBackReq
 
 instance HideSecrets TicketStatusCallBackReq where
   hideSecrets = identity
@@ -261,12 +208,6 @@ data Summary = Summary
 -----------------------------------------------------------
 -- CreateIssueCatgeory API ------------------------------------
 
-type CreateIssueCategoryAPI =
-  "category"
-    :> "create"
-    :> ReqBody '[JSON] CreateIssueCategoryReq
-    :> Post '[JSON] APISuccess
-
 data CreateIssueCategoryReq = CreateIssueCategoryReq
   { category :: Text,
     logoUrl :: Text,
@@ -274,10 +215,12 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     categoryType :: CategoryType,
     isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
-    label :: Maybe Text
+    label :: Maybe Text,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -306,8 +249,16 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
-    restrictedVariants :: Maybe [Variant],
-    showOnlyWhenUserBlocked :: Maybe Bool
+    restrictedVariants :: Maybe [VehicleVariant],
+    restrictedRideStatuses :: Maybe [RideStatus],
+    showOnlyWhenUserBlocked :: Maybe Bool,
+    igmSubCategory :: Maybe Spec.IssueSubCategory
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype CreateIssueCategoryRes = CreateIssueCategoryRes
+  { categoryId :: Id IssueCategory
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -318,31 +269,19 @@ instance HideSecrets CreateIssueCategoryReq where
 -----------------------------------------------------------
 -- Update IssueCatgeory API ------------------------------------
 
-type UpdateIssueCategoryAPI =
-  "category"
-    :> "update"
-    :> MandatoryQueryParam "issueCategoryId" (Id IssueCategory)
-    :> ReqBody '[JSON] UpdateIssueCategoryReq
-    :> Post '[JSON] APISuccess
-
 data UpdateIssueCategoryReq = UpdateIssueCategoryReq
   { category :: Maybe Text,
     logoUrl :: Maybe Text,
     priority :: Maybe Int,
     isRideRequired :: Maybe Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
     translations :: [Translation],
-    label :: Maybe Text
+    label :: Maybe Text,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data Translation = Translation
-  { language :: Language,
-    translation :: Text
-  }
-  deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets UpdateIssueCategoryReq where
@@ -351,26 +290,17 @@ instance HideSecrets UpdateIssueCategoryReq where
 -----------------------------------------------------------
 -- Create IssueOption API ------------------------------------
 
-type CreateIssueOptionAPI =
-  "option"
-    :> "create"
-    :> MandatoryQueryParam "issueCategoryId" (Id IssueCategory)
-    :> MandatoryQueryParam "issueMessageId" (Id IssueMessage)
-    :> ReqBody '[JSON] CreateIssueOptionReq
-    :> Post '[JSON] APISuccess
+newtype CreateIssueOptionRes = CreateIssueOptionRes
+  { optionId :: Id IssueOption
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CreateIssueOptionReq where
   hideSecrets = identity
 
------------------------------------------------------------
+--------------------------------------------------------------
 -- Update IssueOption API ------------------------------------
-
-type UpdateIssueOptionAPI =
-  "option"
-    :> "update"
-    :> MandatoryQueryParam "issueOptionid" (Id IssueOption)
-    :> ReqBody '[JSON] UpdateIssueOptionReq
-    :> Post '[JSON] APISuccess
 
 data UpdateIssueOptionReq = UpdateIssueOptionReq
   { issueCategoryId :: Maybe (Id IssueCategory),
@@ -380,8 +310,10 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     label :: Maybe Text,
     isActive :: Maybe Bool,
     translations :: [Translation],
-    restrictedVariants :: Maybe [Variant],
-    showOnlyWhenUserBlocked :: Maybe Bool
+    restrictedVariants :: Maybe [VehicleVariant],
+    restrictedRideStatuses :: Maybe [RideStatus],
+    showOnlyWhenUserBlocked :: Maybe Bool,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -391,12 +323,6 @@ instance HideSecrets UpdateIssueOptionReq where
 
 -----------------------------------------------------------
 -- Upsert IssueMessage API ------------------------------------
-
-type UpsertIssueMessageAPI =
-  "message"
-    :> "upsert"
-    :> MultipartForm Tmp UpsertIssueMessageReq
-    :> Post '[JSON] APISuccess
 
 data UpsertIssueMessageReq = UpsertIssueMessageReq
   { issueMessageId :: Maybe (Id IssueMessage),
@@ -415,6 +341,12 @@ data UpsertIssueMessageReq = UpsertIssueMessageReq
     isActive :: Maybe Bool,
     deleteExistingFiles :: Maybe Bool,
     mediaFiles :: Maybe [IssueMessageMediaFileUploadReq]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype UpsertIssueMessageRes = UpsertIssueMessageRes
+  { messageId :: Id IssueMessage
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

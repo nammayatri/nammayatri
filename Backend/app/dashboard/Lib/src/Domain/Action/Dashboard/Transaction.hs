@@ -15,7 +15,7 @@
 module Domain.Action.Dashboard.Transaction where
 
 import Dashboard.Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import Kernel.Beam.Functions as B

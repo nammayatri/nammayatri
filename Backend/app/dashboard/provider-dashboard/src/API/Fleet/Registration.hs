@@ -66,7 +66,7 @@ fleetOwnerLogin req = withFlowHandlerAPI' $ do
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerLogin) req
 
 fleetOwnerVerfiy :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
@@ -75,7 +75,7 @@ fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
   token <- DR.generateToken person.id merchant.id req.city
   unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus person.id True
@@ -86,7 +86,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) req
   let req' = buildFleetOwnerRegisterReq req
   void $ registerFleetOwner req' $ Just res.personId

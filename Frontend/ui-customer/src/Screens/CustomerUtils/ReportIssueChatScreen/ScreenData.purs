@@ -31,15 +31,16 @@ import Data.Show.Generic (genericShow)
 import Services.API (Chat)
 import Screens.Types (IndividualRideCardState)
 import MerchantConfig.Types (AppConfig)
+import Common.Types.App (CategoryListType)
+import ConfigProvider
 
 initData :: ReportIssueChatScreenState
 initData = {
     data: {
         tripId: Nothing,
         selectedOption: Nothing,
-        categoryName: "",
         issueId: Nothing,
-        categoryId: "",
+        selectedCategory: selectedCategory',
         messageToBeSent: "",
         chatConfig: chatConfig',
         recordAudioState: recordAudioState',
@@ -57,7 +58,7 @@ initData = {
         selectedRide : Nothing, 
         entryPoint : TripDetailsScreenEntry,
         issueReportShortId : Nothing,
-        config : DC.config
+        config : getAppConfig appConfig
     },
     props : {
       showSubmitComp: false,
@@ -125,6 +126,16 @@ addAudioState' = {
   stateChanged: false
 }
 
+selectedCategory' = {
+  categoryName : "", 
+  categoryImageUrl : Nothing, 
+  categoryId : "", 
+  categoryAction : Nothing,  
+  isRideRequired : false,
+  maxAllowedRideAge : Nothing,
+  allowedRideStatuses : Nothing,
+  categoryType: ""
+}
 
 type ReportIssueChatScreenState = {
     data :: ReportIssueChatScreenData,
@@ -133,13 +144,12 @@ type ReportIssueChatScreenState = {
 
 type ReportIssueChatScreenData = {
   tripId :: Maybe String,
-  categoryName :: String,
+  selectedCategory :: CategoryListType,
   messageToBeSent :: String,
   issueId :: Maybe String,
   chatConfig :: Config,
   selectedOption :: Maybe Option,
   addedImages :: Array { image :: String, imageName :: String },
-  categoryId :: String,
   recordAudioState :: RecordAudioState,
   addImagesState :: AddImageState,
   viewImageState :: ViewImageState,
@@ -156,7 +166,7 @@ type ReportIssueChatScreenData = {
   config :: AppConfig,
   issueReportShortId :: Maybe String
 }
-data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry
+data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry | FaqEntry | RiderRideCompletedScreen
 derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
 instance showReportIssueChatScreenEntryPoint :: Show ReportIssueChatScreenEntryPoint where show = genericShow
 instance eqReportIssueChatScreenEntryPoint :: Eq ReportIssueChatScreenEntryPoint where eq = genericEq

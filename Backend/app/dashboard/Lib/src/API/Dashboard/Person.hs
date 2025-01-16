@@ -14,7 +14,7 @@
 
 module API.Dashboard.Person where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Action.Dashboard.Transaction as DTransaction
 import Domain.Types.AccessMatrix

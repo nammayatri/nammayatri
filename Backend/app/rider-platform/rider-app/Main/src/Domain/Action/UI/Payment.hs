@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -94,13 +95,14 @@ createOrder (personId, merchantId) rideId = do
             mandateEndDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            splitSettlementDetails = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
@@ -167,7 +169,9 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   paymentServiceConfig <- do
     case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
       Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MetroPaymentServiceConfig psc) -> pure psc
+      Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
+      Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
+      Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
       _ -> throwError $ InternalError "Unknown Service Config"
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
@@ -178,12 +182,17 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
     case mbServiceType of
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (ShortId orderShortId) merchantId
       _ -> pure ()
   pure Ack
   where
     getPaymentServiceByType = \case
       Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
+      Just Payment.BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)

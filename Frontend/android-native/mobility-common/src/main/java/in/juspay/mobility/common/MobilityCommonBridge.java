@@ -16,17 +16,15 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
-import static in.juspay.mobility.common.Utils.captureImage;
-import static in.juspay.mobility.common.Utils.drawableToBitmap;
-import static in.juspay.mobility.common.Utils.encodeImageToBase64;
-import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
-import static android.graphics.Color.GREEN;
+import static in.juspay.mobility.common.utils.Utils.captureImage;
+import static in.juspay.mobility.common.utils.Utils.drawableToBitmap;
+import static in.juspay.mobility.common.utils.Utils.encodeImageToBase64;
+import static in.juspay.mobility.common.utils.Utils.getCircleOptionsFromJSON;
 import static android.graphics.Color.green;
-import static android.graphics.Color.rgb;
-
+import static android.graphics.Color.parseColor;
 import android.Manifest;
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
@@ -62,6 +60,8 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
@@ -90,6 +90,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.animation.LinearInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
@@ -106,6 +107,10 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -135,6 +140,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
@@ -149,15 +155,19 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
+import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.Feature;
 import com.google.maps.android.data.Layer;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
-import com.theartofdev.edmodo.cropper.CropImage;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
+import in.juspay.mobility.common.cropImage.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -167,15 +177,13 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
@@ -184,28 +192,20 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
-import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
-import java.util.Objects;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -215,8 +215,9 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
-import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.utils.CipherUtil;
+import in.juspay.mobility.common.utils.Utils;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -229,11 +230,16 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
+    private static final String HOTSPOTS = "hotspots";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
+    protected static final String LOCATION_IS_FAR = "LocationIsFar";
+    protected static Boolean editLocation = false;
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
     protected static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
+    private static final int PICK_CONTACT_REQUEST_CODE = 191;
+    private static final int PICK_CONTACT_PERMISSION_REQUEST_CODE = 1993;
     //Maps
     protected HashMap <String, Marker> markers = new HashMap <>();
     protected GoogleMap googleMap;
@@ -244,9 +250,13 @@ public class MobilityCommonBridge extends HyperBridge {
     protected float zoom = 17.0f;
     // CallBacks
     protected String storeLocateOnMapCallBack = null;
+    protected String storeHotspotMapCallback = null;
+    protected String storeCircleOnClickCallback = null;
+    protected String storeEditLocationCallBack = null;
     protected String storeDashboardCallBack = null;
     private String storeImageUploadCallBack = null;
     private String storeUploadMultiPartCallBack = null;
+    private String storePickContactCallBack = null;
     protected Marker userPositionMarker;
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
@@ -279,6 +289,9 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private ShakeDetector shakeDetector;
     protected class PolylineDataPoints {
         public Polyline polyline = null;
         public Polyline overlayPolylines = null;
@@ -295,11 +308,14 @@ public class MobilityCommonBridge extends HyperBridge {
     private PaymentPage paymentPage;
 
     protected  Receivers receivers;
+    private Integer debounceAnimateCameraCounter;
     private ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener;
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
     protected String downloadLayout;
     protected int labelTextSize = 30;
+    protected String labelId = "";
+    protected float editPickupThreshold = 100;
 
     protected HashMap<String,CircleRippleEffect> circleRipples = new HashMap<>();
     protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
@@ -312,6 +328,33 @@ public class MobilityCommonBridge extends HyperBridge {
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
     private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
+    protected BridgeComponents bridgeComponents ;
+
+   public MobilityCommonBridge(BridgeComponents bridgeComponents) {
+        super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
+        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+        if (isLocationPermissionEnabled()){
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                    .addOnSuccessListener( location -> {
+                        JSONObject currLoc = new JSONObject();
+                        try {
+                            currLoc.put("lat", location.getLatitude());
+                            currLoc.put("lon", location.getLongitude());
+                            String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
+                            callbackQueue.add(command);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+        }
+
+        receivers = new Receivers(bridgeComponents);
+        receivers.initReceiver();
+        callBack = this::callImageUploadCallBack;
+        Utils.registerCallback(callBack);
+        fetchAndUpdateLastKnownLocation();
+    }
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -334,6 +377,7 @@ public class MobilityCommonBridge extends HyperBridge {
         String secondaryText = "";
         MarkerImageConfig labelImage = new MarkerImageConfig("", 28, 28);
         MarkerImageConfig labelActionImage = new MarkerImageConfig("", 28, 28);
+        MarkerActionImageConfig markerActionImage = new MarkerActionImageConfig("", 28, 28, "HORIZONTAL", "", new JSONObject(), new JSONObject(), new JSONObject());;
         Theme theme = Theme.LIGHT;
         String markerCallback = "";
         String shortTitle = "";
@@ -399,6 +443,19 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         public void setMarkerCallback(String callback) { this.markerCallback = callback; }
         public void  setMarkerIconSize(int markerSize) {this.markerIconSize = markerSize; }
+        public void setMarkerActionImageConfig(JSONObject markerActionImage) {
+            this.markerActionImage.image = markerActionImage.optString("image", "");
+            this.markerActionImage.height = markerActionImage.optInt("height", 28);
+            this.markerActionImage.width = markerActionImage.optInt("width", 28);
+            this.markerActionImage.orientation = markerActionImage.optString("orientation", "VERTICAL");
+            this.markerActionImage.background = markerActionImage.optString("background", "");
+            this.markerActionImage.layoutMargin = getMarkerEdgeInsets(markerActionImage.optJSONObject("layoutMargin"));
+            this.markerActionImage.padding = getMarkerEdgeInsets(markerActionImage.optJSONObject("padding"));
+            this.markerActionImage.layoutPadding = getMarkerEdgeInsets(markerActionImage.optJSONObject("layoutPadding"));
+        }
+        public void setMarkerActionImage(String markerActionImage) {
+            this.markerActionImage.image = markerActionImage;
+        }
     }
 
     public static class MarkerImageConfig {
@@ -410,6 +467,47 @@ public class MobilityCommonBridge extends HyperBridge {
             this.image = image;
             this.height = height;
             this.width = width;
+        }
+    }
+    private static MarkerEdgeInsets getMarkerEdgeInsets(JSONObject config) {
+        int left = config.optInt("left", -1);
+        int top = config.optInt("top", -1);
+        int right = config.optInt("right", -1);
+        int bottom = config.optInt("bottom", -1);
+        return new MarkerEdgeInsets(left, top, bottom, right);
+    }
+    public static class MarkerEdgeInsets {
+        int left;
+        int right;
+        int bottom;
+        int top;
+
+        MarkerEdgeInsets(int left, int top, int right, int bottom){
+            this.left = left;
+            this.right = right;
+            this.top = top;
+            this.bottom = bottom;
+        }
+    }
+    public static class MarkerActionImageConfig {
+        String image;
+        int height;
+        int width;
+        String orientation;
+        String background;
+        MarkerEdgeInsets layoutMargin;
+        MarkerEdgeInsets layoutPadding;
+        MarkerEdgeInsets padding;
+
+        MarkerActionImageConfig(String image, int height, int width, String orientation, String background, JSONObject layoutMargin, JSONObject layoutPadding, JSONObject padding){
+            this.image = image;
+            this.height = height;
+            this.width = width;
+            this.orientation = orientation;
+            this.background = background;
+            this.layoutMargin = getMarkerEdgeInsets(layoutMargin);
+            this.layoutPadding = getMarkerEdgeInsets(layoutPadding);
+            this.padding = getMarkerEdgeInsets(padding);
         }
     }
     public Polyline getPolyLine(Boolean isOverlayPolyLine, PolylineDataPoints polylineData)
@@ -511,31 +609,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
-        super(bridgeComponents);
-        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
-        if (isLocationPermissionEnabled()){
-            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
-                    .addOnSuccessListener( location -> {
-                        JSONObject currLoc = new JSONObject();
-                        try {
-                            currLoc.put("lat", location.getLatitude());
-                            currLoc.put("lon", location.getLongitude());
-                            String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
-                            callbackQueue.add(command);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-        }
-
-        receivers = new Receivers(bridgeComponents);
-        receivers.initReceiver();
-        callBack = this::callImageUploadCallBack;
-        Utils.registerCallback(callBack);
-        fetchAndUpdateLastKnownLocation();
-    }
-
     public MapRemoteConfig getMapRemoteConfig() {
                 try {
             if(this.mapRemoteConfig == null) {
@@ -601,6 +674,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
         // CallBacks
         storeLocateOnMapCallBack = null;
+        storeEditLocationCallBack = null;
         storeDashboardCallBack = null;
         userPositionMarker = null;
         storeImageUploadCallBack = null;
@@ -622,6 +696,15 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void storeCallBackLocateOnMap(String callback) {
         storeLocateOnMapCallBack = callback;
+    }
+
+    @JavascriptInterface
+    public void storeCallbackHotspotMap(String callback) {
+        storeHotspotMapCallback = callback;
+    }
+    @JavascriptInterface
+    public void storeCallbackCircleOnClick(String callback) {
+        storeCircleOnClickCallback = callback;
     }
 
     @JavascriptInterface
@@ -773,7 +856,11 @@ public class MobilityCommonBridge extends HyperBridge {
                             if (animate && googleMap != null) {
                                 LatLng latLng = new LatLng(lat, lng);
                                 if (userPositionMarker == null) {
-                                    upsertMarker(CURRENT_LOCATION, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
+                                    String marker = "";
+                                    if (!editLocation) {
+                                        marker = CURRENT_LOCATION;
+                                        upsertMarker(marker, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f); //TODO this function will be removed
+                                    }
                                 } else {
                                     if (storeLocateOnMapCallBack == null)
                                         userPositionMarker.setVisible(true);
@@ -850,12 +937,41 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel) {
+    public void drawCircleOnMap(String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String circleId = payload.optString("circleId", "");
+            double centerLat = payload.optDouble("centerLat", 0.0);
+            double centerLon = payload.optDouble("centerLon", 0.0);
+            boolean showPrimaryStrokeColor = payload.optBoolean("showPrimaryStrokeColor", true);
+            CircleRippleEffectOptions config = setCircleConfigFromJSON(payload, showPrimaryStrokeColor);
+            updateRippleCircleWithId(circleId, config, new LatLng(centerLat, centerLon));
+        } catch (JSONException e) {
+            Log.i(MAPS, "drawCircleOnMap error for ", e);
+        }
+    }
+
+    protected void updateRippleCircleWithId(String id, CircleRippleEffectOptions config, LatLng source) {
+        if (circleRipples != null) {
+            CircleRippleEffect circle = circleRipples.get(id);
+            if (circle == null) {
+                CircleRippleEffect circleRippleEffect = new CircleRippleEffect(1, config);
+                circleRippleEffect.draw(googleMap, source, bridgeComponents, storeCircleOnClickCallback);
+                circleRipples.put(id, circleRippleEffect);
+            } else {
+                circle.updateCircle(config);
+            }
+        }
+    }
+
+    @JavascriptInterface
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel, JSONObject circleConfig) {
         try {
             System.out.println("Inside locateOnMap" + zoomLevel);
             ExecutorManager.runOnMainThread(() -> {
                 removeMarker("ny_ic_customer_current_location");
                 LatLng position = new LatLng(0.0, 0.0);
+                final ImageView labelView = labelId.equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(labelId));
                 boolean moveToCurrentPosition = goToCurrentLocation;
                 try {
                     position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
@@ -870,15 +986,45 @@ public class MobilityCommonBridge extends HyperBridge {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
-
-                googleMap.setOnCameraIdleListener(() -> {
-                    double lat1 = (googleMap.getCameraPosition().target.latitude);
-                    double lng = (googleMap.getCameraPosition().target.longitude);
-                    if (storeLocateOnMapCallBack != null) {
-                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, "LatLon", lat1, lng);
-                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                    }
-                });
+                if (editLocation && googleMap != null) {
+                    if (labelView != null)
+                        labelView.setVisibility(View.INVISIBLE);
+                    double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, position);
+                    String circleId = circleConfig.optString("circleId", "");
+                    removeAllPolylines("");
+                    CircleRippleEffectOptions options = setCircleConfigFromJSON(circleConfig, (distFromSource <= editPickupThreshold));
+                    updateRippleCircleWithId(circleId, options, position);
+                }
+                if (googleMap != null) {
+                    googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
+                        @Override
+                        public void onCameraMoveStarted(int i) {
+                            if (labelView != null)
+                                labelView.setVisibility(View.INVISIBLE);
+                        }
+                    });
+                    googleMap.setOnCameraIdleListener(() -> {
+                        double latitude = googleMap.getCameraPosition().target.latitude;
+                        double longitude = googleMap.getCameraPosition().target.longitude;
+                        LatLng markerLatLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                        zoneName = "LatLon";
+                        if (editLocation) {
+                            double distance = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, markerLatLng);
+                            handleEditPickupMarkerListener(zoneName, distance, markerLatLng, labelView, circleConfig);
+                        }
+                        if (storeLocateOnMapCallBack != null && bridgeComponents != null) {
+                            String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, latitude, longitude);
+                            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                        }
+                        if (storeHotspotMapCallback != null && bridgeComponents != null) {
+                            LatLngBounds latLngBounds = googleMap.getProjection().getVisibleRegion().latLngBounds;
+                            LatLng southwest = latLngBounds.southwest;
+                            LatLng northeast = latLngBounds.northeast;
+                            String javascript = String.format("window.callUICallback('%s','%s','%s','%s','%s');", storeHotspotMapCallback, southwest.latitude, northeast.latitude, northeast.longitude, southwest.longitude);
+                            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                        }
+                    });
+                }
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     if (googleMap != null)
@@ -896,6 +1042,52 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    public CircleRippleEffectOptions setCircleConfigFromJSON(JSONObject json, boolean showPrimaryStrokeColor) {
+        float radius = (float) json.optDouble("radius", 0.0);
+        String strokeColour = showPrimaryStrokeColor ? json.optString("primaryStrokeColor", "#FFFFFF") : json.optString("secondaryStrokeColor", "#FFFFFF");
+        int fillColor = parseColor(json.optString("fillColor", "#FFFFFF"));
+        int strokeWidth = json.optInt("strokeWidth", 0);
+        String strokePattern = json.optString("strokePattern", "NORMAL");
+        boolean isClickable = json.optBoolean("isCircleClickable", false);
+        CircleRippleEffectOptions options = new CircleRippleEffectOptions();
+        options.radius(radius);
+        options.strokeWidth(strokeWidth);
+        options.fromStrokeColor(strokeColour);
+        options.fillColor(fillColor);
+        options.strokePattern(strokePattern);
+        options.isCircleClickable(isClickable);
+        return options;
+    }
+
+    public void handleEditPickupMarkerListener (String key, double distFromSource, LatLng markerLatlng, ImageView labelView, JSONObject circleJSON) {
+        removeMarker("ny_ic_src_marker");
+        removeMarker("ny_ic_dest_marker");
+        String primaryStrokeColor = circleJSON.optString("primaryStrokeColor", "#00FFFFFF");
+        String secondaryStrokeColor = circleJSON.optString("secondaryStrokeColor", "#00FFFFFF");
+        String circleId = circleJSON.optString("circleId", "");
+        if(distFromSource >= editPickupThreshold) {
+            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+            config.fromStrokeColor(secondaryStrokeColor);
+            config.radius(editPickupThreshold);
+            updateRippleCircleWithId(circleId, config, markerLatlng);
+
+            if ( labelView != null) {
+                zoneName += LOCATION_IS_FAR;
+                MarkerConfig markerConfig = new MarkerConfig();
+                markerConfig.locationName(bridgeComponents.getContext().getString(R.string.location_is_too_far), "");
+                Bitmap bitmap = getMarkerBitmapFromView(null, true, MarkerType.NORMAL_MARKER, markerConfig);
+                labelView.setImageBitmap(bitmap);
+                labelView.setVisibility(View.VISIBLE);
+            }
+        }
+        else {
+            CircleRippleEffectOptions config = new CircleRippleEffectOptions();
+            config.fromStrokeColor(primaryStrokeColor);
+            config.radius(editPickupThreshold);
+            updateRippleCircleWithId(circleId, config, markerLatlng);
+        }
+    }
+
     @JavascriptInterface
     public void locateOnMapV2 (String _payload){
         if (googleMap != null) {
@@ -907,27 +1099,31 @@ public class MobilityCommonBridge extends HyperBridge {
                 String geoJson = payload.optString("geoJson", "");
                 String points = payload.optString("points", "[]");
                 float zoomLevel = (float) payload.optDouble("zoomLevel", 17.0);
+                labelId = payload.optString("labelId", "");
                 final ImageView labelView = payload.optString("labelId", "").equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payload.getString("labelId")));
                 String markerCallback = payload.optString("markerCallback", "");
                 JSONArray markerCallbackForTags = payload.has("markerCallbackForTags") ? payload.getJSONArray("markerCallbackForTags") : new JSONArray();
                 String locationName = payload.optString("locationName", "");
                 JSONObject specialZoneMarkerConfig = payload.optJSONObject("specialZoneMarkerConfig");
                 boolean navigateToNearestGate = payload.optBoolean("navigateToNearestGate", false);
-
+                editPickupThreshold = (float) payload.optDouble("editPickUpThreshold", 100.0);
+                editLocation = payload.optBoolean("editPickupLocation", false);
                 String spotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("spotIcon", "ny_ic_zone_pickup_marker_yellow") : "ny_ic_zone_pickup_marker_yellow";
                 String selectedSpotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("selectedSpotIcon", "ny_ic_selected_zone_pickup_marker_yellow") : "ny_ic_selected_zone_pickup_marker_yellow";
                 String labelImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelImage", "") : "";
                 String theme = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("theme", "LIGHT") : "LIGHT";
                 boolean showZoneLabel = specialZoneMarkerConfig != null && specialZoneMarkerConfig.optBoolean("showZoneLabel", false);
                 String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "") : "";
-
+                LatLng markerLatlng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                JSONObject circleConfigJSON = payload.optJSONObject("circleConfig");
+                String circleId = circleConfigJSON.optString("circleId", "");
                 List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
 
                 final JSONObject hotSpotConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("hotSpotConfig") : null;
                 final boolean enableHotSpot = hotSpotConfig != null && hotSpotConfig.optBoolean("enableHotSpot", false);
 
                 if ((geoJson.equals("") && points.equals("[]") && enableHotSpot) || ((geoJson.equals("") || points.equals("[]")) && !enableHotSpot)) {
-                    locateOnMap(goToCurrentLocation, lat, lon, zoomLevel);
+                    locateOnMap(goToCurrentLocation, lat, lon, zoomLevel, circleConfigJSON);
                     return;
                 }
                 ExecutorManager.runOnMainThread(new Runnable() {
@@ -943,6 +1139,12 @@ public class MobilityCommonBridge extends HyperBridge {
                             locateOnMapManager.setMarkerCallback(markerCallback, markerCallbackForTags);
                             locateOnMapManager.setEnableMapClickListener(payload.optBoolean("enableMapClickListener", false));
 
+                            if (googleMap != null && editLocation) {
+                                removeAllPolylines("");
+                                double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, markerLatlng);
+                                CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON, (distFromSource <= editPickupThreshold));
+                                updateRippleCircleWithId(circleId, circleConfig, markerLatlng);
+                            }
                             if (zoneMarkers != null) {
                                 for (Map.Entry<String, Marker> marker : zoneMarkers.entrySet()) {
                                     Marker m = marker.getValue();
@@ -970,8 +1172,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
                             @Override
                             public void onCameraMoveStarted(int i) {
-                                if (labelView != null)
-                                    labelView.setVisibility(View.INVISIBLE);
                                 Marker m = zoneMarkers.get("selectedGate");
                                 if (m != null)
                                     m.setVisible(false);
@@ -999,7 +1199,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                     }
                                 } else if (mapMode.equals(MapMode.HOTSPOT) && SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius) {
                                     animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, ZoomType.NO_ZOOM);
-                                } else if (!lat.equals("0.0") && !lon.equals("0.0")) {
+                                } else if (!lat.equals("0.0") && !lon.equals("0.0") && !editLocation) {
                                     animateCamera(Double.parseDouble(lat), Double.parseDouble(lon), zoomLevel, ZoomType.ZOOM);
                                 }
                             }catch (Exception e) {
@@ -1053,7 +1253,6 @@ public class MobilityCommonBridge extends HyperBridge {
                                         animateCamera(nearestPointLat, nearestPointLng, 20.0f, ZoomType.NO_ZOOM);
                                     zoneName = "LatLon";
                                 }
-
                                 boolean sendCallback = storeLocateOnMapCallBack != null && ((mapMode.equals(MapMode.SPECIAL_ZONE) && (!isPointInsidePolygon || isOnSpot)) || (mapMode.equals(MapMode.HOTSPOT) && (isOnSpot || nearestPointDistance > goToNearestPointWithinRadius)));
                                 if (sendCallback) {
                                     if (labelView != null && mapMode.equals(MapMode.SPECIAL_ZONE) && isOnSpot) {
@@ -1063,9 +1262,13 @@ public class MobilityCommonBridge extends HyperBridge {
                                         markerConfig.setLabelImage(labelImage);
                                         markerConfig.setLabelMaxWidth(specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optInt("labelMaxWidth", 300) : 300);
                                         markerConfig.setTheme(theme);
-                                        Bitmap bitmap = getMarkerBitmapFromView(null, true, null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+                                        Bitmap bitmap = getMarkerBitmapFromView(null, true, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
                                         labelView.setImageBitmap(bitmap);
                                         labelView.setVisibility(View.VISIBLE);
+                                    }
+                                    if (editLocation){
+                                        double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target,  new LatLng(Double.parseDouble(lat), Double.parseDouble(lon)));
+                                        handleEditPickupMarkerListener(zoneName, distFromSource, markerLatlng, labelView, circleConfigJSON);
                                     }
                                     String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, lat1, lng);
                                     Log.e(CALLBACK, javascript);
@@ -1376,7 +1579,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 MarkerOptions markerOptionsObj = new MarkerOptions()
                         .title("")
                         .position(new LatLng(lat, lng))
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false,null, MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false, MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
                 if (!markerConfig.primaryText.equals(""))
                     markerOptionsObj.anchor(markerOptionsObj.getAnchorU(),0.88f);
                 else
@@ -1442,6 +1645,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try {
             locateOnMapManager = null;
             storeLocateOnMapCallBack = null;
+            editLocation = false;
             ExecutorManager.runOnMainThread(() -> {
                 if (googleMap != null) {
                     googleMap.setOnCameraMoveListener(null);
@@ -1455,9 +1659,26 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
                 if (layer != null)
                     layer.removeLayerFromMap();
+                removeAllCircles();
             });
         } catch (Exception e) {
             Log.i(MAPS, "LocateOnMap Exit Error for ", e);
+        }
+    }
+
+    protected void removeAllCircles() {
+        if (circleRipples != null) {
+            ArrayList<String> circleKeys = new ArrayList<>();
+            for (String i : circleRipples.keySet()) {
+                circleKeys.add(i);
+            }
+            for (String circleKey : circleKeys) {
+                CircleRippleEffect circle = circleRipples.get(circleKey);
+                if (circle != null) {
+                    circle.remove();
+                }
+                circleRipples.remove(circleKey);
+            }
         }
     }
 
@@ -1625,6 +1846,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (markers.containsKey(title)) {
                     Marker m = (Marker) markers.get(title);
                     m.setVisible(false);
+                    m.remove();
                     markers.remove(title);
                     Log.i(MAPS, "Removed marker " + title);
                 }
@@ -1641,7 +1863,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     for (Map.Entry<String, Marker> marker : markers.entrySet()) {
                         Marker m = marker.getValue();
                         m.setVisible(false);
+                        m.remove();
                     }
+                    markers.clear();
                 }
             } catch (Exception e) {
                 Log.e(MAPS, "RemoveAllMarkers error ", e);
@@ -1687,6 +1911,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 LatLng position = null;
                 MarkerConfig markerConfig = new MarkerConfig();
                 markerConfig.locationName(title);
+                markerConfig.setMarkerActionImage(actionImage);
                 if (point != null) {
                     double lat = point.optDouble("lat", lastLatitudeValue);
                     double lon = point.optDouble("lng", lastLongitudeValue);
@@ -1696,25 +1921,18 @@ public class MobilityCommonBridge extends HyperBridge {
                     Marker existingMarker = (Marker)markers.get(id);
                     if (position != null) existingMarker.setPosition(position);
                     existingMarker.setVisible(true);
-                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
+                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), MarkerType.NORMAL_MARKER, markerConfig)));
                 } else {
                     MarkerOptions markerObj = new MarkerOptions();
                     if (position != null) markerObj.position(position);
                     markerObj.title("")
-                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), actionImage, MarkerType.NORMAL_MARKER, markerConfig)));
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(null, markerImage.equals(""), MarkerType.NORMAL_MARKER, markerConfig)));
                     Marker marker = googleMap.addMarker(markerObj);
                     if (!actionCallBack.equals("")) {
                         if (marker != null) {
                             marker.setTag(actionCallBack);
                         }
                     }
-                    googleMap.setOnMarkerClickListener(currMarker -> {
-                        if (currMarker.getTag() != null) {
-                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s');", currMarker.getTag());
-                            bridgeComponents.getJsCallback().addJsToWebView(js);
-                        }
-                        return false;
-                    });
                     markers.put(id, marker);
                 }
             } catch (Exception e) {
@@ -1911,6 +2129,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             Log.i(MAPS, "New marker created and updated for " + title);
                         }
                     }
+
                 }
             } catch (Exception e) {
                 Log.i(MAPS, "Marker creation error for " + title, e);
@@ -2065,8 +2284,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 this.googleMap = googleMap;
                 googleMapInstance.put(pureScriptId, googleMap);
                 System.out.println("Inside getMapAsync " + googleMap);
-                googleMap.setMinZoomPreference(7.0f);
-                googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+                if (mapType.equals(HOTSPOTS)) {
+                    googleMap.setMinZoomPreference(10.0f);
+                    googleMap.setMaxZoomPreference(19.0f);
+                } else {
+                    googleMap.setMinZoomPreference(7.0f);
+                    googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+                }
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
                 googleMap.getUiSettings().setMyLocationButtonEnabled(false);
                 if (isLocationPermissionEnabled()) {
@@ -2077,31 +2301,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     marker.hideInfoWindow();
                     return true;
                 });
-
                 try {
-                    if (mapType.equals(LOCATE_ON_MAP)) {
-                        MarkerConfig config = getMarkerConfigWithIdAndName(LOCATE_ON_MAP, LOCATE_ON_MAP);
-                        upsertMarkerV2(config, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f, pureScriptId);
-                        this.googleMap.setOnCameraMoveListener(() -> {
-                            try {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                MarkerConfig markerConfig = getMarkerConfigWithIdAndName(LOCATE_ON_MAP, LOCATE_ON_MAP);
-                                upsertMarkerV2(markerConfig, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f, pureScriptId);
-                            } catch (Exception e) {
-                                Log.i(MAPS, "Marker creation error for ", e);
-                            }
-                        });
-                        this.googleMap.setOnCameraIdleListener(() -> {
-                            if (callback != null) {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
-                                Log.e(MAPS, javascript);
-                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                            }
-                        });
-                    }
                     setMapCustomTheme();
                     if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
                         LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
@@ -2201,8 +2401,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 CircleRippleEffect circleRippleEffect = new CircleRippleEffect(i,
                         options.clone()
                                 .factor(i)
+                                .fillColor(options.getFillColor())
                                 .radius((i) * options.getRadius()));
-                circleRippleEffect.draw(googleMap, point);
+                circleRippleEffect.draw(googleMap, point, bridgeComponents, null);
                 circleRipples.put(prefix + "_" + i, circleRippleEffect);
             }
         });
@@ -2528,7 +2729,10 @@ public class MobilityCommonBridge extends HyperBridge {
                     String endShortTitle = endMarkerConfig.optString("shortTitle", "");
                     String startTheme = startMarkerConfig.optString("theme", "LIGHT");
                     String endTheme = endMarkerConfig.optString("theme", "LIGHT");
-
+                    JSONObject sourceMarkerActionImageConfig = startMarkerConfig.optJSONObject("actionImage");
+                    JSONObject destMarkerActionImageConfig = endMarkerConfig.optJSONObject("actionImage");
+                    String srcMarkerCallback = startMarkerConfig.optString("markerCallback", "");
+                    String destMarkerCallback = endMarkerConfig.optString("markerCallback", "");
                     int polylineWidth = drawRouteEntity.optInt("routeWidth", 8);
 
                     String style = drawRouteEntity.optString("style", "LineString");
@@ -2597,7 +2801,8 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerConfig destMarkerConfig = new MarkerConfig();
                             Boolean useMarkerSize = endMarkerConfig.optBoolean("useMarkerSize", false);
                             Double destMarkerSize = useMarkerSize ? endMarkerConfig.optDouble("markerSize", 0.0) : 0.0;
-                            destMarkerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
+                            if (destMarkerActionImageConfig != null) destMarkerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
+                            else destMarkerConfig.locationName("");
                             destMarkerConfig.setLabelImageConfig(endLabelImageConfig);
                             destMarkerConfig.setLabelActionImageConfig(endActionImageConfig);
                             destMarkerConfig.setTheme(endTheme);
@@ -2605,14 +2810,26 @@ public class MobilityCommonBridge extends HyperBridge {
                             destMarkerConfig.setLabelMaxLines(endMarkerConfig.optInt("labelMaxLines", 1));
                             destMarkerConfig.setLabelTextSize(endMarkerConfig.optInt("labelTextSize", 11));
                             destMarkerConfig.setShortTitle(endShortTitle);
+                            if (destMarkerActionImageConfig != null) destMarkerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
                             destMarkerConfig.setMarkerIconSize(destMarkerSize.intValue());
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(dest)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destIcon, false, null, MarkerType.NORMAL_MARKER_V2, destMarkerConfig)))
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destIcon, false, MarkerType.NORMAL_MARKER_V2, destMarkerConfig)))
                                     .anchor(destinationAnchorU, destinationAnchorV);
 
                             Marker tempmarker = gMap.addMarker(markerObj);
+                            if (!destMarkerCallback.equals("")) {
+                                tempmarker.setTag(destMarkerCallback);
+                                gMap.setOnMarkerClickListener(currMarker -> {
+                                 if (currMarker.getTag() != null) {
+                                     String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", currMarker.getTag(), currMarker.getTitle());
+                                     bridgeComponents.getJsCallback().addJsToWebView(js);
+                                     return true;
+                                 }
+                                return false;
+                            });
+                            }
                             markers.put(destIconId, tempmarker);
 
                         }
@@ -2631,7 +2848,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 int index = polyline.getPoints().size() - 1;
                                 rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
                                 }
-                                if (rotation != 0.0) currMarker.setRotation(rotation);
+                                if (rotation != 0.0 && currMarker != null) currMarker.setRotation(rotation);
                                 currMarker.setAnchor(sourceAnchorU, sourceAnchorV);
                                 markers.put(sourceIconId, currMarker);
                             } else {
@@ -2643,11 +2860,23 @@ public class MobilityCommonBridge extends HyperBridge {
                                 markerConfig.setLabelMaxLines(startMarkerConfig.optInt("labelMaxLines", 0));
                                 markerConfig.setLabelTextSize(startMarkerConfig.optInt("labelTextSize", 11));
                                 markerConfig.setShortTitle(startShortTitle);
+                                if (sourceMarkerActionImageConfig != null) markerConfig.setMarkerActionImageConfig(sourceMarkerActionImageConfig);
                                 MarkerOptions markerObj = new MarkerOptions()
                                         .title("")
                                         .position(source)
-                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, MarkerType.NORMAL_MARKER, markerConfig)));
                                 Marker tempmarker = gMap.addMarker(markerObj);
+                                if (!srcMarkerCallback.equals("")) {
+                                    tempmarker.setTag(srcMarkerCallback);
+                                    gMap.setOnMarkerClickListener(currMarker -> {
+                                        if (currMarker.getTag() != null) {
+                                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", currMarker.getTag(), currMarker.getTitle());
+                                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                                            return true;
+                                        }
+                                        return false;
+                                    });
+                                }
                                 markers.put(sourceIcon, tempmarker);
                             }
                         }
@@ -2667,6 +2896,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                     Double lng = position != null ? position.optDouble("lng", 0.0) : 0.0;
                                     Double stopMarkerAnchorVD = stopMarkerConfig.optDouble("anchorV", 1.0);
                                     Double stopMarkerAnchorUD = stopMarkerConfig.optDouble("anchorU", 0.5);
+                                    JSONObject stopMarkerActionImageConfig = stopMarkerConfig.optJSONObject("actionImage");
                                     float stopMarkerAnchorV = stopMarkerAnchorVD.floatValue();
                                     float stopMarkerAnchorU = stopMarkerAnchorUD.floatValue();
                                     String stopShortTitle = stopMarkerConfig.optString("shortTitle", "");
@@ -2684,10 +2914,11 @@ public class MobilityCommonBridge extends HyperBridge {
                                     mConfig.setLabelTextSize(stopMarkerConfig.optInt("labelTextSize", 11));
                                     mConfig.setShortTitle(stopShortTitle);
                                     mConfig.setMarkerIconSize(stopMarkerSize.intValue());
+                                    if (stopMarkerActionImageConfig != null) mConfig.setMarkerActionImageConfig(stopMarkerActionImageConfig);
                                     MarkerOptions markerObj = new MarkerOptions()
                                             .title("")
                                             .position(source)
-                                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(stopIcon, false, null, MarkerType.STOP_ICON_MARKER, mConfig)))
+                                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(stopIcon, false, MarkerType.STOP_ICON_MARKER, mConfig)))
                                             .anchor(stopMarkerAnchorU, stopMarkerAnchorV);
                                     Marker currMarker = gMap.addMarker(markerObj);
                                     markers.put(stopIcon, currMarker);
@@ -2710,7 +2941,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, final String mapRouteConfig) {
         onMapUpdate(null,null);
         ExecutorManager.runOnMainThread(() -> {
-            if (googleMap != null) {
+            if (googleMap != null && !editLocation) {
                 String key = "DEFAULT";
                 String mapKey = "DEFAULT";
                 setPolyLineDataByMapInstance("DEFAULT","DEFAULT", new PolylineDataPoints());
@@ -2760,6 +2991,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                     String sourceSpecialTagIcon = sourceMarkerConfig.getString("labelImage");
                     String destinationSpecialTagIcon = destMarkerConfig.getString("labelImage");
+                    String destinationLabelActionImage = destMarkerConfig.getString("labelActionImage");
                     MarkerConfig markerConfig = new MarkerConfig();
 
                     checkAndAnimatePolyline(key,color, style, polylineWidth, polylineOptions, mapRouteConfigObject, googleMap, "DEFAULT");
@@ -2769,13 +3001,15 @@ public class MobilityCommonBridge extends HyperBridge {
                         LatLng dest = points.get(0);
                         markerConfig.locationName(destMarkerConfig.optString("primaryText", ""), destMarkerConfig.optString("secondaryText", ""));
                         markerConfig.setLabelImage(destinationSpecialTagIcon);
+                        markerConfig.setLabelActionImage(destinationLabelActionImage);
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title("")
                                 .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationIcon, false,MarkerType.NORMAL_MARKER, markerConfig)));
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarkerId, tempmarker);
                     }
+
                     if (!sourceIcon.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng source = points.get(points.size() - 1);
@@ -2790,12 +3024,11 @@ public class MobilityCommonBridge extends HyperBridge {
                             currMarker.setAnchor(0.5f, 0.5f);
                             markers.put(sourceMarkerId, currMarker);
                         } else {
-                            markerConfig.locationName(sourceMarkerConfig.optString("primaryText", ""), sourceMarkerConfig.optString("secondaryText", ""));
                             markerConfig.setLabelImage(sourceSpecialTagIcon);
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false,null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceIcon, false, MarkerType.NORMAL_MARKER, markerConfig)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarkerId, tempmarker);
                         }
@@ -2806,7 +3039,6 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         });
     }
-
 
     @JavascriptInterface
     public void updateMarker(final String markerConfigString) {
@@ -2827,7 +3059,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title("")
                                 .position(latLng)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),MarkerType.NORMAL_MARKER, markerConfig)));
                         Marker marker = googleMap.addMarker(markerObj);
                         markers.put(markerObject.optString("markerId", ""), marker);
                     }
@@ -2864,7 +3096,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title(markerTitle)
                                 .position(latLng)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),null, MarkerType.NORMAL_MARKER, markerConfig)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(markerObject.optString("pointerIcon"), !markerObject.optBoolean("showPointer", false),MarkerType.NORMAL_MARKER, markerConfig)));
                         Marker marker = googleMap.addMarker(markerObj);
                         markers.put(markerTitle, marker);
                         if(marker != null && !markerConfig.markerCallback.equals("")){
@@ -2889,20 +3121,19 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
-    protected Bitmap getMarkerBitmapFromView(String pointerImage, boolean isInvisiblePointer, String actionImage, MarkerType markerType, MarkerConfig markerConfig) {
+    protected Bitmap getMarkerBitmapFromView(String pointerImage, boolean isInvisiblePointer, MarkerType markerType, MarkerConfig markerConfig) {
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
 
         String textColor = markerConfig.theme.equals(Theme.DARK) ? "#FFFFFF" : "#454545";
         String backgroundColor = markerConfig.theme.equals(Theme.DARK) ? "#454545" : "#FFFFFF";
-
         View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier("marker_label_layout", "layout", context.getPackageName())), null);
         try {
             setMarkerBackground(backgroundColor, customMarkerView);
             setMarkerText(textColor, customMarkerView, markerConfig);
             setMarkerlabelImage(markerConfig.labelImage, customMarkerView);
             setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView, markerConfig);
-            setMarkerActionImage(actionImage, markerConfig.primaryText, customMarkerView);
+            setMarkerActionImage(markerConfig.markerActionImage, markerConfig.primaryText, customMarkerView);
             setLabelImageAction(customMarkerView, markerConfig.labelActionImage);
         } catch (Exception e) {
             Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
@@ -3015,14 +3246,55 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    private void setMarkerActionImage(String actionImage, String primaryText, View customMarkerView) {
+    private void setMarkerActionImage(MarkerActionImageConfig actionImageConfig, String primaryText, View customMarkerView) {
         Context context = bridgeComponents.getContext();
-        if (actionImage != null) {
+        String actionImage =  actionImageConfig.image;
+        String orientation = actionImageConfig.orientation;
+        String imageBackground = actionImageConfig.background;
+        int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, actionImageConfig.height, context.getResources().getDisplayMetrics());
+        int width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, actionImageConfig.width, context.getResources().getDisplayMetrics());
+        MarkerEdgeInsets layoutMargin = actionImageConfig.layoutMargin;
+        MarkerEdgeInsets padding = actionImageConfig.padding;
+        MarkerEdgeInsets layoutPadding = actionImageConfig.layoutPadding;
+        LinearLayout mainLabelLayout = customMarkerView.findViewById(R.id.main_label_layout);
+        if (orientation.equals("HORIZONTAL"))
+            mainLabelLayout.setOrientation(LinearLayout.HORIZONTAL);
+        else
+            mainLabelLayout.setOrientation(LinearLayout.VERTICAL);
+
+        if ( layoutPadding.left!= -1 && layoutPadding.top != -1 && layoutPadding.right != -1 && layoutPadding.bottom != -1)
+            mainLabelLayout.setPadding(layoutPadding.left,layoutPadding.top,layoutPadding.right,layoutPadding.bottom);
+
+        View ImageAndTextView = customMarkerView.findViewById(R.id.zone_image_and_text);
+        if ( layoutMargin.left!= -1 && layoutMargin.top != -1 && layoutMargin.right != -1 && layoutMargin.bottom != -1) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) ImageAndTextView.getLayoutParams();
+            lp.setMargins(layoutMargin.left,layoutMargin.top,layoutMargin.right,layoutMargin.bottom);
+        }
+
+        if (!actionImage.equals("")) {
             ImageView markerActionImage = customMarkerView.findViewById(R.id.marker_action_image);
+            LinearLayout parent = customMarkerView.findViewById(R.id.marker_action_image_parent);
+            if ( padding.left!= -1 && padding.top != -1 && padding.right != -1 && padding.bottom != -1) {
+                markerActionImage.setPadding(padding.left,padding.top,padding.right,padding.bottom);
+            }
+            parent.setVisibility(View.VISIBLE);
+                if (!imageBackground.equals("")) {
+                    parent.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ));
+                parent.setBackground(context.getResources().getDrawable(context.getResources().getIdentifier(imageBackground, "drawable", context.getPackageName())));
+                parent.setClickable(true);
+            }
+            if (height != 0 && width != 0) {
+                ViewGroup.LayoutParams layoutParams = markerActionImage.getLayoutParams();
+                layoutParams.height = height;
+                layoutParams.width = width;
+            }
             markerActionImage.setVisibility(View.VISIBLE);
             markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
         }
-        if (actionImage == null && primaryText.equals("")){
+        if (actionImage.equals("") && primaryText.equals("")){
             View mainLableLayout = customMarkerView.findViewById(R.id.main_label_layout);
             mainLableLayout.setVisibility(View.GONE);
         }
@@ -3128,6 +3400,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+
     private void setMarkerBackground(String backgroundColor, View customMarkerView) {
         Context context = bridgeComponents.getContext();
         View background = customMarkerView.findViewById(R.id.main_label_layout);
@@ -3151,6 +3424,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ic_auto_nav_on_map");
                 removeMarker("ny_ic_vehicle_nav_on_map");
                 removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_bike_delivery_nav_on_map");
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");
@@ -3243,6 +3517,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 }
             }
+            removeAllCircles();
         });
     }
 
@@ -3435,6 +3710,16 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public String getAndroidId() {
+        String androidId = DeviceIdentifier.getAndroidId(bridgeComponents.getContext());
+        if(DeviceIdentifier.isValid(androidId)) {
+            return androidId;
+        }else {
+            return "NO_ANDROID_ID";
+        }
+    }
+
+    @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
             System.out.println("Inside showMap 123");
@@ -3462,6 +3747,287 @@ public class MobilityCommonBridge extends HyperBridge {
         } catch (Exception e) {
             Log.e("ADD_MARKER", e.toString());
         }
+    }
+
+    @JavascriptInterface
+    public String isCoordOnPath(String json, double currLat, double currLng, int speed) throws JSONException {
+        LatLng currPoint = new LatLng(currLat, currLng);
+        ArrayList<LatLng> path = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(json);
+        int distanceRemaining;
+        JSONArray coordinates = jsonObject.getJSONArray("points");
+        int eta;
+        int resultIndex;
+        JSONObject result = new JSONObject();
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
+            JSONObject coordinate = (JSONObject) coordinates.get(i);
+            double lng = coordinate.getDouble("lng");
+            double lat = coordinate.getDouble("lat");
+            LatLng tempPoints = new LatLng(lat, lng);
+            path.add(tempPoints);
+        }
+        if (path.size() == 0) {
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
+            return result.toString();
+        }
+        double locationOnPathThres = Double.parseDouble(getKeysInSharedPref("ACCURACY_THRESHOLD").equals("__failed") ? "30.0" : getKeysInSharedPref("ACCURACY_THRESHOLD"));
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
+        if (resultIndex == -1) {
+            result.put("points", coordinates);
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
+        } else if (resultIndex == (path.size() - 2) || resultIndex == (path.size() - 1)) {
+            distanceRemaining = (int) SphericalUtil.computeLength(path);
+            eta = distanceRemaining / speed;
+            result.put("points", coordinates);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
+        } else if (resultIndex == 0) {
+            path.clear();
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", true);
+        } else {
+            path.subList(resultIndex + 2, path.size()).clear();
+            distanceRemaining = (int) SphericalUtil.computeLength(path);
+            eta = distanceRemaining / speed;
+            JSONArray remainingPoints = new JSONArray();
+            for (int i = path.size() - 1; i >= 0; i--) {
+                LatLng point = path.get(i);
+                JSONObject tempPoints = new JSONObject();
+                tempPoints.put("lat", point.latitude);
+                tempPoints.put("lng", point.longitude);
+                remainingPoints.put(tempPoints);
+            }
+            result.put("points", remainingPoints);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
+        }
+        return result.toString();
+    }
+
+    @JavascriptInterface
+    public void updateRoute(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID","");
+                GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
+                if (gMap != null) {
+                    try {
+                        MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+                        float zoomLevel;
+                        try {
+                            zoomLevel = (float) mapRemoteConfig.zoomLevel;
+                        }catch (Exception e){
+                            zoomLevel = 20.0f;
+                        }
+                        String json = payload.optString("json", "");
+                        JSONObject destMarkerConfig = payload.optJSONObject("destMarkerConfig");
+                        String dest = (destMarkerConfig != null) ? destMarkerConfig.optString("pointerIcon", "") : "";
+                        String eta = payload.optString("eta", "");
+                        String locationName = payload.optString("locationName" , "");
+                        String src = payload.optString("srcMarker", "");
+                        String specialLocation = payload.optString("specialLocation", "");
+                        String polylineKey = payload.optString("polylineKey", "DEFAULT");
+                        JSONObject destMarkerActionImageConfig = (destMarkerConfig != null) ? destMarkerConfig.optJSONObject("actionImage") : null;
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        int dashUnit = specialLocationObject.optInt("dashUnit", 1);
+                        int gapUnit = specialLocationObject.optInt("gapUnit", 0);
+                        boolean autoZoom = payload.optBoolean("autoZoom", true);
+                        ArrayList<LatLng> path = new ArrayList<>();
+                        JSONObject jsonObject = new JSONObject(json);
+                        JSONArray coordinates = jsonObject.getJSONArray("points");
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            LatLng tempPoint = new LatLng(lat, lng);
+                            path.add(tempPoint);
+                        }
+                        Marker currMarker = (Marker) markers.get(src);
+                        if (currMarker != null)
+                        {
+                            currMarker.setTitle("Vehicle Icon On Map");
+                            currMarker.hideInfoWindow();
+                        }
+                        Marker destMarker = (Marker) markers.get(dest);
+                        String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(locationName);
+                        markerConfig.setLabelImage(destinationSpecialTagIcon);
+                        if (destMarkerActionImageConfig != null) markerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
+                        if (destMarker != null)
+                        {
+                            destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false, MarkerType.NORMAL_MARKER, markerConfig))));
+                            destMarker.setTitle("Driver is " + eta);
+                        }
+                        PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(pureScriptID,polylineKey);
+                        Polyline polyline = getPolyLine(false, polylineDataPoints);
+                        if (polyline != null) {
+                            polyline.setEndCap(new ButtCap());
+                            if (path.size() == 0) {
+                                if (destMarker != null) {
+                                    LatLng destination = destMarker.getPosition();
+                                    animateMarkerNew(src, destination, currMarker, eta );
+                                    Polyline overlayPolylines = getPolyLine(true, polylineDataPoints);
+                                    if (overlayPolylines != null) {
+                                        overlayPolylines.remove();
+                                    }
+                                    polyline.remove();
+                                    if(polylineDataPoints != null)
+                                    {
+                                        polylineDataPoints.setPolyline(null);
+                                        polylineDataPoints.setOverlayPolylines(null);
+                                    }
+                                    setPolyLineDataByMapInstance(pureScriptID, polylineKey, polylineDataPoints);
+                                    if(currMarker != null) {currMarker.setAnchor(0.5f, 0);}
+                                    mapUpdate.isMapMoved = false;
+                                    mapUpdate.isMapIdle = true;
+                                    animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
+                                }
+                            } else {
+                                double destinationLat = path.get(0).latitude;
+                                double destinationLon = path.get(0).longitude;
+                                double sourceLat = path.get(path.size() - 1).latitude;
+                                double sourceLong = path.get(path.size() - 1).longitude;
+                                LatLng destination = path.get(path.size() - 1);
+                                animateMarkerNew(src, destination, currMarker, eta );
+                                PatternItem dash = new Dash(dashUnit);
+                                PatternItem gap = new Gap(gapUnit);
+                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(dash, gap);
+                                polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                                polyline.setPoints(path);
+                                if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    mapUpdate.isMapMoved = false;
+                                    mapUpdate.isMapIdle = true;
+                                    debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                } else {
+                                    debounceAnimateCameraCounter--;
+                                }
+                            }
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void animateMarkerNew(String src, LatLng destination, final Marker marker, String infoLabelText) {
+        if (marker != null) {
+            LatLng startPosition = marker.getPosition();
+            ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+            valueAnimator.setDuration(2000); // TODO :: get this value from Local Storage to maintain sync with PS
+            valueAnimator.setInterpolator(new LinearInterpolator());
+            valueAnimator.addUpdateListener(animation -> {
+                try {
+                    float v = animation.getAnimatedFraction();
+                    LatLng newPosition = SphericalUtil.interpolate(startPosition, destination, v);
+                    float rotation = bearingBetweenLocations(startPosition, destination);
+                    if (rotation > 1.0){
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(infoLabelText);
+                        markerConfig.setRotation(rotation);
+                        marker.setRotation(0.0f);
+                        marker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(src, false, MarkerType.NORMAL_MARKER, markerConfig)));
+                    }
+                    marker.setPosition(newPosition);
+                    marker.setAnchor(0.5f, 0.7f);
+                    markers.put(src, marker);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            valueAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                }
+            });
+            valueAnimator.start();
+        }
+    }
+
+    private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
+        double PI = 3.14159;
+        double lat1 = latLng1.latitude * PI / 180;
+        double long1 = latLng1.longitude * PI / 180;
+        double lat2 = latLng2.latitude * PI / 180;
+        double long2 = latLng2.longitude * PI / 180;
+        double dLon = (long2 - long1);
+        double y = Math.sin(dLon) * Math.cos(lat2);
+        double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1)
+                * Math.cos(lat2) * Math.cos(dLon);
+        double brng = Math.atan2(y, x);
+        brng = Math.toDegrees(brng);
+        brng = (brng + 360) % 360;
+        return (float) brng;
+    }
+
+    @JavascriptInterface
+    public String getExtendedPath(String json) throws JSONException {
+        ArrayList<LatLng> path = new ArrayList<>();
+        ArrayList<LatLng> extendedPath = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(json);
+        JSONArray coordinates = jsonObject.getJSONArray("points");
+        if (coordinates.length() <= 1) return json;
+        int pointsFactor = Integer.parseInt(getKeysInSharedPref("POINTS_FACTOR"));
+
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
+            JSONObject coordinate = (JSONObject) coordinates.get(i);
+            double lng = coordinate.getDouble("lng");
+            double lat = coordinate.getDouble("lat");
+            LatLng tempPoints = new LatLng(lat, lng);
+            path.add(tempPoints);
+        }
+        for (int i = 0, j = 1; i < path.size() - 1 && j <= path.size() - 1; i++, j++) {
+            LatLng point1 = path.get(i);
+            LatLng point2 = path.get(j);
+            extendedPath.add(point1);
+            double distanceBtw = SphericalUtil.computeDistanceBetween(point1, point2);
+            int noOfPoints = (int) Math.ceil(distanceBtw / pointsFactor);
+            float fraction = 1.0f / (noOfPoints + 1);
+            for (int k = 1; k <= noOfPoints; k++) {
+                LatLng point = getNewLatLng(fraction * k, point1, point2);
+                extendedPath.add(point);
+            }
+        }
+        extendedPath.add(path.get(path.size() - 1));
+        JSONObject newPoints = new JSONObject();
+        JSONArray remainingPoints = new JSONArray();
+        for (int i = extendedPath.size() - 1; i >= 0; i--) {
+            LatLng point = extendedPath.get(i);
+            JSONObject tempPoints = new JSONObject();
+            tempPoints.put("lat", point.latitude);
+            tempPoints.put("lng", point.longitude);
+            remainingPoints.put(tempPoints);
+        }
+        newPoints.put("points", remainingPoints);
+        return newPoints.toString();
+    }
+
+    private LatLng getNewLatLng(float fraction, LatLng a, LatLng b) {
+        double lat = (b.latitude - a.latitude) * fraction + a.latitude;
+        double lngDelta = b.longitude - a.longitude;
+        // Take the shortest path across the 180th meridian.
+        if (Math.abs(lngDelta) > 180) {
+            lngDelta -= Math.signum(lngDelta) * 360;
+        }
+        double lng = lngDelta * fraction + a.longitude;
+        return new LatLng(lat, lng);
     }
 
     // region Shared Preference Utils
@@ -3493,9 +4059,14 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region DATE / TIME UTILS
+
+    @JavascriptInterface
+    public void timePicker(final String callback, String label) {
+        timePicker(callback, label, null);
+    }
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void timePicker(final String callback) {
+    public void timePicker(final String callback,String label,String defaultDate) {
         ExecutorManager.runOnMainThread(() -> {
             final Calendar c = Calendar.getInstance();
             int hour = c.get(Calendar.HOUR_OF_DAY);
@@ -3508,7 +4079,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             }, hour, minute, false);
-
             timePickerDialog.setOnCancelListener(var1 -> {
                 if (callback != null) {
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
@@ -3523,8 +4093,19 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             });
-            timePickerDialog.show();
 
+            if (defaultDate != null && defaultDate!="") {
+                    try {
+                        long defaultDateMillis = Long.parseLong(defaultDate);
+                        Calendar defaultCa = Calendar.getInstance();
+                        defaultCa.setTimeInMillis(defaultDateMillis);
+                        timePickerDialog.updateTime(defaultCa.get(Calendar.HOUR_OF_DAY), defaultCa.get(Calendar.MINUTE));
+                    } catch (NumberFormatException e) {
+                        Log.e(DTUTILS, "Invalid default time format: " + e);
+                    }
+                }
+            timePickerDialog.show();
+            
         });
     }
 
@@ -3579,16 +4160,28 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @SuppressLint("DiscouragedApi")
     public void datePicker(final String callback, String label) {
+        datePicker(callback,label,null);
+    }
+
+    @JavascriptInterface
+    public void datePicker(final String callback, String label, String defaultDate) {
+        datePicker(callback,label,defaultDate, null);
+    }
+    @JavascriptInterface
+    public void datePicker(final String callback, String label, String defaultDate, String maxDate) {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
-                final Calendar c = Calendar.getInstance();
-                int mYear = c.get(Calendar.YEAR);
-                int mMonth = c.get(Calendar.MONTH);
-                int mDate = c.get(Calendar.DATE);
+                final Calendar calendar = Calendar.getInstance();
+                switch (label) {
+                    case DatePickerLabels.MINIMUM_NEXT_DATE:
+                        calendar.add(Calendar.DAY_OF_YEAR, 1);
+                        break;
+                }
+                int mYear = calendar.get(Calendar.YEAR);
+                int mMonth = calendar.get(Calendar.MONTH);
+                int mDate = calendar.get(Calendar.DATE);
                 int datePickerTheme = AlertDialog.THEME_HOLO_LIGHT;
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) datePickerTheme = 0;
 
@@ -3620,35 +4213,55 @@ public class MobilityCommonBridge extends HyperBridge {
                     @Override
                     public void onDateChanged(@NonNull DatePicker view, int y, int m, int d) {
                         super.onDateChanged(view, y, m, d);
-                        try {
-                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
-                                if (month != 0) {
-                                    NumberPicker monthPicker = findViewById(month);
-                                    if (monthPicker != null) {
-                                        monthPicker.setDisplayedValues(monthNumbers);
+                        switch (label) {
+                            case DatePickerLabels.MINIMUM_NEXT_DATE:
+                                break;
+                            default:
+                                try {
+                                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                        if (month != 0) {
+                                            NumberPicker monthPicker = findViewById(month);
+                                            if (monthPicker != null) {
+                                                monthPicker.setDisplayedValues(monthNumbers);
+                                            }
+                                            if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                                                long maxDateInMills = Long.parseLong(maxDate);
+                                                this.getDatePicker().setMaxDate(maxDateInMills);
+                                            }
+                                        }
                                     }
+                                } catch (Exception e) {
+                                    Log.e(DTUTILS, "Error in onDateChanged : " + e);
                                 }
-                            }
-                        } catch (Exception e) {
-                            Log.e(DTUTILS, "Error in onDateChanged : " + e);
+                                break;
                         }
                     }
 
                     @Override
                     protected void onCreate(Bundle savedInstanceState) {
                         super.onCreate(savedInstanceState);
-                        try {
-                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
-                                if (month != 0) {
-                                    NumberPicker monthPicker = findViewById(month);
-                                    if (monthPicker != null) {
-                                        monthPicker.setDisplayedValues(monthNumbers);
+                        switch (label) {
+                            case DatePickerLabels.MINIMUM_NEXT_DATE:
+                                break;
+                            default:
+                                try {
+                                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                        if (month != 0) {
+                                            NumberPicker monthPicker = findViewById(month);
+                                            if (monthPicker != null) {
+                                                monthPicker.setDisplayedValues(monthNumbers);
+                                            }
+                                            if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                                                long maxDateInMills = Long.parseLong(maxDate);
+                                                this.getDatePicker().setMaxDate(maxDateInMills);
+                                            }
+                                        }
                                     }
+                                } catch (Exception e) {
+                                    Log.e(DTUTILS, "Error in Date onCreate : " + e);
                                 }
-                            }
-                        } catch (Exception e) {
-                            Log.e(DTUTILS, "Error in Date onCreate : " + e);
-                        }
+                                break;
+                    }
                     }
                 };
                 datePickerDialog.setOnCancelListener(var1 -> {
@@ -3665,7 +4278,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
                     }
                 });
-
                 switch (label) {
                     case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
                         Calendar maxDateDOB = Calendar.getInstance();
@@ -3677,6 +4289,29 @@ public class MobilityCommonBridge extends HyperBridge {
                     case DatePickerLabels.MAXIMUM_PRESENT_DATE:
                         datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
                         break;
+                    case DatePickerLabels.MINIMUM_NEXT_DATE:
+                        Calendar minDate = Calendar.getInstance();
+                        minDate.set(Calendar.HOUR_OF_DAY, 0);
+                        minDate.set(Calendar.MINUTE, 0);
+                        minDate.set(Calendar.SECOND, 0);
+                        minDate.set(Calendar.MILLISECOND, 0);
+                        minDate.add(Calendar.DAY_OF_YEAR, 1);
+                        datePickerDialog.getDatePicker().setMinDate(minDate.getTimeInMillis());
+                        break;
+                }
+                if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                    long maxDateInMills = Long.parseLong(maxDate);
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateInMills);
+                }
+                if (defaultDate != null && !defaultDate.isEmpty() && !defaultDate.equals("-1")) {
+                    try {
+                        long defaultDateMillis = Long.parseLong(defaultDate);
+                        Calendar defaultCa = Calendar.getInstance();
+                        defaultCa.setTimeInMillis(defaultDateMillis);
+                        datePickerDialog.updateDate(defaultCa.get(Calendar.YEAR), defaultCa.get(Calendar.MONTH), defaultCa.get(Calendar.DAY_OF_MONTH));
+                    } catch (NumberFormatException e) {
+                        Log.e(DTUTILS, "Invalid default date format: " + e);
+                    }
                 }
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
                     datePickerDialog.setTitle(bridgeComponents.getContext().getString(R.string.select_date));
@@ -3714,8 +4349,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
     //endregion
-
-    // region OTHER UTILS
 
     // region OTHER UTILS
     @JavascriptInterface
@@ -4355,6 +4988,8 @@ public class MobilityCommonBridge extends HyperBridge {
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
+        private static final String MINIMUM_PRESENT_DATE = "MINIMUM_PRESENT_DATE";
+        private static final String MINIMUM_NEXT_DATE = "MINIMUM_NEXT_DATE";
     }
 
     public File checkAndGetFileName(String fileName) {
@@ -4514,7 +5149,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType) {
+    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType, String outputField, String formDataField) {
         try {
             String boundary = UUID.randomUUID().toString();
 
@@ -4532,7 +5167,7 @@ public class MobilityCommonBridge extends HyperBridge {
             DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
 
             outputStream.writeBytes("--" + boundary + "\r\n");
-            outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
+            outputStream.writeBytes(("Content-Disposition: form-data; name=\""+formDataField+"\"; filename=\"" + fileName + "\"" + "\r\n"));
             if (fileType.equals("Image"))
                 outputStream.writeBytes("Content-Type: image/jpeg\r\n");
             else if (fileType.equals("Audio"))
@@ -4576,12 +5211,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 JSONObject jsonObject;
                 try {
                     jsonObject = new JSONObject(res);
-                    res = jsonObject.getString("fileId");
+
+                    res = jsonObject.getString(outputField);
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
             } else {
-                Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.unable_to_upload_image), Toast.LENGTH_SHORT).show();
+                Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.unable_to_upload_media), Toast.LENGTH_SHORT).show();
             }
             callUploadMultiPartCallBack(fileType, res);
         }catch(Exception e){
@@ -4732,7 +5368,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Use displayBase64Image instead
     @JavascriptInterface
     public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
+        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
     }
 
     // Deprecated on 5-Jan-2024
@@ -4765,6 +5401,16 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public String convertAudioToBase64(String filePath) throws IOException {
+        File file = new File(filePath);
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] fileBytes = new byte[(int) file.length()];
+            fileInputStream.read(fileBytes);
+            return Base64.encodeToString(fileBytes, Base64.DEFAULT);
+        }
+    }
+
+    @JavascriptInterface
     public void encodeToBase64(String url, String callback) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -4794,9 +5440,10 @@ public class MobilityCommonBridge extends HyperBridge {
             String id = configObj.optString("id", "");
             String scaleType = configObj.optString("scaleType", "CENTER_CROP");
             int inSampleSize = configObj.optInt("inSampleSize", 1);
+            boolean adjustViewBounds = configObj.optBoolean("adjustViewBounds", true);
 
             // call api to get base64image
-            String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
+            String base64Image = source.startsWith("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
 
             // convert base64Image to imageView
             ExecutorManager.runOnMainThread(() -> {
@@ -4814,7 +5461,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             imageView.setLayoutParams(layoutParams);
                             imageView.setImageBitmap(decodedByte);
                             imageView.setScaleType(getScaleTypes(scaleType));
-                            imageView.setAdjustViewBounds(true);
+                            imageView.setAdjustViewBounds(adjustViewBounds);
                             imageView.setClipToOutline(true);
 
                             layout.removeAllViews();
@@ -4866,9 +5513,9 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public boolean startAudioRecording() {
+    public boolean startAudioRecording(String fileName) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        return mediaPlayer.startAudioRecording();
+        return mediaPlayer.startAudioRecording(fileName);
     }
 
     @JavascriptInterface
@@ -4884,9 +5531,17 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void uploadFile() {
-        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.uploadFile();
+    public void uploadFile(String ratio, boolean canChooseFromFile) {
+        try{
+            if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+            JSONObject payload = new JSONObject(ratio);
+            int imageAspectHeight = payload.optInt("imageAspectHeight", 0);
+            int imageAspectWidth = payload.optInt("imageAspectWidth", 0);
+            boolean showAccordingToAspectRatio = payload.optBoolean("showAccordingToAspectRatio", false);
+            mediaPlayer.uploadFile(imageAspectHeight, imageAspectWidth, showAccordingToAspectRatio, canChooseFromFile);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @JavascriptInterface
@@ -4942,7 +5597,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
                         if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
-                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
+                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext(), mediaPlayer.showToAspectRatio, mediaPlayer.height, mediaPlayer.width);
                     }
                 } else {
                     if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
@@ -4955,6 +5610,26 @@ public class MobilityCommonBridge extends HyperBridge {
                     CropImage.ActivityResult result = CropImage.getActivityResult(data);
                     Log.e(OVERRIDE, result.getError().toString());
                 }
+                break;
+            case PICK_CONTACT_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    Uri contactUri = data.getData();
+
+                    String[] projection = new String[]{
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    };
+
+                    try (Cursor cursor = bridgeComponents.getContext().getContentResolver().query(contactUri, projection, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            String name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                            String phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+
+                            Log.d("Contact Info", "Name: " + name + ", Phone Number: " + phoneNumber);
+                            callPickContactCallBack(name, phoneNumber);
+                        }
+                    }
+                    }
                 break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
@@ -5006,6 +5681,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+                break;
+            case PICK_CONTACT_PERMISSION_REQUEST_CODE:
+                Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
                 break;
             default:
                 break;
@@ -5078,4 +5757,117 @@ public class MobilityCommonBridge extends HyperBridge {
         storeContactsCallBack = callback;
     }
 
+    @JavascriptInterface
+    public void initialiseShakeListener (String callback, String config){
+        try {
+            JSONObject shakeListenerConfig = new JSONObject(config);
+            sensorManager = (SensorManager) bridgeComponents.getContext().getSystemService(Context.SENSOR_SERVICE);
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
+            float shakeAccelerationThreshold = (float) shakeListenerConfig.optDouble("shakeAccelerationThreshold", 5);
+            int consecutiveShakeInterval = shakeListenerConfig.optInt("consecutiveShakeInterval", 500);
+            int shakeCountResetTime = shakeListenerConfig.optInt("shakeCountResetTime", 3000);
+            shakeDetector = new ShakeDetector(shakeAccelerationThreshold, consecutiveShakeInterval, shakeCountResetTime);
+            shakeDetector.setOnShakeListener(new ShakeDetector.OnShakeListener() {
+                @Override
+                public void onShake(int count) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                            callback, count);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+    }
+
+    @JavascriptInterface
+    public void unregisterShakeListener (){
+        sensorManager.unregisterListener(shakeDetector);
+    }
+
+    @JavascriptInterface
+    public void registerShakeListener(){
+        sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
+    }
+
+    @JavascriptInterface
+    public String fetchFilesFromFolderPath(String path){
+        File[] files = FileUtils.getFilesInFolderPath(path);
+        String[] filePaths = files != null ? new String[files.length] : new String[0];
+        for(int i = 0; i < files.length; i++){
+            filePaths[i] = files[i].getAbsolutePath();
+        }
+        return Arrays.toString(filePaths);
+    }
+
+    public boolean requestUninstallPackage(String packageName){
+        try {
+            Intent intent = new Intent(Intent.ACTION_DELETE);
+            intent.setData(Uri.parse("package:" + packageName));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            bridgeComponents.getContext().startActivity(intent);
+            return true; // requested successfully
+        } catch (Exception ignored) {
+            return false;// request failed
+        }
+    }
+
+    public boolean isPackageInstalled(String packageName) {
+        PackageManager packageManager = bridgeComponents.getContext().getPackageManager();
+        if (packageName == null || packageName.isEmpty()) {
+            return false;
+        }
+        try {
+            packageManager.getPackageInfo(packageName, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+
+    @JavascriptInterface
+    public boolean checkIfPointInsidePolygon(String geoJson, double latitude, double longitude) {
+        List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
+        Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
+        return res;
+    }
+
+    @JavascriptInterface
+    public String rsEncryption(String phoneNumber){
+        return CipherUtil.getInstance().encryptData(phoneNumber);
+    }
+
+
+    @JavascriptInterface
+    public void storeCallBackPickContact(String callback){
+        storePickContactCallBack = callback;
+    }
+
+    public void callPickContactCallBack(String name, String phoneNumber) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storePickContactCallBack, name, phoneNumber);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void pickContact()
+    {
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, PICK_CONTACT_PERMISSION_REQUEST_CODE);
+            }
+        } else {
+            ExecutorManager.runOnMainThread(() -> {
+                try {
+                    Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                    bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
+                } catch (Exception e) {
+                    Log.e(UTILS, "Exception in Contact Permission" + e);
+                }
+            });
+        }
+    }
 }
+

@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantMessage where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -21,6 +20,7 @@ data MerchantMessageT f = MerchantMessageT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     message :: B.C f Kernel.Prelude.Text,
     messageKey :: B.C f Domain.Types.MerchantMessage.MessageKey,
+    senderHeader :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     templateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

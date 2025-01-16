@@ -27,9 +27,13 @@ data GateInfoFull = GateInfoFull
     name :: Text,
     address :: Maybe Text,
     geoJson :: Maybe Text,
-    canQueueUpOnGate :: Bool
+    canQueueUpOnGate :: Bool,
+    gateType :: GateType
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data GateType = Pickup | Drop
+  deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
 data GateInfo = GateInfo
   { id :: Id GateInfo,
@@ -41,6 +45,9 @@ data GateInfo = GateInfo
     geom :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    canQueueUpOnGate :: Bool
+    canQueueUpOnGate :: Bool,
+    gateType :: GateType,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

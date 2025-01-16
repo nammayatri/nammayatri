@@ -19,6 +19,7 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Data.Maybe (Maybe(..))
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
@@ -105,7 +106,8 @@ data KeyStore
   | CUSTOMER_REFERRAL_CODE
   | CUSTOMER_CLIENT_ID
   | CUSTOMER_FIRST_RIDE
-  | HAS_TOLL_CHARGES -- @TODO: Remove this key after toll charges are coming from backend
+  | DRIVER_WITHIN_PICKUP_THRESHOLD
+  | ADVANCED_ROUTE_DISTANCE
   | AC_POPUP_SHOWN_FOR_RIDE
   | STARTED_ESTIMATE_SEARCH
   | RATE_CARD_INFO
@@ -114,6 +116,14 @@ data KeyStore
   | CONFIRM_QUOTES_START_TIME
   | BOOKING_TIME_LIST
   | TICKETS_BOOKED_IN_EVENT
+  | POST_RIDE_CHECK_SETTINGS
+  | INTERCITY_BUS_PHONE_NUMBER_PERMISSION
+  | PARCEL_INSTRUCTIONS_VISITED
+  | DRIVER_REACHED_DESTINATION_ACTION
+  | LOCAL_ESTIMATES
+  | BOOSTED_SEARCH
+  | RECENT_BUS_STOPS
+  | RECENT_BUS_ROUTES
 
 derive instance genericKeyStore :: Generic KeyStore _
 
@@ -125,6 +135,13 @@ setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyIn
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show
+
+getValueFromLocalStoreMb :: KeyStore -> Maybe String
+getValueFromLocalStoreMb key = do
+  let val = getValueToLocalStore key
+  if val == "(null)" || val == "__failed"
+    then Nothing
+    else Just val
 
 deleteValueFromLocalStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInSharedPrefs <<< show
@@ -138,8 +155,13 @@ getValueToLocalNativeStore = JBridge.getKeyInNativeSharedPrefKeys <<< show
 deleteValueFromLocalNativeStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalNativeStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInNativeSharedPrefs <<< show
 
+-- TODO:: Make sure caching works before enabling it here
 updateLocalStage :: Stage -> FlowBT String Unit
+-- updateLocalStage stage = void $ pure $ setValueToCache "LOCAL_STAGE" stage show
 updateLocalStage = setValueToLocalStore LOCAL_STAGE <<< show
 
+
 isLocalStageOn :: Stage -> Boolean
+-- isLocalStageOn stage = show stage == getValueFromCache "LOCAL_STAGE" JBridge.getKeyInSharedPrefKeys
 isLocalStageOn stage = (getValueToLocalStore LOCAL_STAGE) == show stage
+

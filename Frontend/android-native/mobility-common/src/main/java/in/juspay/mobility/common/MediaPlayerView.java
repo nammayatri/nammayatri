@@ -29,6 +29,7 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
@@ -339,20 +340,32 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         private static String fileName = null;
         private MediaRecorder recorder = null;
 
-        public void startRecording(Context context) {
-            Log.d(LOG_TAG, "Recording in audio recorder");
-            fileName = context.getFilesDir().getAbsolutePath() + "/namma_yatri_audio_record.mp3";
-            recorder = new MediaRecorder();
-            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            recorder.setOutputFile(fileName);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            try {
-                recorder.prepare();
-            } catch (Exception e) {
-                e.printStackTrace();
+        public void startRecording(Context context, String fileNameParam) {
+
+            fileName = context.getFilesDir().getAbsolutePath() + (fileNameParam.isEmpty() ? "/namma_yatri_audio_record.mp3" : fileNameParam);
+
+            File file = new File(fileName);
+            File directory = new File(file.getParent());
+            boolean directoryExists = directory.exists();
+            if (!directoryExists) {
+                directoryExists = directory.mkdirs();
             }
-            recorder.start();
+            if (directoryExists){
+                recorder = new MediaRecorder();
+                recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                recorder.setOutputFile(fileName);
+                recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                try {
+                    recorder.prepare();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                recorder.start();
+            }
+            else {
+                Log.e(LOG_TAG, "Couldn't create directory.");
+            }
         }
 
         public String stopRecording() {

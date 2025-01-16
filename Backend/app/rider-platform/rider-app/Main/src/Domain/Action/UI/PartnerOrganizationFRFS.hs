@@ -25,10 +25,10 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, name)
 import qualified Domain.Action.UI.Registration as DReg
-import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -39,22 +39,22 @@ import qualified Domain.Types.PartnerOrgStation as DPOS
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common as Kernel
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -74,11 +74,13 @@ import Tools.Error
 data GetFareReq = GetFareReq
   { fromStationCode :: Text,
     toStationCode :: Text,
+    routeCode :: Maybe Text,
     numberOfPassengers :: Int,
     mobileCountryCode :: Text,
     mobileNumber :: Text,
     identifierType :: SP.IdentifierType,
-    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
+    cityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -100,7 +102,8 @@ data GetConfigResp = GetConfigResp
   { frfsConfig :: FRFSTypes.FRFSConfigAPIRes,
     fromStation :: FRFSTypes.FRFSStationAPI,
     toStation :: FRFSTypes.FRFSStationAPI,
-    city :: Context.City
+    city :: Context.City,
+    cityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -117,20 +120,13 @@ data ShareTicketInfoResp = ShareTicketInfoResp
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 upsertPersonAndGetToken ::
-  ( HasFlowEnv m r '["version" ::: DeploymentVersion],
-    EncFlow m r,
-    EsqDBFlow m r,
-    DB.EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    CacheFlow m r
-  ) =>
   Id PartnerOrganization ->
   DPOC.RegistrationConfig ->
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   Maybe Maps.LatLong ->
   GetFareReq ->
-  m (Id SP.Person, RegToken)
+  Flow (Id SP.Person, RegToken)
 upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates req@GetFareReq {..} = do
   runRequestValidation validateGetFareReq req
   merchant <- B.runInReplica $ CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
@@ -168,26 +164,21 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
         return res
 
 createPersonViaPartner ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    DB.EsqDBReplicaFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["version" ::: DeploymentVersion]
-  ) =>
   GetFareReq ->
   DM.Merchant ->
   Maybe Maps.LatLong ->
   Id PartnerOrganization ->
-  m (SP.Person, Bool)
+  Flow (SP.Person, Bool)
 createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
   let identifierType = req.identifierType
       notificationToken = Nothing
       mbBundleVersion = Nothing
       mbClientVersion = Nothing
+      mbRnVersion = Nothing
       mbClientConfigVersion = Nothing
       mbDevice = Nothing
       authReq = buildPartnerAuthReq identifierType notificationToken
-  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant (Just partnerOrgId)
+  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant (Just partnerOrgId)
   return (person, True)
   where
     buildPartnerAuthReq identifierType notificationToken =
@@ -208,20 +199,17 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           otpChannel = Nothing,
           registrationLat = mbRegCoordinates <&> (.lat),
           registrationLon = mbRegCoordinates <&> (.lon),
-          enableOtpLessRide = Nothing
+          enableOtpLessRide = Nothing,
+          allowBlockedUserLogin = Nothing
         }
 
 makeSessionViaPartner ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
   SmsSessionConfig ->
   Text ->
   Text ->
   Text ->
   Id PartnerOrganization ->
-  m SR.RegistrationToken
+  Flow SR.RegistrationToken
 makeSessionViaPartner sessionConfig entityId mId fakeOtp partnerOrgId = do
   let authMedium = SR.PARTNER_ORG
   regToken <- makeSession authMedium sessionConfig entityId mId (Just fakeOtp) partnerOrgId
@@ -230,14 +218,13 @@ makeSessionViaPartner sessionConfig entityId mId fakeOtp partnerOrgId = do
   return regToken
 
 makeSession ::
-  MonadFlow m =>
   SR.Medium ->
   SmsSessionConfig ->
   Text ->
   Text ->
   Maybe Text ->
   Id PartnerOrganization ->
-  m SR.RegistrationToken
+  Flow SR.RegistrationToken
 makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partnerOrgId = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
@@ -263,7 +250,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partner
         createdViaPartnerOrgId = Just partnerOrgId
       }
 
-getConfigByStationIds :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> m GetConfigResp
+getConfigByStationIds :: PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> Flow GetConfigResp
 getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
   fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId fromPOrgStationId
   toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId toPOrgStationId
@@ -277,11 +264,12 @@ getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
   fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just partnerOrg.orgId)
   toStation <- Utils.mkPOrgStationAPIRes toStation' (Just partnerOrg.orgId)
   let frfsConfig = Utils.mkFRFSConfigAPI frfsConfig'
-  city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
-
+  moc <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
+  let city = moc.city
+  let cityId = moc.id
   pure $ GetConfigResp {..}
 
-shareTicketInfo :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, CallFRFSBPP.BecknAPICallFlow m r) => Id DFTB.FRFSTicketBooking -> m ShareTicketInfoResp
+shareTicketInfo :: Id DFTB.FRFSTicketBooking -> Flow ShareTicketInfoResp
 shareTicketInfo ticketBookingId = do
   -- TODO: Make it findAllWithKVAndConditionalDB
   tickets' <- B.runInReplica $ QFT.findAllByTicketBookingId ticketBookingId
@@ -295,7 +283,7 @@ shareTicketInfo ticketBookingId = do
   paymentBooking <- B.runInReplica $ QFTBP.findNewTBPByBookingId ticketBookingId >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
   fromStation' <- B.runInReplica $ CQS.findById ticketBooking.fromStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.fromStationId.getId ||+ "")
   toStation' <- B.runInReplica $ CQS.findById ticketBooking.toStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.toStationId.getId ||+ "")
-  city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
+  city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
   pOrgId <- ticketBooking.partnerOrgId & fromMaybeM (InternalError $ "PartnerOrgId is missing for ticketBookingId:" +|| ticketBookingId.getId ||+ "")
 
   fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just pOrgId)
@@ -309,6 +297,7 @@ shareTicketInfo ticketBookingId = do
         bookingPrice = ticketBooking.price.amount,
         paymentStatus = Utils.mkTBPStatusAPI paymentBooking.status,
         partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
+        city = city.city,
         ..
       }
   where
@@ -326,6 +315,6 @@ shareTicketInfo ticketBookingId = do
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
           B.runInReplica $
-            CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) DBC.METRO
-              >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| DBC.METRO ||+ "")
-        void $ CallFRFSBPP.callBPPStatus ticketBooking bapConfig city merchantId
+            CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
+              >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
+        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking

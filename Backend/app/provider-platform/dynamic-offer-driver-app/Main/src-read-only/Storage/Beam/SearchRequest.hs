@@ -1,11 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -26,14 +26,19 @@ data SearchRequestT f = SearchRequestT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     customerLanguage :: B.C f (Kernel.Prelude.Maybe Tools.Maps.Language),
+    customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverDefaultExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverDefaultExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverIdForSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dynamicPricingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -44,16 +49,21 @@ data SearchRequestT f = SearchRequestT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     providerId :: B.C f Kernel.Prelude.Text,
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    searchTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     transactionId :: B.C f Kernel.Prelude.Text,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

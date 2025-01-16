@@ -33,6 +33,11 @@ updatePayoutEarningsByDriverId totalPayoutEarnings driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateTotalPayoutAmountPaid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateTotalPayoutAmountPaid totalPayoutAmountPaid driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateTotalReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateTotalReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
@@ -46,6 +51,24 @@ updateTotalValidRidesAndPayoutEarnings totalValidActivatedRides totalPayoutEarni
   updateOneWithKV
     [ Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateValidCustomerCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidCustomerCancellationTagCount validCustomerCancellationTagCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.validCustomerCancellationTagCount (Kernel.Prelude.Just validCustomerCancellationTagCount),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateValidDriverCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidDriverCancellationTagCount validDriverCancellationTagCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.validDriverCancellationTagCount (Kernel.Prelude.Just validDriverCancellationTagCount),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
@@ -73,6 +96,7 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
+      Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid,
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings),
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.totalRatings totalRatings,
@@ -80,6 +104,9 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalRides totalRides,
       Se.Set Beam.totalRidesAssigned totalRidesAssigned,
       Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.validCancellationTagsStatsStartDate validCancellationTagsStatsStartDate,
+      Se.Set Beam.validCustomerCancellationTagCount (Kernel.Prelude.Just validCustomerCancellationTagCount),
+      Se.Set Beam.validDriverCancellationTagCount (Kernel.Prelude.Just validDriverCancellationTagCount)
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

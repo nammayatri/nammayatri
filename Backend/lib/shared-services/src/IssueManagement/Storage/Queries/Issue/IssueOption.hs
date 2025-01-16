@@ -3,6 +3,7 @@
 module IssueManagement.Storage.Queries.Issue.IssueOption where
 
 import Database.Beam.Postgres (Postgres)
+import qualified IGM.Enums as Spec
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption as DomainIO
@@ -29,7 +30,9 @@ updateByPrimaryKey IssueOption {..} =
       Set BeamIO.label label,
       Set BeamIO.isActive isActive,
       Set BeamIO.restrictedVariants restrictedVariants,
+      Set BeamIO.restrictedRideStatuses restrictedRideStatuses,
       Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
+      Set BeamIO.igmSubCategory igmSubCategory,
       Set BeamIO.createdAt createdAt,
       Set BeamIO.updatedAt updatedAt
     ]
@@ -79,6 +82,9 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+findByIGMIssueSubCategory :: BeamFlow m r => Maybe Spec.IssueSubCategory -> m (Maybe IssueOption)
+findByIGMIssueSubCategory igmSubCategory = findOneWithKV [Is BeamIO.igmSubCategory $ Eq igmSubCategory]
+
 updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
 updatePriority issueOptionId priority =
   updateWithKV
@@ -94,6 +100,7 @@ instance FromTType' BeamIO.IssueOption IssueOption where
           { id = Id id,
             issueCategoryId = Id <$> issueCategoryId,
             merchantId = Id merchantId,
+            igmSubCategory = igmSubCategory,
             merchantOperatingCityId = Id merchantOperatingCityId,
             ..
           }
@@ -108,10 +115,12 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
         BeamIO.restrictedVariants = restrictedVariants,
+        BeamIO.restrictedRideStatuses = restrictedRideStatuses,
         BeamIO.showOnlyWhenUserBlocked = showOnlyWhenUserBlocked,
         BeamIO.label = label,
         BeamIO.merchantId = getId merchantId,
         BeamIO.isActive = isActive,
         BeamIO.createdAt = createdAt,
-        BeamIO.updatedAt = updatedAt
+        BeamIO.updatedAt = updatedAt,
+        BeamIO.igmSubCategory = igmSubCategory
       }

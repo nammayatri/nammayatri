@@ -91,5 +91,6 @@ mkPayment merchant bppConfig mbPaymentId = do
 
 mkItemTags :: DTC.TransporterConfig -> CUtils.Pricing -> Bool -> Maybe [Spec.TagGroup]
 mkItemTags transporterConfig pricing isValueAddNP = do
-  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.tollCharges)) pricing.farePolicy
-  rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP)
+  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy
+  let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
+  vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP)

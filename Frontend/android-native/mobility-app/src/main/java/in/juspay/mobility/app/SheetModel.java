@@ -13,13 +13,14 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class SheetModel {
-    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource, renderedAt ;
     private String requestId;
-    private int startTime, specialZoneExtraTip;
-    private double updatedAmount;
+    private int startTime, driverDefaultStepFee;
+    private double updatedAmount, parkingCharge;
     private double offeredPrice;
     private int customerExtraFee;
     private final int airConditioned;
+    private final int ventilator;
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
@@ -28,10 +29,11 @@ public class SheetModel {
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
     private final int tollCharges;
+    private final int stops;
 
-    private final Boolean disabilityTag;
+    private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking , roundTrip;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
@@ -65,9 +67,10 @@ public class SheetModel {
                       double destLat,
                       double destLng,
                       boolean specialZonePickup,
-                      int specialZoneExtraTip,
+                      int driverDefaultStepFee,
                       boolean downgradeEnabled,
                       int airConditioned,
+                      int ventilator,
                       String vehicleServiceTier,
                       String rideProductType,
                       String rideDuration,
@@ -76,7 +79,11 @@ public class SheetModel {
                       String rideStartDate,
                       String notificationSource,
                       Boolean isThirdPartyBooking,
-                      int offeredPrice
+                      Boolean isFavourite,
+                      double parkingCharge,
+                      String renderedAt,
+                      int stops,
+                      boolean roundTrip
                       ){
 
         this.srcLat = srcLat;
@@ -90,20 +97,20 @@ public class SheetModel {
         this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
         this.destinationAddress = destinationAddress;
-        this.updatedAmount = offeredPrice;
+        this.updatedAmount = driverDefaultStepFee;
         this.reqExpiryTime = reqExpiryTime;
         this.searchRequestId = searchRequestId;
-        this.offeredPrice = offeredPrice;
+        this.offeredPrice = driverDefaultStepFee;
         this.baseFare = baseFare;
         this.startTime = startTime;
         this.driverMinExtraFee = driverMinExtraFee;
         this.driverMaxExtraFee = driverMaxExtraFee;
         this.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration;
         this.negotiationUnit = negotiationUnit;
-        this.buttonIncreasePriceAlpha = specialZoneExtraTip <= 0 ? 1.0f : 0.5f;
-        this.buttonIncreasePriceClickable = specialZoneExtraTip <= 0;
-        this.buttonDecreasePriceAlpha = specialZoneExtraTip > 0 ? 1.0f : 0.5f;
-        this.buttonDecreasePriceClickable = specialZoneExtraTip > 0;
+        this.buttonIncreasePriceAlpha = initialIncButtonToggle() ? 1.0f : 0.5f;
+        this.buttonIncreasePriceClickable = initialIncButtonToggle();
+        this.buttonDecreasePriceAlpha = initialDecButtonToggle() ? 1.0f : 0.5f;
+        this.buttonDecreasePriceClickable = initialDecButtonToggle();
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
@@ -116,9 +123,10 @@ public class SheetModel {
         this.isTranslated = isTranslated;
         this.driverPickUpCharges = driverPickUpCharges;
         this.specialZonePickup = specialZonePickup;
-        this.specialZoneExtraTip = specialZoneExtraTip;
+        this.driverDefaultStepFee = driverDefaultStepFee;
         this.downgradeEnabled = downgradeEnabled;
         this.airConditioned = airConditioned;
+        this.ventilator = ventilator;
         this.vehicleServiceTier = vehicleServiceTier;
         this.rideProductType = rideProductType;
         this.rideDuration = rideDuration;
@@ -127,7 +135,18 @@ public class SheetModel {
         this.rideStartDate = rideStartDate;
         this.notificationSource = notificationSource;
         this.isThirdPartyBooking = isThirdPartyBooking;
+        this.isFavourite = isFavourite;
+        this.parkingCharge = parkingCharge;
+        this.renderedAt = renderedAt;
+        this.stops = stops;
+        this.roundTrip = roundTrip;
     }
+
+    public String getRenderedAt(){
+        return renderedAt;
+    }
+
+    public boolean getRoundTrip(){return roundTrip;}
 
     public String getVehicleServiceTier() {
         return vehicleServiceTier;
@@ -135,6 +154,10 @@ public class SheetModel {
 
     public int isAirConditioned() {
         return airConditioned;
+    }
+
+    public int isVentilator() {
+        return ventilator;
     }
 
     public String getRideProductType() {
@@ -161,12 +184,8 @@ public class SheetModel {
         return specialZonePickup;
     }
 
-    public int getSpecialZoneExtraTip (){
-        return specialZoneExtraTip;
-    }
-
-    public void setSpecialZoneExtraTip(int updatedAmount) {
-        this.specialZoneExtraTip = updatedAmount;
+    public int getDriverDefaultStepFee(){
+        return driverDefaultStepFee;
     }
 
     public boolean isDowngradeEnabled(){
@@ -189,6 +208,8 @@ public class SheetModel {
     }
 
     public int getCustomerTip() {return customerExtraFee;}
+
+    public Boolean isFavourite() {return isFavourite;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
 
@@ -358,5 +379,31 @@ public class SheetModel {
 
     public double getDestLng() {
         return destLng;
+    }
+
+    public double getParkingCharges() {
+        return parkingCharge;
+    }
+
+    public int getStops() { return stops; }
+
+    private boolean initialIncButtonToggle(){
+        if (offeredPrice <= 0){
+            return true;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return false;
+        }else {
+            return true;
+        }
+    }
+
+    private boolean initialDecButtonToggle(){
+        if (offeredPrice <= 0){
+            return false;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return true;
+        }else {
+            return true;
+        }
     }
 }

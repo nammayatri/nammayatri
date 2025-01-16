@@ -11,18 +11,29 @@ imports:
   Language: Tools.Maps
   Money: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  TripCategory: Domain.Types.Trip
+  Person: Domain.Types.Person
 
 SearchRequest:
-  derives: Generic,Show
+  derives: Generic,Show,ToJSON,FromJSON
 
   fields:
     id: Id SearchRequest
     transactionId: Text
     messageId: Maybe Text
+    hasStops : Maybe Bool
+    dynamicPricingLogicVersion: Maybe Int
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)
     fromLocation: Location
+    fromLocGeohash: Maybe Text
+    toLocGeohash: Maybe Text
+    stops: "[Location]"
     area: Maybe Area
     bapId: Text
     bapUri: BaseUrl
@@ -52,8 +63,14 @@ SearchRequest:
     roundTrip: Maybe Bool
     isAdvanceBookingEnabled: Bool
     isDashboardRequest: Bool
+    customerNammaTags: "Maybe [Text]"
+    searchTags: "Maybe [Text]"
     startTime: UTCTime
     createdAt: UTCTime
+    tripCategory: Maybe TripCategory
+    poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
+    driverIdForSearch: Maybe (Id Person)
 
   beamType:
     startTime: Maybe UTCTime
@@ -73,6 +90,7 @@ SearchRequest:
       fromLocationId: Maybe Text
     toLocation:
       toLocationId: Maybe Text
+    stops: {}
 
   toTType:
     fromLocationId: Just $ Kernel.Types.Id.getId ((.id) fromLocation)|E
@@ -101,6 +119,7 @@ SearchRequest:
     bapUri: Kernel.Prelude.parseBaseUrl|IM
     fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
     toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
     startTime: startTime_|E
     validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E
     isScheduled: fromMaybe False isScheduled|E
@@ -160,6 +179,23 @@ SearchRequest:
     updateIsReallocationEnabled:
       kvFunction: updateWithKV
       params: [isReallocationEnabled]
+      where: id
+    updateSearchTags:
+      kvFunction: updateWithKV
+      params: [searchTags]
+      where: id
+    updateTripCategory:
+      kvFunction: updateWithKV
+      params: [tripCategory]
+      where: id
+    updatePoolingLogicVersion:
+      kvFunction: updateWithKV
+      params: [poolingLogicVersion]
+      where: id
+
+    updatePoolingConfigVersion:
+      kvFunction: updateWithKV
+      params: [poolingConfigVersion]
       where: id
 
   extraOperations:

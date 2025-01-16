@@ -14,6 +14,7 @@
 
 module SharedLogic.Payment where
 
+import Data.List (groupBy, sortBy)
 import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
@@ -23,6 +24,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
+import qualified Domain.Types.VendorFee as VF
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -30,7 +32,7 @@ import Kernel.External.Payment.Interface.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import Kernel.Storage.Esqueleto as Esq hiding (Value, groupBy, on)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -74,9 +76,10 @@ createOrder ::
   Maybe MandateOrder ->
   INV.InvoicePaymentMode ->
   Maybe (Id INV.Invoice, Text) ->
+  [VF.VendorFee] ->
   Maybe DeepLinkData ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice mbDeepLinkData = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -89,6 +92,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
+      splitSettlementDetails = mkSplitSettlementDetails vendorFees amount
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
@@ -108,17 +112,44 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             mandateStartDate = mbMandateOrder <&> (.mandateStartDate),
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
+            splitSettlementDetails = Just splitSettlementDetails,
             metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       createOrderCall = TPayment.createOrder merchantId opCity serviceName -- api call
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing mbDeepLinkData -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData -- call same function with no existing order
+
+mkSplitSettlementDetails :: [VF.VendorFee] -> HighPrecMoney -> SplitSettlementDetails
+mkSplitSettlementDetails vendorFees totalAmount = do
+  let sortedVendorFees = sortBy (compare `on` VF.vendorId) vendorFees
+      groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
+      mbVendorSplits = map computeSplit groupedVendorFees
+      vendorSplits = catMaybes mbVendorSplits
+  let totalVendorAmount = sum $ map (\Split {amount} -> amount) vendorSplits
+      marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+  SplitSettlementDetails
+    { marketplace = Marketplace marketplaceAmount,
+      mdrBorneBy = ALL,
+      vendor = Vendor vendorSplits
+    }
+  where
+    roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
+    computeSplit feesForVendor =
+      case feesForVendor of
+        [] -> Nothing
+        (firstFee : _) ->
+          Just $
+            Split
+              { amount = sum $ map (\fee -> VF.amount fee) feesForVendor,
+                merchantCommission = 0,
+                subMid = firstFee.vendorId
+              }
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
@@ -135,6 +166,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       bankErrorUpdatedAt = Nothing,
       lastStatusCheckedAt = Nothing,
       serviceName = driverFee.serviceName,
+      merchantId = Just driverFee.merchantId,
       merchantOperatingCityId = driverFee.merchantOperatingCityId,
       updatedAt = now,
       createdAt = now
@@ -156,8 +188,17 @@ offerListCache merchantId merchantOpCityId serviceName req = do
 
 cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
 cacheOfferListResponse includeDriverId req resp = do
-  key <- makeOfferListCacheKey includeDriverId req
+  version <- getVersionKey
+  key <- makeOfferListCacheKey includeDriverId req <&> (<> ":V-" <> version)
   Hedis.setExp key resp 86400
+  where
+    getVersionKey = do
+      Hedis.get makeOfferListCacheVersionKey >>= \case
+        Just a -> return a
+        Nothing -> do
+          versionId <- generateShortId
+          Hedis.setExp makeOfferListCacheVersionKey versionId.getShortId (23 * 60 * 60)
+          return versionId.getShortId
 
 makeOfferListCacheKey :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> m Text
 makeOfferListCacheKey includeDriverId req = do
@@ -186,6 +227,9 @@ makeOfferListCacheKey includeDriverId req = do
         LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
         _ -> show offerListingMetric'
 
+makeOfferListCacheVersionKey :: Text
+makeOfferListCacheVersionKey = "OfferList:Version"
+
 sendLinkTroughChannelProvided ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
   Maybe Payment.PaymentLinks ->
@@ -205,7 +249,7 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
   webPaymentLink <- getPaymentLinks mbPaymentLink driverId sendDeepLink
   case mbChannel of
     Just MessageKey.WHATSAPP -> do
-      merchantMessage <- QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
+      merchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
       let amount = show <$> mbAmount
       let whatsAppReq =
             Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq

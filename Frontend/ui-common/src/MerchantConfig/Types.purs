@@ -75,6 +75,7 @@ type NavigationAppConfig = {
 , packageName :: String
 , walkQuery :: String
 , directionQuery :: String
+, twoWheelerQuery :: String
 }
 
 type GenericHeaderConfig = {
@@ -89,54 +90,10 @@ type AppDatas = {
   , logoLight :: String
 }
 
-type CityConfig = {
-  cityName :: String,
-  mapImage :: String,
-  cityCode :: String,
-  showSubscriptions :: Boolean,
-  enableAdvancedBooking :: Boolean,
-  advancedRidePopUpYoutubeLink :: String,
-  callDriverInfoPost :: Boolean,
-  cityLat :: Number,
-  cityLong :: Number,
-  supportNumber :: String,
-  languageKey :: String,
-  showDriverReferral :: Boolean,
-  showCustomerReferral :: Boolean,
-  uploadRCandDL :: Boolean,
-  enableYatriCoins :: Boolean,
-  registration :: RegistrationConfig,
-  vehicleNSImg :: String,
-  variantSubscriptionConfig :: VariantSubscriptionConfig,
-  showEarningSection :: Boolean,
-  referral :: Referral,
-  waitingCharges :: Number,
-  waitingChargesConfig :: WaitingChargesConfig,
-  rentalWaitingChargesConfig :: WaitingChargesConfig,
-  rateCardConfig :: RateCardConfig,
-  assets :: Assets
-}
-
-type RateCardConfig = {
-  showLearnMore :: Boolean,
-  learnMoreVideoLink :: String
-}
-
-type Assets ={
-  auto_image :: String,
-  onboarding_auto_image :: String
-}
-
 type Referral = {
     domain :: String
   , customerAppId :: String
   , driverAppId :: String
-}
-
-type WaitingChargesConfig = {
-  cab :: ChargesEntity,
-  auto :: ChargesEntity,
-  bike :: ChargesEntity
 }
 
 type ChargesEntity = {
@@ -149,32 +106,9 @@ type DashboardConfig = {
   , enable :: Boolean
 }
 
-type RegistrationConfig = {
-  supportWAN :: String,
-  callSupport :: Boolean,
-  whatsappSupport :: Boolean
-}
-
 type BannerCarousalConfig = {
   autoScrollDelay :: Number
 , enableAutoScroll :: Boolean
-}
-
-type VariantSubscriptionConfig = {
-  enableVariantBasedSubscription :: Boolean,
-  variantList :: Array String,
-  enableCabsSubscriptionView :: Boolean,
-  staticViewPlans :: Array StaticViewPlans
-}
-
-type StaticViewPlans = {
-  price :: Number,
-  frequency :: String,
-  variantCategory :: String,
-  name :: String,
-  introductoryOffer :: String,
-  showSelected :: Boolean,
-  planDesc :: String
 }
 
 type GeoJson = {

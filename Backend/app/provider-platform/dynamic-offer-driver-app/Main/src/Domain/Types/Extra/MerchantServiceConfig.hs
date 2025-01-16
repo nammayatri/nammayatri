@@ -1,15 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.MerchantServiceConfig where
 
+import ChatCompletion.Interface.Types
+import ChatCompletion.Types
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
-import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
@@ -29,8 +25,6 @@ import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -47,11 +41,13 @@ data ServiceName
   | PaymentService Payment.PaymentService
   | RentalPaymentService Payment.PaymentService
   | PayoutService Payout.PayoutService
+  | RentalPayoutService Payout.PayoutService
   | IssueTicketService Ticket.IssueTicketService
   | NotificationService Notification.NotificationService
   | TokenizationService Tokenize.TokenizationService
   | BackgroundVerificationService BackgroundVerification.BackgroundVerificationService
   | IncidentReportService IncidentReport.IncidentReportService
+  | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -68,11 +64,13 @@ instance Show ServiceName where
   show (PaymentService s) = "Payment_" <> show s
   show (RentalPaymentService s) = "RentalPayment_" <> show s
   show (PayoutService s) = "Payout_" <> show s
+  show (RentalPayoutService s) = "RentalPayout_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (BackgroundVerificationService s) = "BackgroundVerification_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
+  show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -119,6 +117,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payout_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (RentalPayoutService v1, r2)
+                 | r1 <- stripPrefix "RentalPayout_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -139,6 +141,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "IncidentReport_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (LLMChatCompletionService v1, r2)
+                 | r1 <- stripPrefix "LLMChatCompletion_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -155,11 +161,13 @@ data ServiceConfigD (s :: UsageSafety)
   | PaymentServiceConfig !PaymentServiceConfig
   | RentalPaymentServiceConfig !PaymentServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
+  | RentalPayoutServiceConfig !PayoutServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | BackgroundVerificationServiceConfig !BackgroundVerification.BackgroundVerificationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
+  | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

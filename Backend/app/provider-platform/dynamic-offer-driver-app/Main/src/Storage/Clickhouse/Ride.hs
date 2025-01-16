@@ -15,7 +15,7 @@
 
 module Storage.Clickhouse.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
@@ -56,7 +56,7 @@ rideTTable =
 
 type Ride = RideT Identity
 
-$(TH.mkClickhouseInstances ''RideT)
+$(TH.mkClickhouseInstances ''RideT 'SELECT_FINAL_MODIFIER)
 
 data RideStats = RideStats
   { totalEarnings :: Int,
@@ -175,7 +175,7 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to limit offset s
         Just True -> CH.desc
         _ -> CH.asc
   let sortOn = case mbSortOn of
-        Just Common.CANCELLED_RIDES -> (\_ (_, _, cancelledRides, _, _, _) -> sortBy cancelledRides)
+        Just Common.CANCELLED_RIDES -> (\_ (_, _, _, cancelledRides, _, _) -> sortBy cancelledRides)
         _ -> (\_ (_, _, completedRides, _, _, _) -> sortBy completedRides)
   res <-
     CH.findAll $

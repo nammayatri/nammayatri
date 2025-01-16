@@ -19,11 +19,9 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnSearch as OnSearchUtils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
@@ -37,7 +35,6 @@ buildOnSearchReqV2 ::
   Spec.OnSearchReq ->
   m (Maybe DOnSearch.DOnSearchReq)
 buildOnSearchReqV2 req = do
-  ContextUtils.validateContext Context.ON_SEARCH req.onSearchReqContext
   logOnSearchEventV2 req
   (_, validTill) <- Utils.getTimestampAndValidTill req.onSearchReqContext
   case req.onSearchReqError of

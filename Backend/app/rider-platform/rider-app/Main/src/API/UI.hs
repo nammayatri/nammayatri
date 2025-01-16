@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.EditLocation as EditLocation
@@ -26,10 +27,14 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
+import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
+import qualified API.Action.UI.TrackRoute as TrackRoute
+import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -101,6 +106,7 @@ type API =
            :<|> Issue.API
            :<|> TicketService.API
            :<|> Invoice.API
+           :<|> PriceBreakup.API
            :<|> FollowRide.API
            :<|> SosApi.API
            :<|> FRFSTicketService.API
@@ -111,6 +117,10 @@ type API =
            :<|> EstimateBP.API
            :<|> FavouriteDriver.API
            :<|> PartnerOrgFRFS.API
+           :<|> TriggerFCM.API
+           :<|> MultimodalConfirm.API
+           :<|> TrackRoute.API
+           :<|> BBPS.API
        )
 
 handler :: FlowServer API
@@ -149,6 +159,7 @@ handler =
     :<|> Issue.handler
     :<|> TicketService.handler
     :<|> Invoice.handler
+    :<|> PriceBreakup.handler
     :<|> FollowRide.handler
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler
@@ -159,3 +170,7 @@ handler =
     :<|> EstimateBP.handler
     :<|> FavouriteDriver.handler
     :<|> PartnerOrgFRFS.handler
+    :<|> TriggerFCM.handler
+    :<|> MultimodalConfirm.handler
+    :<|> TrackRoute.handler
+    :<|> BBPS.handler

@@ -22,7 +22,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
-import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
@@ -40,7 +40,7 @@ type API =
            :> TokenAuth
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
-           :> QueryParam "vehicleVariant" Vehicle.Variant
+           :> QueryParam "vehicleVariant" Vehicle.VehicleVariant
            :> Get '[JSON] DPlan.PlanListAPIRes
            :<|> "suspend"
              :> TokenAuth
@@ -70,7 +70,7 @@ handler =
     :<|> planSubscribe
     :<|> planSelect
 
-planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.Variant -> FlowHandler DPlan.PlanListAPIRes
+planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.VehicleVariant -> FlowHandler DPlan.PlanListAPIRes
 planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION mbLimit mbOffset
 
 planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
@@ -89,7 +89,7 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerA
   if autoPayStatus == Just DI.SUSPENDED
     then do
       void $ DPlan.planResume DPlan.YATRI_SUBSCRIPTION (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing Nothing
       return $ DPlan.PlanSubscribeRes {..}
     else do DPlan.planSubscribe DPlan.YATRI_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
 

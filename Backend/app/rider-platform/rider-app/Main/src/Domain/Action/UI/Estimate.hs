@@ -18,7 +18,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
-import qualified Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -46,6 +46,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
+    tripCategory :: Maybe TripCategory,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     estimatedPickupDuration :: Maybe Seconds,
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
@@ -53,6 +54,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
+    tipOptions :: Maybe [Int],
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     providerName :: Text,
@@ -65,7 +67,11 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    vehicleIconUrl :: Maybe Text,
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text,
+    isReferredRide :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -83,8 +89,8 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity Estimate {..} = do
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
@@ -113,7 +119,8 @@ mkEstimateAPIEntity Estimate {..} = do
         tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
-        vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType,
+        vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
+        vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
         ..
       }
   where

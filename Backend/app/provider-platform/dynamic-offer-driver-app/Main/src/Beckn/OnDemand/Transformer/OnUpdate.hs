@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Transformer.OnUpdate
   ( buildOnUpdateReqV2,
+    mkOnUpdateMessageV2,
   )
 where
 
@@ -23,7 +24,7 @@ import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
 import qualified Domain.Types.BecknConfig as DBC
@@ -31,6 +32,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -54,7 +56,8 @@ buildOnUpdateReqV2 ::
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- becknConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   message <- mkOnUpdateMessageV2 req farePolicy becknConfig
   pure $
@@ -90,6 +93,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
+  OU.DriverReachedDestinationBuildReq req -> Common.tfReachedDestinationReqToOrder req
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
@@ -107,7 +111,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -249,7 +253,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -264,6 +268,44 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.TollCrossedBuildReq OU.DTollCrossedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.TOLL_CROSSED) isValueAddNP Nothing False 0
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }
+  OU.RideEstimatedEndTimeRangeBuildReq OU.DRideEstimatedEndTimeRangeReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    let estimatedEndTimeRangeTagGroup = Utils.mkEstimatedEndTimeRangeTagGroupV2 ride.estimatedEndTimeRange
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing estimatedEndTimeRangeTagGroup Nothing False False Nothing (Just $ show Event.ESTIMATED_END_TIME_RANGE_UPDATED) isValueAddNP Nothing False 0
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }
+  OU.ParcelImageUploadedBuildReq OU.DParcelImageUploadedReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    let parcelImageUploadedTag = Utils.mkParcelImageUploadedTag
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing parcelImageUploadedTag Nothing False False Nothing (Just $ show Event.PARCEL_IMAGE_UPLOADED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,

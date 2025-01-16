@@ -10,6 +10,9 @@ import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
+create :: BeamFlow m r => IssueConfig -> m ()
+create = createWithKV
+
 findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> m (Maybe IssueConfig)
 findByMerchantOpCityId (Id merchantOpCityId) = findOneWithKV [Is BeamIC.merchantOperatingCityId $ Eq merchantOpCityId]
 
@@ -33,10 +36,10 @@ instance ToTType' BeamIC.IssueConfig IssueConfig where
     BeamIC.IssueConfigT
       { BeamIC.id = getId id,
         BeamIC.merchantOperatingCityId = getId merchantOperatingCityId,
-        BeamIC.onCreateIssueMsgs = show <$> onCreateIssueMsgs,
-        BeamIC.onAutoMarkIssueClsMsgs = show <$> onAutoMarkIssueClsMsgs,
-        BeamIC.onIssueReopenMsgs = show <$> onIssueReopenMsgs,
-        BeamIC.onKaptMarkIssueResMsgs = show <$> onKaptMarkIssueResMsgs,
+        BeamIC.onCreateIssueMsgs = getId <$> onCreateIssueMsgs,
+        BeamIC.onAutoMarkIssueClsMsgs = getId <$> onAutoMarkIssueClsMsgs,
+        BeamIC.onIssueReopenMsgs = getId <$> onIssueReopenMsgs,
+        BeamIC.onKaptMarkIssueResMsgs = getId <$> onKaptMarkIssueResMsgs,
         BeamIC.merchantId = getId merchantId,
         ..
       }

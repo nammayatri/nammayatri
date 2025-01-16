@@ -54,3 +54,7 @@ cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> Id MerchantOpera
 cacheLeaderBoardConfig leaderBType merchantOpCityId lbConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeLeaderBoardConfigKey leaderBType merchantOpCityId) lbConfig expTime
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)

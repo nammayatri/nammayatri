@@ -1,16 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantServiceUsageConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.UtilsTH
 import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
@@ -23,6 +23,7 @@ import Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.AadhaarVerificationService,
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    cancelPaymentIntent :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService),
     capturePaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
     createEphemeralKeys :: B.C f Kernel.External.Payment.Types.PaymentService,
     createPaymentCustomer :: B.C f Kernel.External.Payment.Types.PaymentService,
@@ -36,6 +37,9 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
+    getFirstPickupRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,

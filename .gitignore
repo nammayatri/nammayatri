@@ -1,5 +1,7 @@
 .vscode/tasks.json
 
+/.DS_Store
+
 # Nix
 result
 result-*

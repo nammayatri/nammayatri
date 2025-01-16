@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Cancel where
 
+import Beckn.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Maybe (fromJust)
@@ -35,6 +36,7 @@ buildCancelReqV2 req = do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
       let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       let userReallocationEnabled = req.cancelReqMessage.cancelReqMessageReallocate
+      let cancellationReason = getCancellationReason req
       return $
         DCancel.CancelRide $
           DCancel.CancelRideReq

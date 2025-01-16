@@ -1,27 +1,21 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
-import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Common as DI
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
-import Storage.Queries.OrphanInstances.FleetDriverAssociation
+import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
 
@@ -36,6 +30,27 @@ upsert a@FleetDriverAssociation {..} = do
         ]
         [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
     else createWithKV a
+
+createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> Bool -> m ()
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId isActive = do
+  res <- findOneWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+  case res of
+    Nothing -> do
+      now <- getCurrentTime
+      id <- generateGUID
+      createWithKV $
+        FleetDriverAssociation
+          { associatedTill = Nothing,
+            driverId = driverId,
+            fleetOwnerId = fleetOwnerId.getId,
+            associatedOn = Just now,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+    Just fleetDriverAssociation -> do
+      when (fleetDriverAssociation.isActive /= isActive) $ do
+        upsert fleetDriverAssociation {isActive}
 
 findAllActiveDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
@@ -81,7 +96,7 @@ findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetV
               B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
                 B.filter_'
                   ( \(fleetDriverAssociation, driverInformation) ->
-                      fleetDriverAssociation.fleetOwnerId B.==?. (B.val_ fleetOwnerId)
+                      fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
                         B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                   )

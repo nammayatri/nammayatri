@@ -62,11 +62,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -96,8 +99,10 @@ public class NotificationUtils {
     public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING_NEW";
     public static final String SOS_TRIGGERED = "SOS_TRIGGERED_NEW";
     public static final String SOS_RESOLVED = "SOS_RESOLVED_NEW";
-    public static String RENTAL = "Rental";
-    public static String INTERCITY = "InterCity";
+    public static final String NOSOUND_NOTIFICATION = "NOSOUND_NOTIFICATION";
+    public static final String RENTAL = "Rental";
+    public static final String INTERCITY = "InterCity";
+    public static final String DELIVERY = "Delivery";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -108,6 +113,7 @@ public class NotificationUtils {
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final Map<String, Long> processedNotificationIds = new HashMap<>();
 
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
@@ -159,6 +165,7 @@ public class NotificationUtils {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
+            boolean incVol = sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true");
             String notificationType = data.getString("notification_type");
             String notificationIdString = "null", expTime = "null";
 
@@ -226,7 +233,9 @@ public class NotificationUtils {
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
-                    JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}");
+                    JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(
+                            entity_payload.has("driverDefaultStepFeeWithCurrencyV2") && !entity_payload.isNull("driverDefaultStepFeeWithCurrencyV2") ?
+                            entity_payload.get("driverDefaultStepFeeWithCurrencyV2").toString() : (entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}"));
                     JSONObject driverStepFeeWithCurrency = new JSONObject(entity_payload.has("driverStepFeeWithCurrency") && !entity_payload.isNull("driverStepFeeWithCurrency") ? entity_payload.get("driverStepFeeWithCurrency").toString() : "{}");
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     String[] specialZoneSplit = entity_payload.optString("specialLocationTag", "None").split("_");
@@ -251,8 +260,8 @@ public class NotificationUtils {
                     sheetData.putDouble("destLng", addressDrop.has("lon") && !addressDrop.isNull("lon") ? addressDrop.getDouble("lon"): 0.0);
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
                     sheetData.putString("addressDrop", addressDrop.has("full_address") && !addressDrop.isNull("full_address") ? addressDrop.getString("full_address") : "");
-                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);
-                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 20);
+                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 0);
+                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 0);
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
@@ -264,8 +273,7 @@ public class NotificationUtils {
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
-                    sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
-                    sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
+                    sheetData.putBoolean("specialZonePickup", isSpecialPickupZone);
                     sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));
                     sheetData.putInt("airConditioned", entity_payload.has("airConditioned") && !entity_payload.isNull("airConditioned") ? (entity_payload.getBoolean("airConditioned") ? 1 : 0) : -1);
                     sheetData.putString("vehicleServiceTier", entity_payload.optString("vehicleServiceTier", null));
@@ -276,11 +284,14 @@ public class NotificationUtils {
                     sheetData.putString("rideStartDate", rideStartDate);
                     sheetData.putString("notificationSource", source);
                     sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
-                    sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
+                    sheetData.putInt("driverDefaultStepFee", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
+                    sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
+                    sheetData.putBoolean("isFavourite", entity_payload.has("isFavourite") && entity_payload.optBoolean("isFavourite", false));
+                    sheetData.putInt("middleStopCount", entity_payload.optInt("middleStopCount", 0));
+                    sheetData.putBoolean("roundTrip" , entity_payload.optBoolean("roundTrip", false));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
-
                     System.out.println(entity_payload);
                 } catch (Exception e) {
                     Exception exception = new Exception("Error in parse overlay data " + e);
@@ -352,7 +363,7 @@ public class NotificationUtils {
                                     lastRideReq = new Bundle();
                                     lastRideReq.putAll(sheetData);
                                     lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                    startMediaPlayer(context, R.raw.allocation_request, true);
+                                    startMediaPlayer(context, R.raw.allocation_request, incVol);
                                     RideRequestUtils.createRideRequestNotification(context);
                                 } catch (Exception e) {
                                     Exception exception = new Exception("Error in onCreate ride req activity " + e);
@@ -443,11 +454,13 @@ public class NotificationUtils {
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
         int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
+        String show_notification = data.getString("show_notification");
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
         }
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        boolean incVol = sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true");
         String disabilityName = sharedPref.getString("DISABILITY_NAME", "");
         final PackageManager pm = context.getPackageManager();
         Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
@@ -469,10 +482,10 @@ public class NotificationUtils {
         String merchantType = context.getString(R.string.service);
         String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
-        System.out.println("showNotification:- " + notificationType);
         if (MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED.equals(notificationType)) {
             channelId = RIDE_STARTED;
-        } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT) ||
+        }
+        else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.DRIVER_HAS_REACHED) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED) ||
@@ -484,8 +497,12 @@ public class NotificationUtils {
         else {
             channelId = GENERAL_NOTIFICATION;
         }
+
+        if(!allowSoundForNotification(notificationType,data,key)){
+            channelId = NOSOUND_NOTIFICATION;
+        }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
-        if (imageUrl != null) {
+        if (imageUrl != null && bitmap != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
                     .setContentTitle(title)
@@ -526,7 +543,10 @@ public class NotificationUtils {
             } else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
-            mBuilder.setSound(notificationSound);
+            boolean playSoundForNotification = allowSoundForNotification(notificationType,data,key);
+            if(playSoundForNotification){
+              mBuilder.setSound(notificationSound);
+            } 
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -574,7 +594,7 @@ public class NotificationUtils {
             else
                 Utils.logEvent("ride_cancelled", context);
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
-                startMediaPlayer(context, R.raw.ride_cancelled_media, true);
+                startMediaPlayer(context, R.raw.ride_cancelled_media, incVol);
             } else {
                 int cancellationSound = R.raw.cancel_notification_sound;
                 if (disabilityName.equals("BLIND_LOW_VISION"))
@@ -583,9 +603,16 @@ public class NotificationUtils {
                     else
                         cancellationSound = R.raw.you_have_cancelled_the_ride;
                 }
-                startMediaPlayer(context, cancellationSound, false);
+                if(allowSoundForNotification(notificationType,data,key)) {
+                    startMediaPlayer(context, cancellationSound, false);
+                }
             }
         }
+
+        if(MyFirebaseMessagingService.NotificationTypes.DRIVER_HAS_REACHED.equals(notificationType) && key.equals("USER")){
+            startMediaPlayer(context, R.raw.driver_arrived, false );
+        }
+
         if (MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             int audio = R.raw.ride_assigned;
@@ -598,7 +625,9 @@ public class NotificationUtils {
             if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
                 audio = R.raw.ride_assigned_talkback;
             }
-            startMediaPlayer(context, audio, !key.equals("USER"));
+            if(allowSoundForNotification(notificationType,data,key)) {
+                startMediaPlayer(context, audio, key.equals("DRIVER") && incVol );
+            }
         }
         notificationId++;
         if(MyFirebaseMessagingService.NotificationTypes.NEW_STOP_ADDED.equals(notificationType) || MyFirebaseMessagingService.NotificationTypes.EDIT_STOP.equals(notificationType) ){
@@ -613,6 +642,29 @@ public class NotificationUtils {
         }
     }
 
+    public static Boolean allowSoundForNotification(String notificationType, JSONObject data,String key){
+        if(data.has("rideTime")){
+            try {
+                long scheduled_ride_buffer_time = 30 * 60 * 1000;
+                if(remoteConfigs.hasKey("scheduled_ride_buffer_time")){
+                    scheduled_ride_buffer_time = remoteConfigs.getLong("scheduled_ride_buffer_time");
+                }
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Date rideTime = sdf.parse(data.getString("rideTime"));
+                Date currentTime = new Date();
+                if (rideTime != null) {
+                    long timeDifference = rideTime.getTime() - currentTime.getTime();
+                    return (timeDifference < (long) scheduled_ride_buffer_time);
+                }else{
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing rideTime: " + e.getMessage());
+            }
+        }
+        return true;
+    }
     public static void triggerUICallbacks (String notificationType, String notificationData) {
         for (int i = 0; i < callBack.size(); i++) {
             callBack.get(i).customerCallBack(notificationType,notificationData);
@@ -692,6 +744,12 @@ public class NotificationUtils {
                         channel.setName("Ride Reallocation");
                         channel.setDescription("Ride Reallocation related Notifications");
                         break;
+                    case NOSOUND_NOTIFICATION:
+                        soundUri = null;
+                        channel.setName("Other Silent notifications");
+                        channel.setDescription("Other ride related silent Notifications");
+                        channel.setSound(null,null);
+                        break;
                     default:
                         soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                         channel.setName("Other ride related");
@@ -703,8 +761,9 @@ public class NotificationUtils {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                         .build();
-                channel.setSound(soundUri, attributes);
-
+                if(soundUri!=null){
+                    channel.setSound(soundUri, attributes);
+                }
 
                 switch (channel_Id) {
                     case RIDE_STARTED:
@@ -916,15 +975,7 @@ public class NotificationUtils {
 //        if (driverVehicle.equals(variant)) return NO_VARIANT; TODO :: if driver's variant is same then don't show
         String buildType = context.getResources().getString(R.string.service);
         switch (buildType){
-            case  "yatrisathiprovider" :
-                switch (variant){
-                    case "SEDAN" :
-                    case "HATCHBACK" :
-                    case "TAXI_PLUS" : return "AC Cab";
-                    case "SUV" : return "AC SUV";
-                    case "TAXI" : return "Non AC Taxi";
-                    default : return NO_VARIANT;
-                }
+            case  "yatrisathiprovider" : return NO_VARIANT;
             case "nammayatriprovider" : return NO_VARIANT;
 
             case "yatriprovider" :
@@ -953,5 +1004,80 @@ public class NotificationUtils {
         bHardware = bHardware == null || bHardware.isEmpty() ? "null" : bHardware;
         deviceDetails = bManufacturer + "/" + bModel + "/" + bDevice + "/" + bBoard + "/" + bHardware;
         return deviceDetails;
+    }
+
+    public static void handleNotifications (String notificationType, JSONObject payload, String notificationId, Context context, SharedPreferences sharedPref,boolean triggerUICallback){
+        try {
+            if (notificationAlreadyProcessed(notificationId)) return;
+            String title = payload.getString("title");
+            String body = payload.getString("body");
+            String imageUrl = payload.getString("imageUrl");
+            String key = context.getString(R.string.service);
+            String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
+            if (triggerUICallback) NotificationUtils.triggerUICallbacks(notificationType, String.valueOf(new JSONObject().put("title", title).put("msg" , body)));
+            switch (notificationType){
+                case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
+                    NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
+                    sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
+                    startMainActivity(context);
+                    if (merchantType.equals("DRIVER")){
+                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                    }
+                    break;
+                case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
+                    if (payload.get("show_notification").equals("true")) {
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    }
+                    if (merchantType.equals("DRIVER")){
+                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                    }
+                    break;
+            }
+        }catch (Exception e){
+            FirebaseCrashlytics.getInstance().recordException(e);
+        }
+    }
+
+    public static boolean notificationAlreadyProcessed (String notificationId){
+        long currentTime = System.currentTimeMillis();
+        synchronized (processedNotificationIds) {
+            if (processedNotificationIds.containsKey(notificationId)) {
+                return true;
+            }
+            //put new notificationId
+            processedNotificationIds.put(notificationId, currentTime);
+        }
+        // Remove expired entries
+        long notificationExpiryTime = remoteConfigs.hasKey("notificationExpiryTime") ? remoteConfigs.getLong("notificationExpiryTime") : 5 * 60 * 1000; // 5 minutes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            processedNotificationIds.entrySet().removeIf(entry -> currentTime - entry.getValue() >= notificationExpiryTime);
+        } else {
+            Iterator<Map.Entry<String, Long>> iterator = processedNotificationIds.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Long> entry = iterator.next();
+                if (currentTime - entry.getValue() > notificationExpiryTime) {
+                    iterator.remove();
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void startMainActivity(Context context) {
+        SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String key = context.getString(R.string.service);
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
+        if (merchantType.equals("DRIVER") && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+            Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            try {
+                context.getApplicationContext().startActivity(intent);
+            } catch (Exception e) {
+                Exception exception = new Exception("Error in startMainActivity " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+                NotificationUtils.firebaseLogEventWithParams(context, "exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
+            }
+        }
     }
 }

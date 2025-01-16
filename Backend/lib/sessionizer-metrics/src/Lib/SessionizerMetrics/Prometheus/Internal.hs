@@ -30,11 +30,11 @@ incrementCounter ::
   Text ->
   Text ->
   m ()
-incrementCounter merchantId event deploymentVersion = do
+incrementCounter entityId event deploymentVersion = do
   counterName <- asks (.eventRequestCounter)
-  liftIO $ P.withLabel counterName (event, merchantId, deploymentVersion) P.incCounter
+  liftIO $ P.withLabel counterName (event, entityId, deploymentVersion) P.incCounter
 
 type EventCounterMetric = P.Vector P.Label3 P.Counter
 
 registerEventRequestCounterMetric :: IO EventCounterMetric
-registerEventRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "event_count" ""
+registerEventRequestCounterMetric = P.register $ P.vector ("event", "entityId", "version") $ P.counter $ P.Info "event_count" ""

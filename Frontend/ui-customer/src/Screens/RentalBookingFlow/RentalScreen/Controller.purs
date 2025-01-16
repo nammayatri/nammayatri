@@ -42,9 +42,10 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, rideStartingInBetweenPrevRide,overlappingRides)
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
-import JBridge (showDateTimePicker, toast, updateSliderValue)
+import JBridge (showDateTimePicker, updateSliderValue)
+import Engineering.Helpers.Utils as EHU
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
@@ -53,7 +54,7 @@ import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateA
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RentalScreenStage(..), RentalScreenState, BookingTime)
-import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
+import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), RentalQuoteAPIDetails(..))
 import Data.Number (fromString)
 import Data.Lens
 import Accessor
@@ -62,6 +63,12 @@ import Data.Int as INT
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Data.String as DS
+import Services.FlowCache as FlowCache
+import Components.PopUpModal.Controller as PopUpModal
+import Data.Function.Uncurried (runFn2)
+import Helpers.Utils (isParentView, emitTerminateApp)
+import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Utils as EHC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -92,6 +99,7 @@ data Action =
   | PopUpModalAC PopUpModalController.Action
   | RequestInfoCardAction RequestInfoCardController.Action
   | UpdateSliderValue Int
+  | ScheduledRideExistsAction PopUpModal.Action
 
 data ScreenOutput = NoScreen
                   | GoToHomeScreen RentalScreenState (Maybe BookingTime)
@@ -126,8 +134,7 @@ eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue 
 eval (RequestInfoCardAction (RequestInfoCardController.BackPressed)) state = continue state {props { showRentalPolicy = false}}
 
 eval (UpdateLocAndLatLong lat lon) state =
-  if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
-  else continue state
+  continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
 
 eval BackpressAction state = genericBackPressed state 
 
@@ -186,21 +193,23 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
         isAfterThirtyMinutes = (EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC "")) > (30 * 60)
-        validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
-                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+        validDate = (unsafePerformEffect $ runEffectFn2 EHC.compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 EHC.compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
+        returnTimeUTC = EHC.getUTCAfterNSeconds selectedUTC (state.data.rentalBookingData.baseDuration * 60 * 60)
     in if validDate && isAfterThirtyMinutes then do 
-      let maybeInvalidBookingId = invalidBookingTime selectedUTC Nothing
-      if (isJust maybeInvalidBookingId) then do
-        exit $ GoToHomeScreen state maybeInvalidBookingId
+      let latestScheduledRides = state.data.latestScheduledRides
+          {overLapping,overLappedBooking} = overlappingRides selectedUTC (Just returnTimeUTC) 1800 latestScheduledRides
+      if overLapping then do
+          continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
       else continue newState {props{showPrimaryButton = true}}
        else 
         if validDate then do 
-          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
+          void $ pure $ EHU.showToast $ getString STR.SCHEDULE_RIDE_AVAILABLE
           continue state {props{showPrimaryButton = true}}
         else do
-          void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
+          void $ pure $ EHU.showToast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
           continue state {props{showPrimaryButton = true}}
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state
@@ -214,7 +223,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
       if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props{showPrimaryButton = true}} 
         [ do 
           push <- getPushFn Nothing "RentalScreen"
-          _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+          _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just $ EHC.getCurrentUTC "") Nothing true true
           pure NoAction
         ]
       else genericBackPressed state {props{showPrimaryButton = true}}
@@ -226,6 +235,8 @@ eval (RateCardAC action) state =
     RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
     _ -> continue state { props {showRateCard = false}}
 
+eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startTimeUTC = "",overLappingBooking= Nothing}, props{showScheduledRideExistsPopUp = false}}
+
 eval _ state = continue state
 
 
@@ -233,7 +244,11 @@ genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreen
 genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_PACKAGE -> do 
     if state.props.showRentalPolicy then continue state { props {showRentalPolicy = false}}
-    else exit $ GoToHomeScreen state Nothing
+    else if isParentView FunctionCall 
+      then do 
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+      else exit $ GoToHomeScreen state Nothing
   RENTAL_SELECT_VARIANT -> do 
     if state.props.showRateCard then continue state { props {showRateCard = false}}
     else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
@@ -241,11 +256,14 @@ genericBackPressed state = case state.data.currentStage of
   _ -> continue state
 
 openDateTimePicker :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
-openDateTimePicker state =
+openDateTimePicker state = do 
+  let 
+    scheduledUTC = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 1860
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+      let maxDate = Just $ EHC.getUTCAfterNHours (EHC.getCurrentUTC "") 120
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) maxDate true true
       pure NoAction
     ]
 

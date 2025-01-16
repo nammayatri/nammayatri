@@ -26,6 +26,7 @@ import Data.Either (Either(..))
 import Debug (spy)
 import Foreign.Object (empty)
 import Control.Transformers.Back.Trans as App
+import DecodeUtil
 
 callApi :: forall a b st.
   StandardEncode a =>
@@ -33,13 +34,17 @@ callApi :: forall a b st.
   RestEndpoint a =>
   a ->
   Array Header ->
+  Flow st Unit ->
   Flow st (Either ErrorResponse b)
-callApi payload headers' = do
+callApi payload headers' noInternetScreen = do
   logRequest
   result <- callAPI (Headers headers') payload
   case result of
-    Right (resp :: (Response b)) -> pure $ Right $ spy "Response :: " resp.response
+    Right (resp :: (Response b)) -> do
+      let _ = setKeyInWindow "noInternetCount" 0
+      pure $ Right $ spy "Response :: " resp.response
     Left err -> do
+      if err.code == -1 then noInternetScreen else pure unit
       pure $ Left err
   where
     logRequest = do
@@ -54,14 +59,18 @@ callApiBT :: forall a b e st.
   a ->
   Array Header ->
   e ->
+  Flow st Unit ->
   FlowBT String st b
-callApiBT payload headers' errorHandler = do
+callApiBT payload headers' errorHandler noInternetScreen = do
   logRequest
   result <- lift $ lift $ callAPI (Headers headers') payload
   case result of
-    Right resp -> pure $ spy "Response :: " resp.response
+    Right resp -> do
+      let _ = setKeyInWindow "noInternetCount" 0 
+      pure $ spy "Response :: " resp.response
     Left err -> do
-      handleApiError errorHandler $ spy "Error :: " err
+      if err.code == -1 then lift $ lift $ noInternetScreen 
+      else handleApiError errorHandler $ spy "Error :: " err
       App.BackT $ pure App.GoBack
   where
     logRequest = do
@@ -74,10 +83,11 @@ callGzipApi :: forall a b st.
   RestEndpoint a =>
   a ->
   Array Header ->
+  Flow st Unit ->
   Flow st (Either ErrorResponse b)
-callGzipApi payload headers = do
+callGzipApi payload headers noInternetScreen = do
   let gzipHeader = [Header "Accept-Encoding" "gzip"]
-  callApi payload (headers <> gzipHeader)
+  callApi payload (headers <> gzipHeader) noInternetScreen
 
 callGzipApiBT :: forall a b e st.
   ApiErrorHandler e st =>
@@ -87,7 +97,8 @@ callGzipApiBT :: forall a b e st.
   a ->
   Array Header ->
   e ->
+  Flow st Unit ->
   FlowBT String st b
-callGzipApiBT payload headers errorHandler = do
+callGzipApiBT payload headers errorHandler noInternetScreen = do
   let gzipHeader = [Header "Accept-Encoding" "gzip"]
-  callApiBT payload (headers <> gzipHeader) errorHandler
+  callApiBT payload (headers <> gzipHeader) errorHandler noInternetScreen

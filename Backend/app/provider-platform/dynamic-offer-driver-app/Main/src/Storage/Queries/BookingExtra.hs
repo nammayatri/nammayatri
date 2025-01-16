@@ -1,58 +1,49 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.BookingExtra where
 
-import qualified Data.Text as T
+import Data.List.Extra (notNull)
 import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.Booking
-import qualified Domain.Types.BookingLocation as DBBL
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverQuote as DDQ
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
-import Kernel.Prelude
-import Kernel.Types.Error
+import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
-import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import Storage.Queries.OrphanInstances.Booking
-import Tools.Error
+import Storage.Queries.OrphanInstances.Booking ()
 
 createBooking' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking' = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
-create dBooking = do
-  void $ whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
-  whenJust dBooking.toLocation $ \toLocation -> whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
-  createBooking' dBooking
-
-createBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
+createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-  QLM.create fromLocationMap
-  whenJust booking.toLocation $ \toLocation -> do
-    toLocationMaps <- SLM.buildDropLocationMapping toLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-    QLM.create toLocationMaps
-  create booking
+  processSingleLocation booking.fromLocation SLM.buildPickUpLocationMapping
+  when (notNull booking.stops) $ processMultipleLocations booking.stops
+  whenJust booking.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  createBooking' booking
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+      QLM.createMany locationMappings
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -78,7 +69,7 @@ findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
 findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
-findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
+findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id cityId) timeDiffFromUtc = do
   let limitVal = maybe 5 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
   now <- getCurrentTime
@@ -92,7 +83,7 @@ findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay stat
         [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamB.startTime $ Se.LessThanOrEq to,
           Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
-          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
+          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId),
           Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
           Se.Is BeamB.status $ Se.Eq status
         ]
@@ -182,10 +173,15 @@ findStuckBookings merchant moCity bookingIds now = do
           ]
       ]
 
-findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> UTCTime -> Int -> m (Maybe Booking)
-findBookingBySpecialZoneOTP cityId otpCode now specialZoneBookingOtpExpiry = do
+findBookingBySpecialZoneOTPAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> UTCTime -> Int -> m (Maybe Booking)
+findBookingBySpecialZoneOTPAndCity cityId otpCode now specialZoneBookingOtpExpiry = do
   let otpExpiryCondition = addUTCTime (- (fromIntegral specialZoneBookingOtpExpiry * 60) :: NominalDiffTime) now
-  findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
+  findOneWithKVRedis [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
+
+findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> UTCTime -> Int -> m (Maybe Booking)
+findBookingBySpecialZoneOTP otpCode now specialZoneBookingOtpExpiry = do
+  let otpExpiryCondition = addUTCTime (- (fromIntegral specialZoneBookingOtpExpiry * 60) :: NominalDiffTime) now
+  findOneWithKVRedis [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
 cancelBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
@@ -215,3 +211,6 @@ updatePaymentId bookingId paymentId = do
   updateOneWithKV
     [Se.Set BeamB.paymentId $ Just paymentId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]
+findBookingsFromDB bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]

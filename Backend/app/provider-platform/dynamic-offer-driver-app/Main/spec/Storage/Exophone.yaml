@@ -11,7 +11,7 @@ Exophone:
 
   types:
     ExophoneType:
-      enum: "CALL_RIDE, END_RIDE"
+      enum: "CALL_RIDE, END_RIDE, CALL_DELIVERY_SENDER, CALL_DELIVERY_RECEIVER"
 
   fields:
     id : Id Exophone

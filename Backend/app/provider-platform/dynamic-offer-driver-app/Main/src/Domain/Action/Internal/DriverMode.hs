@@ -15,7 +15,7 @@
 module Domain.Action.Internal.DriverMode where
 
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude

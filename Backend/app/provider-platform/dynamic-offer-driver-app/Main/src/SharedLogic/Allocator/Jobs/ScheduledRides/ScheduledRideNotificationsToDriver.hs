@@ -18,9 +18,10 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Action.UI.Call
+import qualified Domain.Types as DTC
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.CallStatus as SCS
-import qualified Domain.Types.Common as DTC
-import qualified Domain.Types.DriverInformation as DInfo
+import qualified Domain.Types.Common as DInfo
 import qualified Domain.Types.Overlay as DOverlay
 import Domain.Types.RideRelatedNotificationConfig
 import Domain.Types.TransporterConfig
@@ -36,6 +37,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.Overlay as CMO
@@ -66,13 +68,14 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
       driverId = jobData.driverId
       notificationType = jobData.notificationType
       notificationKey = jobData.notificationKey
-      bookingStatus = jobData.bookingStatus
       onlyIfOffline = jobData.onlyIfOffline
+      merchantId = jobData.merchantId
   booking <- QB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
 
-  when (isNotificationRequired && booking.status == bookingStatus) do
+  when (isNotificationRequired && booking.status /= DB.CANCELLED) do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
     driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
@@ -94,40 +97,46 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
         callStatus <- buildCallStatus callStatusId exotelResponse booking
         void $ QCallStatus.create callStatus
       PN -> do
-        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey driver.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
-        let entityData = generateReq merchantPN.title merchantPN.body booking
+        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing driver.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+        let entityData = generateReq merchantPN.title merchantPN.body booking merchant
         notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
       OVERLAY -> do
         overlayKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid overlay key for Notification")
-        merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId overlayKey ENGLISH Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
-        let (title, description) = formatMessageTransformer (fromMaybe "" merchantOverlay.title) (fromMaybe "" merchantOverlay.description) booking
+        merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
+        let (title, description) = formatMessageTransformer (fromMaybe "" merchantOverlay.title) (fromMaybe "" merchantOverlay.description) booking merchant.shortId
         let overlay :: DOverlay.Overlay = overlay {DOverlay.title = Just title, DOverlay.description = Just description}
         sendOverlay merchantOpCityId driver $ mkOverlayReq overlay
       SMS -> do
         smsCfg <- asks (.smsCfg)
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
-        merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+        merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
         let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMessage.message phoneNumber sender) >>= Sms.checkSmsResult
+            (_, messageBody) = formatMessageTransformer "" merchantMessage.message booking merchant.shortId
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender) >>= Sms.checkSmsResult
       _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
   return Complete
   where
-    generateReq notifTitle notifBody booking = do
-      let (title, message) = formatMessageTransformer notifTitle notifBody booking
+    generateReq notifTitle notifBody booking merchant = do
+      let (title, message) = formatMessageTransformer notifTitle notifBody booking merchant.shortId
       NotifReq
         { title = title,
           message = message,
           entityId = booking.id.getId
         }
 
-    formatMessageTransformer title body booking = do
+    formatMessageTransformer title body booking merchantShortId = do
       let isRentalOrIntercity = case booking.tripCategory of
-            DTC.Rental _ -> "Rental "
-            DTC.InterCity _ _ -> "InterCity "
+            DTC.Rental _ -> "Rental"
+            DTC.InterCity _ _ -> "InterCity"
             _ -> ""
+          driverPartnerName = case merchantShortId.getShortId of
+            "BRIDGE_CABS_PARTNER" -> "Bridge Cabs"
+            "JATRI_SAATHI_PARTNER" -> "Jatri Saathi"
+            "YATRI_PARTNER" -> "Yatri"
+            _ -> "Namma Yatri"
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           fullAddress = fromMaybe "" booking.fromLocation.address.fullAddress
-          formattedBody = T.replace "{#pickupAddress#}" fullAddress $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity body
+          formattedBody = T.replace "{#pickupAddress#}" fullAddress $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#driverPartnerName#}" driverPartnerName body
       (formattedTitle, formattedBody)
 
     buildCallStatus callStatusId exotelResponse booking = do
@@ -142,6 +151,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.providerId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             callService = Just Exotel,
             callAttempt = Just SCS.Resolved,
             callError = Nothing,

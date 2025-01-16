@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
-//import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING;
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -110,7 +110,7 @@ public class ChatService extends Service {
         sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification());
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             }else {
                 this.startForeground(serviceNotificationID, createNotification());
             }
@@ -131,7 +131,7 @@ public class ChatService extends Service {
         if (!isChatServiceRunning) {
             try{
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    this.startForeground(serviceNotificationID, createNotification());
+                    this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
                 }else {
                     this.startForeground(serviceNotificationID, createNotification());
                 }
@@ -154,7 +154,7 @@ public class ChatService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification());
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             }else {
                 this.startForeground(serviceNotificationID, createNotification());
             }
@@ -206,15 +206,12 @@ public class ChatService extends Service {
 
     private void handleMessages() {
         int count = 1;
+        shouldNotify = false;
         isChatServiceRunning = false;
         int messageSize = messages.size();
         for (Message message : messages) {
-            shouldNotify = true;
             if (count == messageSize && !isChatServiceRunning) {
                 isChatServiceRunning = true;
-                if (count != 1) {
-                    shouldNotify = false;
-                }
             }
             count++;
             handleMessage(message, String.valueOf(messageSize - 1));

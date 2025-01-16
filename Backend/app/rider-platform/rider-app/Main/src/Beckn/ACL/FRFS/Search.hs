@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Beckn.ACL.FRFS.Search (buildSearchReq) where
 
@@ -61,7 +60,7 @@ tfIntent search fromStation toStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment search fromStation toStation,
-        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing Nothing
+        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing Nothing Nothing
       }
 
 tfIntentFulfillment :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Maybe Spec.Fulfillment

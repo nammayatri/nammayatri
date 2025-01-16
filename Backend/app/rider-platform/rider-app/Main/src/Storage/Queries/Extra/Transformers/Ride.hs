@@ -2,6 +2,7 @@ module Storage.Queries.Extra.Transformers.Ride where
 
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
+import Domain.Types.Ride (EstimatedEndTimeRange (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -40,5 +41,21 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
       else QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
   QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
+getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> Maybe Bool -> m [Location]
+getStops id hasStops = do
+  if hasStops == Just True
+    then do
+      stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+      mapM
+        ( \stopLocationMapping ->
+            QL.findById stopLocationMapping.locationId
+              >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+        )
+        stopsLocationMapping
+    else return []
+
 mkLatLong :: Maybe Double -> Maybe Double -> Maybe LatLong
 mkLatLong lat lon = LatLong <$> lat <*> lon
+
+mkEstimatedEndTimeRange :: UTCTime -> UTCTime -> EstimatedEndTimeRange
+mkEstimatedEndTimeRange start end = EstimatedEndTimeRange {..}

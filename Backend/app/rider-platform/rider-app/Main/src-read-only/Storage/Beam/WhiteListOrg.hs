@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.WhiteListOrg where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -17,6 +16,7 @@ data WhiteListOrgT f = WhiteListOrgT
     domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
@@ -28,6 +28,6 @@ instance B.Table WhiteListOrgT where
 
 type WhiteListOrg = WhiteListOrgT Identity
 
-$(enableKVPG ''WhiteListOrgT ['id] [['subscriberId]])
+$(enableKVPG ''WhiteListOrgT ['id] [])
 
 $(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("subscriberId", "subscriber_id")])

@@ -1,8 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-identities #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Producer.Flow where
@@ -28,6 +26,7 @@ import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
 import Lib.Scheduler.Types as ST
+import Producer.SchedulerJob ()
 import qualified Sequelize as Se
 import SharedLogic.Allocator
 
@@ -113,7 +112,9 @@ runReviver' = do
                 createdAt = now,
                 updatedAt = now,
                 currErrors = 0,
-                status = Pending
+                status = Pending,
+                merchantId = ST.merchantId x,
+                merchantOperatingCityId = ST.merchantOperatingCityId x
               }
       createWithKVScheduler $ AnyJob newJob
       logDebug $ "Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid

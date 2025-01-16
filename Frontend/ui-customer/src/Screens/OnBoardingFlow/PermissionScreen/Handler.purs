@@ -16,13 +16,23 @@
 module Screens.PermissionScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, ($), pure, (<$>))
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Prelude
+import Engineering.Helpers.Commons (liftFlow) 
 import PrestoDOM.Core.Types.Language.Flow (showScreen)
-import Presto.Core.Types.Language.Flow (doAff , getLogFields)
+import Presto.Core.Types.Language.Flow (Flow, doAff , getLogFields)
+import Presto.Core.Types.Language.Flow (getState) as Flow
 import Screens.PermissionScreen.Controller (ScreenOutput(..))
 import Screens.PermissionScreen.View as PermissionScreen
 import Types.App (FlowBT, GlobalState(..), PERMISSION_SCREEN_OUTPUT(..))
+import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace, runScreenWithNameSpace)
+import Data.Maybe (Maybe(..))
+import PrestoDOM.Core (terminateUI)
+import Screens.Types as ST
+import Engineering.Helpers.Utils as EHU
+import DecodeUtil as DU
+import JBridge
+import Helpers.PrestoUtils
 
 permissionScreen :: FlowBT String PERMISSION_SCREEN_OUTPUT
 permissionScreen = do
@@ -34,3 +44,24 @@ permissionScreen = do
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)
     LocationCallBack updatedState -> App.BackT $ App.NoBack <$> (pure TURN_ON_GPS)
     InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure TURN_ON_INTERNET)
+
+
+noInternetScreen :: Flow GlobalState Unit
+noInternetScreen = do
+  void $ EHU.toggleLoader false
+  (GlobalState state) <- Flow.getState
+  logField_ <- getLogFields
+  void $ liftFlow $ initUIWithNameSpace "PermissionScreen" (getFragmentView "")
+  let 
+    screen = PermissionScreen.screen state.permissionScreen{logField = logField_, stage = ST.INTERNET_ACTION}
+    scopedScreen = { 
+      initialState : screen.initialState
+      , view : screen.view
+      , name : screen.name  
+      , globalEvents : screen.globalEvents
+      , eval : screen.eval
+      , parent : Just "PermissionScreen"}
+  void $ runScreenWithNameSpace scopedScreen
+  let _ = DU.setKeyInWindow "noInternetCount" 0
+  liftFlow $ terminateUI $ Just "PermissionScreen"
+  liftFlow $ triggerReloadApp "lazy"

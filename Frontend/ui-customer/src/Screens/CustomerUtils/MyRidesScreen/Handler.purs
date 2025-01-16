@@ -56,3 +56,4 @@ myRidesScreen = do
     BookRide -> App.BackT $ App.BackPoint <$> (pure $ BOOK_RIDE )
     RepeatRide updatedState-> App.BackT $ App.NoBack <$> (pure $ REPEAT_RIDE_FLOW updatedState)
     GoToRideScheduledScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SCHEDULED_SCREEN updatedState)
+    NotificationListenerSO notification notificationBody ->  App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_HANDLER notification notificationBody)

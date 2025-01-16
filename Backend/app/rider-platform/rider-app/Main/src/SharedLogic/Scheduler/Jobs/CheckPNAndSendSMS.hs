@@ -58,14 +58,12 @@ sendSMS ::
   Text ->
   m ()
 sendSMS merchantId merchantOpCity phoneNo name trackLink = do
-  smsCfg <- asks (.smsCfg)
-  let sender = smsCfg.sender
-  message <-
+  buildSmsReq <-
     MessageBuilder.buildFollowRideStartedMessage merchantOpCity $
       MessageBuilder.BuildFollowRideMessageReq
         { userName = fromMaybe "" name,
           rideLink = trackLink
         }
   void $
-    Sms.sendSMS merchantId merchantOpCity (Sms.SendSMSReq message phoneNo sender)
+    Sms.sendSMS merchantId merchantOpCity (buildSmsReq phoneNo)
       >>= Sms.checkSmsResult

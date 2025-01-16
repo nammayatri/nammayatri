@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FlaggedCategory where
@@ -11,7 +9,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data FlaggedCategoryT f = FlaggedCategoryT {createdAt :: (B.C f Kernel.Prelude.UTCTime), id :: (B.C f Kernel.Prelude.Text), name :: (B.C f Kernel.Prelude.Text), updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
+data FlaggedCategoryT f = FlaggedCategoryT {createdAt :: B.C f Kernel.Prelude.UTCTime, id :: B.C f Kernel.Prelude.Text, name :: B.C f Kernel.Prelude.Text, updatedAt :: B.C f Kernel.Prelude.UTCTime}
   deriving (Generic, B.Beamable)
 
 instance B.Table FlaggedCategoryT where
@@ -20,6 +18,6 @@ instance B.Table FlaggedCategoryT where
 
 type FlaggedCategory = FlaggedCategoryT Identity
 
-$(enableKVPG (''FlaggedCategoryT) [('id)] [])
+$(enableKVPG ''FlaggedCategoryT ['id] [])
 
-$(mkTableInstances (''FlaggedCategoryT) "flagged_category")
+$(mkTableInstances ''FlaggedCategoryT "flagged_category")

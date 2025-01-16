@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.RideSummary where
 
@@ -32,7 +31,10 @@ data DriverRideSummaryResp = DriverRideSummaryResp
     rideDistance :: Meters,
     rideDistanceWithUnit :: Distance,
     rideDate :: Day,
-    noOfRides :: Int
+    noOfRides :: Int,
+    tipAmount :: PriceAPIEntity,
+    cancellationCharges :: PriceAPIEntity,
+    rideDuration :: Seconds
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -57,6 +59,9 @@ mkRideSummaryList =
             rideDistance = x.totalDistance,
             rideDistanceWithUnit = convertMetersToDistance x.distanceUnit x.totalDistance,
             rideDate = x.merchantLocalDate,
-            noOfRides = x.numRides
+            noOfRides = x.numRides,
+            tipAmount = PriceAPIEntity x.tipAmount x.currency,
+            cancellationCharges = PriceAPIEntity x.cancellationCharges x.currency,
+            rideDuration = x.totalRideTime
           }
     )

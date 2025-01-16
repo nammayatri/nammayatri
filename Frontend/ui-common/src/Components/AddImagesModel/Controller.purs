@@ -41,7 +41,8 @@ type AddImagesModelState = {
   viewText:: String,
   deleteText:: String,
   addAnotherText:: String,
-  addImageText:: String
+  addImageText:: String,
+  noOfImages :: Int
 }
 
 type Image = {
@@ -61,7 +62,8 @@ config = {
   viewText: "",
   deleteText: "",
   addAnotherText: "",
-  addImageText: ""
+  addImageText: "",
+  noOfImages: 3
 }
 
 doneButtonConfig :: AddImagesModelState -> PrimaryButton.Config

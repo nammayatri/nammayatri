@@ -24,10 +24,13 @@ instance FromTType' Beam.Rating Domain.Types.Rating.Rating where
             isFavourite = isFavourite,
             isSafe = isSafe,
             issueId = issueId,
+            mediaId = Kernel.Types.Id.Id <$> mediaId,
             ratingValue = ratingValue,
             rideId = Kernel.Types.Id.Id rideId,
             updatedAt = updatedAt,
-            wasOfferedAssistance = wasOfferedAssistance
+            wasOfferedAssistance = wasOfferedAssistance,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
@@ -40,8 +43,11 @@ instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
         Beam.isFavourite = isFavourite,
         Beam.isSafe = isSafe,
         Beam.issueId = issueId,
+        Beam.mediaId = Kernel.Types.Id.getId <$> mediaId,
         Beam.ratingValue = ratingValue,
         Beam.rideId = Kernel.Types.Id.getId rideId,
         Beam.updatedAt = updatedAt,
-        Beam.wasOfferedAssistance = wasOfferedAssistance
+        Beam.wasOfferedAssistance = wasOfferedAssistance,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

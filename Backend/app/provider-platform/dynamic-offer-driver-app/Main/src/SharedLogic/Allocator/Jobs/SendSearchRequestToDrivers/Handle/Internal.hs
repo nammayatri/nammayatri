@@ -15,8 +15,6 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
   ( getRescheduleTime,
     isReceivedMaxDriverQuotes,
-    setBatchDurationLock,
-    createRescheduleTime,
     isSearchTryValid,
     cancelSearchTry,
     module Reexport,
@@ -26,9 +24,6 @@ where
 import Domain.Types.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis (HedisFlow)
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
@@ -73,32 +68,6 @@ getRescheduleTime singleBatchProcessTime = do
   singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   now <- getCurrentTime
   return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` now) -- Temporarily adding this singleBatchProcessingTempDelayTime for preventing second fcm to be triggered when first is already there, should be removed later once UI fix is done.
-
-setBatchDurationLock ::
-  ( MonadFlow m,
-    HedisFlow m r
-  ) =>
-  Id SearchTry ->
-  Seconds ->
-  m (Maybe UTCTime)
-setBatchDurationLock searchRequestId singleBatchProcessTime = do
-  now <- getCurrentTime
-  res <- Hedis.setNxExpire (getId searchRequestId) (fromIntegral singleBatchProcessTime) now
-  if not res
-    then do Hedis.get (getId searchRequestId)
-    else return Nothing
-
-createRescheduleTime ::
-  ( Monad m,
-    CacheFlow m r,
-    HasField "singleBatchProcessingTempDelay" r NominalDiffTime
-  ) =>
-  Seconds ->
-  UTCTime ->
-  m UTCTime
-createRescheduleTime singleBatchProcessTime lastProcTime = do
-  singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
-  return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime)
 
 cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED

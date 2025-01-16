@@ -19,7 +19,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
-import Common.Types.Config (CityConfig)
+import MerchantConfig.Types (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
@@ -33,6 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Array as DA
 import Common.Types.App as Common
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: RegistrationScreenState
 initData = {
@@ -41,6 +42,9 @@ initData = {
         registerationStepsCabs : [],
         registerationStepsAuto : [],
         registerationStepsBike : [],
+        registerationStepsAmbulance : [],
+        registerationStepsTruck : [],
+        registerationStepsBus : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
@@ -49,7 +53,7 @@ initData = {
         variantList : [],
         phoneNumber : "",
         lastUpdateTime : "",
-        cityConfig : dummyCityConfig,
+        cityConfig : defaultCityConfig,
         config : getAppConfig appConfig,
         referralCode : "",
         referral_code_input_data : "",
@@ -57,7 +61,10 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         vehicleCategory : Nothing,
-        linkedRc : Nothing
+        linkedRc : Nothing,
+        accessToken : "",
+        hvTxnId : Nothing,
+        hvFlowId : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -75,80 +82,7 @@ initData = {
         driverEnabled : false,
         menuOptions : false,
         manageVehicle : false,
-        manageVehicleCategory : Nothing
+        manageVehicleCategory : Nothing,
+        dontAllowHvRelaunch : false
       }
   }
-
-dummyCityConfig :: CityConfig
-dummyCityConfig = {
-                    cityName : "",
-                    mapImage : "",
-                    cityCode : "",
-                    showSubscriptions : false,
-                    enableAdvancedBooking : false,
-                    advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
-                    callDriverInfoPost : false,
-                    cityLat : 0.0,
-                    cityLong : 0.0,
-                    supportNumber : "",
-                    languageKey : "",
-                    showDriverReferral : false,
-                    showCustomerReferral : false,
-                    uploadRCandDL : true,
-                    enableYatriCoins : false,
-                    vehicleNSImg : "",
-                    registration : { 
-                      callSupport : false,
-                      supportWAN : "", 
-                      whatsappSupport : false
-                    },
-                    variantSubscriptionConfig : {
-                      enableVariantBasedSubscription : true,
-                      variantList : ["AutoCategory"],
-                      enableCabsSubscriptionView : false,
-                      staticViewPlans : []
-                    },
-                    showEarningSection: true,
-                    referral : {
-                        domain : ""
-                      , customerAppId : ""
-                      , driverAppId : ""
-                    },
-                    waitingCharges : 1.50,
-                    waitingChargesConfig : {
-                      cab : {
-                        freeSeconds : 300,
-                        perMinCharges : 1.0
-                      },
-                      auto : {
-                        freeSeconds : 180,
-                        perMinCharges : 1.50
-                      },
-                      bike : {
-                        freeSeconds : 180,
-                        perMinCharges : 1.0
-                      }
-                    },
-                    rentalWaitingChargesConfig : {
-                      cab : {
-                        freeSeconds : 180,
-                        perMinCharges : 2.0
-                      },
-                      auto : {
-                        freeSeconds : 180,
-                        perMinCharges : 2.0
-                      },
-                      bike : {
-                        freeSeconds : 180,
-                        perMinCharges : 2.0
-                      }
-                    },
-                    rateCardConfig : {
-                      showLearnMore : false,
-                      learnMoreVideoLink : ""
-                    },
-                    assets :{
-                        auto_image :  "ny_ic_black_yellow_auto_side_view",
-                        onboarding_auto_image : ""
-                      }
-}

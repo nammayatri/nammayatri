@@ -24,9 +24,10 @@ import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..), Component(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 import Screens.Types as ST
+import Engineering.Helpers.Commons as EHC
 
 initData :: DriverProfileScreenState
 initData = 
@@ -92,7 +93,17 @@ initData =
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config
+    config,
+    cancellationRate : 0,
+    assignedRides : 0,
+    cancelledRides : 0,
+    cancellationWindow : Nothing,
+    missedEarnings : 0,
+    driverInfoResponse : Nothing,
+    profileCompletedModules : 0,
+    driverBlocked : false,
+    blockedExpiryTime : "",
+    favCount : Nothing
     },
 
   props: {
@@ -130,13 +141,35 @@ initData =
     paymentInfoView : false,
     enableGoto : false,
     isRideActive : false,
-    canSwitchToRental : false,
-    canSwitchToIntercity : Nothing
+    canSwitchToRental : Nothing,
+    canSwitchToInterCity : Nothing,
+    showDriverBlockedPopup : false
    }
 }
 
+inputTextState' = {
+  feedback : "",
+  component : Empty,
+  others : others'
+}
 
+others' = {
+  pledge : "",
+  aspirations : ""
+}
 
+datePickerState' = {
+  activeIndex : 0,
+  dates : EHC.getPastYears 70,
+  id : ""
+}
+
+addImagesState' = {
+  images: [],
+  stateChanged: false,
+  isLoading: false,
+  imageMediaIds: []
+}
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
@@ -199,6 +232,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , bundleVersion         :  Nothing
     , gender                :  Nothing
     , blocked               :  Nothing
+    , blockExpiryTime       :  Nothing
     , numberOfRides         :  Nothing
     , paymentPending        :  false
     , subscribed            :  false
@@ -214,9 +248,29 @@ dummyDriverInfo = GetDriverInfoResp {
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
-    , canSwitchToRental     : false
+    , canSwitchToRental     : Nothing
     , checkIfACWorking    : Nothing
-    , canSwitchToIntercity   : Nothing
+    , canSwitchToInterCity   : Nothing
+    , payoutVpa             : Nothing
+    , payoutVpaStatus       : Nothing
+    , isPayoutEnabled       : Nothing
+    , payoutRewardAmount    : Nothing
+    , payoutVpaBankAccount  : Nothing
+    , cancellationRateInWindow : Nothing
+    , cancelledRidesCountInWindow : Nothing
+    , assignedRidesCountInWindow : Nothing
+    , windowSize : Nothing
+    , favCount : Nothing
+    , isSubscriptionVehicleCategoryChanged : Nothing
+    , isOnFreeTrial : Nothing
+    , planMandatoryForCategory : Nothing
+    , isSubscriptionCityChanged : Nothing
+    , freeTrialDays : Nothing
+    , freeTrialRides : Nothing
+    , totalRidesTaken : Nothing
+    , subscriptionEnabledForVehicleCategory : Nothing
+    , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , isSpecialLocWarrior : Nothing
 }
 
 organizationInfo :: OrganizationInfo

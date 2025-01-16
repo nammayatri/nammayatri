@@ -1,18 +1,12 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.Notification where
 
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import Storage.Beam.Notification as BeamI

@@ -15,16 +15,17 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RentalBookingConfig, CustomerIssueTypes(..))
+import Common.Types.App (RateCardType(..), RentalBookingConfig, CustomerIssueTypes(..),TicketType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType)
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
+import Services.API as API
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
@@ -35,6 +36,12 @@ import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
+import Components.MessagingView.Controller (ChatContacts, dummyChatRecipient)
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 
 initData :: HomeScreenState
 initData = let
@@ -43,9 +50,10 @@ initData = let
   {
     data: {
       suggestedAmount : 0
-    , finalAmount : 0
-    , startedAt : ""
-    , endedAt : ""
+    , channelIdFromFCM : ""
+    , personIdFromFCM : ""
+    , sourceFromFCM : ""
+    , isBookingUpdated : false
     , source : ""
     , destination : ""
     , eta : "2 mins"
@@ -54,14 +62,16 @@ initData = let
     , rating : 4.0
     , locationList : []
     , savedLocations : []
-    , fareProductType : FPT.ONE_WAY
+    , fareProductType : ST.ONE_WAY
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
     , tripSuggestions: []
     , suggestionsData : { suggestionsMap: Map.empty }
+    , suggestedVehicalVarient : []
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
+    , activeRidesList : []
     , driverInfoCardState : dummyDriverInfo
     , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
@@ -122,7 +132,7 @@ initData = let
     , quoteList : []
     , selectedQuoteId : Nothing
     , selectedQuoteVariant : Nothing
-    , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+    , lastMessage : { message : "", messageTitle : Nothing, messageAction : Nothing, sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     , ratingViewState : {
         selectedYes : Nothing,
@@ -134,7 +144,8 @@ initData = let
         issueReason : Nothing,
         issueDescription : "",
         rideBookingRes : dummyRideBooking,
-        wasOfferedAssistance : Nothing
+        wasOfferedAssistance : Nothing,
+        nightSafety : Nothing
     }
     , config : config
     , currentCityConfig : MRC.defaultCityConfig
@@ -157,6 +168,7 @@ initData = let
     } 
     , contactList : Nothing
     , followers : Nothing
+    , manuallySharedFollowers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
     , iopState : {
@@ -173,6 +185,8 @@ initData = let
     , rateCardCache : Nothing
     , rentalsInfo : Nothing 
     , startTimeUTC : ""
+    , returnTimeUTC : ""
+    , estReturnTimeUTC : ""
     , invalidBookingId : Nothing
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
@@ -180,6 +194,20 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , chatPersonId : "Customer"
+    , parking : initialParkingData
+    , toll : initialTollData
+    , tripTypeDataConfig : tripTypeDataConfig
+    , tripEstDuration : 0
+    , latestScheduledRides : Nothing
+    , overLappingBooking : Nothing
+    , upcomingRideDetails : Nothing
+    , selectedService : Nothing
+    , intercityBus : initialIntercityBusData
+    , deliveryImage : Nothing
+    , deliveryDetailsInfo : Nothing
+    , requestorPartyRoles : Nothing
+    , boostSearchEstimate : CV.config
     },
     props: {
       rideRequestFlow : false
@@ -201,6 +229,7 @@ initData = let
     , destinationLong : 0.0
     , sourcePlaceId : Nothing
     , destinationPlaceId : Nothing
+    , homeScreenPrimaryButtonLottie : false
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0
@@ -229,6 +258,7 @@ initData = let
     , isSrcServiceable : true
     , isDestServiceable : true
     , isRideServiceable : true
+    , userBlocked : false 
     , showlocUnserviceablePopUp : false
     , autoSelecting : true
     , searchExpire : 90
@@ -256,6 +286,7 @@ initData = let
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , markerLabel : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
@@ -287,7 +318,6 @@ initData = let
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    , specialZoneType : ""
     , currentLocation : dummyLocation
     , isShorterTrip : false
     , locateOnMapLocation : {
@@ -318,6 +348,14 @@ initData = let
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
     , autoScroll : true
+    , editedPickUpLocation : {
+      gps : LatLong{
+        lat : 0.0,
+        lon : 0.0
+      },
+      address : dummyAddress
+    }
+    , showEditPickupPopupOnCancel : false
     , enableChatWidget : false
     , sosBannerType : Nothing
     , showShareRide : false
@@ -345,8 +383,8 @@ initData = let
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , repeatRideVariant : ""
-    , hasToll : false
     , repeatRideServiceTierName : Nothing
+    , hasEstimateBackpoint : false
     , isSearchCancelled : false
     , referralComponentProps : { stage : NO_REFERRAL_STAGE
                                , referralCode : Nothing
@@ -369,19 +407,52 @@ initData = let
     , isBannerDataComputed : false
     , showScheduledRideExistsPopUp : false
     , isOffline : false
-    , hasEstimateBackpoint : false
     , shimmerViewTimer : config.homeScreen.shimmerTimer
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , showChatListPopUp : false
+    , isSharedLocationFlow : false
+    , isOtpRideFlow : false
+    , safetySettings : Nothing
+    , isIntercityFlow : false
+    , isTripSchedulable : false
+    , isConfirmSourceCurrentLocation : true
+    , showDeliveryImageAndOtpModal : false
+    , loadingDeliveryImage : false
+    , showBookAnyOptions : false
+    , showBoostSearch : false
+    , busClicked : false
+    , ticketServiceType : API.METRO
   }
 }
 
+
+tripTypeDataConfig =  {
+      tripPickupData : Just dummyTripTypeData,
+      tripReturnData : Just dummyTripTypeData
+    }
+dummyTripTypeData :: TripTypeData
+dummyTripTypeData = {
+  tripDateTimeConfig : {
+    year : 0
+  , month : 0
+  , day : 0
+  , hour : 0
+  , minute : 0
+  },
+  tripDateUTC : "",
+  tripDateReadableString : convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A"
+}
 dummySearchLocationModelProps = {
     isAutoComplete : false
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
+  , tripType : ONE_WAY_TRIP
+  , totalRideDistance : 0
+  , totalRideDuration : 0
+  , showRideInfo : false
 }
 
 dummySearchLocationModelData = {
@@ -456,6 +527,8 @@ dummyDriverInfo =
   , price : 0
   , sourceLat : 0.0
   , sourceLng : 0.0
+  , initialPickupLat : 0.0
+  , initialPickupLon : 0.0
   , destinationLat : 0.0
   , destinationLng : 0.0
   , driverLat : 0.0
@@ -465,6 +538,8 @@ dummyDriverInfo =
   , driverArrived : false
   , estimatedDistance : ""
   , driverArrivalTime : 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId : ""
   , driverNumber : Nothing
   , merchantExoPhone : ""
@@ -474,6 +549,7 @@ dummyDriverInfo =
   , vehicleVariant : ""
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
+  , editPickupAttemptsLeft : 0
   , status : ""
   , serviceTierName : Nothing
   , vehicleModel : ""
@@ -481,11 +557,20 @@ dummyDriverInfo =
   , providerName : ""
   , providerType : CT.ONUS
   , rentalData : dummyRentalBookingConfig
-  , fareProductType : FPT.ONE_WAY
+  , fareProductType : ST.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , currentChatRecipient : dummyChatRecipient
+  , hasToll : false
+  , isAlreadyFav : false
+  , favCount : 0
+  , rideDuration : Just 0
+  , rideScheduledAtUTC : Nothing
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -513,34 +598,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-dummyQuoteAPIEntity :: QuoteAPIEntity
-dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : Nothing,
-  createdAt : "",
-  discount : Nothing,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  vehicleVariant : "",
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
-  serviceTierShortDesc : Nothing,
-  serviceTierName : Nothing, 
-  airConditioned : Nothing
-}
-
-dummyDriverOfferAPIEntity :: QuoteAPIContents
-dummyDriverOfferAPIEntity =
-  DRIVER_OFFER
-    $ DriverOfferAPIEntity
-        { rating: Nothing
-        , validTill: ""
-        , driverName: ""
-        , distanceToPickup: Nothing
-        , durationToPickup: Nothing
-        }
 
 dummyLocationName :: PlaceName
 dummyLocationName = PlaceName {
@@ -594,6 +651,7 @@ dummyRideBooking = RideBookingRes
   updatedAt : "",
   bookingDetails : dummyRideBookingAPIDetails ,
   fromLocation :  dummyBookingDetails,
+  initialPickupLocation : dummyBookingDetails,
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
@@ -609,8 +667,16 @@ dummyRideBooking = RideBookingRes
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
   driversPreviousRideDropLocLon : Nothing,
-  specialLocationName : Nothing
-  }
+  specialLocationName : Nothing,
+  estimatedFareBreakup : [],
+  isScheduled : false,
+  isAlreadyFav : Nothing,
+  favCount : Nothing,
+  rideDuration : Just 0,
+  vehicleServiceTierAirConditioned : Nothing,
+  vehicleServiceTierSeatingCapacity : Nothing,
+  returnTime : Nothing
+}
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
 dummyRideBookingAPIDetails= RideBookingAPIDetails{
@@ -623,7 +689,10 @@ dummyRideBookingDetails = RideBookingDetails {
   toLocation : Nothing,
   estimatedDistance : Nothing,
   otpCode : Nothing,
-  stopLocation : Nothing
+  stopLocation : Nothing,
+  senderDetails : Nothing,
+  receiverDetails : Nothing,
+  requestorPartyRoles : Nothing
 }
 
 
@@ -675,7 +744,7 @@ dummyInvalidBookingPopUpConfig = {
   bookingId : "",
   rideScheduledTime : "",
   maxEstimatedDuration : 0,
-  fareProductType : FPT.ONE_WAY
+  fareProductType : ST.ONE_WAY
 }
 
 initialRideCompletedData :: RideCompletedData
@@ -708,9 +777,45 @@ initialRideCompletedData = {
   ]
   , respondedValidIssues : false
   }
-, toll : {
-    confidence : Nothing
-  , showAmbiguousPopUp : false
-  }
 }
 
+initialParkingData :: ParkingData 
+initialParkingData = {
+  estimatedCharge : Nothing
+}
+
+initialTollData :: TollData
+initialTollData = {
+  confidence : Nothing
+, showAmbiguousPopUp : false
+, estimatedCharges : 0.0
+, showIncludedPopUp : false
+}
+
+dummyNewContacts :: NewContacts 
+dummyNewContacts = {
+  name : "",
+  number : "",
+  isSelected : false,
+  enableForFollowing : false,
+  enableForShareRide: false,
+  onRide : false,
+  priority : 1,
+  contactPersonId : Nothing,
+  notifiedViaFCM : Nothing,
+  isFollowing : Nothing,
+  shareTripWithEmergencyContactOption : neverShareRideOption
+}
+
+dummyNotificationBody :: NotificationBody 
+dummyNotificationBody = {
+    rideTime : Nothing,
+    bookingId : Nothing
+}
+initialIntercityBusData :: ST.IntercityBusData
+initialIntercityBusData = {
+  showPermissionPopUp : false
+, showWebView: false
+, hasPhoneNumberPermission : false
+, url : Nothing
+}

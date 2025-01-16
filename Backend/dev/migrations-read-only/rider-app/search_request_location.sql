@@ -16,3 +16,14 @@ ALTER TABLE atlas_app.search_request_location ADD COLUMN lat double precision NO
 ALTER TABLE atlas_app.search_request_location ADD COLUMN lon double precision NOT NULL;
 ALTER TABLE atlas_app.search_request_location ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.search_request_location ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request_location ADD COLUMN instructions text ;
+ALTER TABLE atlas_app.search_request_location ADD COLUMN extras text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request_location ADD COLUMN title text ;

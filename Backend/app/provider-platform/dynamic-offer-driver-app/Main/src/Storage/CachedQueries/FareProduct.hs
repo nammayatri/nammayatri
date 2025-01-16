@@ -15,16 +15,16 @@
 
 module Storage.CachedQueries.FareProduct where
 
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.TimeBound as Domain
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as Domain
 import Kernel.Utils.Common (CacheFlow, MonadFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.Queries.FareProduct as Queries
@@ -129,3 +129,7 @@ clearCache FareProduct {..} = Hedis.withCrossAppRedis $ do
     Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)
     Hedis.del (makeUnboundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
     Hedis.del (makeBoundedFareProductByMerchantVariantAreaKey merchantOperatingCityId searchSources tripCategory vehicleServiceTier area)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOperatingCityId = do
+  Hedis.del (makeFareProductByMerchantOpCityIdKey merchantOperatingCityId)

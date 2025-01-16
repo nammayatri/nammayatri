@@ -25,6 +25,8 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), Unit)
 import Data.Maybe as Mb
+import Font.Style as FontStyle
+import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
@@ -41,9 +43,15 @@ data Action = OnButton1Click
             | YoutubeVideoStatus String
             | TipsViewActionController TipsView.Action
             | OnCoverImageClick
+            | PersonMobile PrimaryEditTextController.Action
+            | PersonName PrimaryEditTextController.Action
+            | PersonAddress PrimaryEditTextController.Action
+            | PersonInstruction PrimaryEditTextController.Action
+            | CheckBoxClick
 
 type Config = {
     primaryText :: TextConfig,
+    headerInfo :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
@@ -90,7 +98,30 @@ type Config = {
     coverLottieConfig :: LottieConfig,
     showRetry :: Boolean,
     coverLottie :: CoverLottie,
-    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w)
+    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
+    completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
+    upiDetailConfig :: UPIDetailConfig,
+    deliveryDetailsConfig :: DeliveryDetailsConfig
+}
+
+type DeliveryDetailsConfig = {
+  visibility :: Visibility,
+  margin  :: Margin,
+  personNameDetails :: PrimaryEditTextController.Config,
+  mobileNumberDetails :: PrimaryEditTextController.Config,
+  addressDetails :: PrimaryEditTextController.Config,
+  instructionDetails :: PrimaryEditTextController.Config,
+  isSource :: Boolean,
+  locationTitle :: String,
+  locationDetails :: String,
+  checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
+}
+
+type UPIDetailConfig = {
+  visibility :: Visibility,
+  upiID :: String,
+  accountName :: String,
+  imageConfig :: ImageConfig
 }
 
 type LayoutConfig = {
@@ -130,7 +161,8 @@ type TextConfig = {
   textStyle :: Style,
   accessibilityHint :: String,
   suffixImage :: ImageConfig,
-  prefixImage :: ImageConfig
+  prefixImage :: ImageConfig,
+  isClickable :: Boolean
 }
 type ButtonConfig = {
   background :: String,
@@ -271,6 +303,7 @@ config = {
       text : "Text1",
       color : Color.black800,
       gravity : CENTER,
+      isClickable : false,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
@@ -300,7 +333,35 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
+      isClickable : false ,
       textStyle : ParagraphText,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
+  , headerInfo : {
+      text : "Step",
+      color : Color.textSecondary,
+      gravity : RIGHT,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      visibility : GONE,
+      textStyle : ParagraphText,
+      isClickable : true,
       accessibilityHint : "", 
       suffixImage : {
         visibility : GONE
@@ -410,6 +471,7 @@ config = {
         text : "",
         color : Color.black800,
         gravity : CENTER,
+        isClickable :true,
         padding : (Padding 0 0 0 0),
         margin : (Margin 0 0 0 0),
         visibility : GONE,
@@ -437,6 +499,7 @@ config = {
         color : Color.black800,
         gravity : CENTER,
         padding : (Padding 0 0 0 0),
+        isClickable : true,
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
@@ -539,6 +602,7 @@ config = {
           text : "",
           color : Color.textSecondary,
           gravity : CENTER,
+          isClickable : true,
           padding : PaddingHorizontal 16 16,
           margin : MarginVertical 20 20,
           visibility : GONE,
@@ -591,6 +655,7 @@ config = {
       headingText : {
       text : "Text1",
       color : Color.black800,
+      isClickable : false,
       gravity : CENTER,
       padding : (Padding 0 0 0 0),
       margin : (Margin 0 0 0 0),
@@ -620,6 +685,7 @@ config = {
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
+      isClickable : false,
       visibility : VISIBLE,
       textStyle : Tags,
       accessibilityHint : "", 
@@ -651,6 +717,68 @@ config = {
     gravity : CENTER
   }
   , layout : Mb.Nothing
+  , upiDetailConfig : {
+      visibility : GONE,
+      upiID : "",
+      accountName : "",
+      imageConfig : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
+  , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , completeProfileLayout : Mb.Nothing
 }
 
+dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
+dummyDeliveryDetailsConfig = 
+  let config' = dummyDeliveryPrimaryText
+  in
+    {
+      visibility : GONE,
+      margin : Margin 0 0 0 0,
+      isSource : true,
+      locationTitle : "",
+      locationDetails : "",
+      personNameDetails : config',
+      mobileNumberDetails : config',
+      addressDetails : config',
+      instructionDetails : config',
+      checkBoxDetails : {
+        text : ""
+        , isSelected : false
+        , visibility : true
+      }
+    }
 
+dummyDeliveryPrimaryText :: PrimaryEditTextController.Config
+dummyDeliveryPrimaryText = 
+  let
+      config = PrimaryEditTextController.config
+      primaryEditTextConfig' = config
+        { editText
+          { color = Color.black800
+          , singleLine = true
+          , placeholder = ""
+          , textStyle = FontStyle.SubHeading3
+          }
+        , background = Color.white900
+        , topLabel
+          { text = ""
+          , color = Color.black800
+          , textStyle = FontStyle.Body3
+          }
+        , stroke = ("1,"<> Color.black500)
+        , margin = (Margin 0 8 0 0)
+        , errorLabel
+          { text = ""
+          , margin = (MarginTop 1)
+          }
+        , showErrorLabel = false
+        , width = MATCH_PARENT
+        }
+      in primaryEditTextConfig'

@@ -3,7 +3,7 @@ import Engineering.Helpers.Commons (os)
 import Prelude ((==))
 
 zoomLevel :: Number
-zoomLevel = if (os == "IOS") then 19.0 else 18.0
+zoomLevel = if (os == "IOS") then 19.0 else 17.0
 
 pickupZoomLevel :: Number
 pickupZoomLevel = 18.0
@@ -22,3 +22,18 @@ assetDomain = "assets.moving.tech"
 
 chatService :: String 
 chatService = "in.juspay.mobility.app.ChatService"
+
+locateOnMapLabelMaxWidth :: Int
+locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
+
+maxImageUploadInIssueReporting :: Int  
+maxImageUploadInIssueReporting = 4
+
+earthRadius :: Number
+earthRadius = 6378137.0
+
+metersPerDegreeLat :: Number
+metersPerDegreeLat = 111320.0
+
+secondsInOneYear :: Int 
+secondsInOneYear = 31536000

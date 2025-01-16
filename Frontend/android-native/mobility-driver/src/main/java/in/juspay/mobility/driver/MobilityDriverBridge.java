@@ -101,12 +101,10 @@ import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.common.MobilityCommonBridge;
-import in.juspay.mobility.common.Utils;
+import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
-import in.juspay.mobility.app.R;
 
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
@@ -186,10 +184,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         storeUpdateTimeCallBack = callback;
     }
 
-    public void callUpdateTimeCallBack(String time, String lat, String lng) {
+    public void callUpdateTimeCallBack(String time, String lat, String lng, String errorCode) {
         if (storeUpdateTimeCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                    storeUpdateTimeCallBack, time, lat, lng);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s','%s');",
+                    storeUpdateTimeCallBack, time, lat, lng, errorCode);
             Log.d(CALLBACK, javascript);
             JsCallback jsCallback = bridgeComponents.getJsCallback();
             if (jsCallback != null) {
@@ -779,5 +777,4 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 }
-
 

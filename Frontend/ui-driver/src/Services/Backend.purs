@@ -20,48 +20,60 @@ import Locale.Utils
 import Services.API
 
 import Common.Types.App (Version(..))
+import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import ConfigProvider
 import Data.Array as DA
-import Data.Either (Either(..), either)
+import Data.Either (Either(..), either, hush)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
+import Data.String.Common as DSC
+import Data.Foldable as DF
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
-import Engineering.Helpers.Utils (toggleLoader)
-import Foreign.Generic (encode)
+import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
+import Foreign.Generic (encode, decode)
 import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
-import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig, decodeErrorPayload)
 import Engineering.Helpers.Events as Events
-import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
+import Prelude
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS, fork)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
-import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREENOUTPUT(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import Services.API (DriverProfileDataReq(..))
+import Helpers.API (getDeviceDetails)
+import MerchantConfig.Types as MCT
+import Common.RemoteConfig.Utils as CommonRC
+import Screens.NoInternetScreen.Handler as NoInternetScreen
+import Helpers.API as HAPI
+import Resource.Localizable.TypesV2 as LT2
+import Resource.Localizable.StringsV2 as StringsV2
+
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -72,7 +84,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" getDeviceDetails
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -88,7 +100,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                          Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" getDeviceDetails
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -108,7 +120,8 @@ withAPIResult url f flow = do
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
                 let userMessage = decodeErrorMessage errResp.errorMessage
-                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                if err.code == -1 then do void $ HAPI.noInternetScreenHandler "lazy"
+                else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                     _ <- pure $ deleteValueFromLocalStore VERSION_NAME
                     _ <- pure $ deleteValueFromLocalStore BASE_URL
@@ -139,7 +152,8 @@ withAPIResultBT url f errorHandler flow = do
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
                 let userMessage = decodeErrorMessage errResp.errorMessage
-                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                if err.code == -1 then void $ lift $ lift $ HAPI.noInternetScreenHandler "lazy"
+                else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     deleteValueFromLocalStore REGISTERATION_TOKEN
                     deleteValueFromLocalStore VERSION_NAME
                     deleteValueFromLocalStore BASE_URL
@@ -210,6 +224,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
             | operatingCity `DA.elem` ["__failed", "--", ""] = Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
+            | operatingCity == "Odisha"              = Just "Paris"
             | otherwise                              = Just operatingCity
 
         mkLatLon :: String -> Maybe Number
@@ -272,14 +287,31 @@ driverActiveInactiveBT status status_n = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.driverActiveInactiveSilent status status_n) identity errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
-        errorHandler (ErrorPayload errorPayload) =  do
-            let codeMessage = decodeErrorCode errorPayload.response.errorMessage
-                accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
-            if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+        dummyErrorResponseDriverActivity = ErrorResponseDriverActivity {blockExpiryTime: "", blockReason : ""}
+        errorHandler (ErrorPayload errorResp) =  do
+            let codeMessage = decodeErrorCode errorResp.response.errorMessage
+                accountBlocked = errorResp.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+                noPlanSelectedForDriver = errorResp.code == 400 && codeMessage == "NO_PLAN_SELECTED"
+            (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
+                Just resp -> pure resp
+                _ -> pure dummyErrorResponseDriverActivity
+            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
-            pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
+            pure if noPlanSelectedForDriver then 
+                    toast $ (StringsV2.getStringV2 LT2.no_plan_selected)
+                else if not accountBlocked then 
+                    toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN 
+                else unit
             void $ lift $ lift $ toggleLoader false
+            if noPlanSelectedForDriver then void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "true" else void $ pure unit
             BackT $ pure GoBack
+
+driverActiveInactive :: String -> String -> Flow GlobalState (Either ErrorResponse DriverActiveInactiveResp)
+driverActiveInactive status status_n = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.driverActiveInactiveSilent status status_n) unwrapResponse $ callAPI headers (DriverActiveInactiveReq status status_n)
+    where
+        unwrapResponse (x) = x
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
 startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -358,7 +390,8 @@ cancelRide productId payload = do
 makeCancelRideReq :: String -> String -> DriverCancelRideReq
 makeCancelRideReq info reason = DriverCancelRideReq {
     "additionalInfo": info,
-    "reasonCode": reason
+    "reasonCode": reason,
+    "doCancellationRateBasedBlocking": true
 }
 
 --------------------------------- logOutBT ---------------------------------------------------------------------------------------------------------------------------------
@@ -380,7 +413,7 @@ getDriverInfoBT dummy = do
          cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
      if (not cityConfig.callDriverInfoPost)
         then getDriverInfoBTGet
-        else getDriverInfoBTPost cityConfig.enableAdvancedBooking
+        else getDriverInfoBTPost cityConfig
    
 getDriverInfoBTGet :: FlowBT String GetDriverInfoResp
 getDriverInfoBTGet = do
@@ -390,11 +423,13 @@ getDriverInfoBTGet = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
-getDriverInfoBTPost :: Boolean -> FlowBT String GetDriverInfoResp
-getDriverInfoBTPost enabled = do
+getDriverInfoBTPost :: MCT.CityConfig -> FlowBT String GetDriverInfoResp
+getDriverInfoBTPost cityConfig = do
     headers <- getHeaders' "" true
     let config = getAppConfig appConfig
-    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enabled, isInteroperable: Just config.feature.enableInterOperability}))
+        isAdvancedBookingEnabled = cityConfig.enableAdvancedBooking
+        subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
+    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just isAdvancedBookingEnabled, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI}))
     pure (resp1)
     where
         errorHandler (ErrorPayload errorPayload) =  do
@@ -414,7 +449,14 @@ getDriverInfoApi dummy = do
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after effetct" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
      if (not cityConfig.callDriverInfoPost)
         then getDriverInfoApiGet
-        else getDriverInfoApiPost cityConfig.enableAdvancedBooking
+        else getDriverInfoApiPost cityConfig
+
+checkSubsV2EnabledForCity :: MCT.CityConfig -> Maybe Boolean 
+checkSubsV2EnabledForCity cityConfig =
+    let driverVehicle = getValueToLocalStore VEHICLE_VARIANT
+        driverCity = cityConfig.cityName
+        vehicleAndCityConfig = CommonRC.subscriptionsConfigVariantLevel driverCity driverVehicle
+    in vehicleAndCityConfig.enableSubsV2
 
 getDriverInfoApiGet :: Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
 getDriverInfoApiGet = do
@@ -423,11 +465,13 @@ getDriverInfoApiGet = do
     where
         unwrapResponse (x) = x
 
-getDriverInfoApiPost :: Boolean -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
-getDriverInfoApiPost enableAdvancedBooking = do
+getDriverInfoApiPost :: MCT.CityConfig -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
+getDriverInfoApiPost cityConfig = do
     headers <- getHeaders "" true
     let config = getAppConfig appConfig
-    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability})
+        enableAdvancedBooking = cityConfig.enableAdvancedBooking
+        subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
+    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI})
     case resp1 of
         Right (UpdateFeatureInDInfoResp resp1) -> do
             let (GetDriverInfoResp resp ) = resp1
@@ -490,6 +534,25 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
       "offeredFare" : offeredFare
     }
 
+makeDriverProfileReq :: Maybe String -> Array String -> Array String -> Array String -> Maybe Int -> Array String -> GetUploadProfileReq
+makeDriverProfileReq homeTown pledge vehicalTags aspiration drivingSince imageId = GetUploadProfileReq {
+    pledges : pledge,
+    vehicleTags : vehicalTags,
+    languages : [],
+    aspirations : aspiration,
+    drivingSince : drivingSince,
+    hometown : homeTown,
+    imageIds : imageId
+}
+
+uploadProfileReq :: GetUploadProfileReq -> FlowBT String ApiSuccessResult
+uploadProfileReq body = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.submitDriverProfile "") identity errorHandler (lift $ lift $ callAPI headers (UploadProfileReq body))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
 getRideHistoryReq limit offset onlyActive status day = do
@@ -534,10 +597,9 @@ updateDriverInfoBT payload = do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
-mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
+mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReqEntity
 mkUpdateDriverInfoReq dummy
-  = UpdateDriverInfoReq
-    { middleName: Nothing
+  = { middleName: Nothing
     , firstName: Nothing
     , lastName: Nothing
     , deviceToken: Nothing
@@ -562,7 +624,8 @@ mkUpdateDriverInfoReq dummy
     , vehicleName: Nothing
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
-    , canSwitchToIntercity: Nothing
+    , canSwitchToInterCity: Nothing
+    , isSpecialLocWarrior: Nothing
     }
 
 
@@ -591,6 +654,13 @@ getRouteBT body routeType = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
+getRoute :: GetRouteReq -> String -> Flow GlobalState (Either ErrorResponse GetRouteResp)
+getRoute body routeType = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getRoute routeType) unwrapResponse $  callAPI headers (RouteReq routeType body)
+   where
+    unwrapResponse (x) = x
+
 makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
 makeGetRouteReq slat slng dlat dlng = GetRouteReq {
     "waypoints": [
@@ -602,6 +672,13 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
           "lon": dlng,
           "lat": dlat
       }],
+    "mode": Just "CAR",
+    "calcPoints": true
+}
+
+makeGetRouteReqArray :: Array LatLong -> GetRouteReq
+makeGetRouteReqArray points = GetRouteReq {
+    "waypoints": points,
     "mode": Just "CAR",
     "calcPoints": true
 }
@@ -678,6 +755,14 @@ getCorrespondingErrorMessage errorPayload = do
         "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "RC_ACTIVE_ON_OTHER_ACCOUNT" -> "RC " <> getString ACTIVE_RC_ON_ANOTHER_DRIVER
+        "DOCUMENT_ALREADY_VALIDATED" -> getString DOCUMENT_ALREADY_VALIDATED
+        "DOCUMENT_UNDER_MANUAL_REVIEW" -> getString DOCUMENT_UNDER_MANUAL_REVIEW
+        "DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER" -> getString DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER
+        "PAN_ALREADY_LINKED" -> getString PAN_ALREADY_LINKED
+        "EXITED_BY_USER" -> getString EXITED_BY_USER
+        "IMAGE_VALIDATION_EXCEED_LIMIT" -> getString IMAGE_VALIDATION_EXCEED_LIMIT
+        "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY" -> getString CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY
+        "DRIVER_UNSUBSCRIBED" -> getString DRIVER_UNSUBSCRIBED
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -722,15 +807,17 @@ callDriverToDriverBT rcNo = do
   where
     errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
 
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Int -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned = DriverRCReq
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> Maybe ST.VehicleCategory -> Maybe Int -> Maybe Boolean -> Maybe Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditioned oxygen ventilator = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : DS.toUpper $ getValueToLocalStore DRIVER_LOCATION,
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
       "vehicleCategory" : mkCategory category,
-      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned
+      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned,
+      "oxygen" : oxygen,
+      "ventilator" : ventilator
     }
 
 mkCategory :: Maybe ST.VehicleCategory -> Maybe String
@@ -739,10 +826,17 @@ mkCategory category =
         Just ST.AutoCategory -> Just "AUTO_CATEGORY"
         Just ST.CarCategory -> Just "CAR"
         Just ST.BikeCategory -> Just "MOTORCYCLE"
-        _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
+        Just ST.AmbulanceCategory -> Just "AMBULANCE"
+        Just ST.TruckCategory -> Just "TRUCK"
+        Just ST.BusCategory -> Just "BUS"
+        Just ST.UnKnown -> Nothing
+        Nothing -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
                 "BikeCategory" -> Just "MOTORCYCLE"
+                "AmbulanceCategory" -> Just "AMBULANCE"
+                "TruckCategory" -> Just "TRUCK"
+                "BusCategory" -> Just "BUS"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  ApiSuccessResult
@@ -787,19 +881,21 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> Maybe String -> Maybe ST.VehicleCategory ->ValidateImageReq
-makeValidateImageReq image imageType rcNumber category = ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber status transactionId category = ValidateImageReq
     {
       "image" : image,
       "imageType" : imageType,
       "rcNumber" : rcNumber,
+      "validationStatus" : status,
+      "workflowTransactionId" : transactionId,
       "vehicleCategory" : mkCategory category
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus "" )) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
@@ -1082,11 +1178,13 @@ leaderBoardBT request = do
             withAPIResultBT (EP.leaderBoardDaily date) identity errorHandler (lift $ lift $ callAPI headers request)
         (WeeklyRequest fromDate toDate) ->
             withAPIResultBT (EP.leaderBoardWeekly fromDate toDate) identity errorHandler (lift $ lift $ callAPI headers request)
+        (MonthlyRequest month) ->
+            withAPIResultBT (EP.leaderBoardMonthly month) identity errorHandler (lift $ lift $ callAPI headers request)
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
-leaderBoard :: LeaderBoardReq -> Flow GlobalState (Either ErrorResponse LeaderBoardRes) 
+leaderBoard :: LeaderBoardReq -> Flow GlobalState (Either ErrorResponse LeaderBoardRes)
 leaderBoard request = do
     headers <- getHeaders "" true
     case request of
@@ -1094,6 +1192,8 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardDaily date) unwrapResponse (callAPI headers request)
         (WeeklyRequest fromDate toDate) ->
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
+        (MonthlyRequest month) ->
+            withAPIResult (EP.leaderBoardMonthly month) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
 
@@ -1440,15 +1540,16 @@ referredDriversBT payload = do
             BackT $ pure GoBack
 
 
-detectCity :: Number -> Number -> Flow GlobalState (Either ErrorResponse DetectCityResp)
-detectCity lat lon = do
+detectCity :: Number -> Number -> String -> Flow GlobalState (Either ErrorResponse DetectCityResp)
+detectCity lat lon merchantId = do
   headers <- getHeaders "" false
   withAPIResult (EP.detectCity "") unwrapResponse $ callAPI headers $ makeDetectCityReq
   where
     unwrapResponse x = x
     makeDetectCityReq = DetectCityReq $ {
         lat : lat,
-        lon : lon
+        lon : lon,
+        merchantId : merchantId
     }
 
 ------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
@@ -1456,7 +1557,7 @@ pushSDKEvents :: Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 pushSDKEvents = do
     headers <- getHeaders "" false
     events <- liftFlow $ Events.getEvents
-    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
+    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events, events : [] })
     where
         unwrapResponse x = x
 -------------------------------------------------------------------------- List all lms modules --------------------------------------------------------------------------
@@ -1584,6 +1685,15 @@ deleteVPA vpaId = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- verifyVpaId ---------------------------------------------------------------------------------------------------
+
+verifyVpaID :: String -> Flow GlobalState (Either ErrorResponse VerifyVpaRes)
+verifyVpaID dummy = do 
+        headers <- getHeaders "" true
+        withAPIResult (EP.verifyUPI "") unwrapResponse $ callAPI headers (VerifyVpaReq dummy)
+    where
+        unwrapResponse (x) = x
+
 --------------------------------- payoutRegistration ---------------------------------------------------------------------------------------------------
 
 payoutRegistration :: String -> Flow GlobalState (Either ErrorResponse PayoutRegisterRes)
@@ -1592,3 +1702,161 @@ payoutRegistration dummy = do
     withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
     where
         unwrapResponse (x) = x
+
+rideBooking :: String -> String -> String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse ScheduledBookingListResponse)
+rideBooking limit offset from to  tripCategory lat lon  = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory lat lon ) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory lat lon )
+    where
+        unwrapResponse (x) = x
+
+rideBookingBT :: String -> String -> String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
+rideBookingBT limit offset  from to  tripCategory lat lon = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory lat lon ) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory lat lon ))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+scheduleBookingAccept :: String -> Flow GlobalState (Either ErrorResponse ScheduleBookingAcceptRes)
+scheduleBookingAccept bookingId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.scheduleBookingAccept bookingId) unwrapResponse $  callAPI headers (ScheduleBookingAcceptReq bookingId)
+   where
+    unwrapResponse (x) = x
+
+------------------------------------------------------------------------ Get Sdk Token -------------------------------------------------------------------------------
+getSdkTokenBT :: String -> ServiceName -> FlowBT String GetSdkTokenResp
+getSdkTokenBT expiry serviceName = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getSdkToken expiry (show serviceName)) identity errorHandler (lift $ lift $ callAPI headers (GetSdkTokenReq expiry serviceName))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+----------------------------------------------------------------------- Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------
+
+getLiveSelfie :: String -> Flow GlobalState (Either ErrorResponse GetLiveSelfieResp)
+getLiveSelfie status = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getLiveSelfie status)  unwrapResponse $ callAPI headers (GetLiveSelfieReq status)
+    where
+        unwrapResponse x = x
+
+registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPAN req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makePANCardReq :: Boolean -> String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> String -> ValidationStatus -> Maybe String -> Maybe String -> PanCardReq
+makePANCardReq consent consentTimestamp dateOfBirth nameOnCard imageId1 imageId2 panNumber validationStatus transactionId panDB_name = PanCardReq
+    {
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : convertToMaybeUTC dateOfBirth,
+       "nameOnCard" : nameOnCard,
+       "imageId1" : imageId1,
+       "imageId2" : imageId2,
+       "panNumber" : panNumber,
+       "validationStatus" : validationStatus,
+       "verifiedBy" : FRONTEND_SDK,
+       "transactionId" : transactionId,
+       "nameOnGovtDB" : panDB_name
+    }
+    where
+        convertToMaybeUTC dob = case dob of
+            Just "" -> Nothing
+            Just dob -> Just ((DF.intercalate "-" $ DA.reverse (DSC.split (DS.Pattern "-") dob)) <> "T00:00:00.000Z")
+            Nothing -> Nothing
+
+
+registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeAadhaarCardReq :: Maybe String -> Maybe String -> Maybe String -> Boolean -> String -> Maybe String ->  Maybe String -> Maybe String -> ValidationStatus -> String -> AadhaarCardReq
+makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consentTimestamp dateOfBirth maskedAadhaarNumber nameOnCard validationStatus transactionId = AadhaarCardReq
+    {
+       "aadhaarBackImageId" : aadhaarBackImageId,
+       "aadhaarFrontImageId" : aadhaarFrontImageId,
+       "address" : address,
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "maskedAadhaarNumber" : maskedAadhaarNumber,
+       "nameOnCard" : nameOnCard,
+       "validationStatus" : validationStatus,
+       "transactionId" : transactionId
+    }
+
+---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
+
+fetchDriverProfile ::  Boolean -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
+fetchDriverProfile isImages = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getDriverProfile isImages) unwrapResponse $ callAPI headers $ DriverProfileDataReq isImages
+    where
+        unwrapResponse (x) = x
+
+--------------------------------- getCoinInfo ---------------------------------------------------------------------------------------------------
+
+getCoinInfo :: String -> Flow GlobalState (Either ErrorResponse CoinInfoRes)
+getCoinInfo lazy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getCoinInfo "") identity $ callAPI headers CoinInfoReq
+
+getCoinInfoBT :: String -> FlowBT String CoinInfoRes
+getCoinInfoBT lazy = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.getCoinInfo "") identity errorHandler (lift $ lift $ callAPI headers CoinInfoReq)
+  where
+    errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack
+
+-------------------------------------------------------------- Demand Hotspots API -------------------------------------------------------------
+
+getDemandHotspotsBT :: String -> FlowBT String DemandHotspotsResp
+getDemandHotspotsBT dummy = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.demandHotspots "") (\x → x) errorHandler (lift $ lift $ callAPI headers (DemandHotspotsReq dummy))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        pure $ toast $ getString HOTSPOTS_NOT_AVAILABLE_CURRENTLY
+        void $ lift $ lift $ toggleLoader false
+        BackT $ pure GoBack
+
+-------------------------- REACHED DESTINATION --------------------------------------------
+
+driverReachedDestination :: String -> DriverReachedReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+driverReachedDestination rideId payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.driverReachedDestination rideId) unwrapResponse $ callAPI headers $ DriverReachedDestinationRequest rideId payload
+    where
+        unwrapResponse (x) = x
+
+------------------------------- HyperVerge Sdk Calls logging ------------------------------------
+
+updateHVSdkCallLog :: HVSdkCallLogReq -> Flow GlobalState (Either ErrorResponse HVSdkCallLogResp)
+updateHVSdkCallLog req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.updateHVSdkCallLog "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeupdateHVSdkCallLogReq :: String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> HVSdkCallLogReq
+makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackResponse = HVSdkCallLogReq
+    { "callbackResponse" : callbackResponse,
+      "docType" : docType,
+      "failureReason" : failureReason,
+      "hvFlowId" : hvFlowId,
+      "status" : status,
+      "txnId" : txnId
+    }
+    

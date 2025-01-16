@@ -108,6 +108,7 @@ in  { esqDBCfg
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/provider-dashboard"
+      , "dev/migrations-read-only/provider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
@@ -123,7 +124,12 @@ in  { esqDBCfg
     , encTools
     , exotelToken = sec.exotelToken
     , dataServers =
-      [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
+      [ driverOfferBpp
+      , driverOfferBppManagement
+      , appBackend
+      , appBackendManagement
+      , specialZone
+      ]
     , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
@@ -133,4 +139,5 @@ in  { esqDBCfg
     , cacheConfig
     , cacConfig
     , kvConfigUpdateFrequency = +60
+    , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     }

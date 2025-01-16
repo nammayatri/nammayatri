@@ -8,7 +8,7 @@
 -}
 module Screens.NammaSafetyFlow.Components.HeaderView where
 
-import Prelude (Unit, const, ($), (<<<), (<>), (==))
+import Prelude (Unit, const, ($), (<<<), (<>), (==), (&&), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width, accessibilityHint, accessibility, Accessiblity(..))
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
@@ -46,13 +46,16 @@ view push state =
                     state.useLightColor
                     state.showCrossImage
             ]
-        , textView
-            [ text state.learnMoreTitle
-            , color Color.blue900
+        , imageView
+            [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_kebab_white"
+            , height $ V 24
+            , width $ V 56
             , gravity RIGHT
-            , margin $ MarginRight 16
-            , visibility $ boolToVisibility state.showLearnMore
-            , onClick push $ const LearnMoreClicked
+            , visibility $ boolToVisibility state.showOptions
+            , onClick push $ const OptionsMenuToggle
+            , accessibility ENABLE
+            , accessibilityHint $ "Options : Button"
+            , padding $ PaddingHorizontal 16 16
             ]
         ]
     , linearLayout
@@ -70,12 +73,14 @@ type Config
     , showCrossImage :: Boolean
     , useLightColor :: Boolean
     , headerVisiblity :: Visibility
+    , showOptions :: Boolean
     }
 
 data Action
   = GenericHeaderAC GenericHeader.Action
   | LearnMoreClicked
   | BackClicked
+  | OptionsMenuToggle
 
 config :: LazyCheck -> Config
 config _ =
@@ -85,6 +90,7 @@ config _ =
   , useLightColor: false
   , headerVisiblity: VISIBLE
   , learnMoreTitle: getString LEARN_MORE
+  , showOptions: false
   }
 
 genericHeaderConfig :: String -> Boolean -> Boolean -> GenericHeader.Config
@@ -93,7 +99,7 @@ genericHeaderConfig title useLightColor showCrossImage =
     { height = WRAP_CONTENT
     , background = Color.transparent
     , prefixImageConfig
-      { imageUrl = prefixImage
+      { imageUrl = HU.fetchImage HU.FF_ASSET prefixImage
       , visibility = VISIBLE
       , margin = Margin 8 8 8 8
       , layoutMargin = Margin 4 6 4 4
@@ -132,7 +138,7 @@ testSafetyHeaderView push =
         , height $ V 24
         , width $ V 24
         , margin $ MarginRight 8
-        , visibility $ boolToVisibility $ EHC.os == "IOS"
+        , visibility GONE -- not required now.
         , onClick push $ const BackClicked
         , accessibility ENABLE
         , accessibilityHint $ "Back : Button"

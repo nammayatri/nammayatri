@@ -1,14 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchTry where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.SearchTry
-import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -39,7 +37,7 @@ data SearchTryT f = SearchTryT
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

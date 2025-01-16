@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.FavouriteDriver where
 
 import qualified API.Types.UI.FavouriteDriver
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -13,14 +9,11 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error (GenericError (InternalError))
-import qualified Kernel.Types.Error as Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
-import Servant
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
 
 getDriverFavorites ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

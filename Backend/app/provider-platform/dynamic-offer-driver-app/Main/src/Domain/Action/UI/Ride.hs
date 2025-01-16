@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Ride
   ( DriverRideRes (..),
@@ -19,11 +18,16 @@ module Domain.Action.UI.Ride
     OTPRideReq (..),
     UploadOdometerReq (..),
     UploadOdometerResp (..),
+    DeliveryImageUploadReq (..),
+    StopAction (..),
     listDriverRides,
     arrivedAtPickup,
+    arrivedAtDestination,
     otpRideCreate,
     arrivedAtStop,
+    stopAction,
     uploadOdometerReading,
+    uploadDeliveryImage,
   )
 where
 
@@ -38,10 +42,12 @@ import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
 import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -51,8 +57,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -65,6 +71,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -79,7 +86,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverPool.Types
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
@@ -87,9 +94,11 @@ import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
@@ -98,11 +107,41 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
+import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+
+data DeliveryImageUploadReq = DeliveryImageUploadReq
+  { file :: FilePath,
+    reqContentType :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp DeliveryImageUploadReq where
+  fromMultipart form = do
+    DeliveryImageUploadReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
+
+instance ToMultipart Tmp DeliveryImageUploadReq where
+  toMultipart deliveryImageUploadReq =
+    MultipartData
+      []
+      [FileData "file" (T.pack deliveryImageUploadReq.file) "" (deliveryImageUploadReq.file)]
+
+newtype DeliveryImageUploadRes = DeliveryImageUploadRes
+  { fileId :: Id MediaFile.MediaFile
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StopAction = DEPART | ARRIVE
+  deriving stock (Eq, Show, Generic, Ord)
 
 data UploadOdometerReq = UploadOdometerReq
   { file :: FilePath,
@@ -141,9 +180,10 @@ data DriverRideRes = DriverRideRes
     status :: DRide.RideStatus,
     fromLocation :: DLoc.LocationAPIEntity,
     toLocation :: Maybe DLoc.LocationAPIEntity,
+    stops :: [Stop],
     driverName :: Text,
     driverNumber :: Maybe Text,
-    vehicleVariant :: DVeh.Variant,
+    vehicleVariant :: DVeh.VehicleVariant,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     vehicleModel :: Text,
     vehicleColor :: Text,
@@ -175,7 +215,7 @@ data DriverRideRes = DriverRideRes
     customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     disabilityTag :: Maybe Text,
-    requestedVehicleVariant :: DVeh.Variant,
+    requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
@@ -208,7 +248,31 @@ data DriverRideRes = DriverRideRes
     bookingType :: BookingType,
     enableFrequentLocationUpdates :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    cancellationSource :: Maybe DBCR.CancellationSource,
+    tipAmount :: Maybe PriceAPIEntity,
+    penalityCharge :: Maybe PriceAPIEntity,
+    senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    extraFareMitigationFlag :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data Stop = Stop
+  { location :: DLoc.LocationAPIEntity,
+    stopInfo :: Maybe DSI.StopInformation
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
+  { name :: Text,
+    primaryExophone :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data CoinsEarned = CoinsEarned
+  { coins :: Int,
+    eventType :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -233,13 +297,15 @@ listDriverRides ::
   Maybe DRide.RideStatus ->
   Maybe Day ->
   Maybe Text ->
+  Maybe Int ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId = do
-  rides <-
-    if mbOnlyActive == Just True
-      then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
-      else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  rides <- case (driverInfo.onRide, mbOnlyActive) of
+    (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
+    (False, Just True) -> return []
+    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
+
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
@@ -247,8 +313,9 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+    stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
     let goHomeReqId = ride.driverGoHomeRequestId
-    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
+    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -271,8 +338,9 @@ mkDriverRideRes ::
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
   Bool ->
+  [DSI.StopInformation] ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -282,6 +350,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
+  cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
   return $
     DriverRideRes
       { id = ride.id,
@@ -289,6 +358,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         status = ride.status,
         fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
         toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
+        stops = map (makeStop stopsInfo) booking.stops,
         driverName = rideDetails.driverName,
         driverNumber,
         vehicleNumber = rideDetails.vehicleNumber,
@@ -323,7 +393,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata >>= (.logoUrl),
         disabilityTag = booking.disabilityTag,
-        requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
+        requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,
@@ -356,8 +426,18 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isValueAddNP,
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
         fleetOwnerId = rideDetails.fleetOwnerId,
-        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
+        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
+        cancellationSource = fmap (\cr -> cr.source) cancellationReason,
+        tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
+        penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
+        senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
+        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag)
       }
+
+makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
+makeStop stopsInfo loc = do
+  Stop (DLoc.makeLocationAPIEntity loc) (find (\stop -> stop.stopLocId == loc.id) stopsInfo)
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -390,10 +470,21 @@ arrivedAtPickup rideId req = do
     now <- getCurrentTime
     QRide.updateArrival rideId now
     BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
+    -- Extra Fare Mitigation warning --
+    driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
+    when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
 
   pure Success
   where
     isValidRideStatus status = status == DRide.NEW
+
+    notifyDriverOnExtraFareWarning driverId moCityId = do
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      mbVehicle <- QVeh.findById driverId
+      let mbVehicleCategory = mbVehicle >>= (.category)
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
+      TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
+      QDI.updateExtraFareMitigation (Just False) driverId
 
 otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
 otpRideCreate driver otpCode booking clientId = do
@@ -408,16 +499,18 @@ otpRideCreate driver otpCode booking clientId = do
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+  when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
 
   driverNumber <- RD.getDriverNumber rideDetails
+  stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
+  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -450,6 +543,56 @@ arrivedAtStop rideId pt = do
   where
     isValidRideStatus status = status == DRide.INPROGRESS
 
+stopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
+stopAction rideId pt stopLocId action = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  void $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  void $ QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  void $ runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
+  when (null stopsLM) $ throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
+  stopLM <- find (\lm -> lm.locationId == stopLocId) stopsLM & fromMaybeM (InvalidRequest $ "Stop location with Id " <> stopLocId.getId <> "doesn't exist for ride " <> ride.id.getId)
+  stopsInfo <- QSI.findAllByRideId rideId
+  now <- getCurrentTime
+  appBackendBapInternal <- asks (.appBackendBapInternal)
+  case action of
+    DEPART -> do
+      stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
+      QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
+      let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
+      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      pure Success
+    ARRIVE -> do
+      unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
+      id <- generateGUID
+      let stopInfo =
+            DSI.StopInformation
+              { stopLocId = stopLocId,
+                stopOrder = stopLM.order,
+                waitingTimeStart = now,
+                waitingTimeEnd = Nothing,
+                stopStartLatLng = pt,
+                rideId = rideId,
+                stopEndLatLng = Nothing,
+                createdAt = now,
+                updatedAt = now,
+                id,
+                merchantOperatingCityId = Just ride.merchantOperatingCityId,
+                merchantId = ride.merchantId
+              }
+      QSI.create stopInfo
+      let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
+      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      pure Success
+  where
+    isValidStopArrivedAction stopLM =
+      all (\stopInfo -> stopInfo.stopOrder < stopLM.order && isJust stopInfo.waitingTimeEnd && isJust stopInfo.stopEndLatLng)
+    -- isValidStopDepartedAction stopsInfo = do
+    --   let stopInfo = find (\stop -> stop.stopLocId == stopLocId) stopsInfo
+    --   isJust stopInfo
+    isValidRideStatus status = status == DRide.INPROGRESS
+
 uploadOdometerReading ::
   Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
@@ -470,7 +613,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Odometer Reading File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl
+  createMediaEntry fileUrl filePath
   where
     validateContentType = do
       case fileType of
@@ -481,7 +624,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
         S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-    createMediaEntry url = do
+    createMediaEntry url filePath = do
       fileEntity <- mkFile url
       QMediaFile.create fileEntity
       return $ UploadOdometerResp {fileId = cast $ fileEntity.id}
@@ -494,5 +637,75 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
               { id,
                 _type = fileType,
                 url = fileUrl,
+                s3FilePath = Just filePath,
                 createdAt = now
               }
+
+uploadDeliveryImage ::
+  Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
+  DeliveryImageUploadReq ->
+  Flow APISuccess
+uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
+  contentType <- validateContentType
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.NEW) $ throwError $ InvalidRequest "Cannot upload image due to unexpected ride status"
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  config <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath "delivery/" ("rideId-" <> rideId.getId) S3.Image contentType
+  let fileUrl =
+        config.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "issue"
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Delivery Image File" $ S3.put (T.unpack filePath) mediaFile
+  now <- getCurrentTime
+  fileId <- createMediaEntry fileUrl filePath now
+  let deliveryFileIds = fromMaybe [fileId] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileId]))
+  QRide.updateDeliveryFileIds rideId deliveryFileIds now
+  BP.notfyDeliveryImageUploadedToBAP booking ride
+  return Success
+  where
+    validateContentType = do
+      case reqContentType of
+        "image/png" -> pure "png"
+        "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
+    createMediaEntry url filePath now = do
+      fileEntity <- mkFile url
+      QMediaFile.create fileEntity
+      return fileEntity.id
+      where
+        mkFile fileUrl = do
+          id <- generateGUID
+          return $
+            MediaFile.MediaFile
+              { id,
+                _type = S3.Image,
+                url = fileUrl,
+                s3FilePath = Just filePath,
+                createdAt = now
+              }
+
+arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess
+arrivedAtDestination rideId pt = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
+  destLoc <- booking.toLocation & fromMaybeM (InvalidRequest "To location doesn't exist for ride")
+  let curPt = LatLong destLoc.lat destLoc.lon
+      distance = distanceBetweenInMeters pt curPt
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let dropLocThreshold = metersToHighPrecMeters transporterConfig.dropLocThreshold
+  unless (distance < dropLocThreshold) $ throwError $ InvalidRequest ("Driver is not at destination location for ride " <> ride.id.getId)
+  unless (isJust ride.destinationReachedAt) $ do
+    now <- getCurrentTime
+    QRide.updateDestinationArrival ride.id now
+    BP.sendDestinationArrivalUpdateToBAP booking ride (Just now)
+  pure Success
+  where
+    isValidRideStatus status = status == DRide.INPROGRESS

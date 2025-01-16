@@ -1,9 +1,15 @@
 imports:
+  Base64: Kernel.Types.Base64
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BaseUrl: Servant.Client.Core
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
+  VehicleCategory: BecknV2.OnDemand.Enums
+  Network: BecknV2.FRFS.Enums
+  EBIXConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CUMTAConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -18,10 +24,10 @@ BecknConfig:
     uniqueKeyId: Text
     settlementType: Maybe Text
     paymentParamsJson: Maybe Text
-    vehicleCategory: VehicleCategory
-    collectedBy: PaymentCollectedBy
+    vehicleCategory: VehicleCategory|NoRelation
+    collectedBy: Network
     staticTermsUrl: Maybe BaseUrl
-    buyerFinderFee: Maybe Text
+    buyerFinderFee: Maybe Text # Becomes Redundant
     settlementWindow: Maybe Text
     searchTTLSec: Maybe Int
     selectTTLSec: Maybe Int
@@ -34,22 +40,13 @@ BecknConfig:
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
 
-  types:
-    VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
-
-    PaymentCollectedBy:
-      enum: "BAP, BPP"
+  derives: "Generic,Show,FromJSON,ToJSON"
 
   default:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
 
   queries:
-    findByMerchantIdDomainAndVehicle:
-      kvFunction: findOneWithKV
-      where:
-        and: [merchantId, domain, vehicleCategory]
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
       where:
@@ -57,12 +54,23 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByMerchantIdDomainandMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, domain, merchantOperatingCityId]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   beamType:
     subscriberUrl: Text
     gatewayUrl: Text
     registryUrl: Text
     staticTermsUrl: Maybe Text
+    verifiedBy: Maybe Network
 
   toTType:
     subscriberUrl: showBaseUrl|I
@@ -75,3 +83,58 @@ BecknConfig:
     gatewayUrl: parseBaseUrl|IM
     registryUrl: parseBaseUrl|MI
     staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+
+IntegratedBPPConfig:
+  tableName: integrated_bpp_config
+
+  fields:
+    domain: Text
+    providerConfig: ProviderConfig
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    vehicleCategory: VehicleCategory|NoRelation
+
+  beamFields:
+    providerConfig:
+      configJSON: Data.Aeson.Value
+
+  types:
+    ProviderConfig:
+      enum: "EBIX EBIXConfig, CUMTA CUMTAConfig, CMRL CMRLConfig"
+      derive': "Generic, FromJSON, ToJSON, Eq"
+
+  fromTType:
+    providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
+
+  toTType:
+    configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E
+
+  sqlType:
+    configJSON: json
+
+  constraints:
+    merchantId: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+    vehicleCategory: PrimaryKey
+    domain: PrimaryKey
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  derives: "Generic,FromJSON,ToJSON"
+
+  default:
+    vehicleCategory: "'BUS'"
+
+  queries:
+    findByDomainAndCityAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [domain, merchantOperatingCityId, vehicleCategory]
+
+  cachedQueries:
+    findByDomainAndCityAndVehicleCategory:
+      keyParams: [domain, merchantOperatingCityId, vehicleCategory]
+      dbQuery: findByDomainAndCityAndVehicleCategory
+      dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory]
+      queryType: FindAndCache

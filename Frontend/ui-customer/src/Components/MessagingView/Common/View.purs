@@ -38,7 +38,6 @@ import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
-import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUp
@@ -71,8 +70,8 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
-import JBridge (animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, disableChat)
+import JBridge (animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -86,7 +85,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -95,7 +94,6 @@ import Locale.Utils
 import Components.MessagingView.Common.Types
 import Components.MessagingView.View
 import Screens.Types (FareProductType(..)) as FPT
-
 
 
 messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
@@ -115,7 +113,7 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
+  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && (state.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && not (state.currentStage == RideAccepted && state.isOtpRideFlow) ) && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification && disableChat state.fareProductType
   , cornerRadius 20.0
   ][linearLayout 
     [ height $ WRAP_CONTENT
@@ -202,7 +200,7 @@ messageView push state message=
   ][ imageView
      [ height $ V 32
      , width $ V 32
-     , imageWithFallback $ if message.sentBy == "Driver" then fetchImage FF_ASSET "ny_ic_driver_message" else fetchImage FF_ASSET "ny_ic_customer_message"
+     , imageWithFallback $ if message.sentBy == "Driver" then fetchImage FF_ASSET if ((getMerchant FunctionCall) == YATRISATHI) then "ys_ic_driver_message" else "ny_ic_driver_message" else fetchImage FF_ASSET "ny_ic_customer_message"
      , margin $ Margin 0 8 8 0
      , accessibility DISABLE
      ]

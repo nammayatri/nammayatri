@@ -61,7 +61,6 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       personId = jobData.personId
       notificationType = jobData.notificationType
       notificationKey = jobData.notificationKey
-      bookingStatus = jobData.bookingStatus
   booking <- QB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
@@ -71,7 +70,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
       phoneNumber = countryCode <> mobileNumber
 
-  when (booking.status == bookingStatus) do
+  when (booking.status /= DB.CANCELLED) do
     case notificationType of
       CALL -> do
         callStatusId <- generateGUID
@@ -87,14 +86,14 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         callStatus <- buildCallStatus callStatusId exotelResponse booking ride
         QCallStatus.create callStatus
       PN -> do
-        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey person.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing person.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
         let entityData = generateReq merchantPN.title merchantPN.body booking ride
         notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
       SMS -> do
         smsCfg <- asks (.smsCfg)
-        let sender = smsCfg.sender
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
         merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+        let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
         let (_, smsReqBody) = formatMessageTransformer "" merchantMessage.message booking ride
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading
           >>= Sms.checkSmsResult
@@ -110,13 +109,14 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
 
     formatMessageTransformer title body booking ride = do
       let isRentalOrIntercity = case booking.bookingDetails of
-            DB.RentalDetails _ -> "Rental "
-            DB.InterCityDetails _ -> "InterCity "
+            DB.RentalDetails _ -> "Rental"
+            DB.InterCityDetails _ -> "InterCity"
             _ -> ""
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           rideStartOtp = ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
-          formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" (show booking.startTime) body
+          rideStartTime = showTimeIst booking.startTime
+          formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" rideStartTime body
       (formattedTitle, formattedBody)
 
     buildCallStatus callStatusId exotelResponse booking ride = do
@@ -132,6 +132,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.merchantId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             callService = Just Call.Exotel,
             callError = Nothing,
             createdAt = now,

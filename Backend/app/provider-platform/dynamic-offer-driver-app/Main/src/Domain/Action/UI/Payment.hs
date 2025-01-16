@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
@@ -23,6 +22,9 @@ module Domain.Action.UI.Payment
   )
 where
 
+import Control.Applicative ((<|>))
+import qualified Data.Tuple.Extra as Tuple
+import qualified Domain.Action.UI.Driver as DADriver
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
@@ -78,6 +80,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -95,7 +98,8 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) Nothing
+  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
@@ -145,7 +149,11 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
             refunds = [],
-            payerVpa = Nothing
+            payerVpa = Nothing,
+            card = Nothing,
+            paymentMethodType = Nothing,
+            authIdCode = Nothing,
+            txnUUID = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
@@ -162,9 +170,14 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False (serviceName, serviceConfig)
         DPayment.PaymentStatus {..} -> do
-          when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && status == Payment.CHARGED) do
-            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
-            fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+          logDebug $ "Payment Status: " <> show status <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> order.id.getId
+          logDebug $ "Invoices: " <> show invoices
+          let isOneTimeSecurityInvoice = any (\inv -> inv.paymentMode == INV.ONE_TIME_SECURITY_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
+          let isPayoutRegistrationInvoice = any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
+          when ((isOneTimeSecurityInvoice || isPayoutRegistrationInvoice) && status == Payment.CHARGED) do
+            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+            logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
+            when (isJust payerVpa && isPayoutRegistrationInvoice) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -195,7 +208,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (subscriptionConfig.paymentServiceName) merchanOperatingCityId
+    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'
@@ -209,9 +222,13 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.OrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
+      logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
+      logDebug $ "Invoices: " <> show invoices
       when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
-        whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
-        fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchanOperatingCityId
+        let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
+        whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+        logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
+        when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
           processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
@@ -275,7 +292,8 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
       maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (invoice <&> (.driverFeeId))
-    QDF.updateStatusByIds CLEARED driverFeeIds now
+    Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $
+      QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
@@ -291,7 +309,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan serviceName merchantOpCityId
+  plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
   case plan of
     Nothing -> QDI.updateSubscription True (cast driverId)
     Just plan_ -> when (totalDue < plan_.maxCreditLimit && plan_.subscribedFlagToggleAllowed) $ QDI.updateSubscription True (cast driverId)
@@ -380,7 +398,7 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
   resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
-  let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
+  let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
   return resp
   where
@@ -461,7 +479,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
       QDP.updatePaymentModeByDriverIdAndServiceName DP.AUTOPAY (cast driverId) serviceName
       QDP.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverId) serviceName
-      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
+      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
       let subcribeToggleAllowed = maybe False (.subscribedFlagToggleAllowed) mbPlan
       when subcribeToggleAllowed $ QDI.updateSubscription True (cast driverId)
       ADPlan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (castAutoPayStatus mandateStatus) payerVpa'
@@ -514,6 +532,8 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             mandatePaymentFlow,
             startDate = fromMaybe now startDate,
             endDate = fromMaybe now endDate,
+            merchantOperatingCityId = Just merchantOpCityId,
+            merchantId = Just merchantId,
             ..
           }
     checkToUpdatePayerVpa existingMandateEntry autoPayStatus =

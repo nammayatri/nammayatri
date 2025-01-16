@@ -19,6 +19,7 @@ import MerchantConfig.Types
 import JBridge as JB
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
+import Resources.LocalizableV2.Strings (getEN)
 
 type ContentConfig = 
    { primaryText :: String,
@@ -183,6 +184,7 @@ contactSupportPopUpConfig appConfig =
         , secondaryText
           { text = getString YOU_CAN_WRITE_TO_US_AT <> ": <br> <span style='color:#2194FF'>" <> appConfig.appData.supportMail <> "</span> <br> <br> OR"
           , margin = Margin 0 16 0 16
+          , accessibilityHint = getEN YOU_CAN_WRITE_TO_US_AT <> appConfig.appData.supportMail 
           }
         , option1
           { text = getString PLACE_A_CALL

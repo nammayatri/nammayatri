@@ -15,7 +15,7 @@
 module Storage.Queries.Vehicle.Internal where
 
 import Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.Vehicle as DV
+import qualified Domain.Types.Vehicle as DV
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id

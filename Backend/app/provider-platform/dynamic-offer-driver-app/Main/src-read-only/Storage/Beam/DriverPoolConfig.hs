@@ -1,18 +1,17 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.TimeBound
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.TimeBound
 import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import Tools.Beam.UtilsTH
@@ -22,6 +21,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     actualDistanceThresholdOnRide :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     area :: B.C f Lib.Types.SpecialLocation.Area,
     batchSizeOnRide :: B.C f Kernel.Prelude.Int,
+    batchSizeOnRideWithStraightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentRideTripCategoryValidForForwardBatching :: B.C f [Kernel.Prelude.Text],
     distanceBasedBatchSplit :: B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
@@ -32,7 +32,9 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverRequestCountLimit :: B.C f Kernel.Prelude.Int,
     driverToDestinationDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
     driverToDestinationDuration :: B.C f Kernel.Types.Common.Seconds,
+    dynamicBatchSize :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     enableForwardBatching :: B.C f Kernel.Prelude.Bool,
+    enableUnifiedPooling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     maxDriverQuotesRequired :: B.C f Kernel.Prelude.Int,
     maxNumberOfBatches :: B.C f Kernel.Prelude.Int,
@@ -50,11 +52,12 @@ data DriverPoolConfigT f = DriverPoolConfigT
     scheduleTryTimes :: B.C f [Kernel.Prelude.Int],
     singleBatchProcessTime :: B.C f Kernel.Types.Common.Seconds,
     thresholdToIgnoreActualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    timeBounds :: B.C f Domain.Types.TimeBound.TimeBound,
+    timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
     tripCategory :: B.C f Kernel.Prelude.Text,
     tripDistance :: B.C f Kernel.Types.Common.Meters,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType)
+    useOneToOneOsrmMapping :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType)
   }
   deriving (Generic, B.Beamable)
 

@@ -33,6 +33,10 @@ module SharedLogic.MessageBuilder
     buildFRFSTicketBookedMessage,
     BuildSendRideEndOTPMessageReq (..),
     buildSendRideEndOTPMessage,
+    shortenTrackingUrl,
+    BuildDeliveryMessageReq (..),
+    DeliveryMessageRequestType (..),
+    buildDeliveryDetailsMessage,
   )
 where
 
@@ -43,15 +47,32 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import Tools.Error
+import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+type BuildMessageFlow m r =
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    CacheFlow m r
+  )
+
+type SmsReqBuilder = Text -> Sms.SendSMSReq
+
+buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
+buildSendSmsReq merchantMessage vars = do
+  smsCfg <- asks (.smsCfg)
+  let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
+      sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+  return $ \phoneNumber -> Sms.SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   { otp :: Text,
@@ -59,15 +80,12 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
+buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
 buildSendOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "otp") req.otp
-      & T.replace (templateText "hash") req.hash
+  buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
 
 data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   { otp :: Text,
@@ -75,74 +93,65 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m Text
+buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
 buildSendBookingOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "otp") req.otp
-      & T.replace (templateText "amount") req.amount
+  buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
 
 newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
   { otp :: Text
   }
   deriving (Generic)
 
-buildSendRideEndOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m Text
+buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
 buildSendRideEndOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_RIDE_END_OTP))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "otp") req.otp
+  buildSendSmsReq merchantMessage [("otp", req.otp)]
 
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)
 
-buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
+buildGenericMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m SmsReqBuilder
 buildGenericMessage merchantOpCityId messageKey _ = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let jsonData = merchantMessage.jsonData
-  return $
-    merchantMessage.message
-      & T.replace (templateText "var1") (fromMaybe "" jsonData.var1)
-      & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
-      & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
+  buildSendSmsReq merchantMessage [("var1", fromMaybe "" jsonData.var1), ("var2", fromMaybe "" jsonData.var2), ("var3", fromMaybe "" jsonData.var3)]
 
 data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   { userName :: Text,
-    rideLink :: Text
+    rideLink :: Text,
+    rideEndTime :: Maybe Text,
+    isRideEnded :: Bool
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m Text
+buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
+  shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
+  let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
+      smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_SOS_ALERT
-      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_SOS_ALERT))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "userName") req.userName
-      & T.replace (templateText "rideLink") req.rideLink
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId $ show messageKey)
+  buildSendSmsReq merchantMessage smsParams
 
 newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
   { userName :: Text
   }
   deriving (Generic)
 
-buildMarkRideAsSafeMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m Text
+buildMarkRideAsSafeMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m SmsReqBuilder
 buildMarkRideAsSafeMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.MARK_RIDE_AS_SAFE))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "userName") req.userName
+  buildSendSmsReq merchantMessage [("userName", req.userName)]
 
 data BuildFollowRideMessageReq = BuildFollowRideMessageReq
   { userName :: Text,
@@ -150,15 +159,12 @@ data BuildFollowRideMessageReq = BuildFollowRideMessageReq
   }
   deriving (Generic)
 
-buildFollowRideStartedMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m Text
+buildFollowRideStartedMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m SmsReqBuilder
 buildFollowRideStartedMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FOLLOW_RIDE))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "userName") req.userName
-      & T.replace (templateText "rideLink") req.rideLink
+  buildSendSmsReq merchantMessage [("userName", req.userName), ("rideLink", req.rideLink)]
 
 data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessageReq
   { userName :: Text,
@@ -166,15 +172,12 @@ data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessag
   }
   deriving (Generic)
 
-buildAddedAsEmergencyContactMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m Text
+buildAddedAsEmergencyContactMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m SmsReqBuilder
 buildAddedAsEmergencyContactMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.ADDED_AS_EMERGENCY_CONTACT))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "userName") req.userName
-      & T.replace (templateText "appUrl") req.appUrl
+  buildSendSmsReq merchantMessage [("userName", req.userName), ("appUrl", req.appUrl)]
 
 data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageReq
   { personName :: Text,
@@ -182,15 +185,12 @@ data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageR
   }
   deriving (Generic)
 
-buildTicketBookingCancelled :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m Text
+buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
 buildTicketBookingCancelled merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.TICKET_BOOKING_CANCELLED))
-  return $
-    merchantMessage.message
-      & T.replace (templateText "personName") req.personName
-      & T.replace (templateText "categoryName") req.categoryName
+  buildSendSmsReq merchantMessage [("personName", req.personName), ("categoryName", req.categoryName)]
 
 data BuildFRFSTicketBookedMessageReq = BuildFRFSTicketBookedMessageReq
   { countOfTickets :: Int,
@@ -213,7 +213,8 @@ buildFRFSTicketBookedMessage pOrgId req = do
               { baseUrl,
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
-                expiryInHours = Nothing
+                expiryInHours = Nothing,
+                urlCategory = UrlShortner.METRO_TICKET_BOOKING
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
@@ -222,3 +223,51 @@ buildFRFSTicketBookedMessage pOrgId req = do
         msg
           & T.replace (templateText "TICKET_PLURAL") ticketPlural
           & T.replace (templateText "URL") url
+
+shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
+shortenTrackingUrl url = do
+  let shortUrlReq =
+        UrlShortner.GenerateShortUrlReq
+          { baseUrl = url,
+            customShortCode = Nothing,
+            shortCodeLength = Nothing,
+            expiryInHours = Just 24,
+            urlCategory = UrlShortner.RIDE_TRACKING
+          }
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  return res.shortUrl
+
+data DeliveryMessageRequestType = SenderReq | ReceiverReq
+
+data BuildDeliveryMessageReq = BuildDeliveryMessageReq
+  { driverName :: Text,
+    driverNumber :: Text,
+    trackingUrl :: Maybe Text,
+    senderName :: Text,
+    receiverName :: Text,
+    appUrl :: Text,
+    otp :: Text,
+    hasEnded :: Bool,
+    pickedUp :: Bool,
+    deliveryMessageType :: DeliveryMessageRequestType
+  }
+
+buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage merchantOperatingCityId req = do
+  let merchantMessageKey = case req.deliveryMessageType of
+        SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
+        ReceiverReq -> bool DMM.PRE_PICKUP_DELIVERY_RECEIVER DMM.SMS_DELIVERY_DETAILS_RECEIVER req.pickedUp
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
+  shortTrackingUrl <- maybe (pure mempty) shortenTrackingUrl req.trackingUrl
+  buildSendSmsReq
+    merchantMessage
+    [ ("driverName", req.driverName),
+      ("driverNumber", req.driverNumber),
+      ("trackingUrl", shortTrackingUrl),
+      ("senderName", req.senderName),
+      ("receiverName", req.receiverName),
+      ("appUrl", req.appUrl),
+      ("otp", req.otp)
+    ]

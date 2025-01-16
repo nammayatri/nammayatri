@@ -30,14 +30,16 @@ separatorView color' margin' =
     ]
     []
 
-recommendContactsToInstallView :: forall w. String -> PrestoDOM (Effect Unit) w
-recommendContactsToInstallView appName =
+recommendContactsToInstallView :: forall w. String -> Boolean -> PrestoDOM (Effect Unit) w
+recommendContactsToInstallView appName visible =
   textView
-    $ [ text $ getString $ RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL appName
+    $ [ text "You can also share manually with anybody using the share button"
       , color Color.black700
+      , visibility $ boolToVisibility visible
+      , width MATCH_PARENT
       , background Color.blue600
-      , padding $ Padding 8 12 8 12
-      , margin $ MarginVertical 16 16
+      , padding $ Padding 16 12 16 12
+      , margin $ Margin 16 16 16 16
       , cornerRadius 8.0
       ]
     <> FontStyle.body1 LanguageStyle
@@ -81,7 +83,7 @@ safetyPartnerView _lazy =
 
 shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
-  relativeLayout
+  linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -93,7 +95,7 @@ shimmerView state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , alignParentBottom "true,-1"
+        , margin $ MarginTop 16
         ]
         [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
         , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")

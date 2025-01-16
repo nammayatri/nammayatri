@@ -49,6 +49,12 @@ import Foreign (Foreign)
 import DecodeUtil(decodeForeignObject, decodeForeignAny)
 import RemoteConfig as RC
 import Foreign.Generic (encodeJSON)
+import Components.PlanCard as PlanCard
+import Components.SelectPlansModal as SelectPlansModal
+import Services.API as APITypes
+import Screens.Types as ST 
+import Screens.SubscriptionScreen.Transformer as Transformer
+import Common.RemoteConfig.Utils as RC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -102,6 +108,12 @@ data Action = BackPressed
             | EnableIntroductoryView
             | OpenReelsView Int
             | GetCurrentPosition String String Foreign Foreign
+            | PlanCardAction PlanCard.Action
+            | SelectPlanAction PlanCard.Action
+            | ChoosePlanAction PlanCard.Action
+            | TogglePlanAction PlanCard.Action
+            | SelectPlansModalAction SelectPlansModal.Action
+            | OnCityOrVehicleChange APITypes.UiPlansResp
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -122,6 +134,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
                     | EarningsScreen SubscriptionScreenState 
+                    | SwitchPlanOnCityOrVehicleChange ST.PlanCardState ST.SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state =
@@ -137,7 +150,7 @@ eval BackPressed state =
   else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.subscriptionConfig.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && (Mb.fromMaybe false state.data.vehicleAndCityConfig.enableSubscriptionSupportPopup) then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -179,9 +192,9 @@ eval ManagePlanAC state = do
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_manage_plan_clicked"
   updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuState = ALL_COLLAPSED}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuState = ALL_COLLAPSED }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
-eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
+eval (SelectPlanAction (PlanCard.OnClick config) ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
 
-eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
+eval (ChoosePlanAction (PlanCard.OnClick config) ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ JoinPlanExit state
 
@@ -315,7 +328,8 @@ eval (LoadMyPlans plans) state = do
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                                       lowAccountBalance = requiredBalance,
                                       dueItems = constructDues planEntity.dues state.data.config.subscriptionConfig.showFeeBreakup,
-                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges
+                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges,
+                                      coinEntity = planEntity.coinEntity
                                   }}
                          }
                      else state{ 
@@ -375,7 +389,8 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
       else updateAndExit update $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  void $ pure $ showDialer cityConfig.supportNumber false
   continue state
 
 eval (CallHelpCenter phone) state = do
@@ -429,20 +444,22 @@ eval (GetCurrentPosition label stringData reelItemData buttonData) state = case 
                 _ -> continue state
   _ -> continue state
 
+eval (OnCityOrVehicleChange (APITypes.UiPlansResp plansListResp)) state = do
+  let plans = map (\plan -> Transformer.transformPlan state.props.isSelectedLangTamil $ Transformer.getPlanCardConfig plan false false state.data.config.subscriptionConfig) plansListResp.list
+  continue state { data { switchPlanModalState { plansList = plans, selectedPlan = DA.head plans, showSwitchPlanModal = true }}}
+
+eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = exit $ HomeScreen state
+
+eval (SelectPlansModalAction SelectPlansModal.Support) state = continueWithCmd state [pure CallSupport]
+
+eval (SelectPlansModalAction (SelectPlansModal.PlanCardAction item _)) state = continue state {data {switchPlanModalState {selectedPlan = Mb.Just item}}}
+
+eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButton.OnClick)) state = 
+  case state.data.switchPlanModalState.selectedPlan of
+    Mb.Nothing -> continue state
+    Mb.Just plan -> exit $ SwitchPlanOnCityOrVehicleChange plan state
+
 eval _ state = update state
-
-getPlanPrice :: Array PaymentBreakUp -> String -> String
-getPlanPrice fares priceType = do
-  let price = (DA.filter(\(PaymentBreakUp item) -> item.component == priceType) fares)
-  case price DA.!! 0 of
-    Mb.Just (PaymentBreakUp element) -> getFixedTwoDecimals element.amount
-    Mb.Nothing -> ""
-
-getAllFareFromArray :: Array PaymentBreakUp -> Array String -> Number
-getAllFareFromArray fares titles = do
-  let matchingFares = (DA.filter (\(PaymentBreakUp fare) -> DA.elem fare.component titles) fares)
-  let price = (DA.foldl (\acc (PaymentBreakUp fare) -> fare.amount - acc) 0.0 matchingFares)
-  price * -1.0
 
 getAutopayStatus :: Mb.Maybe String -> AutoPayStatus
 getAutopayStatus autoPayStatus = 

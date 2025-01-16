@@ -39,9 +39,9 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
@@ -52,14 +52,14 @@ sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
       when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.SmsService provider) merchantOpCityId
+        QMSC.findByServiceAndCity (DMSC.SmsService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

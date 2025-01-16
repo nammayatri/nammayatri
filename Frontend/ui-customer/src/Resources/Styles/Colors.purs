@@ -421,3 +421,54 @@ lightGrey1 = "#F3F3F3"
 
 moonCreme :: Color
 moonCreme = "#FFF5DA"
+
+manatee5 :: Color
+manatee5 = "#059A9CA1"
+
+manatee33 :: Color 
+manatee33 = "#339A9CA1"
+
+gunMetal :: Color 
+gunMetal = "#2E303A"
+
+eerieBlack :: Color 
+eerieBlack = "#1A1C24"
+
+greyBackground :: Color 
+greyBackground = "#F2F2F2"
+
+seashell :: Color
+seashell = "#FFF5EF"
+
+seashellBorder :: Color
+seashellBorder = "#FFECE1"
+
+activeTicketColor :: Color
+activeTicketColor = "#165718"
+
+expiredTicketColor :: Color 
+expiredTicketColor = "#2C2F3A"
+
+backgroundPassengerColor :: Color
+backgroundPassengerColor = "#206423"
+
+abbey :: Color
+abbey = "#47484D"
+
+cloudBurst :: Color
+cloudBurst = "#1D3449"
+
+mutedRed :: Color
+mutedRed = "#E554541A"
+
+amber :: Color
+amber = "#FF85331A"
+
+cosmicLatte :: Color 
+cosmicLatte = "#FFF9EA"
+
+darkGrey :: Color
+darkGrey = "#B9B8B8"
+
+verifiedStateColor :: Color
+verifiedStateColor = "#112F4B"

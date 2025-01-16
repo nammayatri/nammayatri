@@ -50,20 +50,40 @@ type API =
                   :> TokenAuth
                   :> ReqBody '[JSON] DRide.EditLocationReq
                   :> Post '[JSON] DRide.EditLocationResp
+                  :<|> "deliveryImage"
+                  :> TokenAuth
+                  :> Get '[JSON] Text
               )
+           :<|> "driver"
+             :> "photo"
+             :> "media"
+             :> TokenAuth
+             :> MandatoryQueryParam "filePath" Text
+             :> Get '[JSON] Text
        )
 
 handler :: FlowServer API
-handler rideId =
-  getDriverLoc rideId
-    :<|> getRideStatus rideId
-    :<|> editLocation rideId
+handler =
+  rideRelatedApis
+    :<|> getDriverPhoto
+  where
+    rideRelatedApis rideId =
+      getDriverLoc rideId
+        :<|> getRideStatus rideId
+        :<|> editLocation rideId
+        :<|> getDeliveryImage rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId
+
+getDriverPhoto :: (Id SPerson.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
+getDriverPhoto (personId, _) filePath = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverPhoto filePath
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
 
 editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
 editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+
+getDeliveryImage :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler Text
+getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)

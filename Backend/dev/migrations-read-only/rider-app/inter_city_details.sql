@@ -27,3 +27,8 @@ ALTER TABLE atlas_app.inter_city_details ADD COLUMN created_at timestamp with ti
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.inter_city_details ADD COLUMN round_trip boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.inter_city_details ADD COLUMN per_day_max_allowance_in_mins int ;

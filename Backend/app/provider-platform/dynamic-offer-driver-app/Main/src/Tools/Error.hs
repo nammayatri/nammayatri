@@ -14,6 +14,7 @@
 
 module Tools.Error (module Tools.Error) where
 
+import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
@@ -173,16 +174,34 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''BlockReasonFlag)
+
+data BlockErrorPayload = BlockErrorPayload
+  { blockExpiryTime :: Maybe UTCTime,
+    blockReason :: Maybe BlockReasonFlag
+  }
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance ToJSON BlockErrorPayload where
+  toJSON (BlockErrorPayload expiryTime reason) =
+    object
+      [ "blockExpiryTime" .= expiryTime,
+        "blockReason" .= reason
+      ]
+
 data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
   | NoPlanSelected Text
-  | DriverAccountBlocked
+  | DriverAccountBlocked BlockErrorPayload
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
   | DriverNotFound Text
   | DriverEmailNotFound Text
   | DriverMobileAlreadyExists Text
+  | DriverEmailAlreadyExists Text
   | DriverReferralCodeNotGenerated
   | DriverAlreadyLinkedWithVehicle Text
   | FleetOwnerAccountBlocked
@@ -195,12 +214,13 @@ instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
   toMessage (NoPlanSelected personId) = Just $ "Driver with id = " <> personId <> " has not selected any plan"
-  toMessage DriverAccountBlocked = Just "Driver account has been blocked."
+  toMessage (DriverAccountBlocked _) = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
   toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
   toMessage (DriverEmailNotFound personId) = Just $ "Driver email not found driverId = " <> personId
   toMessage (DriverMobileAlreadyExists phoneNo) = Just $ "Mobile number " <> phoneNo <> " already exists with another user."
+  toMessage (DriverEmailAlreadyExists email) = Just $ "Email " <> email <> " already exists with another user."
   toMessage DriverReferralCodeNotGenerated = Just "Not able to generate driver referral code"
   toMessage (DriverAlreadyLinkedWithVehicle vehicleNo) = Just $ "Driver is already linked with vehicle " <> vehicleNo
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
@@ -211,7 +231,7 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
     NoPlanSelected _ -> "NO_PLAN_SELECTED"
-    DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
+    DriverAccountBlocked _ -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
     DriverNotFound _ -> "DRIVER_NOT_FOUND"
@@ -219,13 +239,14 @@ instance IsHTTPError DriverError where
     DriverReferralCodeNotGenerated -> "DRIVER_REFERRAL_CODE_NOT_GENERATED"
     DriverAlreadyLinkedWithVehicle _ -> "DRIVER_ALREADY_LINKED"
     DriverMobileAlreadyExists _ -> "DRIVER_MOBILE_ALREADY_EXISTS"
+    DriverEmailAlreadyExists _ -> "DRIVER_EMAIL_ALREADY_EXISTS"
     FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
     AccountBlocked -> "ACCOUNT_BLOCKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
     NoPlanSelected _ -> E400
-    DriverAccountBlocked -> E403
+    DriverAccountBlocked _ -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
     DriverNotFound _ -> E403
@@ -233,10 +254,13 @@ instance IsHTTPError DriverError where
     DriverReferralCodeNotGenerated -> E400
     DriverAlreadyLinkedWithVehicle _ -> E403
     DriverMobileAlreadyExists _ -> E400
+    DriverEmailAlreadyExists _ -> E400
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
 
-instance IsAPIError DriverError
+instance IsAPIError DriverError where
+  toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
+  toPayload _ = Null
 
 data AadhaarError
   = AadhaarAlreadyVerified
@@ -310,6 +334,8 @@ data DriverQuoteError
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | RideRequestAlreadyAccepted
+  | RideRequestAlreadyAcceptedOrCancelled Text
+  | DriverAlreadyQuoted Text
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
   | NoActiveRidePresent
@@ -327,6 +353,8 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
+  toMessage (RideRequestAlreadyAcceptedOrCancelled srfd) = Just $ "Ride request already accepted by other driver or cancelled:-" <> show srfd
+  toMessage (DriverAlreadyQuoted stId) = Just $ "Driver already quoted for stId:-" <> show stId
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
@@ -342,6 +370,8 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
+    RideRequestAlreadyAcceptedOrCancelled _ -> "RIDE_REQUEST_ALREADY_ACCEPTED_OR_CANCELLED"
+    DriverAlreadyQuoted _ -> "DRIVER_ALREADY_QUOTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
     NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
@@ -356,11 +386,13 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     RideRequestAlreadyAccepted -> E400
+    RideRequestAlreadyAcceptedOrCancelled _ -> E409
+    DriverAlreadyQuoted _ -> E409
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
     RecentActiveRide -> E400
-    DriverTransactionTryAgain _ -> E500
+    DriverTransactionTryAgain _ -> E409
     CustomerDestinationUpdated -> E400
 
 instance IsAPIError DriverQuoteError
@@ -711,6 +743,7 @@ data DriverGoHomeRequestError
   | DriverGoHomeRequestNotPresent
   | GoHomeFeaturePermanentlyDisabled
   | DriverCloseToHomeLocation
+  | CannotEnableGoHomeForDifferentCity
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverGoHomeRequestError
@@ -724,6 +757,7 @@ instance IsBaseError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> Just "GoHome feature is not activated"
     GoHomeFeaturePermanentlyDisabled -> Just "GoHome feature is permanently disabled."
     DriverCloseToHomeLocation -> Just "Driver is close to home location."
+    CannotEnableGoHomeForDifferentCity -> Just "Cannot Enable Go To For a Location outside currentCity."
 
 instance IsHTTPError DriverGoHomeRequestError where
   toErrorCode = \case
@@ -734,6 +768,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> "DRIVER_GO_HOME_REQUEST_NOT_PRESENT"
     GoHomeFeaturePermanentlyDisabled -> "GO_HOME_FEATURE_PERMANENTLY_DISABLED"
     DriverCloseToHomeLocation -> "DRIVER_CLOSE_TO_HOME_LOCATION"
+    CannotEnableGoHomeForDifferentCity -> "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY"
   toHttpCode = \case
     DriverGoHomeRequestErrorNotFound _ -> E500
     DriverGoHomeRequestErrorDoesNotExist _ -> E400
@@ -742,6 +777,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> E400
     GoHomeFeaturePermanentlyDisabled -> E400
     DriverCloseToHomeLocation -> E400
+    CannotEnableGoHomeForDifferentCity -> E400
 
 instance IsAPIError DriverGoHomeRequestError
 
@@ -891,6 +927,8 @@ data DriverCoinError
   | CoinConversionToCash Text Int Int
   | CoinUsedForConverting Text Int Int
   | NonBulkUploadCoinFunction Text
+  | CoinInfoTranslationNotFound Text Text
+  | NoPlanAgaintsDriver Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -901,7 +939,9 @@ instance IsBaseError DriverCoinError where
     InsufficientCoins driverId coins -> Just ("Insufficient coin balance for driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
     CoinConversionToCash driverId coins val -> Just ("Atleast " <> show val <> " coins is required for conversion driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
     CoinUsedForConverting driverId coins val -> Just ("Coins used for converting to cash should be multiple of " <> show val <> " for driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
+    CoinInfoTranslationNotFound key lang -> Just $ "Coin info translation not found for " <> key <> " in " <> lang <> " language."
     NonBulkUploadCoinFunction eventFunction -> Just ("Coin function " <> show eventFunction <> " is not bulk upload function.")
+    NoPlanAgaintsDriver driverId -> Just ("No plan found against driverId " <> show driverId <> ".")
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
@@ -910,17 +950,22 @@ instance IsHTTPError DriverCoinError where
     CoinConversionToCash _ _ val -> "ATLEAST_" <> show val <> "_COINS_REQUIRED_FOR_CONVERSION"
     CoinUsedForConverting _ _ val -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_" <> show val
     NonBulkUploadCoinFunction _ -> "NON_BULK_UPLOAD_COIN_FUNCTION"
+    CoinInfoTranslationNotFound _ _ -> "COIN_INFO_TRANSLATION_NOT_FOUND"
+    NoPlanAgaintsDriver _ -> "NO_PLAN_AGAINST_DRIVER"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
     InsufficientCoins _ _ -> E400
     CoinConversionToCash _ _ _ -> E400
     CoinUsedForConverting _ _ _ -> E400
     NonBulkUploadCoinFunction _ -> E400
+    CoinInfoTranslationNotFound _ _ -> E400
+    NoPlanAgaintsDriver _ -> E400
 
 instance IsAPIError DriverCoinError
 
-newtype DriverReferralError
+data DriverReferralError
   = InvalidReferralCode Text
+  | DriverNotFoundForReferralCode Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverReferralError
@@ -928,12 +973,15 @@ instanceExceptionWithParent 'HTTPException ''DriverReferralError
 instance IsBaseError DriverReferralError where
   toMessage = \case
     InvalidReferralCode referralCode -> Just ("Invalid referral code " <> show referralCode <> ".")
+    DriverNotFoundForReferralCode referralCode -> Just ("Driver not found for referral code " <> show referralCode <> ".")
 
 instance IsHTTPError DriverReferralError where
   toErrorCode = \case
     InvalidReferralCode _ -> "INVALID_REFERRAL_CODE"
+    DriverNotFoundForReferralCode _ -> "DRIVER_NOT_FOUND_FOR_REFERRAL_CODE"
   toHttpCode = \case
     InvalidReferralCode _ -> E400
+    DriverNotFoundForReferralCode _ -> E400
 
 instance IsAPIError DriverReferralError
 
@@ -1009,6 +1057,8 @@ instance IsAPIError RentalError
 data LocationMappingError
   = FromLocationMappingNotFound Text
   | FromLocationNotFound Text
+  | StopsLocationMappingNotFound Text
+  | StopsLocationNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''LocationMappingError
@@ -1017,11 +1067,15 @@ instance IsBaseError LocationMappingError where
   toMessage = \case
     FromLocationMappingNotFound id_ -> Just $ "From location mapping not found for entity id: " <> id_ <> "."
     FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
+    StopsLocationMappingNotFound id_ -> Just $ "Stops location mapping not found for entity id: " <> id_ <> "."
+    StopsLocationNotFound id_ -> Just $ "Stops location not found for locationId: " <> id_ <> "."
 
 instance IsHTTPError LocationMappingError where
   toErrorCode = \case
     FromLocationMappingNotFound _ -> "FROM_LOCATION_MAPPING_NOT_FOUND"
     FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
+    StopsLocationMappingNotFound _ -> "STOPS_LOCATION_MAPPING_NOT_FOUND"
+    StopsLocationNotFound _ -> "STOPS_LOCATION_NOT_FOUND"
 
   toHttpCode _ = E500
 
@@ -1158,6 +1212,10 @@ data DriverOnboardingError
   | DriverBankAccountNotFound Text
   | DriverChargesDisabled Text
   | DocumentAlreadyLinkedToAnotherDriver Text
+  | UnsyncedImageNotFound
+  | DocumentAlreadyInSync
+  | NotValidatedUisngFrontendSDK
+  | InvalidDocumentType Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1203,6 +1261,10 @@ instance IsBaseError DriverOnboardingError where
     DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
     DriverChargesDisabled id_ -> Just $ "Bank account is not verified for driverId \"" <> id_ <> "\"."
     DocumentAlreadyLinkedToAnotherDriver docName -> Just $ "Document Already linked to another driver " <> docName
+    UnsyncedImageNotFound -> Just "Unsynced image not found"
+    DocumentAlreadyInSync -> Just "Document already in sync"
+    NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
+    InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1247,6 +1309,10 @@ instance IsHTTPError DriverOnboardingError where
     DriverBankAccountNotFound _ -> "DRIVER_BANK_ACCOUNT_NOT_FOUND"
     DriverChargesDisabled _ -> "DRIVER_CHARGES_DISABLED"
     DocumentAlreadyLinkedToAnotherDriver _ -> "DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER"
+    UnsyncedImageNotFound -> "UNSYNCED_IMAGE_NOT_FOUND"
+    DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
+    NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
+    InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1289,6 +1355,10 @@ instance IsHTTPError DriverOnboardingError where
     DriverBankAccountNotFound _ -> E400
     DriverChargesDisabled _ -> E400
     DocumentAlreadyLinkedToAnotherDriver _ -> E400
+    UnsyncedImageNotFound -> E400
+    DocumentAlreadyInSync -> E400
+    NotValidatedUisngFrontendSDK -> E400
+    InvalidDocumentType _ -> E400
 
 instance IsAPIError DriverOnboardingError
 
@@ -1331,3 +1401,73 @@ instance IsHTTPError ForwardBatchingErrors where
     CurrentRideInprogress _ -> E500
 
 instance IsAPIError ForwardBatchingErrors
+
+data DeliveryErrors = DeliveryImageNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DeliveryErrors
+
+instance IsBaseError DeliveryErrors where
+  toMessage = \case
+    DeliveryImageNotFound -> Just "Delivery image not found."
+
+instance IsHTTPError DeliveryErrors where
+  toErrorCode = \case
+    DeliveryImageNotFound -> "DELIVERY_IMAGE_NOT_FOUND"
+  toHttpCode = \case
+    DeliveryImageNotFound -> E400
+
+instance IsAPIError DeliveryErrors
+
+data SpecialZoneErrors = DriverLocationOutOfRestictionBounds
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
+
+instance IsBaseError SpecialZoneErrors where
+  toMessage = \case
+    DriverLocationOutOfRestictionBounds -> Just "Driver location out of restriction bounds."
+
+instance IsHTTPError SpecialZoneErrors where
+  toErrorCode = \case
+    DriverLocationOutOfRestictionBounds -> "DRIVER_LOCATION_OUT_OF_RESTRICTION_BOUNDS"
+  toHttpCode = \case
+    DriverLocationOutOfRestictionBounds -> E400
+
+instance IsAPIError SpecialZoneErrors
+
+data LlmPromptError
+  = LlmPromptNotFound Text Text Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LlmPromptError
+
+instance IsBaseError LlmPromptError where
+  toMessage (LlmPromptNotFound merchantOperatingCityId service useCase promptKey) = Just $ "LLMPrompt with merchantOperatingCityId \"" <> merchantOperatingCityId <> "\" service \"" <> service <> "\" useCase \"" <> useCase <> "\" promptKey \"" <> promptKey <> "\" not found."
+
+instance IsHTTPError LlmPromptError where
+  toErrorCode = \case
+    LlmPromptNotFound {} -> "LLM_PROMPT_NOT_FOUND"
+
+  toHttpCode = \case
+    LlmPromptNotFound {} -> E500
+
+instance IsAPIError LlmPromptError
+
+-------- FRFS Trip Errors ------------
+data FRFSTripErrors = TripInvalidStatus Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSTripErrors
+
+instance IsBaseError FRFSTripErrors where
+  toMessage = \case
+    TripInvalidStatus msg -> Just $ "Attempted to do some action in wrong trip status. " <> msg
+
+instance IsHTTPError FRFSTripErrors where
+  toErrorCode = \case
+    TripInvalidStatus _ -> "TRIP_INVALID_STATUS"
+  toHttpCode = \case
+    TripInvalidStatus _ -> E400
+
+instance IsAPIError FRFSTripErrors

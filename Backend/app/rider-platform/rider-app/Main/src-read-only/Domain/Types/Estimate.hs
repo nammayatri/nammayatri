@@ -1,15 +1,15 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Estimate where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.TripTerms
-import qualified Domain.Types.VehicleServiceTier
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -39,6 +39,7 @@ data Estimate = Estimate
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -56,17 +57,22 @@ data Estimate = Estimate
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.Estimate.EstimateStatus,
+    tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
     totalFareRange :: Domain.Types.Estimate.FareRange,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     waitingCharges :: Domain.Types.Estimate.WaitingCharges
   }
   deriving (Generic, Show)

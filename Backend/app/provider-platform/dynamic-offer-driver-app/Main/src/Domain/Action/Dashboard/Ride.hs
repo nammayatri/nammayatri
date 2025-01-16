@@ -26,18 +26,18 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified API.Types.Dashboard.RideBooking.Ride as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
-import qualified Domain.Action.Dashboard.Merchant as DM
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import qualified Domain.Types as DTC
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -45,21 +45,25 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
+import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import SharedLogic.External.LocationTrackingService.Types
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -74,6 +78,7 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified System.Environment as Se
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -84,14 +89,13 @@ getRideList ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
-  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbFareDiff mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -103,12 +107,19 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbFareDiff) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
     throwError $ InvalidRequest "At least one filter is required"
+  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  let from = fromMaybe now mbfrom
+  let to = fromMaybe now mbto
+  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
+  rideItems <-
+    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+      then BppT.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to
+      else QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -133,7 +144,8 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = rideDetails.driverName,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
-        tripCategory = castTripCategory tripCategory,
+        tripCategory = castTripCategory tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+        tripCategoryV2 = tripCategory,
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         bookingStatus,
@@ -157,7 +169,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
       no <- getDbHash number
       let code = fromMaybe "+91" countryCode
       person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole code no merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound number)
-      ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing
+      ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing Nothing
       let lastNRides = map fst ridesAndBooking
       ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id)) lastNRides
       let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
@@ -240,7 +252,8 @@ rideInfo ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    CH.HasClickhouseEnv CH.ATLAS_KAFKA m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -279,6 +292,11 @@ rideInfo merchantId merchantOpCityId reqRideId = do
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
+  let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
+      lastDate = addUTCTime (intToNominalDiffTime 300) ride.createdAt
+  driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
+  let driverEdaKafka = listToMaybe driverEdaKafkaList
+  let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -293,7 +311,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
-        driverStartLocation = ride.tripStartPos,
+        driverStartLocation = driverStartLocation,
         driverCurrentLocation = getCoordinates <$> mDriverLocation,
         rideBookingTime = booking.createdAt,
         estimatedDriverArrivalTime = (\quote -> realToFrac quote.durationToPickup `addUTCTime` ride.createdAt) <$> mQuote,
@@ -323,11 +341,12 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         cancellationReason,
         driverInitiatedCallCount = -1,
         scheduledAt = Just booking.startTime,
-        tripCategory = castTripCategory booking.tripCategory,
+        tripCategory = castTripCategory booking.tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+        tripCategoryV2 = booking.tripCategory,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
-        vehicleVariant = DM.castDVehicleVariant <$> rideDetails.vehicleVariant,
+        vehicleVariant = rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         vehicleServiceTierName = booking.vehicleServiceTierName,
@@ -335,8 +354,22 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
         rideCity = Just $ show city.city,
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
-        rideCreatedAt = ride.createdAt
+        rideCreatedAt = ride.createdAt,
+        rideStatus = mkCommonRideStatus ride.status,
+        roundTrip = booking.roundTrip,
+        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
+        estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime)
       }
+
+-- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
+castTripCategory :: DTC.TripCategory -> Common.DeprecatedTripCategory
+castTripCategory = \case
+  DTC.Rental _ -> Common.Rental
+  DTC.RideShare _ -> Common.RideShare
+  DTC.InterCity _ _ -> Common.InterCity
+  DTC.CrossCity _ _ -> Common.CrossCity
+  DTC.Ambulance _ -> Common.Ambulance
+  _ -> Common.OneWay
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -357,9 +390,10 @@ calculateLocations bookingId stopLocationId = do
       return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
-mkLocationAPIEntity DLoc.Location {..} = do
+mkLocationAPIEntity loc@DLoc.Location {..} = do
   let DLoc.LocationAddress {..} = address
-  Common.LocationAPIEntity {..}
+      id' = loc.id.getId
+  Common.LocationAPIEntity {id = id', ..}
 
 mkLocationFromLocationMapping ::
   ( CacheFlow m r,
@@ -382,15 +416,6 @@ castCancellationSource = \case
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
 
-castTripCategory :: DTC.TripCategory -> Common.TripCategory
-castTripCategory = \case
-  DTC.OneWay _ -> Common.OneWay
-  DTC.Rental _ -> Common.Rental
-  DTC.RideShare _ -> Common.RideShare
-  DTC.InterCity _ _ -> Common.InterCity
-  DTC.CrossCity _ _ -> Common.CrossCity
-  DTC.Ambulance _ -> Common.Ambulance
-
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
 
@@ -408,6 +433,14 @@ mkBookingStatus ride now = do
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
+
+mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
+mkCommonRideStatus rs = case rs of
+  DRide.UPCOMING -> Common.RIDE_UPCOMING
+  DRide.NEW -> Common.RIDE_NEW
+  DRide.INPROGRESS -> Common.RIDE_INPROGRESS
+  DRide.COMPLETED -> Common.RIDE_COMPLETED
+  DRide.CANCELLED -> Common.RIDE_CANCELLED
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes

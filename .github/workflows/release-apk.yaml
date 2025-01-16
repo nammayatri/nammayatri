@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - hotpushAPK-*
 
 jobs:
   deploy:
@@ -16,23 +17,23 @@ jobs:
             keystore: ANDROID_KEYSTORE_FILE
             fastlane_cm: NY
             key_alias: KEYSTORE_KEY_ALIAS
-            local_properties: LOCAL_PROPERTIES 
+            local_properties: LOCAL_PROPERTIES
             config_path: app/src/user/nammaYatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json"
           - name: ManaYatri
-            keystore: ANDROID_KEYSTORE_FILE_MY 
+            keystore: ANDROID_KEYSTORE_FILE_MY
             fastlane_cm: MY
             key_alias: KEYSTORE_KEY_ALIAS_MY
-            local_properties: LOCAL_PROPERTIES_MY 
+            local_properties: LOCAL_PROPERTIES_MY
             config_path: app/src/user/manaYatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json'
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json"
           - name: Yatri
-            keystore: ANDROID_KEYSTORE_FILE_Y 
+            keystore: ANDROID_KEYSTORE_FILE_Y
             fastlane_cm: Y
             key_alias: KEYSTORE_KEY_ALIAS_Y
-            local_properties: LOCAL_PROPERTIES_Y 
+            local_properties: LOCAL_PROPERTIES_Y
             config_path: app/src/user/yatri/assets/juspay
-            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json'
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json"
           # Add more variants as needed
     defaults:
       run:
@@ -41,12 +42,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3' # Not needed with a .ruby-version file
+          ruby-version: "3.3" # Not needed with a .ruby-version file
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # See 'Supported distributions' for available options
-          java-version: '17'
+          distribution: "temurin" # See 'Supported distributions' for available options
+          java-version: "17"
 
       - name: Cache Ruby - Bundler
         uses: actions/cache@v2
@@ -80,13 +81,13 @@ jobs:
 
       - name: Run Python script to extract JSA files
         run: python bundleFetch.py "$FASTLANE_CMD"
-        env: 
+        env:
           FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
 
       - name: Move JSA files to specific path
         run: |
           mv -f configs/* "$CONFIG_PATH"
-        env: 
+        env:
           CONFIG_PATH: ${{ matrix.variant.config_path }}
 
       - name: Grant Permission to Execute
@@ -112,14 +113,14 @@ jobs:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
 
       - name: Create Google Services Config file
-        run : |
+        run: |
           echo "$GOOGLE_SERVICES_SECRET" > google-services.json.b64
           base64 -d -i google-services.json.b64 > app/google-services.json
         env:
           GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
-      
+
       - name: Update bools for dynamic assets
-        run : |
+        run: |
           echo "$DYNAMIC_ASSETS" > bools.xml.b64
           base64 -d -i bools.xml.b64 > app/src/dev/res/values/bools.xml
           base64 -d -i bools.xml.b64 > app/src/main/res/values/bools.xml
@@ -127,32 +128,39 @@ jobs:
           DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
 
       - name: Create Local Properties
-        run : |
+        run: |
           echo "$LOCAL_PROPERTIES" > local.properties.b64
           base64 -d -i local.properties.b64 > local.properties
         env:
           LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
 
       - name: Create Google Play Config file
-        run : |
+        run: |
           echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
           base64 -d -i play_config.json.b64 > play_config.json
         env:
           PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
+
+      - name: Add Configs to local.properties
+        run: |
+          echo "" >> local.properties
+          echo "$ADDITIONAL_LOCAL_PROPERTIES" >> local.properties
+        env:
+          ADDITIONAL_LOCAL_PROPERTIES: ${{ secrets.ADDITIONAL_LOCAL_PROPERTIES }}
 
       - name: Distribute app to Production 🚀
         run: |
           echo "Hello, world! $FASTLANE_CMD"
           echo "fastlane_cm: ${{ matrix.variant.name }}"
           bash releaseApp.sh "$FASTLANE_CMD"
-        env: 
+        env:
           FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
-      
+
       - name: Increment Version for the app
         run: |
           git stash
           python updateLocalVersion.py customer
-      
+
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v3
@@ -166,7 +174,7 @@ jobs:
           commit-message: "[BOT] updating version code and name post successful release"
           add-paths: |
             *ions.txt
-      
+
       - name: Merge Pull Request
         uses: peter-evans/enable-pull-request-automerge@v3
         continue-on-error: true

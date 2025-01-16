@@ -48,3 +48,40 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN currency character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN dp_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN supply_demand_ratio_to_loc double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN supply_demand_ratio_from_loc double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN eligible_for_upgrade boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_suggestion double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN tip_options integer[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_operating_city_id character varying(36) ;

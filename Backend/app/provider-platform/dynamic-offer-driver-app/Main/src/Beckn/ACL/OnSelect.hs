@@ -23,12 +23,12 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
 import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
@@ -45,6 +45,7 @@ data DOnSelectReq = DOnSelectReq
     vehicleServiceTierItem :: DVST.VehicleServiceTier,
     searchRequest :: SearchRequest,
     driverQuote :: DQuote.DriverQuote,
+    taggings :: Tags.Taggings,
     now :: UTCTime
   }
 
@@ -71,7 +72,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote isValueAddNP mbFarePolicy) fulfillments,
+          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
           orderProvider = mkProvider bppConfig,
@@ -88,11 +89,9 @@ mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillmen
 mkFulfillmentV2 dReq quote isValueAddNP = do
   Spec.Fulfillment
     { fulfillmentId = Just quote.id.getId,
-      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
+      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = case quote.tripCategory of
-        DTC.Ambulance _ -> Just $ show Enums.AMBULANCE
-        _ -> Just $ show Enums.DELIVERY,
+      fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,
@@ -169,14 +168,14 @@ mkDriverRatingTag quote
           }
       ]
 
-mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
-mkItemV2 fulfillment vehicleServiceTierItem quote isValueAddNP mbFarePolicy = do
+mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Spec.Item
+mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
     { itemId = Just quote.estimateId.getId,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
-      itemTags = mkItemTagsV2 quote isValueAddNP mbFarePolicy,
+      itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
       itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
@@ -202,72 +201,10 @@ mkPriceV2 quote =
       priceComputedValue = Nothing
     }
 
-mkItemTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.TagGroup]
-mkItemTagsV2 quote isValueAddNP mbFarePolicy = do
-  let farePolicyTag = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
-  mkGeneralInfoTag quote isValueAddNP <> farePolicyTag
-
-mkGeneralInfoTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.TagGroup]
-mkGeneralInfoTag quote isValueAddNP =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.GENERAL_INFO,
-                  descriptorName = Just "General Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just $
-              distanceToNearestDriverTag
-                ++ etaToNearestDriverTag
-                ++ mkSpecialLocationTag
-        }
-    ]
-  where
-    distanceToNearestDriverTag =
-      [ Spec.Tag
-          { tagDisplay = Just False,
-            tagDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
-                    descriptorName = Just "Distance To Nearest Driver In Meters",
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = Just $ show quote.distanceToPickup.getMeters
-          }
-      ]
-    etaToNearestDriverTag =
-      [ Spec.Tag
-          { tagDisplay = Just False,
-            tagDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.ETA_TO_NEAREST_DRIVER_MIN,
-                    descriptorName = Just "Agent Duration to Pickup in Seconds",
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = Just . show $ quote.durationToPickup.getSeconds `div` 60
-          }
-      ]
-    mkSpecialLocationTag
-      | isNothing quote.specialLocationTag || not isValueAddNP = []
-      | otherwise =
-        [ Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
-                      descriptorName = Just "Special Zone Tag",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = quote.specialLocationTag
-            }
-        ]
+mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]
+mkItemTagsV2 estimatedFare congestionChargeViaDp mbFarePolicy taggings = do
+  let farePolicyTag = Utils.mkRateCardTag Nothing Nothing estimatedFare congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+  Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do
@@ -309,6 +246,7 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

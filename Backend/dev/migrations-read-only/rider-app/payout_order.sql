@@ -31,3 +31,19 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN entity_ids text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_order ADD COLUMN short_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN response_message text ;
+ALTER TABLE atlas_app.payout_order ADD COLUMN response_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN retried_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN merchant_operating_city_id text ;

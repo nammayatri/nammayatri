@@ -21,11 +21,12 @@ import Data.Aeson as DA
 import Data.Text as Text hiding (find)
 import Data.Time
 import Data.Time.Calendar.WeekDate
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Cac as DTC
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
@@ -37,6 +38,7 @@ import Kernel.Utils.Common (CacheFlow, getLocalCurrentTime, utcTimeToDiffTime)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Lib.Types.SpecialLocation as SL
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
@@ -47,12 +49,13 @@ import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   SL.Area ->
+  DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getSearchDriverPoolConfig merchantOpCityId mbDist area = do
+getSearchDriverPoolConfig merchantOpCityId mbDist area sreq = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
@@ -60,8 +63,8 @@ getSearchDriverPoolConfig merchantOpCityId mbDist area = do
       (_, _, currentDayOfWeek) = toWeekDate currentDay
       serviceTier = Nothing
       tripCategory = "All"
-  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing (Just currTimeOfDay) (Just currentDayOfWeek)
-    |<|>| getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing Nothing Nothing
+  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing (Just currTimeOfDay) (Just currentDayOfWeek) sreq
+    |<|>| getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing Nothing Nothing sreq
 
 getDriverPoolConfigFromCAC ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -99,7 +102,7 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 getDriverPoolConfigCond ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -108,8 +111,9 @@ getDriverPoolConfigCond ::
   Maybe CacKey ->
   Maybe Int ->
   Maybe Int ->
+  DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey currTimeOfDay currentDayOfWeek = do
+getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey currTimeOfDay currentDayOfWeek sreq = do
   let dist = fromMaybe 0 dist'
   getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey currTimeOfDay currentDayOfWeek
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
@@ -119,7 +123,7 @@ getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area sti
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
     |<|>| ( do
               logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show (merchantOpCityId, serviceTier, tripCategory, dist, area)
-              DPC.getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area dist'
+              DPC.getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area dist' stickeyKey sreq
           )
 
 -- TODO :: Need To Handle `area` Properly In CAC
@@ -149,23 +153,24 @@ setConfigInMemory id mbvst tripCategory dist config = do
   CCU.setConfigInMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExp config
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
   Id MerchantOperatingCity ->
   DVST.ServiceTierType ->
   DTC.TripCategory ->
   SL.Area ->
   Maybe Meters ->
   Maybe CacKey ->
+  DSR.SearchRequest ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId = do
+getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId sreq = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime
       (_, _, currentDayOfWeek) = toWeekDate currentDay
   config <-
-    getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId (Just currTimeOfDay) (Just currentDayOfWeek)
-      |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area srId Nothing Nothing
+    getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId (Just currTimeOfDay) (Just currentDayOfWeek) sreq
+      |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area srId Nothing Nothing sreq
   when (isNothing config) do
     logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
     throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId

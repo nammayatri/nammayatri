@@ -15,7 +15,7 @@
 
 module Storage where
 
-import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>))
+import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>), (/=))
 import JBridge as JBridge
 import Types.App (FlowBT)
 import Control.Monad.Trans.Class (lift)
@@ -77,6 +77,8 @@ data KeyStore = USER_NAME
                 | SUGGESTIONS_DEFINITIONS
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
+                | CUSTOMER_CLIENT_ID
+                | REGISTRATION_APPROVED
                 | HAS_TAKEN_FIRST_RIDE
                 | CURRENCY
                 | IS_BANNER_ACTIVE
@@ -146,6 +148,23 @@ data KeyStore = USER_NAME
                 | PREVIOUS_LOCAL_STAGE
                 | COIN_EARNED_POPUP_TYPE
                 | SHOW_TOLL_POPUP
+                | CACHED_SDK_TOKEN_DATA
+                | REFER_NOW_LAST_SHOWN
+                | ADD_UPI_LAST_SHOWN
+                | VERIFY_UPI_LAST_SHOWN
+                | GULLAK_TOKEN
+                | DONT_CALL_REFRESH
+                | IS_ON_FREE_TRIAL
+                | INTRODUCING_YATRI_POINTS_POPUP_LIMIT
+                | PARCEL_IMAGE_UPLOADED
+                | LOGS_TRACKING
+                | FUNCTION_EXECUTED_IN_SESSION
+                | EVENT_STORAGE
+                | LAST_PLAYED_RIDE_ID 
+                | GO_TO_PLANS_PAGE
+                | LAST_EXECUTED_TIME
+                | SHOW_PARCEL_INTRODUCTION_POPUP
+                | METRO_STATIONS_LIST
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -179,4 +198,9 @@ isLocalStageOn :: HomeScreenStage -> Boolean
 isLocalStageOn stage = (getValueToLocalNativeStore LOCAL_STAGE) == show stage
 
 isOnFreeTrial :: LazyCheck -> Boolean
-isOnFreeTrial dummy = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
+isOnFreeTrial dummy = do 
+  let freeTrialFromLocal = getValueToLocalNativeStore IS_ON_FREE_TRIAL
+  if freeTrialFromLocal /= "Nothing" then 
+    freeTrialFromLocal == "true" 
+  else 
+    fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0

@@ -26,7 +26,8 @@ instance FromTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefault
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             name = name,
             personId = Kernel.Types.Id.Id personId,
-            priority = priority
+            priority = priority,
+            shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption
           }
 
 instance ToTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
@@ -42,5 +43,6 @@ instance ToTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEm
         Beam.mobileNumberHash = mobileNumber & hash,
         Beam.name = name,
         Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.priority = priority
+        Beam.priority = priority,
+        Beam.shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption
       }

@@ -20,3 +20,45 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN merchant_opera
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD PRIMARY KEY ( service_name, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN sgst_percentage_one_time_security_deposit double precision ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN cgst_percentage_one_time_security_deposit double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_service_name text  default 'Payout_Juspay';
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN default_city_vehicle_category text ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_enabled_for_vehicle_categories text[] ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN number_of_free_trial_rides integer ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN free_trial_rides_applicable boolean ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN execution_enabled_for_vehicle_categories text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_subscription_enabled_at_category_level boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_city_based_fee_switch boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_vendor_split_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_clearance_message_key text ;

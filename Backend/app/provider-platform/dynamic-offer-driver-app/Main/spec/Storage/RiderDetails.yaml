@@ -13,7 +13,7 @@ RiderDetails:
 
   types:
     PayoutFlagReason:
-        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,DeviceIdDoesNotExist"
+        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
 
   fields:
     id : Id RiderDetails
@@ -30,10 +30,13 @@ RiderDetails:
     currency : Currency
     disputeChancesUsed : Int
     merchantId : Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     otpCode : Maybe Text
     nightSafetyChecks : Bool
     firstRideId: Maybe Text
     payoutFlagReason: Maybe PayoutFlagReason
+    isDeviceIdExists: Maybe Bool
+    isFlagConfirmed: Maybe Bool
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -102,6 +105,26 @@ RiderDetails:
       params: [firstRideId, payoutFlagReason]
       where: id
 
+    updateFlagReasonAndIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason,isDeviceIdExists]
+      where: id
+
+    updateIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [isDeviceIdExists]
+      where: id
+
+    updateIsFlagConfirmed:
+      kvFunction: updateOneWithKV
+      params: [isFlagConfirmed]
+      where: id
+
+    updatePayoutFlagReason:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason]
+      where: id
+
   sqlType:
     mobileCountryCode: character varying(255)
     mobileNumberEncrypted: character varying(255)
@@ -109,9 +132,7 @@ RiderDetails:
     referralCode: character varying(15)
     referredByDriver: character varying(255)
 
-
   extraOperations:
     - EXTRA_QUERY_FILE
 
-
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantId, createdAt, updatedAt]

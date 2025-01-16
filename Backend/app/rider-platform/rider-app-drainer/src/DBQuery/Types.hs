@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 

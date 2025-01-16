@@ -43,11 +43,13 @@ updateByPrimaryKey (Domain.Types.Mandate.Mandate {..}) = do
       Se.Set Beam.endDate endDate,
       Se.Set Beam.mandatePaymentFlow mandatePaymentFlow,
       Se.Set Beam.maxAmount maxAmount,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.payerApp payerApp,
       Se.Set Beam.payerAppName payerAppName,
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

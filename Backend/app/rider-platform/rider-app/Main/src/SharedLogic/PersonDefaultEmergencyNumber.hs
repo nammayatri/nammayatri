@@ -15,6 +15,7 @@
 module SharedLogic.PersonDefaultEmergencyNumber where
 
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
@@ -28,8 +29,8 @@ import Tools.Error
 import Tools.Notifications
 import Tools.SMS as Sms
 
-notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe Text -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
-notifyEmergencyContacts person body title notificationType message useSmsAsBackup emergencyContacts = do
+notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
+notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts = do
   void $
     mapM
       ( \emergencyContact ->
@@ -43,8 +44,8 @@ notifyEmergencyContacts person body title notificationType message useSmsAsBacku
       )
       emergencyContacts
   where
-    sendMessageToContact emergencyContact = when useSmsAsBackup $ case message of
-      Just msg -> sendMessageToEmergencyContact person emergencyContact msg
+    sendMessageToContact emergencyContact = when useSmsAsBackup $ case mbBuildSmsReq of
+      Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
       Nothing -> pure ()
 
 sendNotificationToEmergencyContact :: Person.Person -> Text -> Text -> Notification.Category -> Flow ()
@@ -69,10 +70,8 @@ sendNotificationToEmergencyContact person body title notificationType = do
           sound = notificationSound
         }
 
-sendMessageToEmergencyContact :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Text -> Flow ()
-sendMessageToEmergencyContact person emergencyContact message = do
-  smsCfg <- asks (.smsCfg)
-  let sender = smsCfg.sender
-      contactPhoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
-  Sms.sendSMS person.merchantId person.merchantOperatingCityId (Sms.SendSMSReq message contactPhoneNumber sender)
+sendMessageToEmergencyContact :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> (Text -> Sms.SendSMSReq) -> Flow ()
+sendMessageToEmergencyContact person emergencyContact buildSmsReq = do
+  let contactPhoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
+  Sms.sendSMS person.merchantId person.merchantOperatingCityId (buildSmsReq contactPhoneNumber)
     >>= Sms.checkSmsResult

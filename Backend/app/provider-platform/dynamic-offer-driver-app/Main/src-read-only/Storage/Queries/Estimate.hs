@@ -6,6 +6,7 @@ module Storage.Queries.Estimate where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -28,6 +29,32 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
+findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
+findEligibleForCabUpgrade requestId eligibleForUpgrade = do
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId),
+          Se.Is Beam.eligibleForUpgrade $ Se.Eq (Kernel.Prelude.Just eligibleForUpgrade)
+        ]
+    ]
+    Nothing
+
+updateSupplyDemandRatioByReqIdAndServiceTier ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Common.ServiceTierType -> m ())
+updateSupplyDemandRatioByReqIdAndServiceTier supplyDemandRatioFromLoc supplyDemandRatioToLoc requestId vehicleServiceTier = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
+      Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
+      Se.Set Beam.updatedAt (Just _now)
+    ]
+    [ Se.And
+        [ Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId),
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleServiceTier
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -38,6 +65,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+      Se.Set Beam.dpVersion dpVersion,
+      Se.Set Beam.eligibleForUpgrade (Kernel.Prelude.Just eligibleForUpgrade),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
       Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
@@ -46,10 +75,17 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
       Se.Set Beam.maxFare (Kernel.Prelude.roundToIntegral maxFare),
       Se.Set Beam.maxFareAmount (Kernel.Prelude.Just maxFare),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.minFare (Kernel.Prelude.roundToIntegral minFare),
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.smartTipReason smartTipReason,
+      Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationTag specialLocationTag,
+      Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
+      Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
+      Se.Set Beam.tipOptions tipOptions,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt (Just _now),
@@ -68,6 +104,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
           { createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            dpVersion = dpVersion,
+            eligibleForUpgrade = Kernel.Prelude.fromMaybe False eligibleForUpgrade,
             estimatedDistance = estimatedDistance,
             fareParams = fareParams',
             farePolicy = farePolicy',
@@ -76,9 +114,16 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
             isScheduled = Kernel.Prelude.fromMaybe Kernel.Prelude.False isScheduled,
             maxFare = Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
             requestId = Kernel.Types.Id.Id requestId,
+            smartTipReason = smartTipReason,
+            smartTipSuggestion = smartTipSuggestion,
             specialLocationTag = specialLocationTag,
+            supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
+            supplyDemandRatioToLoc = supplyDemandRatioToLoc,
+            tipOptions = tipOptions,
             tollNames = tollNames,
             tripCategory = Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
@@ -92,6 +137,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
       { Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.dpVersion = dpVersion,
+        Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
         Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
@@ -101,10 +148,17 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.isScheduled = Kernel.Prelude.Just isScheduled,
         Beam.maxFare = Kernel.Prelude.roundToIntegral maxFare,
         Beam.maxFareAmount = Kernel.Prelude.Just maxFare,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.minFare = Kernel.Prelude.roundToIntegral minFare,
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.smartTipReason = smartTipReason,
+        Beam.smartTipSuggestion = smartTipSuggestion,
         Beam.specialLocationTag = specialLocationTag,
+        Beam.supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
+        Beam.supplyDemandRatioToLoc = supplyDemandRatioToLoc,
+        Beam.tipOptions = tipOptions,
         Beam.tollNames = tollNames,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,

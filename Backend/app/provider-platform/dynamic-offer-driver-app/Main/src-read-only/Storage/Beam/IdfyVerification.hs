@@ -1,14 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.IdfyVerification where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.IdfyVerification
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,7 +33,7 @@ data IdfyVerificationT f = IdfyVerificationT
     requestId :: B.C f Kernel.Prelude.Text,
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Kernel.Prelude.Text,
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Category),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

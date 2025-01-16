@@ -17,7 +17,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import GHC.Generics (Generic)
 import Prelude
 
-data AppletKey = SosAppletID | RentalAppletID deriving (Show, Read, Eq, Ord, Generic)
+data AppletKey = SosAppletID | RentalAppletID | UnattendedTicketAppletID | PostRideSafetyCheckAppletID deriving (Show, Read, Eq, Ord, Generic)
 
 instance Hashable AppletKey
 
@@ -26,11 +26,15 @@ appletKeyToString :: AppletKey -> Text
 appletKeyToString = \case
   SosAppletID -> "SosAppletID"
   RentalAppletID -> "RentalAppletID"
+  UnattendedTicketAppletID -> "UnattendedTicketAppletID"
+  PostRideSafetyCheckAppletID -> "PostRideSafetyCheckAppletID"
 
 stringToAppletKey :: Text -> Maybe AppletKey
 stringToAppletKey = \case
   "SosAppletID" -> Just SosAppletID
   "RentalAppletID" -> Just RentalAppletID
+  "UnattendedTicketAppletID" -> Just UnattendedTicketAppletID
+  "PostRideSafetyCheckAppletID" -> Just PostRideSafetyCheckAppletID
   _ -> Nothing
 
 instance ToJSON AppletKey where

@@ -1,32 +1,24 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.DriverPlan where
 
 import qualified Data.Aeson as A
-import Domain.Types.DriverInformation (DriverAutoPayStatus)
 import Domain.Types.DriverPlan as Domain
 import qualified Domain.Types.Extra.DriverPlan
-import Domain.Types.Mandate
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
 import qualified Domain.Types.Plan
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPlan as BeamDF
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Person as QP
 
 getMerchantId :: (MonadFlow m, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames -> m (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant))
@@ -96,3 +88,42 @@ updateMerchantIdAndOpCityByDriverAndServiceName driverId merchantId merchantOpCi
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
+
+backfillVehicleCategoryByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DVC.VehicleCategory -> Text -> Maybe DPlan.ServiceNames -> DPlan.PaymentMode -> Text -> m (Maybe DVC.VehicleCategory)
+backfillVehicleCategoryByDriverIdAndServiceName mbVehicleCategory driverId mbServiceName planType planId = do
+  now <- getCurrentTime
+  let serviceName = fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName
+  case mbVehicleCategory of
+    Nothing -> do
+      plan <- CQP.findByIdAndPaymentModeWithServiceName (Id planId) planType serviceName
+      updateOneWithKV
+        [Se.Set BeamDF.vehicleCategory $ plan <&> (.vehicleCategory), Se.Set BeamDF.updatedAt now]
+        [ Se.And
+            [ Se.Is BeamDF.driverId (Se.Eq driverId),
+              Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+            ]
+        ]
+      return $ plan <&> (.vehicleCategory)
+    Just vehicleCategory' -> return $ Just vehicleCategory'
+
+backfillIsSubscriptionEnabledAtCategory :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Bool -> Text -> Maybe DPlan.ServiceNames -> m (Maybe Bool)
+backfillIsSubscriptionEnabledAtCategory mbIsSubscriptionEnabledAtCategory driverId mbServiceName = do
+  now <- getCurrentTime
+  case mbIsSubscriptionEnabledAtCategory of
+    Nothing -> do
+      isEnabledForCategory <- do
+        case mbServiceName of
+          Nothing -> return False
+          Just DPlan.YATRI_RENTAL -> return True
+          Just DPlan.YATRI_SUBSCRIPTION -> return False
+      whenJust mbServiceName $ \serviceName' -> do
+        updateOneWithKV
+          [Se.Set BeamDF.isCategoryLevelSubscriptionEnabled (Just isEnabledForCategory), Se.Set BeamDF.updatedAt now]
+          [ Se.And
+              [ Se.Is BeamDF.driverId (Se.Eq driverId),
+                Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName'),
+                Se.Is BeamDF.isCategoryLevelSubscriptionEnabled $ Se.Not $ Se.Eq (Just True)
+              ]
+          ]
+      return $ Just isEnabledForCategory
+    Just isEnabledForCategory' -> return $ Just isEnabledForCategory'

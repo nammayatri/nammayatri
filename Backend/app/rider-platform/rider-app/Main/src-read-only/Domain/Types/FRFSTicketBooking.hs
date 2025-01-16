@@ -1,12 +1,13 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketBooking where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -21,23 +22,34 @@ data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bppItemId :: Kernel.Prelude.Text,
     bppOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cashbackPayoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
     customerCancelled :: Kernel.Prelude.Bool,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    frequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
+    payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     price :: Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -47,17 +59,34 @@ data FRFSTicketBooking = FRFSTicketBooking
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
 
-data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED | COUNTER_CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data FRFSTicketBookingStatus
+  = NEW
+  | APPROVED
+  | PAYMENT_PENDING
+  | CONFIRMING
+  | FAILED
+  | CONFIRMED
+  | CANCELLED
+  | COUNTER_CANCELLED
+  | CANCEL_INITIATED
+  | TECHNICAL_CANCEL_REJECTED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

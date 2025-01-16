@@ -28,6 +28,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -46,6 +47,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -135,6 +137,7 @@ dependencies:
   - extra
   - hw-kafka-client
   - regex-posix
+  - insert-ordered-containers
 
 ghc-options:
   - -fwrite-ide-info

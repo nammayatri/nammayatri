@@ -43,6 +43,11 @@ data BannerType = AutoPay
   | CabLaunch
   | RentalsAndIntercity
   | AdvancedRide
+  | SafetyExplaination
+
+data BannerSize = Small --TODO:: Move string to BannerSize for bannerSize param
+  | Medium
+  | Large
 
 type CarouselConfig a = {
     item :: ListItem
@@ -81,9 +86,12 @@ type Config a = {
   actionImageUrl :: String,
   actionImageVisibility :: Boolean,
   actionArrowIconVisibility :: Boolean,
-  actionBottomArrowIconVisibility :: Boolean
+  actionBottomArrowIconVisibility :: Boolean,
+  accessibilityHint :: Maybe String
 , imageBannerUrl :: String
+, bannerSize :: Maybe String
 , dynamicAction :: Maybe RemoteAC
+, showDuringRide :: Maybe Boolean
 }
 
 config :: forall a. a -> Config a
@@ -119,9 +127,12 @@ config action = {
     showImageAsCTA : false,
     actionImageVisibility : false,
     actionArrowIconVisibility : true,
-    actionBottomArrowIconVisibility : false
+    actionBottomArrowIconVisibility : false,
+    accessibilityHint : Nothing
 , imageBannerUrl : ""
+, bannerSize : Nothing
 , dynamicAction : Nothing
+, showDuringRide : Nothing
 }
 
 
@@ -147,7 +158,9 @@ type PropConfig = (
   actionArrowIconVisibility :: PropValue,
   actionBottomArrowIconVisibility :: PropValue,
   imageBannerUrl :: PropValue,
-  imageBannerVisibility :: PropValue
+  imageBannerVisibility :: PropValue,
+  accessibilityHint :: PropValue,
+  bannerSize :: PropValue
 )
 
 
@@ -180,12 +193,14 @@ bannerTransformer =
   actionBottomArrowIconVisibility : toPropValue $ if item.actionBottomArrowIconVisibility then "visible" else "gone"
 , imageBannerUrl : toPropValue $ imageBannerUrl
 , imageBannerVisibility : toPropValue $ if DS.null $ imageBannerUrl then "gone" else "visible"
+, accessibilityHint : toPropValue $ fromMaybe "banner" item.accessibilityHint
+, bannerSize : toPropValue $ fromMaybe "small" item.bannerSize
   }
 )
 
 
-remoteConfigTransformer :: forall a. Array RCCarousel -> (Action -> a) -> Array (Config (Action -> a))
-remoteConfigTransformer remoteConfig action = 
+remoteConfigTransformer :: forall a. Array RCCarousel -> (Action -> a) -> Maybe String -> Array (Config (Action -> a))
+remoteConfigTransformer remoteConfig action mbBannerSize = 
   map (\(RCCarousel remoteConfig) -> 
     let
       config' = config action
@@ -208,6 +223,9 @@ remoteConfigTransformer remoteConfig action =
         actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
-        dynamicAction = remoteConfig.dynamic_action
+        dynamicAction = remoteConfig.dynamic_action,
+        accessibilityHint = remoteConfig.accessibilityHint,
+        bannerSize = mbBannerSize,
+        showDuringRide = remoteConfig.showDuringRide
       }
     in config'') remoteConfig

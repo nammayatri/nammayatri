@@ -19,6 +19,7 @@ import qualified Data.List as DL
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
+import qualified Domain.Types as DVST
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
@@ -28,10 +29,11 @@ import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
-import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -97,7 +99,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           phoneNo = driverPhone,
           personId = person.id.getId,
           classification = Ticket.DRIVER,
-          rideDescription = Nothing
+          rideDescription = Nothing,
+          becknIssueId = Nothing
         }
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
@@ -123,7 +126,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
     countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
     let phoneNumber = countryCode <> mobileNumber
     merchantMessage <-
-      QMM.findByMerchantOpCityIdAndMessageKey merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM
+      QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
     result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
@@ -139,8 +142,8 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
 
-checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Flow ()
-checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers = do
+checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Maybe Text -> Flow ()
+checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers downgradeReason = do
   driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   let serviceTierACThresholds = map (\DVST.VehicleServiceTier {isAirConditioned = _a, ..} -> airConditionedThreshold) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
@@ -156,7 +159,7 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
     when (driverInfo.acUsageRestrictionType `elem` [DI.ToggleAllowed, DI.NoRestriction]) $
       DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
   mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
-  QVehicle.updateAirConditioned (Just isAirConditioned) personId
+  QVehicle.updateAirConditioned (Just isAirConditioned) downgradeReason personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
 
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
@@ -226,7 +229,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     pucExpiry :: Maybe UTCTime,
     insuranceValidity :: Maybe UTCTime,
     vehicleClass :: Maybe Text,
-    vehicleVariant :: Maybe Variant,
+    vehicleVariant :: Maybe DV.VehicleVariant,
     failedRules :: [Text],
     vehicleManufacturer :: Maybe Text,
     vehicleCapacity :: Maybe Int,
@@ -263,12 +266,12 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
-      category = getCategory <$> rc.vehicleVariant,
+      category = DV.castVehicleVariantToVehicleCategory <$> rc.vehicleVariant,
       make = rc.vehicleManufacturer,
       model = fromMaybe "Unkown" rc.vehicleModel,
       size = Nothing,
       merchantId,
-      variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant,
+      variant = fromMaybe DV.AUTO_RICKSHAW rc.vehicleVariant,
       color = fromMaybe "Unkown" rc.vehicleColor,
       energyType = rc.vehicleEnergyType,
       registrationNo = certificateNumber,
@@ -283,6 +286,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       vehicleRating = rc.vehicleRating,
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
+      downgradeReason = Nothing,
       createdAt = now,
       updatedAt = now
     }
@@ -294,7 +298,7 @@ data CreateRCInput = CreateRCInput
   { registrationNumber :: Maybe Text,
     fitnessUpto :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text,
-    vehicleCategory :: Maybe Category,
+    vehicleCategory :: Maybe DVC.VehicleCategory,
     documentImageId :: Id Domain.Image,
     vehicleClass :: Maybe Text,
     vehicleClassCategory :: Maybe Text,
@@ -319,7 +323,7 @@ buildRC :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> 
 buildRC merchantId merchantOperatingCityId input = do
   now <- getCurrentTime
   id <- generateGUID
-  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
+  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessEpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
   return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessEpiry
@@ -375,7 +379,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       updatedAt = now
     }
 
-validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (Documents.VerificationStatus, Maybe Bool, Maybe Variant, Maybe Text)
+validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
   case rcconfigs.supportedVehicleClasses of
     DVC.RCValidClasses [] -> (Documents.INVALID, Nothing, Nothing, Nothing)
@@ -386,7 +390,7 @@ validateRCStatus input rcconfigs now expiry = do
       if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
     _ -> (Documents.INVALID, Nothing, Nothing, Nothing)
 
-isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Variant, Maybe Text)
+isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
   let sortedVariantMap = sortMaybe vehicleClassVariantMap
   let vehicleClassVariant = DL.find checkIfMatch sortedVariantMap
@@ -404,13 +408,13 @@ isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity ma
       let ambulanceMatched = if obj.vehicleVariant `elem` ambulanceVariants then checkAmbulanceVariant obj.vehicleVariant else ensureNonAmbulance bodyType manufacturerModel
       (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched && ambulanceMatched
 
-    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR] -- Todo: Create a fn to get variants by category
+    ambulanceVariants = [DV.AMBULANCE_TAXI, DV.AMBULANCE_TAXI_OXY, DV.AMBULANCE_AC, DV.AMBULANCE_AC_OXY, DV.AMBULANCE_VENTILATOR] -- Todo: Create a fn to get variants by category
     checkAmbulanceVariant variant = case (mbAirConditioned, mbOxygen, mbVentilator) of
-      (_, _, Just True) -> variant == AMBULANCE_VENTILATOR
-      (Just True, Just True, _) -> variant == AMBULANCE_AC_OXY
-      (Just True, _, _) -> variant == AMBULANCE_AC
-      (Just False, Just True, _) -> variant == AMBULANCE_TAXI_OXY
-      _ -> variant == AMBULANCE_TAXI
+      (_, _, Just True) -> variant == DV.AMBULANCE_VENTILATOR
+      (Just True, Just True, _) -> variant == DV.AMBULANCE_AC_OXY
+      (Just True, _, _) -> variant == DV.AMBULANCE_AC
+      (Just False, Just True, _) -> variant == DV.AMBULANCE_TAXI_OXY
+      _ -> variant == DV.AMBULANCE_TAXI
 
     ensureNonAmbulance bodyType_ manufacturerModel_ = do
       let checkerLiteral = Just "AMBULANCE"
@@ -484,21 +488,3 @@ convertTextToDay a = do
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
-
-getCategory :: Variant -> Category
-getCategory SEDAN = CAR
-getCategory SUV = CAR
-getCategory HATCHBACK = CAR
-getCategory AUTO_RICKSHAW = AUTO_CATEGORY
-getCategory TAXI = CAR
-getCategory TAXI_PLUS = CAR
-getCategory PREMIUM_SEDAN = CAR
-getCategory BLACK = CAR
-getCategory BLACK_XL = CAR
-getCategory BIKE = MOTORCYCLE
-getCategory AMBULANCE_TAXI = AMBULANCE
-getCategory AMBULANCE_TAXI_OXY = AMBULANCE
-getCategory AMBULANCE_AC = AMBULANCE
-getCategory AMBULANCE_AC_OXY = AMBULANCE
-getCategory AMBULANCE_VENTILATOR = AMBULANCE
-getCategory SUV_PLUS = CAR

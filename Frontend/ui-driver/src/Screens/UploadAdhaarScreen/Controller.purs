@@ -26,6 +26,7 @@ import Effect.Class (liftEffect)
 import JBridge (uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -67,6 +68,13 @@ data Action = BackPressed
             | UploadImage
             | PreviewImageAction
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> UploadAdhaarScreenState -> Eval Action ScreenOutput UploadAdhaarScreenState
 eval AfterRender state = continue state
 eval BackPressed state = exit GoBack
@@ -77,7 +85,7 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = exit (GoToBankDetails
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
+  _ <- liftEffect $ uploadFile uploadFileConfig true
   pure NoAction]
 eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
                                             else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}

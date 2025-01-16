@@ -17,7 +17,7 @@ module Screens.FollowRideScreen.View where
 import Accessor (_lat, _lon)
 import Animation
 import Animation.Config
-import Common.Resources.Constants (pickupZoomLevel, zoomLevel)
+import Common.Resources.Constants (pickupZoomLevel, zoomLevel, chatService)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
 import Constants.Configs (getPolylineAnimationConfig)
@@ -40,7 +40,7 @@ import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBac
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, frameLayout, imageView, linearLayout, relativeLayout, scrollView, textView)
 import PrestoDOM.Properties (alignParentBottom, accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, sheetState, text, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..))
-import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint, getPeekHeight, getSosStatus)
+import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint, getPeekHeight, getSosStatus, getChatChannelId)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getSosOverlayConfig, getTripDetails, primaryButtonConfig, getChatSuggestions)
 import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
@@ -50,13 +50,13 @@ import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
 import Data.String (take)
 import Font.Style as FontStyle
-import Language.Strings (getString)
+import Language.Strings (getString, getStringWithoutNewLine)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling(delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), SearchResultType(..), Stage(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -72,7 +72,11 @@ import Components.MessagingView.Common.Types (MessageNotificationView)
 import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 import Foreign (unsafeToForeign)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
-
+import Screens.Types as ST
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Components.Safety.Utils as SU
+import Components.MessagingView.Controller as CMC
+import Services.API as API
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -81,7 +85,7 @@ screen initialState globalState =
   , name: "FollowRideScreen"
   , globalEvents:
       [ ( \push -> do
-            storeCallBackCustomer push NotificationListener "FollowRideScreen"
+            storeCallBackCustomer push NotificationListener "FollowRideScreen" Just Nothing
             tracking <- runEffectFn1 getValueFromIdMap "FollowsRide"
             case initialState.data.currentStage of
               MockFollowRide -> void $ launchAff $ flowRunner globalState $ updateMockData push initialState tracking.id
@@ -93,17 +97,16 @@ screen initialState globalState =
                   $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
                       { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
                     ]
-                when (currentFollower.priority == 0 && not initialState.props.chatCallbackInitiated) $ do
-                  case initialState.data.driverInfoCardState of
-                    Nothing -> pure unit
-                    Just ride -> do
-                      when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
-                          void $ clearChatMessages
-                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
-                          void $ storeCallBackOpenChatScreen push OpenChatScreen
-                          void $ startChatListenerService
-                          void $ scrollOnResume push ScrollToBottom
-                          push InitializeChat
+                case initialState.data.driverInfoCardState, not initialState.props.chatCallbackInitiated of
+                  Just ride, true -> do
+                    if os /= "IOS" then do
+                      checkChatService push 5 ride.rideId initialState
+                    else if os == "IOS" then do
+                      startChatServices push ride.rideId initialState
+                    else
+                      pure unit
+                  _,_ -> pure unit
+                        
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 2000.0 tracking.id "trip"
             pure $ pure unit
         )
@@ -116,6 +119,27 @@ screen initialState globalState =
           _ = spy "FollowRideScreen state " state
         eval action state
   }
+
+checkChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> FollowRideScreenState -> Effect Unit
+checkChatService push retry rideId state = 
+  when (retry > 0) $ do 
+    let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
+    if isChatServiceRunning then do
+      void $ pure $ delay $ Milliseconds 2000.0
+      checkChatService push (retry-1) rideId state
+    else
+      startChatServices push rideId state
+
+startChatServices :: (Action -> Effect Unit) -> String -> FollowRideScreenState -> Effect Unit
+startChatServices push rideId state = do
+  let customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+      channelId = getChatChannelId state
+  void $ clearChatMessages
+  void $ storeCallBackMessageUpdated push channelId customerId UpdateMessages AllChatsLoaded
+  void $ storeCallBackOpenChatScreen push OpenChatScreen
+  void $ startChatListenerService
+  void $ scrollOnResume push ScrollToBottom
+  push InitializeChat
 
 type Layout w
   = PrestoDOM (Effect Unit) w
@@ -384,9 +408,11 @@ getMessageNotificationViewConfig state =
       driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
       currentFollower = getCurrentFollower state.data.currentFollower
       name = fromMaybe currentFollower.mobileNumber currentFollower.name
-      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide && currentFollower.priority == 0 
+      removeNotification = if state.props.isRideStarted 
                               then state.props.removeNotification 
                               else true
+      toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, sentBy, timeStamp, type: type_, delay}
   in {
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
@@ -394,7 +420,7 @@ getMessageNotificationViewConfig state =
   , fareProductType : driverInfoCard.fareProductType
   , config : state.data.config
   , rideStarted : true
-  , lastMessage : state.data.lastMessage
+  , lastMessage : toChatComponent state.data.lastMessage
   , lastSentMessage : state.data.lastSentMessage
   , lastReceivedMessage : state.data.lastReceivedMessage
   , removeNotificationAction : RemoveNotification
@@ -411,6 +437,7 @@ getMessageNotificationViewConfig state =
   , user :{ userName : name
     , receiver : name
     }
+  , isOtpRideFlow : false
   }
 
 bottomSheetView ::
@@ -418,8 +445,9 @@ bottomSheetView ::
   (Action -> Effect Unit) ->
   FollowRideScreenState ->
   Layout w
-bottomSheetView push state =
-  linearLayout
+bottomSheetView push state = let
+  isRideData = isJust state.data.driverInfoCardState
+  in linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
@@ -460,7 +488,16 @@ bottomSheetView push state =
                         , emergencyActionsView push state
                         ]
                     , addressView push state
-                    , driverInfoView push state
+                    , if isJust state.data.driverInfoCardState 
+                        then driverInfoView push state
+                        else PrestoAnim.animationSet [ fadeOut isRideData ]
+                              $ linearLayout
+                                  [ width MATCH_PARENT
+                                  , height WRAP_CONTENT
+                                  , visibility $ boolToVisibility $ not $ isJust state.data.driverInfoCardState
+                                  ]
+                                  [ driverInfoShimmer
+                                  ]
                     ]
                 ]
             ]
@@ -597,18 +634,33 @@ driverInfoView push state =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , visibility $ boolToVisibility isRideData
-              , padding $ PaddingBottom $ safeMarginBottomWithDefault 16
+              , padding $ PaddingBottom $ safeMarginBottomWithDefault (if os == "IOS" then 48 else 32)
               ]
-              [ driverDetailsView (getDriverDetails state) "FollowRideDriverDetailsView" "FollowNumberPlate"
+              [ driverDetailsView (push <<< DriverInfoCardAction) (getDriverDetails state) "FollowRideDriverDetailsView" "FollowNumberPlate"
               ]
-      , PrestoAnim.animationSet [ fadeOut isRideData ]
-          $ linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , visibility $ boolToVisibility $ not isRideData
-              ]
-              [ driverInfoShimmer
-              ]
+      ]
+
+driverInfoViewShimmer ::
+  forall w.
+  (Action -> Effect Unit) ->
+  FollowRideScreenState ->
+  Layout w
+driverInfoViewShimmer push state =
+  let
+    isRideData = isJust state.data.driverInfoCardState
+  in
+    relativeLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ]
+      [ PrestoAnim.animationSet [ fadeOut isRideData ]
+        $ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , visibility $ boolToVisibility $ not $ isJust state.data.driverInfoCardState
+            ]
+            [ driverInfoShimmer
+            ]
       ]
 
 addressView ::
@@ -690,7 +742,7 @@ headerView push state =
           ]
       ]
   where 
-    isChatEnabled currentFollower = state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide
+    isChatEnabled currentFollower = state.data.config.feature.enableChat && not currentFollower.isManualFollower
 
 emergencyActionsView ::
   forall w.
@@ -702,12 +754,29 @@ emergencyActionsView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.white900
-    , padding $ Padding 16 12 16 12
+    , padding $ Padding 10 12 10 12
     , margin $ Margin 16 6 16 12
     , cornerRadius 8.0
+
     ]
-    [ buttonView push state
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        ]
+        ( map
+            ( \item ->
+                SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (screenWidth unit - 76) / 2) true item.isDisabled Color.black900 WRAP_CONTENT
+            )
+            safetyActions
+        )
     ]
+  where   
+    safetyActions =
+      [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_ny_support" , backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallPolice, isDisabled: state.props.isMock }
+      , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_help_and_support_dark", backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallSafetyTeam, isDisabled: state.props.isMock }
+      ]
+    
 
 buttonView ::
   forall w.
@@ -722,7 +791,7 @@ buttonView push state =
     , cornerRadius 24.0
     , gravity CENTER
     , padding $ Padding 16 12 16 12
-    , onClick push $ const CallPolice
+    , onClick push $ const $ CallPolice SafetyActionTileView.OnClick
     , alpha $ if state.props.isMock  then 0.5 else 1.0
     , clickable $ not state.props.isMock
     ]
@@ -820,14 +889,14 @@ driverLocationTracking push action duration id routeState = do
 
       destination = ride.destination
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType (Just RideStarted)
 
       sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
       destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
 
       specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
-    routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+    routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon Nothing
     case routeResponse of
       Right (GetRouteResp routeResp) -> do
         case ((routeResp) !! 0) of
@@ -883,7 +952,7 @@ driverLocationTracking push action duration id routeState = do
 
       dstLon = ride.destinationLng
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType Nothing
 
       sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
@@ -896,9 +965,11 @@ driverLocationTracking push action duration id routeState = do
         newPoints = { points: locationResp.points }
 
         mbPoint = head locationResp.points
+
+        destMarkerConfig = defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker}
       liftFlow
         $ runEffectFn1 updateRoute
-            updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false, polylineKey = "DEFAULT" }
+            updateRouteConfig { json = newPoints, destMarkerConfig = destMarkerConfig, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false, polylineKey = "DEFAULT", pureScriptID = (getNewIDWithTag "FollowRideMap")  }
       case mbPoint of
         Just point -> addSosMarkers state.data.sosStatus point
         Nothing -> pure unit
@@ -1002,6 +1073,8 @@ messagingViewConfig state = let
   driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
   currentFollower = getCurrentFollower state.data.currentFollower
   name = fromMaybe currentFollower.mobileNumber currentFollower.name
+  toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, sentBy, timeStamp, type: type_, delay}
   in MessagingView.config {
     userConfig
     { userName = name
@@ -1014,7 +1087,7 @@ messagingViewConfig state = let
     , enableSuggestions = state.data.config.feature.enableSuggestions
     , showVehicleDetails = false
     }
-  , messages = state.data.messages
+  , messages = map toChatComponent state.data.messages
   , messagesSize = state.data.messagesSize
   , vehicleNo = makeNumber $ driverInfoCard.registrationNumber     
   , chatSuggestionsList = getChatSuggestions state
@@ -1028,6 +1101,16 @@ messagingViewConfig state = let
   , peekHeight = getChatHeight state
   , otp = driverInfoCard.otp
   , suggestionKey = emChatSuggestion
+  , currentChatRecipient = 
+    { name : name
+    , number : currentFollower.mobileNumber
+    , uuid : driverInfoCard.rideId <> "$" <> getValueToLocalStore CUSTOMER_ID
+    , recipient : CMC.USER
+    , enableForShareRide : false
+    , contactPersonId : Nothing
+    , notifiedViaFCM : Nothing
+    , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+    }
   }
 
 getChatHeight :: FollowRideScreenState -> Int

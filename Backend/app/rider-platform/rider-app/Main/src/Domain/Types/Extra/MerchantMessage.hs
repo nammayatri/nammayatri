@@ -1,13 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.MerchantMessage where
 
 import Data.Default.Class
-import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 
 -- Extra code goes here --

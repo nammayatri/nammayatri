@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverReferral where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -16,6 +15,8 @@ data DriverReferralT f = DriverReferralT
   { driverId :: B.C f Data.Text.Text,
     linkedAt :: B.C f Kernel.Prelude.UTCTime,
     referralCode :: B.C f Data.Text.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

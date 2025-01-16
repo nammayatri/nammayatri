@@ -42,6 +42,8 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -75,6 +77,8 @@ data HandlerEnv = HandlerEnv
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
+    eventRequestCounter :: EventCounterMetric,
+    eventStreamMap :: [EventStreamMap],
     maxShards :: Int,
     version :: DeploymentVersion,
     jobInfoMap :: M.Map Text Bool,
@@ -102,6 +106,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  eventRequestCounter <- registerEventRequestCounterMetric
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"

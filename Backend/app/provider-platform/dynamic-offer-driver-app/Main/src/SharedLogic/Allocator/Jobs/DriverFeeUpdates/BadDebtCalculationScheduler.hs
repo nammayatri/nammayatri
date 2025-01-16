@@ -1,6 +1,7 @@
 module SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler where
 
 import qualified Data.Map as M
+import Data.Time (UTCTime (UTCTime, utctDay), fromGregorian, secondsToDiffTime, toGregorian)
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -9,6 +10,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.DriverFee as QDF
 
@@ -32,9 +34,11 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   void $ QDF.updateBadDebtDateAllDriverFeeIds merchantId (driverFeesToUpdate <&> (.id)) transporterConfig
   if null driverFeesToUpdate
     then do
-      let dfCalculationJobTs = transporterConfig.badDebtSchedulerTime
-      maxShards <- asks (.maxShards)
-      createJobIn @_ @'BadDebtCalculation dfCalculationJobTs maxShards $
+      scheduledTime <- getThirdDayOfNextMonthWithMidnight
+      now <- getCurrentTime
+      let diffTime = diffUTCTime scheduledTime now
+      let dfCalculationJobTs = diffTime + transporterConfig.badDebtSchedulerTime
+      createJobIn @_ @'BadDebtCalculation (Just merchantId) (Just opCityId) dfCalculationJobTs $
         BadDebtCalculationJobData
           { merchantId = merchantId,
             merchantOperatingCityId = opCityId
@@ -44,3 +48,13 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.badDebtRescheduleTime <$> getCurrentTime
+
+getThirdDayOfNextMonthWithMidnight :: (MonadTime m) => m UTCTime
+getThirdDayOfNextMonthWithMidnight = do
+  currentDay <- getCurrentTime >>= pure . utctDay
+  let (year, month, _) = toGregorian currentDay
+      nextMonth = if month == 12 then 1 else month + 1
+      nextYear = if month == 12 then year + 1 else year
+      thirdDayOfNextMonth = fromGregorian nextYear nextMonth 3
+      midnightTime = UTCTime thirdDayOfNextMonth (secondsToDiffTime 0)
+  return midnightTime

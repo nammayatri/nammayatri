@@ -44,7 +44,7 @@ data DriverEdaKafkaT f = DriverEdaKafkaT
 
 deriving instance Show DriverEdaKafka
 
--- FIXME Status from Dashboard.ProviderPlatform.Ride
+-- FIXME Status from API.Types.ProviderPlatform.Management.Ride
 data Status
   = ON_RIDE
   | ON_PICKUP
@@ -74,7 +74,7 @@ driverEdaKafkaTTable =
 
 type DriverEdaKafka = DriverEdaKafkaT Identity
 
-$(TH.mkClickhouseInstances ''DriverEdaKafkaT)
+$(TH.mkClickhouseInstances ''DriverEdaKafkaT 'NO_SELECT_MODIFIER)
 
 -- FIXME what if we use the same operator like CH.filter_ twice
 findAll :: CH.HasClickhouseEnv CH.ATLAS_KAFKA m => UTCTime -> UTCTime -> Id DP.Driver -> Maybe (Id DRide.Ride) -> m [DriverEdaKafka]

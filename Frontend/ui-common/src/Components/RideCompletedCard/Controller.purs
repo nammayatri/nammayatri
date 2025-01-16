@@ -82,10 +82,15 @@ type Config = {
   rentalRideTextConfig :: RentalRideTextConfig,
   capacity :: Maybe Int,
   serviceTierAndAC :: String,
-  toll :: Toll,
+  additionalCharges :: Array AdditionalCharges,
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
-  showRentalRideDetails :: Boolean
+  showRentalRideDetails :: Boolean,
+  coinsEarned :: CoinsEarnedConfigType,
+  showIntercityDetails :: Boolean ,
+  parkingCharges :: ParkingChargesConfig,
+  showIntercityRideDetails :: Boolean,
+  interCityTextConfig :: IntercityRideTextConfig
 }
 
 data Theme = DARK | LIGHT
@@ -95,7 +100,7 @@ instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
 
-data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW | COINS_EARNED_VIEW
 
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
@@ -105,6 +110,11 @@ data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | Est
 derive instance genericRentalRowView :: Generic RentalRowView _
 instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
 
+
+type ParkingChargesConfig ={
+  parkingChargesTitle :: String,
+  parkingChargesDescription :: String
+} 
 type RentalTextConfig = {
   title :: String,
   subTitle :: String,
@@ -164,7 +174,8 @@ config = {
     title : "",
     subTitle : "",
     driverImage : "",
-    selectedRating : 0
+    selectedRating : 0,
+    actionPills : []
   },
   driverBottomCard : {
     visible : false,
@@ -187,7 +198,8 @@ config = {
     id : "",
     vpa : "",
     vpaIcon : "",
-    collectCashText : ""
+    collectCashText : "",
+    paymentVpa : ""
   },
   noVpaCard : {
     title : "",
@@ -230,17 +242,18 @@ config = {
   },
   needHelpText : "",
   safetyTitle : "",
-  toll : {
-    actualAmount : 0.0,
-    text : "",
-    visibility : GONE,
-    textColor : Color.black600,
-    imageVisibility : GONE,
-    image : ""
-  },
+  additionalCharges : [],
   rentalRowDetails : dummyRentalRowConfig,
   rentalBookingData : dummyRentalBookingConfig,
-  showRentalRideDetails : false
+  showRentalRideDetails : false,
+  coinsEarned : initialConinsEarnedConfig,
+  showIntercityRideDetails : false,
+  interCityTextConfig : dummyInterCityRideTextConfig,
+  showIntercityDetails : false,
+  parkingCharges : {
+    parkingChargesTitle : "",
+    parkingChargesDescription :""
+  }
 }
 
 type CustomerIssue = {
@@ -295,7 +308,8 @@ type CustomerBottomCard = {
   title :: String,
   subTitle :: String,
   driverImage :: String, 
-  selectedRating :: Int
+  selectedRating :: Int,
+  actionPills :: Array PillActionConfig
 }
 
 type DriverBottomCard = {
@@ -326,7 +340,8 @@ type DriverUpiQrCard = {
   id :: String,
   vpa :: String,
   vpaIcon :: String,
-  collectCashText :: String
+  collectCashText :: String,
+  paymentVpa :: String
 }
 
 type NoVpaCard = {
@@ -387,13 +402,16 @@ type RentalRideConfig = {
   rideEndedAt :: String
 }
 
-type Toll = {
-  actualAmount :: Number
-, text :: String
+type AdditionalCharges = {
+  text :: String
 , visibility :: Visibility
 , textColor :: Color
-, imageVisibility :: Visibility
 , image :: String
+}
+
+type IntercityRideTextConfig ={
+  headerText :: String,
+  bottomText :: String
 }
 
 type RentalRowConfig = {
@@ -443,8 +461,11 @@ dummyRentalBookingConfig =
   , extraTimeFare : ""
   }
 
-
-
+dummyInterCityRideTextConfig :: IntercityRideTextConfig
+dummyInterCityRideTextConfig = {
+  headerText : "",
+  bottomText : ""
+}
 
   
 
@@ -509,4 +530,22 @@ getCarouselConfig view customerIssueConfig = {
   , showScrollIndicator : false
   , layoutHeight : V 180
   , overlayScrollIndicator : false
+}
+
+type PillActionConfig = {
+  text :: String,
+  action :: Action,
+  useMarginRight :: Boolean,
+  image :: String
+}
+
+type CoinsEarnedConfigType = {
+  title :: String,
+  subTitle :: String
+}
+
+initialConinsEarnedConfig :: CoinsEarnedConfigType 
+initialConinsEarnedConfig = {
+  title : "",
+  subTitle : ""
 }

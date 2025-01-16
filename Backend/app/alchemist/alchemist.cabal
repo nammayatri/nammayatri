@@ -71,6 +71,7 @@ executable alchemist-generator-exe
     , bytestring
     , casing
     , directory
+    , extra
     , filepath
     , mobility-core
     , namma-dsl
@@ -79,6 +80,7 @@ executable alchemist-generator-exe
     , template-haskell
     , text
     , time
+    , turtle
     , yaml
   default-language: Haskell2010
   if flag(Local)

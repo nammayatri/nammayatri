@@ -203,6 +203,7 @@ library
       BecknV2.FRFS.Enums
       BecknV2.FRFS.Types
       BecknV2.FRFS.Utils
+      BecknV2.IGM.APIs
       BecknV2.OnDemand.Enums
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
@@ -211,6 +212,18 @@ library
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
       Domain.Types
+      Domain.Types.EmptyDynamicParam
+      Domain.Types.FareProductType
+      Domain.Types.RefereeLink
+      Domain.Types.ServiceTierType
+      Domain.Types.StationType
+      Domain.Types.Trip
+      Domain.Types.VehicleCategory
+      Domain.Types.VehicleVariant
+      Domain.Utils
+      IGM.Enums
+      IGM.Types
+      IGM.Utils
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
@@ -222,6 +235,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -240,6 +254,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -276,6 +291,7 @@ library
     , hspec
     , http-media
     , hw-kafka-client
+    , insert-ordered-containers
     , jwt
     , kleene
     , lattices

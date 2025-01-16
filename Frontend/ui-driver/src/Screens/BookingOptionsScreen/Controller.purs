@@ -6,7 +6,7 @@ import Components.PopUpModal as PopUpModal
 import Data.Array (filter, length, (!!), find)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>))
+import Prelude (class Show, map, pure, show, unit, discard, void, (<>), (==), not, ($), (>), (<$>),(&&))
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP, RidePreference)
@@ -21,6 +21,7 @@ import Services.API as API
 import Components.RateCard.Utils (getFareBreakupList)
 import Components.RateCard as RateCard
 import Common.RemoteConfig.Utils (tipConfigData)
+import RemoteConfig as RC
 import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
@@ -51,6 +52,7 @@ data Action
   | ShowRateCard ST.RidePreference
   | RateCardAction RateCard.Action
   | RateCardBannerClick
+  | ServiceTierInfoVideo API.ServiceTierType
 
 data ScreenOutput
   = GoBack BookingOptionsScreenState
@@ -70,13 +72,13 @@ eval (ToggleRidePreference service) state =
     update state
   else updateAndExit state $ ChangeRidePreference state service
 
-eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not state.props.canSwitchToRental} }
+eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} }
 
-eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToIntercity = not <$> state.props.canSwitchToIntercity}} $ ToggleRentalIntercityRide state {props {canSwitchToIntercity = not <$> state.props.canSwitchToIntercity}}
+eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}} $ ToggleRentalIntercityRide state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}}
 
 eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability state $ not acServiceToggle
 
-eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup } }
+eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup && state.data.config.rateCardScreen.showYoutubeVideo} }
 
 eval (TopAcDriverAction action) state = do
   let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
@@ -122,7 +124,7 @@ eval (ShowRateCard pref) state = do
               nightChargeTill = rateCardData.nightChargeEnd,
               nightChargeFrom = rateCardData.nightChargeStart,
               extraFare = rateCardData.fareList
-            }} , props {showRateCard = true } }
+            }} , props {showRateCard = state.data.config.rateCardScreen.showRateCard } }
         Nothing -> continue state
     Nothing -> continue state
 
@@ -140,6 +142,13 @@ eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state {
 
 eval RateCardBannerClick state = exit $ ExitToRateCardScreen state
 
+eval (ServiceTierInfoVideo serviceTierType) state = do
+  case serviceTierType of
+    API.DELIVERY_BIKE ->
+      let parcelConfig = RC.getParcelConfig "lazy"
+      in continueWithCmd state [pure $ OpenLink parcelConfig.introductionVideo]
+    _ -> continue state
+  
 eval _ state = update state
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config
@@ -158,6 +167,12 @@ getVehicleCapacity vehicleType = case vehicleType of
   "TAXI" -> getString ECONOMICAL <> " · " <> "4 " <> getString PEOPLE
   "SUV" -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
   "BIKE" -> getString ECONOMICAL <> " · " <> "1 " <> getString PEOPLE
+  "AMBULANCE_TAXI" -> "Ambulance Taxi" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_TAXI_OXY" -> "Ambulance Taxi Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC" -> "Ambulance AC" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC_OXY" -> "Ambulance AC Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_VENTILATOR" -> "Ambulance Ventilator" <> " · " <> "4 " <> getString PEOPLE
+  "SUV_PLUS" -> "AC, " <> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
   _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
 
 dummyVehicleP :: VehicleP

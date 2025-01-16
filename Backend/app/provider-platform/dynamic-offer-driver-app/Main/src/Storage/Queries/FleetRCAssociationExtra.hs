@@ -1,21 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.FleetRCAssociationExtra where
 
 import Domain.Types.FleetRCAssociation
 import Domain.Types.Person (Person)
 import Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Storage.Beam.FleetRCAssociation
 import qualified Storage.Beam.FleetRCAssociation as Beam
-import Storage.Queries.OrphanInstances.FleetRCAssociation
+import Storage.Queries.OrphanInstances.FleetRCAssociation ()
 
 -- Extra code goes here --
 findLinkedByRCIdAndFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe FleetRCAssociation)

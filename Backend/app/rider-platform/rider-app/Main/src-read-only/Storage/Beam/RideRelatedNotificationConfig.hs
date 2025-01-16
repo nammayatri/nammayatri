@@ -1,13 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.RideRelatedNotificationConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.RideRelatedNotificationConfig
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -39,3 +39,5 @@ type RideRelatedNotificationConfig = RideRelatedNotificationConfigT Identity
 $(enableKVPG ''RideRelatedNotificationConfigT ['id, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''RideRelatedNotificationConfigT "ride_related_notification_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''RideRelatedNotificationConfigT)

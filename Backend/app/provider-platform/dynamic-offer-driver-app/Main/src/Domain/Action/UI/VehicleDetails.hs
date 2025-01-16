@@ -1,13 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.VehicleDetails where
 
 import qualified API.Types.UI.VehicleDetails
-import Control.Applicative (Applicative (pure))
 import Data.List (nub)
-import Data.Maybe (fromMaybe)
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -17,9 +11,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
-import Servant
 import qualified Storage.CachedQueries.VehicleDetails as QCVehicleDetails
-import Tools.Auth
 import Tools.Error
 
 getVehicleMakes ::

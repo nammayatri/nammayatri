@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -14,6 +13,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -25,6 +25,8 @@ data DriverPlan = DriverPlan
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableServiceUsageCharge :: Kernel.Prelude.Bool,
+    isCategoryLevelSubscriptionEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isOnFreeTrial :: Kernel.Prelude.Bool,
     lastPaymentLinkSentAtIstDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mandateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate),
     mandateSetupDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -36,6 +38,7 @@ data DriverPlan = DriverPlan
     serviceName :: Domain.Types.Plan.ServiceNames,
     subscriptionServiceRelatedData :: Domain.Types.Extra.DriverPlan.SubscriptionServiceRelatedData,
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, Eq, Ord)

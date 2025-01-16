@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.SearchRequestForDriver where
 import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -15,7 +16,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
-import qualified SharedLogic.DriverPool.Types
 import qualified Storage.Beam.SearchRequestForDriver as Beam
 import Storage.Queries.Transformers.SearchRequestForDriver
 import qualified Storage.Queries.Transformers.SearchRequestForDriver
@@ -42,9 +42,10 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientSdkVersion = clientSdkVersion',
-            createdAt = Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill,
+            createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = getCustomerCancellationDues customerCancellationDues,
+            customerTags = customerTags,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverAvailableTime = driverAvailableTime,
             driverDefaultStepFee = Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee,
@@ -53,10 +54,13 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             driverMinExtraFee = Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee,
             driverSpeed = driverSpeed,
             driverStepFee = Kernel.Types.Common.mkAmountWithDefault driverStepFeeAmount <$> driverStepFee,
+            driverTags = driverTags,
             durationToPickup = durationToPickup,
             estimateId = estimateId,
+            fromLocGeohash = fromLocGeohash,
             goHomeRequestId = Kernel.Types.Id.Id <$> goHomeRequestId,
             id = Kernel.Types.Id.Id id,
+            isFavourite = isFavourite,
             isForwardRequest = Kernel.Prelude.fromMaybe False isForwardRequest,
             isPartOfIntelligentPool = isPartOfIntelligentPool,
             keepHiddenForSeconds = keepHiddenForSeconds,
@@ -64,23 +68,30 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             lon = lon,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
+            middleStopCount = middleStopCount,
             mode = mode,
             notificationSource = notificationSource,
             parallelSearchRequestCount = parallelSearchRequestCount,
             pickupZone = pickupZone,
+            poolingConfigVersion = poolingConfigVersion,
+            poolingLogicVersion = poolingLogicVersion,
             previousDropGeoHash = previousDropGeoHash,
+            renderedAt = renderedAt,
             requestId = Kernel.Types.Id.Id requestId,
+            respondedAt = respondedAt,
             response = response,
             rideFrequencyScore = rideFrequencyScore,
             rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
-            searchRequestValidTill = Data.Time.localTimeToUTC Data.Time.utc createdAt,
+            searchRequestValidTill = Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill,
             searchTryId = Kernel.Types.Id.Id searchTryId,
             startTime = startTime,
             status = status,
             straightLineDistanceToPickup = straightLineDistanceToPickup,
             totalRides = Kernel.Prelude.fromMaybe 0 totalRides,
+            updatedAt = updatedAt,
+            upgradeCabRequest = upgradeCabRequest,
             vehicleAge = vehicleAge,
-            vehicleServiceTier = Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
+            vehicleServiceTier = Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
           }
@@ -104,9 +115,10 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.clientOsType = clientDevice <&> (.deviceType),
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
-        Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill,
+        Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.customerCancellationDues = Kernel.Prelude.Just customerCancellationDues,
+        Beam.customerTags = customerTags,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverAvailableTime = driverAvailableTime,
         Beam.driverDefaultStepFee = Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee,
@@ -119,10 +131,13 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.driverSpeed = driverSpeed,
         Beam.driverStepFee = Kernel.Prelude.roundToIntegral <$> driverStepFee,
         Beam.driverStepFeeAmount = driverStepFee,
+        Beam.driverTags = driverTags,
         Beam.durationToPickup = durationToPickup,
         Beam.estimateId = estimateId,
+        Beam.fromLocGeohash = fromLocGeohash,
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isFavourite = isFavourite,
         Beam.isForwardRequest = Kernel.Prelude.Just isForwardRequest,
         Beam.isPartOfIntelligentPool = isPartOfIntelligentPool,
         Beam.keepHiddenForSeconds = keepHiddenForSeconds,
@@ -130,12 +145,17 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.lon = lon,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.middleStopCount = middleStopCount,
         Beam.mode = mode,
         Beam.notificationSource = notificationSource,
         Beam.parallelSearchRequestCount = parallelSearchRequestCount,
         Beam.pickupZone = pickupZone,
+        Beam.poolingConfigVersion = poolingConfigVersion,
+        Beam.poolingLogicVersion = poolingLogicVersion,
         Beam.previousDropGeoHash = previousDropGeoHash,
+        Beam.renderedAt = renderedAt,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.respondedAt = respondedAt,
         Beam.response = response,
         Beam.rideFrequencyScore = rideFrequencyScore,
         Beam.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
@@ -145,6 +165,8 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.status = status,
         Beam.straightLineDistanceToPickup = straightLineDistanceToPickup,
         Beam.totalRides = Kernel.Prelude.Just totalRides,
+        Beam.updatedAt = updatedAt,
+        Beam.upgradeCabRequest = upgradeCabRequest,
         Beam.vehicleAge = vehicleAge,
         Beam.vehicleServiceTier = Kernel.Prelude.Just vehicleServiceTier,
         Beam.vehicleServiceTierName = vehicleServiceTierName,

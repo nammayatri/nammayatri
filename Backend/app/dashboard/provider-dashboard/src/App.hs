@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -51,7 +53,7 @@ runService configModifier = do
       )
       appCfg.kvConfigUpdateFrequency
     L.setOption KafkaConn appEnv.kafkaProducerTools
-    L.setOption Tables (KUC.Tables [] [] [] False [])
+    L.setOption Tables KUC.defaultTableData
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     let flowRt' = flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}

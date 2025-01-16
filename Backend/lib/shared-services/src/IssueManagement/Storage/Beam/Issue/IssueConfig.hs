@@ -11,9 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueConfig where
@@ -33,7 +30,9 @@ data IssueConfigT f = IssueConfigT
     onIssueReopenMsgs :: B.C f [Text],
     onKaptMarkIssueResMsgs :: B.C f [Text],
     merchantId :: B.C f Text,
-    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig)
+    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -22,11 +22,11 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds", "addToLogList"])
 
 if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
+    return !blackListFunctions.has(fnName);
   }).forEach(fnName => {
       window.JBridgeProxy = window.JBridgeProxy || {};
       window.JBridgeProxy[fnName] = window.JBridge[fnName];
@@ -36,14 +36,20 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
           params = arguments[1].split("/").splice(6).join("/");
         }
         let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+        if (window.decodeAppConfig) {
+          shouldLog = window.decodeAppConfig.logFunctionCalls ? window.decodeAppConfig.logFunctionCalls : shouldLog;
         }
         if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+          window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
+        try{
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
+        }
+        catch(e){
+          console.error("Error in index.js" + e);
+          return;
+        }
       };
     });
 }
@@ -95,7 +101,7 @@ window.isObject = function (object) {
   return (typeof object == "object");
 }
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen", "RestartAutoScroll"];
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED"];
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED"]);
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {
@@ -182,6 +188,9 @@ window.onMerchantEvent = function (_event, globalPayload) {
   window.__payload = JSON.parse(globalPayload);
   const clientPaylod = window.__payload.payload;
   const appName = clientPaylod.appName;
+  if (clientPaylod.notification_type == "TRIGGER_FCM" && window.__OS == "IOS") {
+    clientPaylod["chatMessageData"] = JSON.parse(clientPaylod?.fullNotificationBody?.data?.entity_data);
+  }
   window.appName = appName;
   if (_event == "initiate") {
     console.log(
@@ -230,7 +239,11 @@ window.onMerchantEvent = function (_event, globalPayload) {
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
-    window.__payload.sdkVersion = "2.0.1"
+    const jpConsumingBackpress = {
+      event: "jp_consuming_backpress",
+      payload: { jp_consuming_backpress: true }
+    }
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
     try {
       const clientPaylod = window.__payload.payload;
       if (
@@ -253,7 +266,9 @@ window.onMerchantEvent = function (_event, globalPayload) {
       window.openChatScreen();
     } else {
       console.log("client Payload: ", clientPaylod);
-      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+      if(clientPaylod.notification_type == "TRIGGER_FCM"){
+        purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
+      }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();
@@ -286,9 +301,18 @@ window.callUICallback = function () {
 
 window.onResumeListeners = [];
 window.internetListeners = {};
+window.onPauseListeners = [];
 
 window.onPause = function () {
   console.error("onEvent onPause");
+  if (window.onPauseListeners && Array.isArray(window.onPauseListeners)) {
+    for (let i = 0; i < window.onPauseListeners.length;i++) {
+      window.onPauseListeners[i].call();
+    }
+  }
+  if(JBridge.unregisterShakeListener) {
+    JBridge.unregisterShakeListener();
+  }
 }
 function checkInternet() {
   return window.__OS === "IOS" ? JBridge.isNetworkAvailable() === "1" : JBridge.isInternetAvailable();
@@ -302,6 +326,9 @@ window.onResume = function () {
     }
     if(window.scrollAction) {
       window.scrollAction();
+    }
+    if(JBridge.registerShakeListener) {
+      JBridge.registerShakeListener();
     }
   }
 }

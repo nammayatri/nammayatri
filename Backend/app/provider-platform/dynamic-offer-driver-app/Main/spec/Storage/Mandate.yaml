@@ -24,6 +24,7 @@ Mandate:
     mandatePaymentFlow : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
   beamType:
     currency: Maybe Currency
@@ -67,4 +68,4 @@ Mandate:
     - EXTRA_QUERY_FILE
 
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

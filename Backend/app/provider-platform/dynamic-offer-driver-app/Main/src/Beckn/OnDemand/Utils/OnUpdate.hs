@@ -101,11 +101,13 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.DRIVER_SELECTED_FARE),
                      Just (show Enums.CUSTOMER_SELECTED_FARE),
                      Just (show Enums.TOTAL_FARE),
+                     Just (show Enums.CONGESTION_CHARGE),
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
+                     --  Just (show Enums.NIGHT_SHIFT_CHARGE)
                    ]
         DFParams.Slab ->
           title
@@ -115,10 +117,11 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PLATFORM_FEE),
                      Just (show Enums.SGST),
                      Just (show Enums.CGST),
+                     Just (show Enums.CONGESTION_CHARGE),
                      Just (show Enums.FIXED_GOVERNMENT_RATE),
                      Just (show Enums.TOTAL_FARE),
                      Just (show Enums.CUSTOMER_SELECTED_FARE),
-                     Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     --  Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
@@ -157,7 +160,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
-        DFParams.Ambulance -> True
+        _ -> True
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
@@ -385,6 +388,6 @@ tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = Utils.tfPaymentId mbPaymentId,
           itemPrice = Utils.tfItemPrice $ booking.estimatedFare,
-          itemTags = Utils.mkRateCardTag estimatedDistance Nothing mbFarePolicy
+          itemTags = Utils.mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
         }
     ]

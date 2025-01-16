@@ -18,6 +18,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
@@ -30,15 +31,21 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified Tools.Notifications as Notify
 
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | UnblockSoftBlockedDriver
+  | SoftBlockNotifyDriver
+  | SupplyDemand
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
@@ -51,15 +58,29 @@ data AllocatorJobType
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
   | CheckExotelCallStatusAndNotifyBAP
+  | Daily
+  | Weekly
+  | Monthly
+  | Quarterly
+  | DailyUpdateTag
+  | WeeklyUpdateTag
+  | MonthlyUpdateTag
+  | QuarterlyUpdateTag
+  | FleetAlert
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType
 
 instance JobProcessor AllocatorJobType where
+  type MerchantType AllocatorJobType = DM.Merchant
+  type MerchantOperatingCityType AllocatorJobType = DMOC.MerchantOperatingCity
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
+  restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
+  restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
@@ -72,6 +93,47 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
+  restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
+  restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
+  restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
+  restoreAnyJobInfo SQuarterly jobData = AnyJobInfo <$> restoreJobInfo SQuarterly jobData
+  restoreAnyJobInfo SDailyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SDailyUpdateTag jobData
+  restoreAnyJobInfo SWeeklyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SWeeklyUpdateTag jobData
+  restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
+  restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
+  restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
+
+instance JobInfoProcessor 'Daily
+
+instance JobInfoProcessor 'Weekly
+
+instance JobInfoProcessor 'Monthly
+
+instance JobInfoProcessor 'Quarterly
+
+instance JobInfoProcessor 'DailyUpdateTag
+
+instance JobInfoProcessor 'WeeklyUpdateTag
+
+instance JobInfoProcessor 'MonthlyUpdateTag
+
+instance JobInfoProcessor 'QuarterlyUpdateTag
+
+type instance JobContent 'Daily = LYT.KaalChakraJobData
+
+type instance JobContent 'Weekly = LYT.KaalChakraJobData
+
+type instance JobContent 'Monthly = LYT.KaalChakraJobData
+
+type instance JobContent 'Quarterly = LYT.KaalChakraJobData
+
+type instance JobContent 'DailyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'WeeklyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'MonthlyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'QuarterlyUpdateTag = LYT.UpdateKaalBasedTagsData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -91,6 +153,48 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data FleetAlertJobData = FleetAlertJobData
+  { fleetOwnerId :: Id DP.Driver,
+    entityId :: Id DTR.ApprovalRequest,
+    appletId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FleetAlert
+
+type instance JobContent 'FleetAlert = FleetAlertJobData
+
+newtype UnblockSoftBlockedDriverRequestJobData = UnblockSoftBlockedDriverRequestJobData
+  { driverId :: Id DP.Driver
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnblockSoftBlockedDriver
+
+type instance JobContent 'UnblockSoftBlockedDriver = UnblockSoftBlockedDriverRequestJobData
+
+data SoftBlockNotifyDriverRequestJobData = SoftBlockNotifyDriverRequestJobData
+  { driverId :: Id DP.Driver,
+    pendingNotificationRedisKey :: Text,
+    entityData :: Notify.IssueBreachEntityData
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SoftBlockNotifyDriver
+
+type instance JobContent 'SoftBlockNotifyDriver = SoftBlockNotifyDriverRequestJobData
+
+data SupplyDemandRequestJobData = SupplyDemandRequestJobData
+  { scheduleTimeIntervalInMin :: Int,
+    supplyDemandRatioTTLInSec :: Int,
+    calculationDataIntervalInMin :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SupplyDemand
+
+type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
 
@@ -131,7 +235,8 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
     scheduleOverlay :: Maybe Bool,
     scheduleManualPaymentLink :: Maybe Bool,
     scheduleDriverFeeCalc :: Maybe Bool,
-    createChildJobs :: Maybe Bool
+    createChildJobs :: Maybe Bool,
+    recalculateManualReview :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -172,7 +277,8 @@ data SendOverlayJobData = SendOverlayJobData
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
     serviceName :: Maybe Plan.ServiceNames,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    vehicleCategory :: Maybe DVC.VehicleCategory
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -225,7 +331,8 @@ data DriverReferralPayoutJobData = DriverReferralPayoutJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     toScheduleNextPayout :: Bool,
-    statusForRetry :: DS.PayoutStatus
+    statusForRetry :: DS.PayoutStatus,
+    schedulePayoutForDay :: Maybe Integer
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -244,8 +351,9 @@ instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
 
 type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData
 
-newtype CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
-  { rideId :: Id DRide.Ride
+data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
+  { rideId :: Id DRide.Ride,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, FromJSON, ToJSON)
 

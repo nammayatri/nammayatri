@@ -18,3 +18,18 @@ ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN rented_vehicle_number 
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN total_coins_converted_cash double precision NOT NULL default 0;
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD PRIMARY KEY ( driver_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_on_free_trial boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_category_level_subscription_enabled boolean ;

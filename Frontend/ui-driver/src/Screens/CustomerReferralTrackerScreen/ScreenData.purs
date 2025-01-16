@@ -76,6 +76,8 @@ initData =
       , showDeleteUPIView : false
       , showUPIOptions : false
       , showInfoPopUp : false
+      , fromDeepLink : false
+      , openPP : false
       }
   }
 

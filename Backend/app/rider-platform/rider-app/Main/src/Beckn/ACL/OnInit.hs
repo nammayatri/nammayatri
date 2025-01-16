@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
+import Beckn.ACL.Common as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -29,13 +30,18 @@ import Kernel.Utils.Common
 import Tools.Error
 
 buildOnInitReqV2 ::
-  ( HasFlowEnv m r '["_version" ::: Text]
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m,
+    CacheFlow m r
   ) =>
   Spec.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
 buildOnInitReqV2 req = do
   ContextV2.validateContext Context.ON_INIT $ req.onInitReqContext
-  handleErrorV2 req $ \_message ->
+  handleErrorV2 req $ \message -> do
+    let order = message.confirmReqMessageOrder
+    fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
+    let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do

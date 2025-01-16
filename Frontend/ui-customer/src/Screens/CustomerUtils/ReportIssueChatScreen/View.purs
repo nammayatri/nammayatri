@@ -45,7 +45,7 @@ import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData, stor
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||), (&&), (/=))
 import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor, accessibility, Accessiblity(..), accessibilityHint)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, id)
@@ -55,7 +55,7 @@ import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
-import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState)
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -168,12 +168,24 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text state.data.categoryName
+              , text $ getString REPORT_AN_ISSUE
               , margin $ MarginLeft 5
               , weight 1.0
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
+        , textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , visibility $ boolToVisibility $ isJust state.data.selectedRide && state.data.entryPoint /= TripDetailsScreenEntry
+              , text $ getString RIDE_DETAILS
+              , weight 1.0
+              , color Color.blue900
+              , gravity RIGHT
+              , margin $ MarginRight 12
+              , onClick push $ const GoToRideDetails
+            ]
+            <> FontStyle.body6 TypoGraphy
         ]
     , linearLayout
         [ width MATCH_PARENT
@@ -217,7 +229,6 @@ chatView push state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    , afterRender push $ pure ShowOptions
     , background Color.white900
     , orientation VERTICAL
     ]
@@ -226,7 +237,7 @@ chatView push state =
 
 submitView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 submitView push state =
-  let enableSubmit = (STR.length (STR.trim state.data.messageToBeSent)) > 0 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
+  let enableSubmit = (STR.length (STR.trim state.data.messageToBeSent)) > 10 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
   in 
   linearLayout
     [ height WRAP_CONTENT
@@ -324,7 +335,7 @@ submitView push state =
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , background Color.brightBlue
+        , background $ state.data.config.submitIssueBtnColor
         , cornerRadius 26.0
         , padding $ PaddingVertical 16 16
         , orientation HORIZONTAL

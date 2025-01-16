@@ -1,19 +1,17 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SearchRequestForDriver where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
-import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -37,6 +35,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    customerTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAvailableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverDefaultStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -45,10 +44,13 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverMinExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
     durationToPickup :: Kernel.Types.Common.Seconds,
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
+    isFavourite :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,
     keepHiddenForSeconds :: Kernel.Types.Common.Seconds,
@@ -56,12 +58,17 @@ data SearchRequestForDriver = SearchRequestForDriver
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
+    middleStopCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupZone :: Kernel.Prelude.Bool,
+    poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     previousDropGeoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    renderedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    respondedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     response :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse,
     rideFrequencyScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     rideRequestPopupDelayDuration :: Kernel.Types.Common.Seconds,
@@ -71,10 +78,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     status :: Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
+    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    upgradeCabRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show)
 

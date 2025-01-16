@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module IssueManagement.Storage.CachedQueries.Issue.IssueConfig where
 
@@ -24,6 +22,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+
+create :: BeamFlow m r => IssueConfig -> m ()
+create = Queries.create
 
 findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> Identifier -> m (Maybe IssueConfig)
 findByMerchantOpCityId merchantOpCityId identifier =

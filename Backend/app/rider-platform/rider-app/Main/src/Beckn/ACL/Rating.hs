@@ -15,7 +15,6 @@
 
 module Beckn.ACL.Rating (buildRatingReqV2) where
 
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
@@ -28,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
 buildRatingReqV2 ::
@@ -38,7 +38,9 @@ buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  moc <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   ttl <- bapConfig.ratingTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country (Just ttl)
   let message = tfMessage res
@@ -61,7 +63,7 @@ tfRating res@DFeedback.FeedbackRes {..} = do
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
       ratingFeedbackForm = Just $ tfFeedbackForm res,
-      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum
+      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath res.riderName
     }
 
 tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
@@ -83,8 +85,8 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
       }
     ]
 
-mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe [Spec.TagGroup]
-mkRatingTags mbShouldFavDriver mbPhoneNum =
+mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe Text -> Text -> Maybe [Spec.TagGroup]
+mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath riderName =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -95,7 +97,7 @@ mkRatingTags mbShouldFavDriver mbPhoneNum =
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
-          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum
+          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum <> mkFilePathTag mbFilePath <> mkPersonName riderName
         }
     ]
 
@@ -128,5 +130,37 @@ mkPersonNumberTag mbPhoneNum =
                 },
           tagDisplay = Just False,
           tagValue = Just phoneNum
+        }
+    ]
+
+mkFilePathTag :: Maybe Text -> Maybe [Spec.Tag]
+mkFilePathTag mbFilePath =
+  mbFilePath <&> \filePath ->
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.MEDIA_FILE_PATH,
+                  descriptorName = Just "Media File Path",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just filePath
+        }
+    ]
+
+mkPersonName :: Text -> Maybe [Spec.Tag]
+mkPersonName riderName = do
+  Just
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDER_NAME,
+                  descriptorName = Just "Rider Name",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just riderName
         }
     ]

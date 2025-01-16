@@ -1,22 +1,25 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverStatsExtra where
 
 import Control.Applicative (liftA2)
+import Domain.Types.DriverInformation
 import Domain.Types.DriverStats as Domain
-import Domain.Types.Person (Driver)
-import GHC.Float (double2Int, int2Double)
+import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Person
+import Domain.Types.Vehicle
+import GHC.Float (int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
+import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
 import qualified Storage.Beam.DriverStats as BeamDS
-import Storage.Queries.OrphanInstances.DriverStats
+import Storage.Queries.OrphanInstances.DriverStats ()
+import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
+import Tools.Error
 
 -- Extra code goes here --
 
@@ -48,9 +51,13 @@ createInitialDriverStats currency distanceUnit driverId = do
             totalRatingScore = Just 0,
             isValidRating = Just False,
             totalPayoutEarnings = 0.0,
+            totalPayoutAmountPaid = Nothing,
             totalValidActivatedRides = 0,
             totalReferralCounts = 0,
-            updatedAt = now
+            updatedAt = now,
+            validCustomerCancellationTagCount = 0,
+            validDriverCancellationTagCount = 0,
+            validCancellationTagsStatsStartDate = Just now
           }
   createWithKV dStats
 
@@ -58,15 +65,12 @@ getTopDriversByIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int ->
 getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
 updateIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
-updateIdleTime driverId = updateIdleTimes [driverId]
-
-updateIdleTimes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m ()
-updateIdleTimes driverIds = do
+updateIdleTime (Id driverId) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDS.idleSince now
     ]
-    [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
+    [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
@@ -74,16 +78,21 @@ fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
 findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]
 
-incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Meters -> m ()
-incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
+incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m ()
+incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   now <- getCurrentTime
-  findTotalRides (Id driverId') >>= \(rides, distance) ->
+  findTotalRides (Id driverId') >>= \(rides, distance) -> do
     updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
         Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
+        Se.Set BeamDS.idleSince now,
         Se.Set BeamDS.updatedAt now
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    totalRideKey :: (Maybe Int) <- Redis.safeGet $ mkCachedKeyTotalRidesByDriverId (Id driverId')
+    case totalRideKey of
+      Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
+      Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
@@ -210,3 +219,17 @@ updateAverageRating (Id driverId') totalRatingsCount' totalRatingScore' isValidR
       Se.Set BeamDS.updatedAt now
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId = do
+  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId
+  addRidesCount `mapM` mbDriverInfo
+  where
+    addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
+    addRidesCount (person, info, vehicle) = do
+      driverStats <- findById person.id >>= fromMaybeM DriverInfoNotFound
+      let ridesCount = Just driverStats.totalRides
+      pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
+
+mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}

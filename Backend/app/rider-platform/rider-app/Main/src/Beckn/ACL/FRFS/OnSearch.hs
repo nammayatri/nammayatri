@@ -14,13 +14,13 @@
 
 module Beckn.ACL.FRFS.OnSearch where
 
-import API.Types.UI.FRFSTicketService as API
+import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
-import qualified Domain.Types.Station as Domain.DStation
+import Domain.Types.StationType
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -51,6 +51,21 @@ buildOnSearchReq onSearchReq = do
 
   items <- provider.providerItems & fromMaybeM (InvalidRequest "Items not found")
   fulfillments <- provider.providerFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
+  payments <- provider.providerPayments & fromMaybeM (InvalidRequest "Payments not found")
+  interestTags <-
+    catMaybes
+      <$> mapM
+        ( \p ->
+            case p.paymentTags of
+              Nothing -> pure Nothing
+              Just paymentTags -> pure $ Utils.getTag "SETTLEMENT_TERMS" "DELAY_INTEREST" paymentTags
+        )
+        payments
+
+  when (null interestTags) $
+    throwError $ InvalidRequest "Payment tags are missing for all payments"
+
+  let bppDelayedInterest = listToMaybe interestTags
 
   quotes <- mkQuotes items fulfillments
 
@@ -64,7 +79,8 @@ buildOnSearchReq onSearchReq = do
         bppSubscriberUrl,
         validTill = ttl,
         transactionId,
-        messageId
+        messageId,
+        bppDelayedInterest
       }
 
 mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]
@@ -98,7 +114,9 @@ parseFulfillments item fulfillments fulfillmentId = do
       { bppItemId = itemId,
         price,
         vehicleType,
+        routeStations = [],
         stations,
+        discounts = [],
         _type = quoteType
       }
 
@@ -116,7 +134,8 @@ mkDStation stop seqNumber = do
         stationType,
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
-        stationLon = snd <$> mLatLon
+        stationLon = snd <$> mLatLon,
+        towards = Nothing
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]
@@ -155,18 +174,18 @@ mapWithIndex f xs = go 0 xs
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-castVehicleVariant :: Text -> Maybe Domain.DStation.FRFSVehicleType
+castVehicleVariant :: Text -> Maybe Enums.VehicleCategory
 castVehicleVariant = \case
-  "METRO" -> Just Domain.DStation.METRO
-  "BUS" -> Just Domain.DStation.BUS
+  "METRO" -> Just Enums.METRO
+  "BUS" -> Just Enums.BUS
   _ -> Nothing
 
-castStationType :: Text -> Maybe API.StationType
+castStationType :: Text -> Maybe StationType
 castStationType = \case
-  "START" -> Just API.START
-  "END" -> Just API.END
-  "TRANSIT_STOP" -> Just API.TRANSIT
-  "INTERMEDIATE_STOP" -> Just API.INTERMEDIATE
+  "START" -> Just START
+  "END" -> Just END
+  "TRANSIT_STOP" -> Just TRANSIT
+  "INTERMEDIATE_STOP" -> Just INTERMEDIATE
   _ -> Nothing
 
 castQuoteType :: MonadFlow m => Text -> m DQuote.FRFSQuoteType

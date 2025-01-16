@@ -74,3 +74,13 @@ ALTER TABLE atlas_app.quote ADD COLUMN is_air_conditioned boolean ;
 
 ALTER TABLE atlas_app.quote ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_app.quote ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN trip_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN vehicle_icon_url character varying(255) ;

@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.MediaFile where
 
@@ -26,6 +24,7 @@ data MediaFileT f = MediaFileT
   { id :: B.C f Text,
     fileType :: B.C f FileType,
     url :: B.C f Text,
+    s3FilePath :: B.C f (Maybe Text),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)

@@ -29,10 +29,10 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import JBridge (getArray)
+import JBridge (getArray, getSecondsFromUTCTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, bind, not, pure, unit, discard, void)
+import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), (>), (-), const, show, bind, not, pure, unit, discard, void)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -42,7 +42,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Types.Core (toPropValue)
 import Screens.RideSelectionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import Services.API (RideBookingListRes(..))
+import Services.API (RideBookingListRes(..), RideBookingRes(..))
 import Services.Backend as Remote
 import Components.PrimaryButton (view) as PrimaryButton
 import Styles.Colors as Color
@@ -50,6 +50,8 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
 import Screens.RideSelectionScreen.ScreenData 
+import Data.Maybe(Maybe(..))
+import Data.Function.Uncurried (runFn1)
 
 screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
 screen initialState listItemm =
@@ -245,19 +247,32 @@ shimmerData i = {
   variantImage : toPropValue "",
   showVariantImage : toPropValue "visible",
   showRepeatRide : toPropValue "visible",
-  showDestination : toPropValue "visible"
+  showDestination : toPropValue "visible",
+  itemRideType : toPropValue "ONE_WAY",
+  rideTypeVisibility : toPropValue "gone",
+  rideTypeBackground : toPropValue "#FFFFFF",
+  cornerRadius : toPropValue "0"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> RideSelectionScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
   rideBookingListResponse <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
   case rideBookingListResponse of
-      Right (RideBookingListRes  listResp) -> do
-          doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
+      Right (RideBookingListRes listResp) -> do
+          doAff do liftEffect $ push $ action (RideBookingListRes {list : listResp.list}) "success"
           pure unit
       Left err -> do
         doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) if err.code == 500 then "listCompleted" else "failure"
         pure unit
+  where
+    filterRides selectedCategory rideList = case selectedCategory.maxAllowedRideAge of
+      Just maxAllowedRideAge -> do
+        let currentTimeInSeconds = getSecondsFromUTCTime $ EHC.getCurrentUTC ""
+        DA.filter (\(RideBookingRes ride) -> do
+            let rideCreatedAtInSeconds = getSecondsFromUTCTime ride.createdAt
+            rideCreatedAtInSeconds > currentTimeInSeconds - maxAllowedRideAge
+          ) rideList
+      Nothing ->  rideList
 
 dummyListResp :: forall a.  { list :: Array a}
 dummyListResp = {list : []}

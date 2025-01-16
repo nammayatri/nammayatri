@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.IdfyVerification where
@@ -10,7 +9,7 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -34,7 +33,7 @@ data IdfyVerificationE e = IdfyVerification
     requestId :: Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Kernel.Prelude.Text,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

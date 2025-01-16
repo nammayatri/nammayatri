@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SuspectFlagRequest where
@@ -36,6 +35,6 @@ data SuspectFlagRequest = SuspectFlagRequest
 
 data AdminApproval = Pending | Approved | Rejected deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AdminApproval))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AdminApproval)
 
-$(mkHttpInstancesForEnum (''AdminApproval))
+$(mkHttpInstancesForEnum ''AdminApproval)

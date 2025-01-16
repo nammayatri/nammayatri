@@ -84,6 +84,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "otpResent"
 
 data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen | GoToVehicleDetailScreen | GoToEnterOtp ApplicationStatusScreenState | AddMobileNumber ApplicationStatusScreenState | ResendOtp ApplicationStatusScreenState

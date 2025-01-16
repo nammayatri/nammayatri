@@ -15,13 +15,12 @@
 module API.UI.Confirm
   ( API,
     handler,
-    confirm,
+    confirm',
     ConfirmRes (..),
   )
 where
 
 import qualified Beckn.ACL.Init as ACL
-import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
@@ -38,7 +37,9 @@ import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Auth
+import qualified Tools.Metrics as Metrics
 
 type API =
   "rideSearch"
@@ -47,6 +48,7 @@ type API =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
+    :> QueryParam "isAdvancedBookingEnabled" Bool
     :> Post '[JSON] ConfirmRes
 
 data ConfirmRes = ConfirmRes
@@ -66,17 +68,29 @@ confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, _) quoteId mbPaymentMethodId =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
+confirm (personId, merchantId) quoteId mbPaymentMethodId = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbPaymentMethodId
+
+confirm' ::
+  (Id SP.Person, Id Merchant.Merchant) ->
+  Id Quote.Quote ->
+  Maybe Payment.PaymentMethodId ->
+  Maybe Bool ->
+  Flow ConfirmRes
+confirm' (personId, _) quoteId mbPaymentMethodId isAdvanceBookingEnabled =
+  withPersonIdLogTag personId $ do
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId isAdvanceBookingEnabled
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
-    bapConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
+    bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dConfirmRes.merchant.id "MOBILITY" moc.id
+    bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dConfirmRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
     initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
     confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
     confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
-    handle (errHandler dConfirmRes.booking) $
+    handle (errHandler dConfirmRes.booking) $ do
+      Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name dConfirmRes.searchRequestId.getId dConfirmRes.booking.merchantOperatingCityId.getId
       void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
 
     return $

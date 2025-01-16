@@ -35,6 +35,7 @@ import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
+import Engineering.Helpers.Utils (showToast)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
 import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent, locateOnMapConfig)
@@ -52,6 +53,7 @@ import Screens.Types (AddNewAddressScreenState, CardType(..), LocationListItemSt
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm, Location)
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
@@ -84,6 +86,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextAC act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "focus_changed"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "text_image_clicked"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "no_action"
@@ -205,7 +208,12 @@ eval (BackPressed backpressState) state = do
     _ , _ , _ , true -> do
       exit $ GoToHome
     _ , _ , _ , false -> do 
-      if (state.props.fromScreen == searchLocScreen) then exit $ GoToSearchLocScreen
+      if (state.props.fromScreen == searchLocScreen) then
+        if isParentView FunctionCall 
+        then do 
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else exit $ GoToSearchLocScreen
       else do 
         void $ pure $ hideKeyboardOnNavigation true
         void $ pure $ exitLocateOnMap ""
@@ -229,7 +237,7 @@ eval (LocationListItemAC (LocationListItemController.OnClick item))  state = do
             _      -> continue state
       Nothing       -> continue state
     else do
-      void $ pure $ toast (getString LOCATION_ALREADY_EXISTS)
+      void $ pure $ showToast (getString LOCATION_ALREADY_EXISTS)
       continue state
 
 eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
@@ -262,7 +270,7 @@ eval (TagSelected index) state = do
                               , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation && state.data.placeName /="" ) || index == 1 || index == 0
                                               }}
         else do
-          void $ pure $ toast ((case (toLower activeTag) of
+          void $ pure $ showToast ((case (toLower activeTag) of
                                   "home" -> (getString HOME)
                                   "work" -> (getString WORK)
                                   _      -> "") <> " " <> (getString LOCATION_ALREADY_EXISTS))
@@ -329,6 +337,8 @@ getLocation prediction = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -392,7 +402,8 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , frequencyCount : Nothing
 , recencyDate : Nothing
 , locationScore : Nothing
-
+, dynamicAction : Nothing
+, types : Nothing 
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
@@ -505,5 +516,6 @@ savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , frequencyCount : Nothing
 , recencyDate : Nothing
 , locationScore : Nothing
-
+, dynamicAction : Nothing
+, types : Nothing
 }) savedLocation )

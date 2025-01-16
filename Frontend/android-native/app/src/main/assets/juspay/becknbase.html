@@ -11,6 +11,14 @@
     window.DUIGatekeeper = JBridge;
     window.JBridge.setAnalyticsHeader(JSON.stringify({"x-client-id": "mobility"}));
 
+    const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+    const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+    const JOSFlags = window.JOS.getJOSflags()
+    if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
+        Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
+    } else {
+        Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
+    }
 </script>
 
 <script type="text/javascript">
@@ -23,5 +31,6 @@
         newScript.id = 'mystique';
         newScript.innerHTML = jsFile;
         headID.appendChild(newScript);
+        
 </script>
 </html>

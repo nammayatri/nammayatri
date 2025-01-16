@@ -73,3 +73,82 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_id SET NOT NULL;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN event_discount_amount double precision ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounted_tickets integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN payer_vpa text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_status text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_payout_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id character varying(36) ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_short_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_long_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_description text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_provider_code text ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_delayed_interest integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_stations_json text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN route_id;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounts_json text ;
+
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_order integer ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frequency integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN start_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color_code text ;

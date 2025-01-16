@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SearchTry where
@@ -9,7 +8,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
-import qualified Domain.Types.ServiceTierType
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -39,7 +37,7 @@ data SearchTry = SearchTry
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -46,6 +46,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -139,6 +140,7 @@ dependencies:
   - amazonka
   - amazonka-core
   - amazonka-ses
+  - amazonka-sns
   - beam-core
   - beam-postgres
   - postgresql-simple

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BookingUpdateRequest where
@@ -27,6 +26,7 @@ data BookingUpdateRequest = BookingUpdateRequest
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
     fareParamsId :: Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters,
     farePolicyId :: Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy,
+    getRouteReq :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -35,6 +35,8 @@ data BookingUpdateRequest = BookingUpdateRequest
     oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
     oldFareParamsId :: Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters,
     oldMaxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    routeInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    snapToRoadFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,

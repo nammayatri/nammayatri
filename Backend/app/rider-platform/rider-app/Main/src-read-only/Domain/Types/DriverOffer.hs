@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverOffer where
@@ -24,6 +23,7 @@ data DriverOffer = DriverOffer
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     fareProductType :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType,
     id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
+    isUpgradedToCab :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,

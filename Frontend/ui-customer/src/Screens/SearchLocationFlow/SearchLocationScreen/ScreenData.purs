@@ -15,11 +15,11 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..),RideType(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
-import Services.API (PlaceName(..), LatLong(..))
+import Services.API (PlaceName(..), LatLong(..) , SearchRideType (..), TicketServiceType(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Prelude (negate)
@@ -28,6 +28,7 @@ import Prelude (negate)
 initData :: SearchLocationScreenState 
 initData = {
   data : { srcLoc : Nothing
+         , listItem : Nothing
          , destLoc : Nothing
          , route : Nothing
          , rideDetails : {
@@ -38,6 +39,12 @@ initData = {
             rideScheduledTime : "",
             rideScheduledTimeUTC : ""
          }
+         , routeSearchedList : []
+         , updatedRouteSearchedList : []
+         , rideType : ROUTES
+         , stopsSearchedList : []
+         , updatedStopsSearchedList : []
+         , ticketServiceType : BUS 
          , currentLoc : dummyLocationInfo{
             address = "Current Location"
          } 
@@ -60,6 +67,7 @@ initData = {
         , updatedMetroStations : []
         , predictionSelectedFromHome : locationListStateObj
         , quotesList : []
+        , searchRideType : BUS_ROUTE
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -78,6 +86,7 @@ initData = {
     fareProductType : RENTAL,
     currentEstimateHeight : 84 ,
     selectedEstimateHeight : 84 ,
+    autoCompleteBusStop : false,
     tipViewProps : {
         stage : DEFAULT
       , isVisible : false
@@ -95,8 +104,14 @@ initData = {
       , tipForDriver: 0
       , tipActiveIndex: -1
       , isTipSelected: false
-      }
-
+      },
+   routeSearch : false,
+   routeSelected : "",
+   stopCodeSelected : "",
+   stopNameSelected : "",
+   srcLat : 0.000,
+   srcLong : 0.000,
+   routeName : ""
   },
   appConfig : getAppConfig appConfig
 }
@@ -122,6 +137,7 @@ dummyLocationInfo = {
   addressComponents : dummyAddress,
   stationCode : "",
   metroInfo : Nothing,
+  busStopInfo : Nothing,
   city : AnyCity 
 }
 

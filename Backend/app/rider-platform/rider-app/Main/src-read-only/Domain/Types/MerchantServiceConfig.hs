@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -24,7 +23,7 @@ data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
   }
   deriving (Generic)
 
-type MerchantServiceConfig = MerchantServiceConfigD ('Safe)
+type MerchantServiceConfig = MerchantServiceConfigD 'Safe
 
 instance FromJSON (MerchantServiceConfigD 'Unsafe)
 

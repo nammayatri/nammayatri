@@ -28,6 +28,7 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
+import JBridge as JB
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
 import PrestoDOM.List (ListItem)
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -41,6 +42,7 @@ import Data.Int as DI
 import PrestoDOM.Core (processEvent)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,7 +76,7 @@ instance loggableAction :: Loggable Action where
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
     ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
-    GoToCustomerReferralTracker -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "go_to_customer_referral_tracker"
+    GoToCustomerReferralTracker openPP -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "go_to_customer_referral_tracker"
     _ -> defaultPerformLog action appId
 
 data Action = BackPressed
@@ -95,13 +97,15 @@ data Action = BackPressed
             | OpenModule LmsModuleRes
             | UpdateModuleList LmsGetModuleRes
             | UpdateModuleListErrorOccurred
-            | GoToCustomerReferralTracker
+            | GoToCustomerReferralTracker Boolean
             | SetBannerItem ListItem
             | BannerCarousal BannerCarousel.Action
             | UpdateBanner
             | BannerChanged String
             | BannerStateChanged String
             | NoAction
+            | GullakSDKResponse String
+            | GullakBannerClick
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -110,7 +114,7 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | EarningsScreen BenefitsScreenState
                   | GoBack
                   | GoToLmsVideoScreen BenefitsScreenState
-                  | GoToCustomerReferralTrackerScreen BenefitsScreenState
+                  | GoToCustomerReferralTrackerScreen Boolean BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
@@ -121,9 +125,16 @@ eval BackPressed state =
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoToHomeScreen state
 
-eval GoToCustomerReferralTracker state = exit $ GoToCustomerReferralTrackerScreen state
+eval (GoToCustomerReferralTracker openPP) state = exit $ GoToCustomerReferralTrackerScreen openPP state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
+
+eval (GullakSDKResponse _ ) state = 
+  continueWithCmd state { props { glBannerClickable = true}}
+    [do
+      void $ EHU.terminateLoader ""
+      pure NoAction
+    ]
 
 eval ShowQRCode state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"
@@ -160,7 +171,20 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     _ -> continue state
 
 eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
-  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}, props{isPayoutEnabled = Just resp.referrals.isPayoutEnabled}}
+  continue state {
+              data{
+                totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, 
+                totalActivatedCustomers = resp.referrals.totalActivatedCustomers, 
+                totalReferredCustomers = resp.referrals.totalReferredCustomers,
+                eligiblePayoutAmount = resp.referrals.eligiblePayoutAmount,
+                lastPayoutAt = resp.referrals.lastPayoutAt,
+                payoutAmountPaid = resp.referrals.payoutAmountPaid,
+                payoutVpa = resp.referrals.payoutVpa
+              },
+              props{
+                isPayoutEnabled = Just resp.referrals.isPayoutEnabled
+              }
+            }
 
 eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   let currentDriverRank = case find (\(DriversInfo driverInfo) -> driverInfo.isCurrentDriver && driverInfo.totalRides /= 0) resp.driverList of
@@ -227,6 +251,8 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
+
+eval GullakBannerClick state = continue state { props { glBannerClickable = false}}
   
 eval _ state = update state
 
@@ -245,7 +271,7 @@ getRemoteBannerConfigs action = do
       variant = getValueToLocalStore VEHICLE_VARIANT
       configName = "driver_referral_banner" <> language
       datas = (RC.carouselConfigData location configName "driver_referral_banner_en" (getValueFromWindow "DRIVER_ID") "" variant)
-  BannerCarousel.remoteConfigTransformer datas action
+  BannerCarousel.remoteConfigTransformer datas action Nothing
   where
     getLanguage :: String -> String
     getLanguage lang = 

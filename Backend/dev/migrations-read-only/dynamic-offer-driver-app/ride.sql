@@ -141,3 +141,49 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fee_if_cancelled
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN tip_amount double precision;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN passed_through_destination boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN delivery_file_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN destination_reached_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_end_time_range_start timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_end_time_range_end timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_tags text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pickup_or_destination_edited boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_driver_special_loc_warrior boolean ;

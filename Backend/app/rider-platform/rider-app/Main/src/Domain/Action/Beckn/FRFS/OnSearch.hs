@@ -15,18 +15,22 @@
 module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
-import qualified Domain.Types.Station as DStation
-import Environment
+import qualified Domain.Types.StationType as Station
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.Queries.FRFSConfig as QFRFSConfig
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.PersonStats as QPStats
@@ -41,15 +45,49 @@ data DOnSearch = DOnSearch
     quotes :: [DQuote],
     validTill :: Maybe UTCTime,
     transactionId :: Text,
-    messageId :: Text
+    messageId :: Text,
+    bppDelayedInterest :: Maybe Text
+  }
+
+data DVehicleServiceTier = DVehicleServiceTier
+  { serviceTierType :: Spec.ServiceTierType,
+    serviceTierProviderCode :: Text,
+    serviceTierShortName :: Text,
+    serviceTierDescription :: Text,
+    serviceTierLongName :: Text
   }
 
 data DQuote = DQuote
   { bppItemId :: Text,
     price :: Price,
-    vehicleType :: DStation.FRFSVehicleType,
+    vehicleType :: Spec.VehicleCategory,
+    routeStations :: [DRouteStation],
     stations :: [DStation],
+    discounts :: [DDiscount],
     _type :: Quote.FRFSQuoteType
+  }
+
+data DDiscount = DDiscount
+  { code :: Text,
+    title :: Text,
+    description :: Text,
+    tnc :: Text,
+    price :: Price,
+    eligibility :: Bool
+  }
+
+data DRouteStation = DRouteStation
+  { routeCode :: Text,
+    routeLongName :: Text,
+    routeShortName :: Text,
+    routeStartPoint :: LatLong,
+    routeEndPoint :: LatLong,
+    routeStations :: [DStation],
+    routeTravelTime :: Maybe Seconds,
+    routeSequenceNum :: Maybe Int,
+    routeServiceTier :: Maybe DVehicleServiceTier,
+    routePrice :: Price,
+    routeColor :: Maybe Text
   }
 
 data DStation = DStation
@@ -57,8 +95,9 @@ data DStation = DStation
     stationName :: Text,
     stationLat :: Maybe Double,
     stationLon :: Maybe Double,
-    stationType :: API.StationType,
-    stopSequence :: Maybe Int
+    stationType :: Station.StationType,
+    stopSequence :: Maybe Int,
+    towards :: Maybe Text
   }
 
 data ValidatedDOnSearch = ValidatedDOnSearch
@@ -70,12 +109,12 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     mbMaxFreeTicketCashback :: Maybe Int
   }
 
-validateRequest :: DOnSearch -> Flow ValidatedDOnSearch
+validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  frfsConfig <- QFRFSConfig.findByMerchantOperatingCityId search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
   if frfsConfig.isEventOngoing == Just True
     then do
       stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
@@ -83,24 +122,38 @@ validateRequest DOnSearch {..} = do
     else return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = 0, isEventOngoing = False, mbFreeTicketInterval = Nothing, mbMaxFreeTicketCashback = Nothing}
 
 onSearch ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r
+  ) =>
   DOnSearch ->
   ValidatedDOnSearch ->
-  Flow ()
+  m ()
 onSearch onSearchReq validatedReq = do
   quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
   QQuote.createMany quotes
+
+  let search = validatedReq.search
+      mbRequiredQuote = filterQuotes quotes
+  whenJust mbRequiredQuote $ \requiredQuote -> do
+    SLCF.createFares search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+
   return ()
 
-mkQuotes :: DOnSearch -> ValidatedDOnSearch -> DQuote -> Flow Quote.FRFSQuote
+filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
+filterQuotes quotes = listToMaybe quotes
+
+mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
 
-  startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
-  endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
-
+  startStation <- QStation.findByStationCodeAndMerchantOperatingCityId dStartStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
+  endStation <- QStation.findByStationCodeAndMerchantOperatingCityId dEndStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
+  let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
+  let discountsJSON = discounts & map castDiscountToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
@@ -129,6 +182,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.riderId = search.riderId,
         Quote.searchId = search.id,
         Quote.stationsJson = stationsJSON,
+        Quote.routeStationsJson = Just routeStationsJSON,
+        Quote.discountsJson = Just discountsJSON,
         Quote.toStationId = endStation.id,
         Quote.validTill,
         Quote.vehicleType,
@@ -138,14 +193,15 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
         Quote.createdAt = now,
         Quote.updatedAt = now,
+        bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
         ..
       }
 
 getStartStation :: [DStation] -> Maybe DStation
-getStartStation = find (\station -> station.stationType == API.START)
+getStartStation = find (\station -> station.stationType == Station.START)
 
 getEndStation :: [DStation] -> Maybe DStation
-getEndStation = find (\station -> station.stationType == API.END)
+getEndStation = find (\station -> station.stationType == Station.END)
 
 castStationToAPI :: DStation -> API.FRFSStationAPI
 castStationToAPI DStation {..} =
@@ -157,5 +213,44 @@ castStationToAPI DStation {..} =
       API.lon = stationLon,
       API.name = stationName,
       API.stationType = Just stationType,
-      API.sequenceNum = stopSequence
+      API.sequenceNum = stopSequence,
+      API.distance = Nothing,
+      API.towards = Nothing
+    }
+
+castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI
+castRouteStationToAPI DRouteStation {..} =
+  API.FRFSRouteStationsAPI
+    { API.code = routeCode,
+      API.color = routeColor,
+      API.startPoint = routeStartPoint,
+      API.endPoint = routeEndPoint,
+      API.longName = routeLongName,
+      API.shortName = routeShortName,
+      API.sequenceNum = routeSequenceNum,
+      API.travelTime = routeTravelTime,
+      API.vehicleServiceTier = castVehicleServiceTierAPI <$> routeServiceTier,
+      API.priceWithCurrency = mkPriceAPIEntity routePrice,
+      API.stations = map castStationToAPI routeStations
+    }
+
+castVehicleServiceTierAPI :: DVehicleServiceTier -> API.FRFSVehicleServiceTierAPI
+castVehicleServiceTierAPI DVehicleServiceTier {..} =
+  API.FRFSVehicleServiceTierAPI
+    { _type = serviceTierType,
+      providerCode = serviceTierProviderCode,
+      description = serviceTierDescription,
+      longName = serviceTierLongName,
+      shortName = serviceTierShortName
+    }
+
+castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
+castDiscountToAPI DDiscount {..} =
+  API.FRFSDiscountRes
+    { API.code = code,
+      API.price = mkPriceAPIEntity price,
+      API.title = title,
+      API.description = description,
+      API.tnc = tnc,
+      API.eligibility = eligibility
     }

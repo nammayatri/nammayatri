@@ -36,8 +36,13 @@ import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
+
+data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
 
 newtype Place = Place {
   id :: String
@@ -66,7 +71,12 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (SUV ) = "SUV"
     show (Auto ) = "Auto"
     show (Bike ) = "Bike"
-
+    show (Ambulance_AC ) = "Ambulance_AC"
+    show (Ambulance_AC_Oxy ) = "Ambulance_AC_Oxy"
+    show (Ambulance_Taxi ) = "Ambulance_Taxi"
+    show (Ambulance_Taxi_Oxy ) = "Ambulance_Taxi_Oxy"
+    show (Ambulance_Ventilator ) = "Ambulance_Ventilator"
+    show (SUV_PLUS) = "SUV_PLUS"
 
 
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
@@ -86,6 +96,17 @@ derive instance genericNotificationData :: Generic NotificationData _
 derive instance newtypeNotificationData :: Newtype NotificationData _
 instance encodeNotificationData :: Encode NotificationData where encode = defaultEncode
 instance decodeNotificationData :: Decode NotificationData where decode = defaultDecode
+
+newtype ChatFCMData = ChatFCMData {
+  channelId :: Maybe String,
+  personId :: Maybe String,
+  source :: Maybe String
+  }
+
+derive instance genericChatFCMData :: Generic ChatFCMData _
+derive instance newtypeChatFCMData :: Newtype ChatFCMData _
+instance encodeChatFCMData :: Encode ChatFCMData where encode = defaultEncode
+instance decodeChatFCMData :: Decode ChatFCMData where decode = defaultDecode
 
 newtype SignatureAuthData = SignatureAuthData {
   signature :: String
@@ -117,6 +138,15 @@ derive instance genericGlobalPayload :: Generic GlobalPayload _
 instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecode
 instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
 
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
+}
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
+
 newtype Payload = Payload
   { service :: Maybe String
   , environment :: Maybe String
@@ -130,11 +160,15 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , chatMessageData :: Maybe ChatFCMData
+  , fragmentViewGroups :: Maybe FragmentViewGroup
+  , appToken :: Maybe String
   }
 
 newtype QueryParam = QueryParam {
   option :: Maybe String,
-  bookingId :: Maybe String
+  bookingId :: Maybe String,
+  rideId :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
@@ -234,7 +268,17 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges | RentalRateCard
+data RateCardType = 
+    DefaultRateCard 
+  | DriverAddition 
+  | FareUpdate 
+  | PaymentFareBreakup 
+  | WaitingCharges 
+  | TollOrParkingCharges 
+  | RentalRateCard
+  | DriverAllowance
+  | NightShiftCharges
+  | TollAndParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
@@ -270,6 +314,11 @@ type CalendarWeek = {
   , utcEndDate :: String
   , startMonth :: String
   , endMonth :: String
+}
+
+type CalendarMonth = {
+    utcDate :: String
+  , month :: Int
 }
 
 type CountryCodeObj = {
@@ -482,9 +531,13 @@ type CarouselHolderData = {
 
 type CategoryListType = {
     categoryName :: String
-  , categoryImageUrl :: String
-  , categoryAction :: String
+  , categoryImageUrl :: Maybe String
+  , categoryAction :: Maybe String
   , categoryId :: String
+  , isRideRequired :: Boolean
+  , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String 
   }
 
 type DisplayBase64ImageConig = {
@@ -492,6 +545,7 @@ type DisplayBase64ImageConig = {
   , id :: String
   , scaleType :: String
   , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+  , adjustViewBounds :: Boolean  
 }
 
 type CircleRippleConfig = {
@@ -508,6 +562,7 @@ type CircleRippleConfig = {
 , toStrokeColor :: String
 , prefix :: String
 , center :: Paths
+, fillColor :: String
 }
 
 type GroundOverlayConfig = {
@@ -580,7 +635,7 @@ type RentalBookingConfig = {
 
 
 
-data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
+data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues | DemandExtraTollAmount
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
 instance eqCustomerIssueTypes :: Eq CustomerIssueTypes where eq = genericEq
 instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where 
@@ -588,6 +643,7 @@ instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where
     TollCharge -> 1
     NightSafety -> 0
     Accessibility -> 2
+    DemandExtraTollAmount -> 3
     NoIssue -> 10
     MoreIssues -> 20
 
@@ -641,3 +697,67 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED | RECORDED
+
+derive instance genericRecordingState :: Generic RecordingState _
+instance eqRecordingState :: Eq RecordingState where eq = genericEq
+instance showRecordingState :: Show RecordingState where show = genericShow
+
+
+type FaqCardDropDownInfo = {
+  title :: String,
+  description :: String,
+  isExpanded :: Boolean,
+  label :: Maybe String,
+  id :: String, 
+  action :: Maybe String, 
+  referenceCategoryId :: Maybe String,
+  referenceOptionId :: Maybe String
+}
+
+type FaqStringType = {
+  value :: String,
+  messageStringType :: String
+}
+newtype TripCategory = TripCategory {
+  contents :: Maybe String,
+  tag :: TripCategoryTag
+}
+data TripCategoryTag  = OneWay | Rental | RideShare | InterCity | CrossCity | Delivery
+
+
+derive instance genericTripCategoryTag  :: Generic TripCategoryTag   _
+instance showTripCategoryTag :: Show TripCategoryTag  where show = genericShow
+instance decodeTripCategoryTag :: Decode TripCategoryTag  where decode = defaultEnumDecode
+instance encodeTripCategoryTag :: Encode TripCategoryTag  where encode = defaultEnumEncode
+instance eqTripCategoryTag :: Eq TripCategoryTag  where eq = genericEq
+instance standardTripCategoryTag :: StandardEncode TripCategoryTag   where standardEncode _ = standardEncode {}
+
+derive instance genericTripCategory :: Generic TripCategory  _
+instance showTripCategory:: Show TripCategory where show = genericShow
+instance decodeTripCategory:: Decode TripCategory where decode = defaultDecode
+instance encodeTripCategory:: Encode TripCategory where encode = defaultEncode
+instance eqTripCategory:: Eq TripCategory where eq = genericEq
+instance standardTripCategory:: StandardEncode TripCategory where standardEncode _ = standardEncode {}
+
+
+data BookingStatus = UPCOMING |UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED | NEW    
+
+derive instance genericBookingStatus :: Generic BookingStatus  _
+instance showBookingStatus:: Show BookingStatus where show = genericShow
+instance decodeBookingStatus :: Decode BookingStatus where decode = defaultEnumDecode
+instance encodeBookingStatus :: Encode BookingStatus where encode = defaultEnumEncode
+instance eqBookingStatus:: Eq BookingStatus where eq = genericEq
+instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
+
+data DateTime = DATE | TIME 
+
+derive instance genericDateTime :: Generic DateTime _
+instance eqDateTime :: Eq DateTime where eq = genericEq
+
+newtype UploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio :: Boolean,
+  imageAspectHeight :: Int,
+  imageAspectWidth :: Int
+}

@@ -1,22 +1,16 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.BusinessEventExtra where
 
 import Domain.Types.Booking
 import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
-import Domain.Types.Vehicle (Variant)
+import Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.BusinessEvent as BeamBE
-import Storage.Queries.OrphanInstances.BusinessEvent
+import Kernel.Utils.Common (CacheFlow)
+import Storage.Queries.OrphanInstances.BusinessEvent ()
 
 logBusinessEvent ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -24,7 +18,7 @@ logBusinessEvent ::
   EventType ->
   Maybe (Id Booking) ->
   Maybe WhenPoolWasComputed ->
-  Maybe Variant ->
+  Maybe VehicleVariant ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->

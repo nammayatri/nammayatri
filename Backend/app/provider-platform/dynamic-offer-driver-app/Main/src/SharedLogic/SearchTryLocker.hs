@@ -31,6 +31,7 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, throwError)
+import Tools.Error
 
 isSearchTryCancelled ::
   CacheFlow m r =>
@@ -57,7 +58,7 @@ whenSearchTryCancellable searchTryId actions = do
   gotLock <- lockSearchTry searchTryId
   if gotLock
     then actions
-    else throwError (InternalError "SEARCH_TRY_CANCELLED")
+    else throwError (DriverAlreadyQuoted searchTryId.getId)
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId

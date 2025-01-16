@@ -17,3 +17,13 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN vehicle_category tex
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD PRIMARY KEY ( merchant_operating_city_id, vehicle_category);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN expand text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN max_payout_referral_for_a_day integer ;

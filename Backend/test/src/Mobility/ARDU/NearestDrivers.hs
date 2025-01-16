@@ -16,7 +16,7 @@ module Mobility.ARDU.NearestDrivers (spec) where
 
 -- import qualified Kernel.Storage.Esqueleto as Esq
 
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DI
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))

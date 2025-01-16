@@ -61,6 +61,8 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let kvConfigUpdateFrequency = +10
 
+let enabledMerchantCityIds = [] : List Text
+
 let healthCheckAppCfg =
       { graceTerminationPeriod = appCfg.graceTerminationPeriod
       , healthcheckPort = +8115
@@ -77,6 +79,7 @@ let healthCheckAppCfg =
           //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
       , batchSize = +100
       , numberOfShards = +10
+      , enabledMerchantCityIds
       }
 
 let cacConfig =

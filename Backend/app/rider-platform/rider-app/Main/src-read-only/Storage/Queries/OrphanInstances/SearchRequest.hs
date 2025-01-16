@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
+import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,18 +27,21 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.SearchRequest.getFromLocation id
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId
+    stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
     toLocation' <- Storage.Queries.Transformers.SearchRequest.getToLocation id
     pure $
       Just
         Domain.Types.SearchRequest.SearchRequest
           { autoAssignEnabled = autoAssignEnabled,
             autoAssignEnabledV2 = autoAssignEnabledV2,
+            availablePaymentMethods = Kernel.Types.Id.Id <$> availablePaymentMethods,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = Kernel.Types.Id.Id <$> clientId,
+            clientReactNativeVersion = clientReactNativeVersion,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             customerExtraFee = Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee,
@@ -45,21 +49,29 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             disabilityTag = disabilityTag,
             distance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            driverIdentifier = Domain.Types.RefereeLink.mkDriverIdentifier driverIdentifierType driverIdentifierValue,
             estimatedRideDuration = estimatedRideDuration,
+            estimatedRideStaticDuration = estimatedRideStaticDuration,
             fromLocation = fromLocation',
+            hasMultimodalSearch = hasMultimodalSearch,
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
+            initiatedBy = initiatedBy,
             isAdvanceBookingEnabled = isAdvanceBookingEnabled,
             isDashboardRequest = isDashboardRequest,
+            journeyLegInfo = Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo agency convenienceCost journeyId journeyLegOrder pricingId skipBooking,
             language = language,
             maxDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
+            placeNameSource = placeNameSource,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id riderId,
             riderPreferredOption = fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption,
             roundTrip = roundTrip,
             selectedPaymentMethodId = selectedPaymentMethodId,
             startTime = startTime,
+            stops = stops',
             toLocation = toLocation',
             totalRidesCount = totalRidesCount,
             validTill = validTill
@@ -70,6 +82,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
     Beam.SearchRequestT
       { Beam.autoAssignEnabled = autoAssignEnabled,
         Beam.autoAssignEnabledV2 = autoAssignEnabledV2,
+        Beam.availablePaymentMethods = Kernel.Types.Id.getId <$> availablePaymentMethods,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.clientBundleVersion = Kernel.Utils.Version.versionToText <$> clientBundleVersion,
@@ -79,6 +92,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.clientOsType = clientDevice <&> (.deviceType),
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
+        Beam.clientReactNativeVersion = clientReactNativeVersion,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.currency = customerExtraFee <&> (.currency),
@@ -89,16 +103,29 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.distance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.driverIdentifierType = driverIdentifier <&> (._type),
+        Beam.driverIdentifierValue = driverIdentifier <&> (.value),
         Beam.estimatedRideDuration = estimatedRideDuration,
+        Beam.estimatedRideStaticDuration = estimatedRideStaticDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.hasMultimodalSearch = hasMultimodalSearch,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initiatedBy = initiatedBy,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,
         Beam.isDashboardRequest = isDashboardRequest,
+        Beam.agency = journeyLegInfo >>= (.agency),
+        Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
+        Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,
+        Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
+        Beam.pricingId = journeyLegInfo >>= (.pricingId),
+        Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.language = language,
         Beam.maxDistance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance,
         Beam.maxDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.placeNameSource = placeNameSource,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.riderPreferredOption = Just riderPreferredOption,

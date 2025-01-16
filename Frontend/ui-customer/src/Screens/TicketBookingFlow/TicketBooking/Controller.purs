@@ -6,13 +6,16 @@ import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, 
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2)
+import Engineering.Helpers.Utils (compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (OperationalDaysData, PeopleCategoriesData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck(..))
 import Debug (spy)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find, sortBy, concat)
@@ -25,6 +28,7 @@ import Domain.Payments as PP
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
@@ -141,7 +145,11 @@ eval BackPressed state = do
     _ -> continue state
 
 eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
-                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
+                    else if isParentView FunctionCall
+                        then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                        else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
@@ -185,7 +193,7 @@ eval (OpenGoogleMap lat long) state = do
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text
-    void $ pure $ JB.toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 

@@ -22,7 +22,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -40,6 +40,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -78,7 +79,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   mbRide <- QRide.findOneByBookingId booking.id
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  let vehicleCategory = BUtils.mapServiceTierToCategory booking.vehicleServiceTier
+  let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
   mbVehicle <- maybe (pure Nothing) (runInReplica . QVeh.findById . (.driverId)) mbRide
   mbPerson <- maybe (pure Nothing) (runInReplica . QPerson.findById . (.driverId)) mbRide
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -109,7 +110,8 @@ buildOnCancelReq ::
   m Spec.OnCancelReq
 buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone = do
   ttl <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
@@ -143,13 +145,13 @@ tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverN
 
 tfFulfillments :: DRB.Booking -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe Text -> Maybe [Spec.Fulfillment]
 tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPhone = do
-  let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.specialZoneOtpCode
+  let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.stops booking.specialZoneOtpCode
   Just
     [ Spec.Fulfillment
         { fulfillmentId = Just booking.quoteId,
           fulfillmentState = mkFulfillmentState rideStatus,
           fulfillmentStops = stops,
-          fulfillmentType = Just $ BUtils.mkFulfillmentType booking.tripCategory,
+          fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
           fulfillmentAgent = tfAgent booking driverName driverPhone,
           fulfillmentCustomer = tfCustomer booking customerPhoneNo,
           fulfillmentTags = Nothing,
@@ -229,7 +231,7 @@ tfItems booking merchant mbFarePolicy =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId booking.paymentId,
           itemPrice = tfItemPrice booking,
-          itemTags = BUtils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+          itemTags = BUtils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
         }
     ]
 

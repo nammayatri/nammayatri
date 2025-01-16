@@ -15,6 +15,7 @@ import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
+import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
@@ -26,6 +27,7 @@ createQuote = createWithKV
 createDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
+  DQ.DeliveryDetails driverOffer -> QueryDO.create driverOffer
   AmbulanceDetails driverOffer -> QueryDO.create driverOffer
   RentalDetails rentalDetails -> QueryRD.create rentalDetails
   DriverOfferDetails driverOffer -> QueryDO.create driverOffer
@@ -36,6 +38,7 @@ createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do
   traverse_ QTT.create (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
+  QQB.createMany quote.quoteBreakupList
   createQuote quote
 
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Quote] -> m ()
@@ -72,7 +75,7 @@ findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is Bea
 
 findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> DriverOfferStatus -> m [Quote]
 findAllQuotesBySRId (Id srId) status = do
-  allQuotes <- findAllWithKV [Se.Is BeamQ.requestId $ Se.Eq srId]
+  allQuotes <- findAllWithKVAndConditionalDB [Se.Is BeamQ.requestId $ Se.Eq srId] Nothing
   return $
     mapMaybe
       ( \quote ->

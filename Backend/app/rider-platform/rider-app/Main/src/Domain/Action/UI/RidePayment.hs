@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
 import Data.Maybe (listToMaybe)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
@@ -24,14 +20,20 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import qualified Tools.Payment as Payment
+
+data DFareBreakup = DFareBreakup
+  { amount :: Price,
+    description :: Text
+  }
+  deriving (Generic, Show)
 
 getCustomerPaymentId :: Domain.Types.Person.Person -> Environment.Flow CustomerId
 getCustomerPaymentId person =
@@ -159,8 +161,8 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
-  Redis.whenWithLockRedis addTipLockKey 60 $ do
+postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
+  Redis.withWaitOnLockRedisWithExpiry (paymentJobExecLockKey rideId.getId) 10 20 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -168,34 +170,35 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
-    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
-    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-    email <- mapM decrypt person.email
-    let cardFixedCharges = HighPrecMoney 0.3
-    let cardPercentageCharges = 0.029 -- 2.9%
-    let applicationFeeAmount = HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
-    let createPaymentIntentReq =
-          Payment.CreatePaymentIntentReq
-            { amount = tipRequest.amount.amount,
-              applicationFeeAmount,
-              currency = tipRequest.amount.currency,
-              customer = customerPaymentId,
-              paymentMethod = paymentMethodId,
-              receiptEmail = email,
-              driverAccountId
-            }
-    paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-    Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
-    -- QRide.markPaymentDone True rideId
+    if ride.paymentStatus == Domain.Types.Ride.NotInitiated
+      then do
+        -- we will add this tip amount in ride end and charge it in job which is already created in ride end
+        QRide.updateTipByRideId (Just $ mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount) rideId -- update tip in ride
+      else do
+        -- Here we creating a new payment intent for tip if the ride payment status is already initiated
+        customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+        paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+        driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+        email <- mapM decrypt person.email
+        let createPaymentIntentReq =
+              Payment.CreatePaymentIntentReq
+                { amount = tipRequest.amount.amount,
+                  applicationFeeAmount = applicationFeeAmountForTipAmount tipRequest,
+                  currency = tipRequest.amount.currency,
+                  customer = customerPaymentId,
+                  paymentMethod = paymentMethodId,
+                  receiptEmail = email,
+                  driverAccountId
+                }
+        paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+        void $ Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
     createFareBreakup
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
   return Success
   where
     tipFareBreakupTitle :: Text
     tipFareBreakupTitle = "RIDE_TIP"
-
-    addTipLockKey :: Text
-    addTipLockKey = "Driver:AddTip:RideId-" <> rideId.getId
 
     createFareBreakup = do
       id <- generateGUID
@@ -208,3 +211,17 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
                 amount = mkPriceFromAPIEntity tipRequest.amount
               }
       QFareBreakup.create tipFareBreakup
+
+paymentJobExecLockKey :: Text -> Text
+paymentJobExecLockKey rideId = "PaymentJobExec:RideId-" <> rideId
+
+applicationFeeAmountForRide :: [DFareBreakup] -> HighPrecMoney
+applicationFeeAmountForRide fareBreakups = do
+  let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
+  sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareBreakups
+
+applicationFeeAmountForTipAmount :: API.Types.UI.RidePayment.AddTipRequest -> HighPrecMoney
+applicationFeeAmountForTipAmount tipRequest = do
+  let cardFixedCharges = HighPrecMoney 0.3
+  let cardPercentageCharges = 0.029 -- 2.9%
+  HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges

@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as CQFPRDB
+import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as CQFPRDPS
 import Storage.Queries.FarePolicy.FarePolicyRentalDetails (fromTTypeFarePolicyRentalDetails)
 import Utils.Common.CacUtils
 
@@ -31,4 +32,7 @@ findFarePolicyRentalDetailsFromCAC context tenant id toss = do
 instance FromCacType (BeamFPRD.FarePolicyRentalDetails, [(CacContext, Value)], String, Id Domain.FarePolicy, Int) Domain.FullFarePolicyRentalDetails where
   fromCacType (farePolicyRentalDetails, context, tenant, id, toss) = do
     fullFPRDB <- CQFPRDB.findFarePolicyRentalDetailsDistanceBuffersFromCAC context tenant id toss
-    pure $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails <$> nonEmpty fullFPRDB
+    fullFPRDPS <- CQFPRDPS.findFarePolicyRentalDetailsPricingSlabsFromCAC context tenant id toss
+    case (nonEmpty fullFPRDB, nonEmpty fullFPRDPS) of
+      (Just fPRDB, Just fPRDPS) -> pure $ Just $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails fPRDB fPRDPS
+      _ -> pure Nothing

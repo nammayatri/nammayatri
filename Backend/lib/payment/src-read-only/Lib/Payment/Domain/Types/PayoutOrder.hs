@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Domain.Types.PayoutOrder where
@@ -24,8 +23,12 @@ data PayoutOrderE e = PayoutOrder
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder,
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
+    responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    retriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder),
     status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -55,8 +58,12 @@ instance EncryptedItem PayoutOrder where
           id = id entity,
           lastStatusCheckedAt = lastStatusCheckedAt entity,
           merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
           mobileNo = mobileNo_,
           orderId = orderId entity,
+          responseCode = responseCode entity,
+          responseMessage = responseMessage entity,
+          retriedOrderId = retriedOrderId entity,
           shortId = shortId entity,
           status = status entity,
           updatedAt = updatedAt entity,
@@ -78,8 +85,12 @@ instance EncryptedItem PayoutOrder where
             id = id entity,
             lastStatusCheckedAt = lastStatusCheckedAt entity,
             merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
             mobileNo = mobileNo_,
             orderId = orderId entity,
+            responseCode = responseCode entity,
+            responseMessage = responseMessage entity,
+            retriedOrderId = retriedOrderId entity,
             shortId = shortId entity,
             status = status entity,
             updatedAt = updatedAt entity,

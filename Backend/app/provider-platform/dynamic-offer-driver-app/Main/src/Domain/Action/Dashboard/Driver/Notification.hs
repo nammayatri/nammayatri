@@ -18,16 +18,17 @@ module Domain.Action.Dashboard.Driver.Notification
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DSSL
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
@@ -37,7 +38,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverPool.Types
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -79,18 +79,27 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   let isValueAddNP = True
 
   now <- getCurrentTime
-  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
-  notificationData <- TN.buildSendSearchRequestNotificationData driver.id driver.deviceToken entityData TN.EmptyDynamicParam
+  let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
+  notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId driver.id driver.deviceToken entityData EmptyDynamicParam Nothing
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   let fallBackCity = TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> Bool -> USRD.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
+mkDummyNotificationEntityData ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DVeh.VehicleVariant ->
+  DLoc.DummyLocationInfo ->
+  DLoc.DummyLocationInfo ->
+  Bool ->
+  Bool ->
+  USRD.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
-      fromLocation = mkDummySearchReqFromLocation now fromLocData
-      toLocation = Just $ mkDummySearchReqToLocation now toLocData
+      fromLocation = mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData
+      toLocation = Just $ mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData
       -- newFromLocation = mkDummyFromLocation now fromLocData
       -- newToLocation = Just $ mkDummyToLocation now toLocData
       mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
@@ -114,7 +123,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
           airConditioned = Nothing,
-          vehicleServiceTier = Just $ show $ castVariantToServiceTier driverVehicle,
+          vehicleServiceTier = Just $ show $ DVeh.castVariantToServiceTier driverVehicle,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,
@@ -139,11 +148,20 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           driverDefaultStepFeeWithCurrencyV2 = driverDefaultStepFeeWithCurrency,
           useSilentFCMForForwardBatch = False,
           isOnRide = False,
+          isFavourite = Just False,
+          isReferredRideReq = Nothing,
+          roundTrip = Just False,
+          middleStopCount = 0,
           ..
         }
 
-mkDummySearchReqFromLocation :: UTCTime -> DLoc.DummyLocationInfo -> DSSL.SearchReqLocation
-mkDummySearchReqFromLocation now fromLocData =
+mkDummySearchReqFromLocation ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DLoc.DummyLocationInfo ->
+  DSSL.SearchReqLocation
+mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData =
   let DLoc.LocationAddress {..} = mkDummyFromAddress fromLocData
    in DSSL.SearchReqLocation
         { id = Id fromLocData.dummyId,
@@ -152,11 +170,18 @@ mkDummySearchReqFromLocation now fromLocData =
           full_address = fullAddress,
           createdAt = now,
           updatedAt = now,
+          merchantId = mbMerchantId,
+          merchantOperatingCityId = mbMerchantOpCityId,
           ..
         }
 
-mkDummySearchReqToLocation :: UTCTime -> DLoc.DummyLocationInfo -> DSSL.SearchReqLocation
-mkDummySearchReqToLocation now toLocData =
+mkDummySearchReqToLocation ::
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  UTCTime ->
+  DLoc.DummyLocationInfo ->
+  DSSL.SearchReqLocation
+mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData =
   let DLoc.LocationAddress {..} = mkDummyToAddress toLocData
    in DSSL.SearchReqLocation
         { id = Id toLocData.dummyId,
@@ -165,6 +190,8 @@ mkDummySearchReqToLocation now toLocData =
           full_address = fullAddress,
           createdAt = now,
           updatedAt = now,
+          merchantId = mbMerchantId,
+          merchantOperatingCityId = mbMerchantOpCityId,
           ..
         }
 

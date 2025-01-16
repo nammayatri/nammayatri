@@ -17,13 +17,16 @@ module Components.RideActionModal.Controller where
 
 import ConfigProvider
 
-import Common.Types.Config as CTC
+import MerchantConfig.Types (CityConfig)
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import Screens.Types as ST
 import Helpers.Utils as HU
-import Prelude (negate, ($))
+import Prelude (negate, ($),class Eq)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe 
 
 data Action = StartRide 
             | EndRide 
@@ -35,10 +38,12 @@ data Action = StartRide
             | TimerCallback String String Int
             | WaitingInfo
             | LoadMessages
-            | SecondaryTextClick
+            | SecondaryTextClick LearnMorePopUp
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
+            | GetFare
+            | MoreDetails
 
 type Config = { 
   startRideActive :: Boolean,
@@ -69,9 +74,9 @@ type Config = {
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
   rideStartRemainingTime :: Int,
-  hasToll :: Boolean,
+  estimatedTollCharges :: Number,
   driverVehicle :: String,
-  cityConfig :: CTC.CityConfig,
+  cityConfig :: CityConfig,
   capacity :: Mb.Maybe Int,
   serviceTierAndAC :: String,
   acRide :: Mb.Maybe Boolean,
@@ -79,13 +84,36 @@ type Config = {
   bookingFromOtherPlatform :: Boolean,
   bapName :: String,
   isOdometerReadingsRequired :: Boolean,
-  distance ::  Int
-  }
+  distance ::  Int,
+  parkingCharge :: Number,
+  isDelivery :: Boolean,
+  delivery :: Mb.Maybe DeliveryDetails,
+  isSourceDetailsExpanded :: Boolean,
+  isDestinationDetailsExpanded :: Boolean
+}
+
+type DeliveryDetails = {
+  sender :: PersonAndDeliveryInfo,
+  receiver :: PersonAndDeliveryInfo
+}
+
+type PersonAndDeliveryInfo = {
+  name :: String,
+  premises :: Maybe String,
+  phoneNumber :: String,
+  exophoneNumber :: Maybe String,
+  instructions :: Maybe String
+}
 
 type AddressConfig = {
   titleText :: String,
   detailText :: String
 }
+
+data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo | IntercityInfo
+
+derive instance genericLearnMorePopUp :: Generic LearnMorePopUp _
+instance eqLearnMorePopUp :: Eq LearnMorePopUp where eq = genericEq
 
 config :: Config
 config = {
@@ -125,7 +153,7 @@ config = {
   durationTravelled : "0",
   rideStartRemainingTime : -1,
   rideStartTime : Mb.Nothing,
-  hasToll : false,
+  estimatedTollCharges : 0.0,
   capacity : Mb.Nothing,
   serviceTierAndAC : "",
   acRide : Mb.Nothing,
@@ -133,5 +161,10 @@ config = {
   bookingFromOtherPlatform : false,
   bapName : "",
   isOdometerReadingsRequired : false,
-  distance : 0
+  distance : 0,
+  parkingCharge : 0.0,
+  isDelivery : false,
+  delivery : Nothing,
+  isSourceDetailsExpanded : false,
+  isDestinationDetailsExpanded : false
 }

@@ -17,18 +17,18 @@ import Servant
 import "lib-dashboard" Tools.Auth
 
 type API =
-  ( DashboardAuth ('MERCHANT_MAKER) :> "upload" :> "suspect" :> "bulk" :> ReqBody ('[JSON]) API.Types.UI.Suspect.SuspectBulkUploadReq
+  ( DashboardAuth 'MERCHANT_MAKER :> "upload" :> "suspect" :> "bulk" :> ReqBody '[JSON] API.Types.UI.Suspect.SuspectBulkUploadReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectBulkUploadResp
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "change"
       :> "flag"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectFlagStatusChangeReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

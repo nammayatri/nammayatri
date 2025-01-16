@@ -65,7 +65,7 @@ handler hnd = do
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
       let jobType' = show (fromSing $ jobType jobInfo)
       expirationTime <- asks (.expirationTime)
-      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $
+      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) $
         withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
           res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
           registerExecutionResult hnd anyJob res

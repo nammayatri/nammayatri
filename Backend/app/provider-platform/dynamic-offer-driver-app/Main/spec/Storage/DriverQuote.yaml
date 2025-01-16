@@ -8,12 +8,12 @@ imports:
   TripCategory: Domain.Types.Common
   Estimate: Domain.Types.Estimate
   Person: Domain.Types.Person
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   FareParameters: Domain.Types.FareParameters
   DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   LocalTime: Data.Time
   Centesimal: Kernel.Types.Common
   Money: Kernel.Types.Common
@@ -42,7 +42,7 @@ DriverQuote:
     driverName : Text
     driverRating : Maybe Centesimal
     status : DriverQuoteStatus
-    vehicleVariant : Variant
+    vehicleVariant : VehicleVariant|NoRelation
     vehicleServiceTier : ServiceTierType|NoRelation
     distance : Maybe Meters
     distanceToPickup : Meters
@@ -100,7 +100,7 @@ DriverQuote:
   fromTType:
     fareParams: getFareParams|M
     tripCategory: fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory|E
-    vehicleServiceTier: fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    vehicleServiceTier: fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM

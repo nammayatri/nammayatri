@@ -4,17 +4,17 @@ imports:
   SearchRequest: Domain.Types.SearchRequest
   SearchTry: Domain.Types.SearchTry
   Money: Kernel.Types.Common
-  Variant: Domain.Types.Vehicle
-  ServiceTierType: Domain.Types.ServiceTierType
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.Common
   DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
-  DriverMode: Domain.Types.DriverInformation
+  DriverMode: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
-
+  Value: Data.Aeson
 
 
 SearchRequestForDriver:
@@ -43,10 +43,11 @@ SearchRequestForDriver:
     searchRequestValidTill : UTCTime
     vehicleAge : Maybe Months
     driverId : Id Person
+    fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
     durationToPickup : Seconds
-    vehicleVariant : Variant
+    vehicleVariant : VehicleVariant|NoRelation
     vehicleServiceTier : ServiceTierType|NoRelation
     vehicleServiceTierName : Maybe Text
     airConditioned : Maybe Bool
@@ -55,6 +56,7 @@ SearchRequestForDriver:
     lat : Maybe Double
     lon : Maybe Double
     createdAt : UTCTime
+    updatedAt: Maybe UTCTime
     response : Maybe SearchRequestForDriverResponse
     notificationSource: Maybe NotificationSource
     driverMinExtraFee : Maybe HighPrecMoney
@@ -81,10 +83,19 @@ SearchRequestForDriver:
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
     isForwardRequest : Bool
+    middleStopCount: Maybe Int
     currency: Currency
     distanceUnit: DistanceUnit
     totalRides: Int
+    driverTags: Maybe Value
+    customerTags: Maybe Value
+    poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
     previousDropGeoHash : Maybe Text
+    upgradeCabRequest: Maybe Bool
+    renderedAt : Maybe UTCTime
+    respondedAt: Maybe UTCTime
+    isFavourite : Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -138,9 +149,9 @@ SearchRequestForDriver:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
-    vehicleServiceTier: Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
-    createdAt: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
-    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    vehicleServiceTier: Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
     baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E
     driverMinExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee|E
     driverMaxExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee|E
@@ -163,7 +174,7 @@ SearchRequestForDriver:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleServiceTier: Kernel.Prelude.Just|I
-    createdAt: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
     baseFare: Kernel.Prelude.roundToIntegral <$> baseFare|E
     baseFareAmount: baseFare|E
@@ -201,7 +212,7 @@ SearchRequestForDriver:
 
     updateDriverResponse:
       kvFunction: updateOneWithKV
-      params: [response, status, notificationSource]
+      params: [response, status, notificationSource, renderedAt, respondedAt]
       where: id
 
   sqlType:
@@ -219,6 +230,8 @@ SearchRequestForDriver:
     driverAvailableTime: real
     estimateId: character varying (36)
     vehicleAge: int
+    driverTags: json
+    customerTags: json
 
   default:
     rideRequestPopupDelayDuration: 0

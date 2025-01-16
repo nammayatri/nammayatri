@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.ReelsData where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.ReelsData
 import Kernel.External.Encryption
 import qualified Kernel.External.Types

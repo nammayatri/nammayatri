@@ -4,6 +4,8 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let sosAlertsTopicARN = common.sosAlertsTopicARN
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -43,6 +45,7 @@ let kafkaClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let driverClickhouseCfg =
@@ -52,7 +55,10 @@ let driverClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_driver_offer_bpp"
       , tls = False
+      , retryInterval = [ +0 ]
       }
+
+let dashboardClickhouseCfg = driverClickhouseCfg
 
 let rcfg =
       { connectHost = "localhost"
@@ -195,23 +201,38 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
+      | UnblockSoftBlockedDriver
+      | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
       | CheckExotelCallStatusAndNotifyBAP
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | SupplyDemand
       | BadDebtCalculation
       | RetryDocumentVerification
       | SendManualPaymentLink
       | ScheduledRideNotificationsToDriver
       | DriverReferralPayout
       | ScheduledRideAssignedOnUpdate
+      | Daily
+      | Weekly
+      | Monthly
+      | Quarterly
+      | DailyUpdateTag
+      | MonthlyUpdateTag
+      | QuarterlyUpdateTag
+      | WeeklyUpdateTag
+      | FleetAlert
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
         }
@@ -236,6 +257,15 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }
+      , { mapKey = AllocatorJobType.Daily, mapValue = True }
+      , { mapKey = AllocatorJobType.Weekly, mapValue = True }
+      , { mapKey = AllocatorJobType.Monthly, mapValue = True }
+      , { mapKey = AllocatorJobType.Quarterly, mapValue = True }
+      , { mapKey = AllocatorJobType.DailyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.MonthlyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -278,6 +308,7 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
     , driverClickhouseCfg
+    , dashboardClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
@@ -297,6 +328,7 @@ in  { esqDBCfg
       [ "dev/migrations-read-only/dynamic-offer-driver-app"
       ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
         ? "dev/migrations/dynamic-offer-driver-app"
+      , "dev/migrations-after-release/dynamic-offer-driver-app"
       ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
@@ -333,7 +365,6 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
     , osrmMatchThreshold = +1500
-    , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     , maxNotificationShards = +128
     , enableRedisLatencyLogging = False
@@ -358,4 +389,11 @@ in  { esqDBCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
+    , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , urlShortnerConfig = common.urlShortnerConfig
     }

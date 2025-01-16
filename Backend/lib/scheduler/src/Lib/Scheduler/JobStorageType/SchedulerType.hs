@@ -14,8 +14,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.JobStorageType.SchedulerType where
 
@@ -34,8 +32,15 @@ import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
-createJob maxShards jobData = do
+createJob ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  JobContent e ->
+  m ()
+createJob merchantId merchantOperatingCityId jobData = do
+  maxShards <- asks (.maxShards)
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
@@ -45,16 +50,24 @@ createJob maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJob @t @e uuid maxShards jobData
-          RQ.createJob @t @e uuid maxShards jobData
+          DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
+          RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
         else do
-          RQ.createJob @t @e uuid maxShards jobData
+          RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJob @t @e uuid maxShards jobData
+      DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
 
-createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn inTime maxShards jobData = do
+createJobIn ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  NominalDiffTime ->
+  JobContent e ->
+  m ()
+createJobIn merchantId merchantOperatingCityId inTime jobData = do
+  maxShards <- asks (.maxShards)
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
@@ -64,13 +77,13 @@ createJobIn inTime maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJobIn @t @e uuid inTime maxShards jobData
-          RQ.createJobIn @t @e uuid inTime maxShards jobData
+          DBQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
+          RQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
         else do
-          RQ.createJobIn @t @e uuid inTime maxShards jobData
+          RQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJobIn @t @e uuid inTime maxShards jobData
+      DBQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
 
 isLongRunning :: (JobCreator r m) => Text -> m Bool
 isLongRunning jType = do
@@ -79,8 +92,16 @@ isLongRunning jType = do
   let jobInfoMapping = jobInfoMap
   pure $ fromMaybe False (M.lookup jType jobInfoMapping)
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
-createJobByTime byTime maxShards jobData = do
+createJobByTime ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  UTCTime ->
+  JobContent e ->
+  m ()
+createJobByTime merchantId merchantOperatingCityId byTime jobData = do
+  maxShards <- asks (.maxShards)
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
@@ -90,13 +111,13 @@ createJobByTime byTime maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJobByTime @t @e uuid byTime maxShards jobData
-          RQ.createJobByTime @t @e uuid byTime maxShards jobData
+          DBQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
+          RQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
         else do
-          RQ.createJobByTime @t @e uuid byTime maxShards jobData
+          RQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJobByTime @t @e uuid byTime maxShards jobData
+      DBQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
 
 findAll :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = do

@@ -25,6 +25,7 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DerivingStrategies
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
@@ -47,6 +48,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -56,6 +58,7 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - PackageImports
+  - TemplateHaskell
 
 dependencies:
   - aeson

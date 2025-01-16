@@ -1,0 +1,35 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name getCoinsHistory
+# CoinHistoryAPI
+
+@driverId1 = favorit-auto1-0000000000000000000000
+
+# INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+#     (
+#     SELECT
+#         atlas_bpp_dashboard.uuid_generate_v4(),
+#         T1.role_id,
+#         'MESSAGE',
+#         'USER_FULL_ACCESS',
+#         unnest (ARRAY ['MESSAGE_LIST'])
+#     FROM atlas_bpp_dashboard.access_matrix AS T1
+#     WHERE T1.api_entity = 'DRIVERS' AND (T1.user_access_type = 'USER_FULL_ACCESS' OR T1.user_access_type = 'USER_READ_ACCESS')
+# 	  GROUP BY role_id
+#     )
+# ON CONFLICT DO NOTHING;
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/message/list
+?limit=10
+&offset=0
+token: {{customer_service}}

@@ -36,13 +36,14 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Debug (spy)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn3, runEffectFn1, runEffectFn4)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
-import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
+import Effect.Uncurried (runEffectFn5, runEffectFn1, runEffectFn4)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC, getGlobalPayload)
+import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, uploadFile, uploadMultiPartData, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable, Eval)
+import Engineering.Helpers.Utils (showToast)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Resources.Constants (maxImageUploadInIssueReporting)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
@@ -54,6 +55,12 @@ import Timers
 import Effect.Uncurried 
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 import Components.ServiceTierCard.View as ServiceTierCard
+import Common.Types.App
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Constants as Constants
+import Data.Lens ((^.))
+import Engineering.Helpers.Accessor
+import Mobility.Prelude (startsWith)
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -135,6 +142,7 @@ data Action = Exit (ScreenOutput)
             | ReopenIssuePress
             | KeyboardCallback String
             | InitializeCallback
+            | GoToRideDetails
 
 data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | UploadIssue  ReportIssueChatScreenState
@@ -146,6 +154,15 @@ data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | GoToRideSelectionScreen ReportIssueChatScreenState
                   | GoToSafetyScreen ReportIssueChatScreenState
                   | GoToHomeScreen ReportIssueChatScreenState
+                  | GoToFaqScreen ReportIssueChatScreenState
+                  | RideEndScreen ReportIssueChatScreenState
+
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
 
 eval :: Action -> ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
 
@@ -163,19 +180,20 @@ eval (KeyboardCallback keyBoardState) state = do
   void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
   continue state {props {isKeyboardOpen = keyState}}
 
-eval BackPressed state =
-  continueWithCmd state [do
-    void $ runEffectFn1 removeMediaPlayer ""
-    void $ pure $ hideKeyboardOnNavigation true
-    pure $ Exit $ (case state.data.entryPoint of 
-                    TripDetailsScreenEntry -> GotoTripDetailsScreen 
-                    HelpAndSupportScreenEntry -> GoToHelpAndSupportScreen 
-                    RideSelectionScreenEntry -> GoToRideSelectionScreen 
-                    OldChatEntry -> GoToHelpAndSupportScreen
-                    SafetyScreen -> GoToSafetyScreen
-                    HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
-  ]
-
+eval BackPressed state = do 
+  if isParentView FunctionCall 
+    then do 
+      let mBPayload = getGlobalPayload Constants.globalPayload
+      case mBPayload of 
+        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+          Just screen -> if startsWith "reportIssue" screen then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                            else handleBackPress state
+          _ -> handleBackPress state
+        Nothing -> handleBackPress state
+    else handleBackPress state
+    
 eval AfterRender state =
   continue state
 
@@ -263,7 +281,7 @@ eval (AddAudioModelAction (AddAudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (AddImagesModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
-    void $ liftEffect $ uploadFile true
+    void $ liftEffect $ uploadFile uploadFileConfig true
     pure NoAction
   ]
 
@@ -304,12 +322,12 @@ eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timerID timeInMinut
 eval (ImageUploadCallback image imageName imagePath) state = do
   let images' = if length state.data.addImagesState.imageMediaIds == maxImageUploadInIssueReporting
                 then do
-                  pure $ toast $ getString MAX_IMAGES
+                  void $ pure $ showToast $ getString MAX_IMAGES
                   state.data.addImagesState.images
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
-    void $ runEffectFn3 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    void $ runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
     pure NoAction
   ]
 
@@ -367,7 +385,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- runEffectFn1 saveAudioFile url
-                  void $ runEffectFn3 uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  void $ runEffectFn5 uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "fileId" "file"
                   pure $  UpdateState state { data  { recordedAudioUrl = Just res}}
       Nothing  -> do
                   if state.data.recordAudioState.openAddAudioModel
@@ -408,13 +426,13 @@ eval (RecordAudioModelAction RecordAudioModel.BackPressed) state = do
 
 eval (UpdateRecordModelPlayer url) state = do
   continueWithCmd state { data { recordAudioState { recordedFile = Just url } } } [do
-    void $ runEffectFn7  addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url (getNewIDWithTag "actionButtonRecord") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
+    void $ runEffectFn7 addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url "-1" "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
     pure NoAction
   ]
 
 ---------------------------------------------------- Chat View Model ----------------------------------------------------
 eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
-  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName "Customer" (getCurrentUTC ""))
+  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName Nothing Nothing "Customer" (getCurrentUTC ""))
       option = find (\optionObj -> optionObj.option == optionName) state.data.options
   case option of
     Just selectedOption -> do
@@ -422,6 +440,8 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
         continue state { props { showCallDriverModel = true, isPopupModelOpen = true }, data { selectedOption = Just selectedOption } }
       else if selectedOption.label == "REOPEN_TICKET" then
         exit $ ReopenIssue state { data { selectedOption = Just selectedOption, options = [], chatConfig { chatSuggestionsList = [], messages = messages' } } }
+      else if selectedOption.label == "SELECT_RIDE" then 
+        exit $ GoToRideSelectionScreen state { data {selectedOption = Just selectedOption, chatConfig { chatSuggestionsList = [], messages = messages' } }}
       else 
         updateWithCmdAndExit state [ do
           if selectedOption.label == "DOWNLOAD_INVOICE" then
@@ -432,7 +452,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
           pure NoAction
         ] $ SelectIssueOption (state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption } })
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -486,7 +506,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
   let option = find (\opt -> (state.props.showCallSupportModel && opt.label == "CALL_SUPPORT") ||(state.props.showCallDriverModel && opt.label == "CALL_DRIVER")) state.data.options
   case option of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option "Customer" (getCurrentUTC "") )
+      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option Nothing Nothing "Customer" (getCurrentUTC "") )
           state' = state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption }, props { isPopupModelOpen = false, showCallDriverModel = false, showCallSupportModel = false } }
       if state.props.showCallDriverModel
       then
@@ -494,7 +514,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
       else
         exit $ CallSupport state'
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (CancelCall (PrimaryButton.OnClick)) state =
@@ -502,10 +522,30 @@ eval (CancelCall (PrimaryButton.OnClick)) state =
 
 eval InitializeCallback state = continue state { props {initalizedCallbacks = true}}
 
-eval _ state =
+eval GoToRideDetails state = do
+  exit $ GotoTripDetailsScreen state
+
+eval _ state = do
   continue state
 
 data Result = Result Boolean
 
 downloadInvoicePDF :: ReportIssueChatScreenState -> Unit
 downloadInvoicePDF state = maybe unit (\ride -> generatePDF (IS.initData  {data {selectedItem = ride}}) "NEW") state.data.selectedRide
+
+
+handleBackPress :: ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
+handleBackPress state = 
+  continueWithCmd state [do
+    void $ runEffectFn1 removeMediaPlayer ""
+    void $ pure $ hideKeyboardOnNavigation true
+    pure $ Exit $ (case state.data.entryPoint of 
+                    TripDetailsScreenEntry -> GotoTripDetailsScreen 
+                    HelpAndSupportScreenEntry -> GoToHelpAndSupportScreen 
+                    RideSelectionScreenEntry -> GoToHelpAndSupportScreen 
+                    OldChatEntry -> GoToHelpAndSupportScreen
+                    SafetyScreen -> GoToSafetyScreen
+                    FaqEntry -> GoToFaqScreen
+                    RiderRideCompletedScreen -> RideEndScreen
+                    HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
+  ]

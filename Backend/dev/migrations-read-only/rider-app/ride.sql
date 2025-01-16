@@ -136,3 +136,81 @@ ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav SET NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN mobile_number_hash text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride DROP COLUMN mobile_number_hash;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN safety_journey_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN destination_reached_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_start timestamp with time zone ;
+ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_end timestamp with time zone ;
+
+ALTER TABLE atlas_app.ride ADD COLUMN tip_amount numeric(30,2) ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN payment_status text ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN was_ride_safe boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN feedback_skipped boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_route_call_count integer ;
+
+
+------- SQL updates -------
+

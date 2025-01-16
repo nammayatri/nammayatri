@@ -10,6 +10,8 @@ import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
 import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
+import Components.MessagingView.Controller (dummyChatRecipient)
 
 initData :: FollowRideScreenState
 initData =
@@ -26,7 +28,7 @@ initData =
       , messages: []
       , messagesSize: "-1"
       , chatSuggestionsList: []
-      , lastMessage: { message: "", sentBy: "", timeStamp: "", type: "", delay: 0 }
+      , lastMessage: { message: "", messageTitle: Nothing, messageAction: Nothing, sentBy: "", timeStamp: "", type: "", delay: 0 }
       , lastSentMessage: { message: "", sentBy: "", timeStamp: "", type: "", delay: 0 }
       , lastReceivedMessage: { message: "", sentBy: "", timeStamp: "", type: "", delay: 0 }
       , messageToBeSent: ""
@@ -61,6 +63,8 @@ dummyFollower =
   , bookingId: ""
   , mobileNumber: ""
   , priority: 0
+  , isManualFollower : false
+  , personId : Nothing
   }
 
 mockFollower :: Followers
@@ -69,6 +73,8 @@ mockFollower =
   , bookingId: "mock_drill"
   , mobileNumber: ""
   , priority: 0
+  , isManualFollower : false
+  , personId : Nothing
   }
 
 mockRoute :: Route
@@ -186,11 +192,15 @@ mockDriverInfo =
   , destinationLng: 77.611986
   , driverLat: 0.0
   , driverLng: 0.0
+  , initialPickupLat : 0.0
+  , initialPickupLon : 0.0
   , distance: 0
   , waitingTime: "--"
   , driverArrived: false
   , estimatedDistance: ""
   , driverArrivalTime: 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId: ""
   , driverNumber: Nothing
   , merchantExoPhone: ""
@@ -200,6 +210,7 @@ mockDriverInfo =
   , vehicleVariant: ""
   , sourceAddress: dummyAddress
   , destinationAddress: dummyAddress
+  , editPickupAttemptsLeft : 0
   , status : ""
   , serviceTierName : Nothing
   , vehicleModel : ""
@@ -212,4 +223,13 @@ mockDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , currentChatRecipient : dummyChatRecipient
+  , hasToll : false
+  , isAlreadyFav : false
+  , favCount : 0
+  , rideDuration : Just 0
+  , rideScheduledAtUTC : Nothing
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }

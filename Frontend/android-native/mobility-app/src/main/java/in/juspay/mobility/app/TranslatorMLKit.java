@@ -132,8 +132,6 @@ public class TranslatorMLKit {
                                 if (textView != null) {
                                     Animation fadeInAnimation = AnimationUtils.loadAnimation(textView.getContext(), R.anim.fadein);
                                     textView.startAnimation(fadeInAnimation);
-                                    textView.setHeight(textView.getHeight());
-                                    textView.setSingleLine();
                                     textView.setText(translatedText);
                                 }
                             })

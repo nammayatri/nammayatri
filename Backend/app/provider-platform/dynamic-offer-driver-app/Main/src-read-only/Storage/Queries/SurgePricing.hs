@@ -4,7 +4,7 @@
 
 module Storage.Queries.SurgePricing where
 
-import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Common
 import qualified Domain.Types.SurgePricing
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByHexDayHourAndVehicleServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.ServiceTierType.ServiceTierType -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.Common.ServiceTierType -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
 findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier = do
   findOneWithKV
     [ Se.And
@@ -62,7 +62,7 @@ instance FromTType' Beam.SurgePricing Domain.Types.SurgePricing.SurgePricing whe
             id = Kernel.Types.Id.Id id,
             sourceHex = sourceHex,
             surgeMultiplier = surgeMultiplier,
-            vehicleServiceTier = Kernel.Prelude.fromMaybe Domain.Types.ServiceTierType.HATCHBACK vehicleServiceTier,
+            vehicleServiceTier = Kernel.Prelude.fromMaybe Domain.Types.Common.HATCHBACK vehicleServiceTier,
             createdAt = createdAt,
             updatedAt = updatedAt
           }

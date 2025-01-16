@@ -1,13 +1,13 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.VehicleServiceTier where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -16,10 +16,12 @@ import Tools.Beam.UtilsTH
 
 data VehicleServiceTierT f = VehicleServiceTierT
   { airConditionedThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    allowedVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
-    autoSelectedVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
-    defaultForVehicleVariant :: B.C f [Domain.Types.Vehicle.Variant],
+    allowedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    autoSelectedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    baseVehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    defaultForVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    fareAdditionPerKmOverBaseServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isIntercityEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -32,8 +34,12 @@ data VehicleServiceTierT f = VehicleServiceTierT
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     priority :: B.C f Kernel.Prelude.Int,
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    serviceTierType :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
+    serviceTierType :: B.C f Domain.Types.Common.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stopFcmSuppressCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    stopFcmThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

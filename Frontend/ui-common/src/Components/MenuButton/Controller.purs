@@ -46,6 +46,8 @@ type Config =
     , layoutBg :: String 
     , layoutStroke :: String 
     , accessibilityHint :: String
+    , weight :: Number
+    , margin :: Margin
   }
 
 type TextConfig =
@@ -98,6 +100,8 @@ config =
           }
     , width : MATCH_PARENT
     , height : V 70
+    , weight : 0.0
+    , margin : (Margin 0 0 0 0)
     , cornerRadius : 0.0
     , padding : (Padding 0 0 0 0)
     , stroke : ""

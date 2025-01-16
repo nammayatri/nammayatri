@@ -1,18 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.LocationExtra where
 
 import Domain.Types.Location
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Location as BeamL
-import Storage.Queries.OrphanInstances.Location
+import Storage.Queries.OrphanInstances.Location ()
 
 updateAddress :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> LocationAddress -> m ()
 updateAddress (Id blId) LocationAddress {..} = do

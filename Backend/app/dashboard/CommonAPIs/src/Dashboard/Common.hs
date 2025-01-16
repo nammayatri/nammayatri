@@ -12,19 +12,31 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.Common
   ( module Dashboard.Common,
+    module Domain.Types.VehicleVariant,
+    module Domain.Types.VehicleCategory,
     module Reexport,
   )
 where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Csv as Csv
 import Data.OpenApi
+import qualified Data.Text as T
+import Domain.Types.VehicleCategory
+import Domain.Types.VehicleVariant
 import Kernel.Prelude
+import Kernel.ServantMultipart
+import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Servant (FromHttpApiData, ToHttpApiData)
 
 data Customer
 
@@ -56,17 +68,7 @@ data DriverGoHomeRequest
 
 data Document
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | PREMIUM_SEDAN | BLACK | BLACK_XL | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''Variant)
-
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''Category)
+data TripTransaction
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
@@ -116,3 +118,74 @@ listItemTaggedObject =
 -- is it correct to show every error?
 listItemErrHandler :: Monad m => SomeException -> m ListItemResult
 listItemErrHandler = pure . FailItem . show @Text @SomeException
+
+addMultipartBoundary :: LBS.ByteString -> ((LBS.ByteString, req) -> res) -> (req -> res)
+addMultipartBoundary boundary clientFn reqBody = clientFn (boundary, reqBody)
+
+newtype PersonIdsCsvRow = PersonIdsCsvRow
+  { personId :: Text
+  }
+
+instance Csv.FromNamedRecord PersonIdsCsvRow where
+  parseNamedRecord r = PersonIdsCsvRow <$> r Csv..: "personId"
+
+newtype PersonIdsReq = PersonIdsReq {file :: FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PersonIdsReq where
+  hideSecrets = Kernel.Prelude.identity
+
+newtype PersonMobileNumberIdsCsvRow = PersonMobileNumberIdsCsvRow
+  { mobileNumber :: Maybe Text
+  }
+
+instance Csv.FromNamedRecord PersonMobileNumberIdsCsvRow where
+  parseNamedRecord r = PersonMobileNumberIdsCsvRow <$> r Csv..: "mobileNumber"
+
+newtype PersonMobileNoReq = PersonMobileNoReq {file :: FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PersonMobileNoReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data PersonRes = PersonRes
+  { id :: Text,
+    mobileNumber :: Maybe Text,
+    alternateMobileNumber :: Maybe Text,
+    merchantOperatingCityId :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp PersonIdsReq where
+  fromMultipart form = do
+    PersonIdsReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp PersonIdsReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp PersonMobileNoReq where
+  fromMultipart form = do
+    PersonMobileNoReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp PersonMobileNoReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ServiceNames)
+
+newtype TransactionLogId = TransactionLogId Text
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving newtype (FromHttpApiData, ToHttpApiData)
+
+instance Kernel.Types.HideSecrets.HideSecrets TransactionLogId where
+  hideSecrets = Kernel.Prelude.identity

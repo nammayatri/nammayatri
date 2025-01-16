@@ -20,7 +20,6 @@ module Lib.LocationUpdates
 where
 
 import Control.Applicative ((<|>))
-import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -28,6 +27,7 @@ import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Trip as Trip
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
@@ -200,7 +200,7 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
-getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], Bool))
+getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], Bool, Maybe Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], Bool, Maybe Bool))
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
   return (0, estimatedTollInfo)
@@ -228,20 +228,23 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
           else snapToRoadWithService
-      enableNightSafety = (not isEndRide) && (checkNightSafetyTimeConstraint transportConfig now)
+      enableNightSafety = not isEndRide
+      enableSafetyCheckWrtTripCategory = \case
+        Trip.Delivery _ -> False
+        _ -> True
   return $
     mkRideInterpolationHandler
       isEndRide
-      (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned))
+      (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
-          routeDeviation <- updateDeviation transportConfig enableNightSafety ride batchWaypoints
+          let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
+          routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
@@ -254,7 +257,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       snapToRoad'
       ( \driverId -> do
           person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "TOLL_CROSSED" person.language
+          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "TOLL_CROSSED" Nothing Nothing person.language
           whenJust mbMerchantPN $ \merchantPN -> do
             let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
             TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType
@@ -271,10 +274,6 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
       return ([Google], Right resp)
-
-    checkNightSafetyTimeConstraint config now = do
-      let time = timeToTimeOfDay $ utctDayTime now
-      isTimeWithinBounds (secondsToTimeOfDay config.nightSafetyStartTime) (secondsToTimeOfDay config.nightSafetyEndTime) time
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do

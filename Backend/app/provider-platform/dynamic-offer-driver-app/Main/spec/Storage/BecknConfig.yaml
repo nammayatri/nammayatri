@@ -4,6 +4,7 @@ imports:
   BaseUrl: Servant.Client.Core
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
+  VehicleCategory: BecknV2.OnDemand.Enums
 
 BecknConfig:
   tableName: beckn_config
@@ -18,7 +19,7 @@ BecknConfig:
     uniqueKeyId: Text
     settlementType: Maybe Text
     paymentParamsJson: Maybe Text
-    vehicleCategory: VehicleCategory
+    vehicleCategory: VehicleCategory|NoRelation
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text
@@ -33,9 +34,6 @@ BecknConfig:
     onCancelTTLSec: Maybe Int
 
   types:
-    VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
-
     PaymentCollectedBy:
       enum: "BAP, BPP"
 
@@ -55,6 +53,10 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
 
   beamType:
     subscriberUrl: Text

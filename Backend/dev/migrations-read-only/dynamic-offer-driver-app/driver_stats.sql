@@ -43,3 +43,15 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats DROP COLUMN rating;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_valid_activated_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_referral_counts integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_earnings double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_amount_paid double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_driver_cancellation_tag_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_customer_cancellation_tag_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_cancellation_tags_stats_start_date timestamp with time zone ;

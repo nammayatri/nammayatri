@@ -46,15 +46,19 @@ instance loggableAction :: Loggable Action where
     AadhaarNumberEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarOtpEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarNameEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarGenderEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen AADHAAR_VERIFICATION_SCREEN) "primary_button" "next_on_click"

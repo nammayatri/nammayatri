@@ -1,15 +1,18 @@
 module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide where
 
+-- import qualified Storage.Queries.DriverStats as QDriverStats
+
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
-import Domain.Types.Common
-import Domain.Types.DriverInformation as DriverInfo
+import Domain.Types as DVST
+import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import Domain.Types.ServiceTierType as DVST
-import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.VehicleVariant as DV
+import Domain.Utils
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -24,10 +27,9 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
--- import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Tools.Utils as TU
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -36,7 +38,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     onRide :: Bool,
     lat :: Double,
     lon :: Double,
-    variant :: DV.Variant,
+    variant :: DV.VehicleVariant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
@@ -53,7 +55,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe LatLong
+    latestScheduledPickup :: Maybe LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -80,9 +83,11 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   let onRideRadius = nearestRadius
   logDebug $ "On Ride radius " <> show onRideRadius
   logDebug $ "lat long" <> show fromLocLatLong
-  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius
+  let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity isValueAddNP
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles
@@ -91,33 +96,28 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       then QDBA.getDrivers (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
-  rideCurrentlyInProgress <- filter (\ride -> show ride.tripCategory `elem` currentRideTripCategoryValidForForwardBatching) <$> QRide.getInProgressByDriverIds (map (.id) drivers)
-  let rideEndLocations = mapMaybe (.toLocation) rideCurrentlyInProgress
-  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "Rides" <> show (length rideCurrentlyInProgress) <> "RideLocs:- " <> show (length rideEndLocations)
-  let res = linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocs driverInfos vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
+  let driversCurrentlyOnRideForForwardBatch = filter (\di -> (isJust di.onRideTripCategory && show (fromJust di.onRideTripCategory) `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation) && (di.hasRideStarted == Just True)) driverInfos
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show driversCurrentlyOnRideForForwardBatch
+  let res = linkArrayListForOnRide driverLocs driversCurrentlyOnRideForForwardBatch vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res
   where
-    linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocations driverInformations vehicles persons driverBankAccounts onRideRadius =
+    linkArrayListForOnRide driverLocations driverInformations vehicles persons driverBankAccounts onRideRadius =
       let locationHashMap = HashMap.fromList $ (\loc -> (loc.driverId, loc)) <$> driverLocations
           personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
-          rideByDriverIdHashMap = HashMap.fromList $ (\ride -> (ride.driverId, ride)) <$> rideCurrentlyInProgress
-          rideToLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> rideEndLocations
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
-       in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
+       in concat $ mapMaybe (buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
 
-    buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do
+    buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do
       let driverId' = vehicle.driverId
       location <- HashMap.lookup driverId' locationHashMap
-      ride <- HashMap.lookup driverId' rideByDriverIdHashMap
-      rideToLoc <- ride.toLocation
-      rideToLocation <- HashMap.lookup rideToLoc.id rideToLocsHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
+      rideToLocation <- info.driverTripEndLocation
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
           destinationPoint = LatLong {lat = rideToLocation.lat, lon = rideToLocation.lon}
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
@@ -128,12 +128,15 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
+      let softBlockedTiers = fromMaybe [] info.softBlockStiers
+      let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
       let selectedDriverServiceTiers =
-            if ifUsageRestricted
-              then do
-                (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
-              else do
-                DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
+            removeSoftBlockedTiers $
+              if ifUsageRestricted
+                then do
+                  (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
+                else do
+                  DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if onRideRadiusValidity
         then do
           if null serviceTiers
@@ -176,5 +179,6 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
-                latestScheduledPickup = info.latestScheduledPickup
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = TU.convertTags $ "OnRideDriver#true" : fromMaybe [] person.driverTag
               }

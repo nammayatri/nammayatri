@@ -1,0 +1,33 @@
+imports:
+  Driver: Dashboard.Common
+  Summary: Dashboard.Common
+  ServiceNames: Dashboard.Common.Driver
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  Value: Data.Aeson
+  Day: Data.Time
+
+module: System
+
+
+apis:
+  - POST:
+      endpoint: /runQuery
+      auth: ApiAuthV2
+      request:
+        type: QueryData
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MIGRATION RUN_QUERY
+
+types:
+  QueryData:
+    - queryType: QueryType
+    - tableName: Text
+    - setClause: Value
+    - whereClause: Value
+    - derive: "'HideSecrets"
+
+  QueryType:
+    - enum: "INSERT, UPDATE"

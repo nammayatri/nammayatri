@@ -18,6 +18,7 @@ module Storage.CachedQueries.BecknConfig
   )
 where
 
+import BecknV2.OnDemand.Enums
 import Domain.Types.BecknConfig
 import Domain.Types.Merchant
 import Kernel.Prelude

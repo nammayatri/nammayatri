@@ -31,7 +31,7 @@ selectLanguageScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectLanguageScreen
   case action of
-    GoToHomeScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN)
+    GoBackScreen -> App.BackT $ App.NoBack <$> (pure $ GO_BACK_SCREEN)
     UpdateLanguage state -> do   
                             modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> state)
                             App.BackT $ App.NoBack <$> (pure $ UPDATE_LANGUAGE state)

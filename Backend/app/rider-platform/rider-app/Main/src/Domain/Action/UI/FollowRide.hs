@@ -1,44 +1,31 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
-import Data.OpenApi (ToSchema)
-import Data.Text (unwords)
-import Data.Time hiding (secondsToNominalDiffTime)
+import qualified Domain.Action.UI.Booking as DAB
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as PDEN
 import Domain.Action.UI.Profile as DAP
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.PersonDefaultEmergencyNumber as PDEN
-import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.Ride as DRide
 import Environment
-import qualified Environment
-import EulerHS.Prelude hiding (elem, id, unwords)
+import EulerHS.Prelude hiding (elem, id, unpack, unwords)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude hiding (mapM_, unwords)
-import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import Servant
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN
-import qualified Storage.Beam.Person as BeamP
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as PDEN
-import Tools.Auth
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Notifications
 
 getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
 getFollowRide (mbPersonId, _) = do
@@ -57,19 +44,20 @@ getFollowRide (mbPersonId, _) = do
             case mbBookingId of
               Nothing -> pure acc
               Just bookingId -> do
-                let follower = buildFollower phoneNo person.firstName bookingId contact.priority
+                let follower = buildFollower phoneNo person bookingId contact.priority
                 pure $ acc <> [follower]
     )
     []
     followingEmContacts
 
-buildFollower :: Maybe Text -> Maybe Text -> Id Booking -> Int -> Followers
-buildFollower phoneNo name bookingId priority =
+buildFollower :: Maybe Text -> Person.Person -> Id Booking -> Int -> Followers
+buildFollower phoneNo person bookingId priority =
   Followers
     { bookingId,
       mobileNumber = fromMaybe "" phoneNo,
-      name,
-      priority
+      name = person.firstName,
+      priority,
+      personId = person.id
     }
 
 postShareRide :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareRideReq -> Flow APISuccess.APISuccess
@@ -99,3 +87,19 @@ updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEnti
 updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
   void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
   QPerson.updateFollowsRide True contactPersonEntity.id
+
+getFollowRideECStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow EmergencyContactsStatusRes
+getFollowRideECStatus (mbPersonId, _merchantId) rideId = do
+  _personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  let hashKey = DAB.makeEmergencyContactSOSCacheKey ride.id
+  keyValues <- Kernel.Prelude.map (\(personIdText, utcTime) -> ContactsDetail (Id personIdText) utcTime) <$> Hedis.hGetAll hashKey
+  return $ EmergencyContactsStatusRes keyValues
+
+getFollowRideCustomerDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow FollowRideCustomerDetailsRes
+getFollowRideCustomerDetails (_, _) rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- Booking.findByPrimaryKey ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+  customerPhone <- mapM decrypt person.mobileNumber
+  return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, ..}

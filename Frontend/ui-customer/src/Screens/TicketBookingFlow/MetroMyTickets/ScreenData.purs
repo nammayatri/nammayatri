@@ -19,16 +19,21 @@ import Prelude
 import Common.Types.App as Common
 import ConfigProvider
 import Screens.Types 
+import Services.API as API
+import Data.Maybe (Maybe(..))
 
 initData :: MetroMyTicketsScreenState
 initData = {
   data : {
       activeTickets : []
     , pastTickets : []
+    , userBlocked : false
     }
   , props :  {
       dummyProps : ""
     , showShimmer : true
     , entryPoint : HomeScreenToMetroMyTickets
+    , fromScreen : Nothing
+    , ticketServiceType : API.METRO
     }
   }

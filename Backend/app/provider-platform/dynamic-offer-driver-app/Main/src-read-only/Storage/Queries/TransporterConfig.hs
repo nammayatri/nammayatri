@@ -42,6 +42,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.defaultPopupDelay defaultPopupDelay,
       Se.Set Beam.popupDelayToAddAsPenalty popupDelayToAddAsPenalty,
+      Se.Set Beam.fleetAlertThreshold fleetAlertThreshold,
       Se.Set Beam.thresholdCancellationScore thresholdCancellationScore,
       Se.Set Beam.minRidesForCancellationScore minRidesForCancellationScore,
       Se.Set Beam.mediaFileUrlPattern mediaFileUrlPattern,
@@ -50,6 +51,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.onboardingRetryTimeInHours onboardingRetryTimeInHours,
       Se.Set Beam.checkImageExtractionForDashboard checkImageExtractionForDashboard,
       Se.Set Beam.searchRepeatLimit searchRepeatLimit,
+      Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.driverPaymentCycleBuffer (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleBuffer),
@@ -68,6 +70,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.orderAndNotificationStatusCheckTimeLimit (Kernel.Utils.Common.nominalDiffTimeToSeconds orderAndNotificationStatusCheckTimeLimit),
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
+      Se.Set Beam.dpGeoHashPercision dpGeoHashPercision,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

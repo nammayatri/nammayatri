@@ -86,3 +86,96 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN settle_cancellation_fee_before_nex
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN cx_agent_details text [] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN cs_alert_trigger_delay integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN avg_speed_in_km_per_hr integer  default 20;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_size integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN execute_payment_delay integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_payment_delay integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN make_multi_modal_search boolean  default false;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN maximum_walk_distance integer  default 600;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN post_ride_safety_notification_delay integer  default 60;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN driver_referred_search_req_expiry integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN dynamic_logic_update_password text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN feedback_alert_rating_threshold integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN use_user_settings_for_safety_ivr boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_program boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_start_date timestamp with time zone  default '2024-12-20 12:00:00.000000+00';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN threshold_cancellation_percentage_to_block integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_block integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN metro_booking_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_show_cancellation_rate integer ;

@@ -99,9 +99,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String durationToPickup = rideRequestBundle.getString("durationToPickup");
             DecimalFormat df = new DecimalFormat();
             df.setMaximumFractionDigits(2);
-            @SuppressLint("SimpleDateFormat") final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String getCurrTime = simpleDateFormat.format(new Date());
+            String getCurrTime = RideRequestUtils.getCurrentUTC();
             int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill, getCurrTime);
             if (sheetArrayList.isEmpty()) {
                 startTimer();
@@ -115,14 +113,15 @@ public class RideRequestActivity extends AppCompatActivity {
             double destLng = rideRequestBundle.getDouble("destLng");
             boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
             int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
+            int ventilator = rideRequestBundle.getInt("ventilator", -1);
             String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
             String rideStartTime = rideRequestBundle.getString("rideStartTime");
             String rideStartDate = rideRequestBundle.getString("rideStartDate");
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
-            int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
-                    
+            int stops = rideRequestBundle.getInt("middleStopCount", 0);
+            boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     tollCharges,
@@ -154,9 +153,10 @@ public class RideRequestActivity extends AppCompatActivity {
                     destLat,
                     destLng,
                     rideRequestBundle.getBoolean("specialZonePickup"),
-                    rideRequestBundle.getInt("specialZoneExtraTip"),
+                    rideRequestBundle.getInt("driverDefaultStepFee"),
                     downgradeEnabled,
                     airConditioned,
+                    ventilator,
                     vehicleServiceTier,
                     rideRequestBundle.getString("rideProductType"),
                     rideDuration,
@@ -165,7 +165,11 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartDate,
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
-                    offeredPrice
+                    rideRequestBundle.getBoolean("isFavourite"),
+                    rideRequestBundle.getDouble("parkingCharge"),
+                    getCurrTime,
+                    stops,
+                    roundTrip
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -182,15 +186,17 @@ public class RideRequestActivity extends AppCompatActivity {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant || model.isFavourite() || model.getRoundTrip()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
-                if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
-                    model.setOfferedPrice(model.getSpecialZoneExtraTip());
-                    model.setUpdatedAmount(model.getSpecialZoneExtraTip());
+                if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
+                    holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
+                }else {
+                    holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
@@ -200,6 +206,9 @@ public class RideRequestActivity extends AppCompatActivity {
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
+                holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
+                holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
+                holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
@@ -255,18 +264,10 @@ public class RideRequestActivity extends AppCompatActivity {
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
-
-            if( service.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
-                holder.durationToPickup.setVisibility(View.VISIBLE);
-                holder.durationToPickupImage.setVisibility(View.VISIBLE);
-                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
-            } else {
-                holder.durationToPickup.setVisibility(View.GONE);
-                holder.durationToPickupImage.setVisibility(View.GONE);
-            }
+            RideRequestUtils.handleDurationToPickup(holder, model, mainLooper, RideRequestActivity.this);
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -276,6 +277,8 @@ public class RideRequestActivity extends AppCompatActivity {
 
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            holder.stopsInfo.setText(getString(model.getTollCharges() > 0 ? R.string.stops : R.string.stops_info, model.getStops()));
+            holder.stopsInfo.setVisibility(model.getStops() > 0? View.VISIBLE : View.GONE);
             if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
@@ -314,14 +317,15 @@ public class RideRequestActivity extends AppCompatActivity {
                     return;
                 }
                 holder.reqButton.setClickable(false);
-                if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-                }else if(service.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
-                }
+                // Deprecated as a generic loader is used irrespective of the vehicle variant
+                // if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                //     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                // }else if(service.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                //     lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
+                // }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
-                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
+                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model, true, RideRequestActivity.this, sheetArrayList.indexOf(model));
                     if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);
                         startLoader(model.getSearchRequestId());
@@ -336,7 +340,7 @@ public class RideRequestActivity extends AppCompatActivity {
                         removeCard(position);
                         return;
                     }
-                    new Thread(() -> RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
+                    new Thread(() -> RideRequestUtils.driverRespondApi(model, false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
                     holder.rejectButton.setClickable(false);
                     mainLooper.post(() -> {
                         removeCard(position);
@@ -366,18 +370,12 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             });
             holder.buttonDecreasePrice.setOnClickListener(view -> {
-                int specialZoneExtraTip = model.getSpecialZoneExtraTip();
                 if (model.getOfferedPrice() > 0) {
-                    if(specialZoneExtraTip > 0) {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
-                        model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
-                        model.setSpecialZoneExtraTip(0);
+                    if (model.getSpecialZonePickup() && model.getOfferedPrice() >= model.getDriverDefaultStepFee()){
                         holder.specialLocExtraTip.setVisibility(View.GONE);
                     }
-                    else {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                        model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
-                    }
+                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
                     sheetAdapter.notifyItemChanged(position, "inc");
                     if (model.getOfferedPrice() == 0) {
                         mainLooper.post(() -> {
@@ -483,21 +481,23 @@ public class RideRequestActivity extends AppCompatActivity {
         View progressDialog = findViewById(R.id.progress_loader);
         int rawResource;
         if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_accepted_lottie;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.ride_accepted_lottie_cab;
-            }else
-                rawResource = R.raw.ride_accepted_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_accepted_lottie;
+            // }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.ride_accepted_lottie_cab;
+            // }else
+            rawResource = R.raw.ride_accepted_lottie;
         }
         else{
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_declined;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.accepted_by_another_driver_lottie_cab;
-            }
-            else
-                rawResource = R.raw.accepted_by_another_driver_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_declined;
+            // }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.accepted_by_another_driver_lottie_cab;
+            // }
+            // else
+            rawResource = R.raw.accepted_by_another_driver_lottie;
         }
         mainLooper.post(() -> {
             TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);

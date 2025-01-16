@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -10,7 +9,8 @@ import Domain.Types.Extra.Plan as ReExport
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -19,7 +19,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Plan = Plan
-  { basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
+  { allowStrikeOff :: Kernel.Prelude.Bool,
+    basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
     cgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     description :: Kernel.Prelude.Text,
     eligibleForCoinDiscount :: Kernel.Prelude.Bool,
@@ -28,6 +29,7 @@ data Plan = Plan
     id :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     isDeprecated :: Kernel.Prelude.Bool,
     isOfferApplicable :: Kernel.Prelude.Bool,
+    listingPriority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -41,7 +43,8 @@ data Plan = Plan
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

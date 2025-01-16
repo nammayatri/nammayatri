@@ -11,7 +11,6 @@ import Screens.HomeScreen.Controllers.Types
 import Language.Strings
 import Language.Types
 import Data.Maybe
-import Screens.HomeScreen.Controllers.Types
 import Screens.RideBookingFlow.HomeScreen.BannerConfig
 import Data.Array
 import Data.Function.Uncurried
@@ -20,6 +19,7 @@ import Common.RemoteConfig.Types as CRT
 import Storage
 import Helpers.Utils
 import Resources.Constants 
+import Engineering.Helpers.Utils as EHU
 import Debug
 import Components.LocationTagBarV2 as LocationTagBarV2
 
@@ -51,7 +51,7 @@ bannerCarouselAC action state =
             BannerCarousel.CabLaunch -> continueWithCmd state [pure $ WhereToClick]
             BannerCarousel.Remote link ->
               if isJust config.dynamicAction then 
-                handleDynamicBannerAC config.dynamicAction
+                handleDynamicBannerAC config.dynamicAction state 
               else if link == "search" then 
                 continueWithCmd state [pure $ WhereToClick ]
               else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
@@ -67,45 +67,48 @@ bannerCarouselAC action state =
         Nothing -> update state
     _ -> update state
 
-    where 
-      handleDynamicBannerAC action = 
-        case action of 
-          Just actiontype -> case actiontype of 
-            CRT.Destination (CRT.DestinationParams destinationParams)-> do
-              void $ pure $ updateLocalStage GoToConfirmLocation
-              pure $ JB.removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
-              pure $ setText (getNewIDWithTag "DestinationEditText") $ fromMaybe "" destinationParams.description
+handleDynamicBannerAC :: Maybe CRT.RemoteAC ->  HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+handleDynamicBannerAC action state = 
+  case action of 
+    Just actiontype -> case actiontype of 
+      CRT.Destination (CRT.DestinationParams destinationParams)-> do
+        void $ pure $ updateLocalStage GoToConfirmLocation
+        pure $ JB.removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+        pure $ setText (getNewIDWithTag "DestinationEditText") $ fromMaybe "" destinationParams.description
 
-              exit $ ExitAndEnterHomeScreen state {
-                data{ 
-                  source = getString CURRENT_LOCATION
-                , destination = fromMaybe "" destinationParams.description
-                , destinationAddress = maybe state.data.destinationAddress (\x -> encodeAddress x [] Nothing destinationParams.lat destinationParams.lng) destinationParams.description
-                }
-              , props{
-                  destinationPlaceId = destinationParams.placeId
-                , destinationLat = destinationParams.lat
-                , destinationLong = destinationParams.lng
-                , currentStage = GoToConfirmLocation
-                , isSource = Just false
-                }
-              } 
-              
-            CRT.WhereTo -> continueWithCmd state [pure WhereToClick]
-            CRT.Profile ->  exit $ GoToMyProfile state false
-            CRT.UpdateProfile -> exit $ GoToMyProfile state true
-            CRT.MetroBooking -> exit $ GoToMetroTicketBookingFlow state
-            CRT.ZooBooking -> exit $ GoToTicketBookingFlow state
-            CRT.Safety -> exit $ GoToSafetyEducation state
-            CRT.WebLink (CRT.WebLinkParams param) -> do
-              continueWithCmd state [ do
-                void $ JB.openUrlInApp param.url
-                pure NoAction
-              ]
-            CRT.NoAction -> update state
-            CRT.Rentals -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "RENTALS")]
-            CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
-          Nothing -> update state
+        exit $ ExitAndEnterHomeScreen state {
+          data{ 
+            source = getString CURRENT_LOCATION
+          , destination = fromMaybe "" destinationParams.description
+          , destinationAddress = maybe state.data.destinationAddress (\x -> encodeAddress x [] Nothing destinationParams.lat destinationParams.lng) destinationParams.description
+          }
+        , props{
+            destinationPlaceId = destinationParams.placeId
+          , destinationLat = destinationParams.lat
+          , destinationLong = destinationParams.lng
+          , currentStage = GoToConfirmLocation
+          , isSource = Just false
+          }
+        } 
+        
+      CRT.WhereTo -> continueWithCmd state [pure WhereToClick]
+      CRT.Profile ->  exit $ GoToMyProfile state false
+      CRT.UpdateProfile -> exit $ GoToMyProfile state true
+      CRT.MetroBooking -> exit $ GoToMetroTicketBookingFlow state
+      CRT.ZooBooking -> exit $ GoToTicketBookingFlow state
+      CRT.Safety -> exit $ GoToSafetyEducation state
+      CRT.WebLink (CRT.WebLinkParams param) -> do
+        continueWithCmd state [ do
+          void $ JB.openUrlInApp param.url
+          pure NoAction
+        ]
+      CRT.NoAction -> update state
+      CRT.Rentals -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "RENTALS")]
+      CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
+      CRT.SafetyExplaination -> update state
+      CRT.SetupSafety -> exit $ GoToNammaSafety state false false
+      CRT.IntercityBus -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTERCITY_BUS")]
+    Nothing -> update state
 
 
 genderBannerModal :: Banner.Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -139,9 +142,8 @@ safetyBannerAction action state =
   case action of 
     Banner.OnClick -> 
       if state.props.isOffline then do  
-        void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+        void $ pure $ EHU.showToast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
         continue state
       else do 
         exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
     Banner.NoAction -> update state
-  

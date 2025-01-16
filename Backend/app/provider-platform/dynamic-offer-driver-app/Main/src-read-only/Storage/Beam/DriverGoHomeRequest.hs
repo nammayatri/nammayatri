@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverGoHomeRequest where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.DriverGoHomeRequest
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -19,6 +18,8 @@ data DriverGoHomeRequestT f = DriverGoHomeRequestT
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
     reachedHome :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numCancellation :: B.C f Kernel.Prelude.Int,
     status :: B.C f Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

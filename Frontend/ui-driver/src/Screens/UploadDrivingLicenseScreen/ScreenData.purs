@@ -19,10 +19,10 @@ import Data.Maybe
 
 import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import Screens.Types (UploadDrivingLicenseState)
 import ConfigProvider
 import Screens.Types as ST
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -45,7 +45,7 @@ initData = {
       , logField : empty
       , mobileNumber : ""
       , vehicleCategory : Nothing
-      , cityConfig : dummyCityConfig
+      , cityConfig : defaultCityConfig
       , config : getAppConfig appConfig
       },
       props: {

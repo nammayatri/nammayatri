@@ -43,6 +43,8 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
+import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
@@ -52,7 +54,9 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyB
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import SharedLogic.KaalChakra.Chakras
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -91,6 +95,9 @@ allocatorHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
@@ -103,6 +110,15 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFleetAlert)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
     }
 
 runDriverOfferAllocator ::

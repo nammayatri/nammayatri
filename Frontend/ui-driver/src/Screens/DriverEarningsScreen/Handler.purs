@@ -64,4 +64,7 @@ driverEarningsScreen = do
     LoaderOutput updatedState -> do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ LOAD_MORE_HISTORY updatedState)
+    CoinsEarningInfo updatedState -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_COINS_EARNING_INFO updatedState)
 

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
     validateRequest,
@@ -24,9 +23,11 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -50,30 +51,38 @@ data DSelectReq = DSelectReq
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
     customerPhoneNum :: Maybe Text,
-    isAdvancedBookingEnabled :: Bool
+    isAdvancedBookingEnabled :: Bool,
+    isMultipleOrNoDeviceIdExist :: Maybe Bool,
+    toUpdateDeviceIdInfo :: Bool,
+    disabilityDisable :: Maybe Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
+  when (sReq.disabilityDisable == Just True) $ QSR.updateDisabilityTag searchReq.id Nothing searchReq.isScheduled
   now <- getCurrentTime
-  case sReq.customerPhoneNum of
+  riderId <- case sReq.customerPhoneNum of
     Just number -> do
-      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+      let mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
-      QSR.updateRiderId searchReq.id riderDetails.id
+      when sReq.toUpdateDeviceIdInfo do
+        let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist
+        when (riderDetails.payoutFlagReason /= mbFlag) $ QRD.updateFlagReasonAndIsDeviceIdExists mbFlag (Just $ isJust sReq.isMultipleOrNoDeviceIdExist) riderDetails.id
+      return (Just riderDetails.id)
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
-  when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
-  when sReq.isAdvancedBookingEnabled $ QSR.updateIsAdvancedBookingEnabled sReq.isAdvancedBookingEnabled searchReq.id
+      return Nothing
+  QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId
-  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled}
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName estimate.minFare Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
+  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId}
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -82,9 +91,13 @@ handler merchant sReq searchReq estimates = do
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            isAllocatorBatch = False
           }
   initiateDriverSearchBatch driverSearchBatchInput
+  Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
+  where
+    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do

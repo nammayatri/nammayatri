@@ -30,6 +30,7 @@ import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Array(any)
 import Common.Types.App (LazyCheck(..))
+import Data.String as DS
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> Boolean -> PrestoDOM (Effect Unit) w
 view push config flag =
@@ -93,7 +94,7 @@ prefixImageView config =
     ][  imageView
         [ height $ V 20
         , width $ V 20
-        , imageWithFallback config.prefixImageUrl
+        , imageWithFallback $ getLocationTagImage config.types config.prefixImageUrl config.description
         ]
       ]
 
@@ -146,3 +147,21 @@ subTitleView config =
     , ellipsize true
     , visibility if config.subTitle == "" then GONE else VISIBLE
     ] <> FontStyle.body3 TypoGraphy)
+
+
+
+getLocationTagImage :: forall w . Maybe (Array String) -> String -> String -> String
+getLocationTagImage mbTypes fallback description =
+  case mbTypes of 
+    Just types -> 
+      if any (_ == "transit_station") types then 
+        if checkBusStation then fetchImage FF_ASSET "ny_ic_loc_bus" 
+        else fetchImage FF_ASSET "ny_ic_loc_train" 
+      else fallback
+    Nothing -> fallback
+  where 
+    checkBusStation :: Boolean 
+    checkBusStation = any (\item -> DS.contains (DS.Pattern item)  $ DS.toLower description) ["bus"]
+
+    checkTrainStation :: Boolean
+    checkTrainStation = any (\item -> DS.contains(DS.Pattern item) $ DS.toLower description) ["train", "metro"] 

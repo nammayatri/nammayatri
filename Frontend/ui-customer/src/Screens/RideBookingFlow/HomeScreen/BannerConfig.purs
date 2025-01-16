@@ -18,7 +18,7 @@ import Data.String (null, take, toLower)
 import Prelude (not, show, ($), (&&), (<>), (==))
 import Locale.Utils (getLanguageLocale)
 import SessionCache (getValueFromWindow)
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Maybe (fromMaybe, Maybe(..), isNothing)
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
 import RemoteConfig as RC
@@ -29,9 +29,19 @@ import DecodeUtil (getAnyFromWindow)
 import Components.RideCompletedCard as RideCompletedCard
 import Data.Foldable
 import ConfigProvider (getAppConfig)
+import Data.Array as DA
+import Common.RemoteConfig.Types as CTR
+import Data.Either (Either(..), hush)
+import Control.Monad.Except (runExcept)
+import Foreign (Foreign)
+import JBridge as JB
+import Data.Function.Uncurried (runFn2)
+import Presto.Core.Utils.Encoding (defaultDecode)
+import DecodeUtil
+import Mobility.Prelude as MP
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
-getBannerConfigs state action =
+getBannerConfigs state action = do
   -- (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
   -- then [metroBannerConfig state action]
   -- else [])
@@ -45,15 +55,32 @@ getBannerConfigs state action =
   --   else [])
   -- <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
   -- <> 
-  (getRemoteBannerConfigs state.props.city)
+  let
+    safetyConfig = RC.getSafetyConfig FunctionCall
+    safetyBannerUrl = runFn2 JB.executeJS [ show state.data.settingSideBar.hasCompletedSafetySetup ] safetyConfig.bannerUrl
+    safetyBannerAction = decodeBannerAction $ parseJSON $ runFn2 JB.executeJS [ show state.data.settingSideBar.hasCompletedSafetySetup ] safetyConfig.bannerAction
+    showSafetyBannerOnRide = runFn2 JB.executeJS [ show state.data.settingSideBar.hasCompletedSafetySetup ] safetyConfig.showOnRide
+    safetyBannerObject =
+        createRCCarousel (if null safetyBannerUrl then Nothing else Just safetyBannerUrl) (fromMaybe CTR.NoAction safetyBannerAction) (Just (showSafetyBannerOnRide == "true"))
+    safetyBanner =
+      if null safetyBannerUrl then
+        []
+      else
+        BannerCarousel.remoteConfigTransformer [ safetyBannerObject ] action Nothing
+  MP.insertArrayAtPosition safetyConfig.bannerPosition safetyBanner $ getRemoteBannerConfigs state.props.city
   where
+    decodeBannerAction :: Foreign -> Maybe CTR.RemoteAC
+    decodeBannerAction = hush <<< runExcept <<< defaultDecode
+    
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
     getRemoteBannerConfigs city = do
       let location = toLower $ show city
           language = getLanguage $ getLanguageLocale languageKey
           configName = "customer_carousel_banner" <> language
           datas = RC.carouselConfigData location configName "customer_carousel_banner_en" (getValueFromWindow "CUSTOMER_ID") "" ""
-      BannerCarousel.remoteConfigTransformer datas action
+          transformedBanners = BannerCarousel.remoteConfigTransformer datas action Nothing
+      if state.data.settingSideBar.hasCompletedSafetySetup then DA.filter (\item -> item.dynamicAction /= Just CTR.SetupSafety) transformedBanners else transformedBanners
+
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang
@@ -64,10 +91,8 @@ getBannerConfigs state action =
 
 
 getDriverInfoCardBanners :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
-getDriverInfoCardBanners state action = 
-  if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow && state.data.driverInfoCardState.providerType == ONUS
-    then [sosSetupBannerConfig state action] 
-    else []
+getDriverInfoCardBanners state action = do
+  DA.filter (\item -> item.showDuringRide == Just true) $ getBannerConfigs state action
 
 
 disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
@@ -143,7 +168,7 @@ metroBannerConfig state action =
     config = BannerCarousel.config action
     appConfig' = state.data.config
     cityMetroAppConfig = getMetroConfigFromAppConfig appConfig' (show state.props.city)
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city Nothing
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city Nothing ""
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {
@@ -258,3 +283,25 @@ issueReportBannerConfigs state =
         Just issue -> issue.selectedYes
         Nothing -> Nothing
 
+createRCCarousel :: Maybe String -> CTR.RemoteAC -> Maybe Boolean -> RC.RCCarousel
+createRCCarousel bannerUrl bannerAction showDuringRide = 
+  RC.RCCarousel { 
+    text_color : ""
+  , text : ""
+  , cta_text : ""
+  , cta_action : Nothing
+  , cta_link : ""
+  , cta_icon : ""
+  , banner_color : ""
+  , banner_image : ""
+  , cta_background_color : ""
+  , cta_text_color : ""
+  , cta_corner_radius : ""
+  , cta_image_url : ""
+  , whitelist : Nothing 
+  , categoryFilter : Nothing 
+  , image_banner : bannerUrl
+  , dynamic_action : Just bannerAction
+  , accessibilityHint : Nothing
+  , showDuringRide : showDuringRide
+  }

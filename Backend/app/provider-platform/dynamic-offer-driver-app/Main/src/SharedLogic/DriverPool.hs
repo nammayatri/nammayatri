@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
@@ -49,6 +48,7 @@ module SharedLogic.DriverPool
     module Reexport,
     scheduledRideFilter,
     getVehicleAvgSpeed,
+    getBatchSize,
   )
 where
 
@@ -61,7 +61,9 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
 import Data.Tuple.Extra (snd3)
+import qualified Data.Vector as V
 import Domain.Action.UI.Route as DRoute
+import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -73,14 +75,13 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
-import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
-import Kernel.Prelude (NominalDiffTime, head)
+import Kernel.Prelude (NominalDiffTime, head, listToMaybe)
 import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
@@ -102,8 +103,10 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
+import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
@@ -128,6 +131,11 @@ windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
+
+getBatchSize :: V.Vector Int -> Int -> Int -> Int
+getBatchSize dynamicBatchSize index driverBatchSize =
+  let size = min (V.length dynamicBatchSize - 1) (index + 1)
+   in bool (dynamicBatchSize V.! size) driverBatchSize (size <= -1)
 
 withAcceptanceRatioWindowOption ::
   ( Redis.HedisFlow m r,
@@ -533,8 +541,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
-convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> DriverPoolWithActualDistResult -> QP.NearestGoHomeDriversResult -- # TODO: Lets merge these two types
-convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> Bool -> DriverPoolWithActualDistResult -> QP.NearestGoHomeDriversResult -- # TODO: Lets merge these two types
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide isSpecialLocWarrior DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
   QP.NearestGoHomeDriversResult {QP.distanceToDriver = distanceToPickup, ..}
 
 -- this is not required in the flow where we convert them
@@ -554,6 +562,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   Id DMOC.MerchantOperatingCity ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+  logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
+  now <- getCurrentTime
   goHomeRequests <-
     mapMaybeM
       ( \driver -> runMaybeT $ do
@@ -562,7 +572,35 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (goHomeReq, driver)
       )
       randomDriverPool
-  let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
+  let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocWarriorDrivers -----" <> show specialLocWarriorDrivers
+  specialLocgoHomeRequests <-
+    mapMaybeM
+      ( \specialLocWarriorDriver -> runMaybeT $ do
+          driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
+          specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
+          preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
+          preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
+          preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
+          let gHR =
+                DDGR.DriverGoHomeRequest
+                  { createdAt = now,
+                    driverId = driverInfo.driverId,
+                    id = Id "specialLocWarriorGoHomeId",
+                    lat = preferredLocGate.point.lat,
+                    lon = preferredLocGate.point.lon,
+                    mbReachedHome = Nothing,
+                    numCancellation = 0,
+                    status = DDGR.ACTIVE,
+                    updatedAt = now,
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId
+                  }
+          return (gHR, specialLocWarriorDriver)
+      )
+      specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
+  let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
       [] -> return []
@@ -586,15 +624,18 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsToDest -----" <> show goHomeDriverIdsToDest
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsNotToDest -----" <> show goHomeDriverIdsNotToDest
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
-  return $ (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
+  logDebug $ "MetroWarriorDebugging goHomeDriverPoolWithActualDist -----" <> show goHomeDriverPoolWithActualDist
+  return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
 
     getRoutesForAllDrivers =
       mapM
@@ -613,6 +654,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
     defRouteInfo =
       RouteInfo
         { duration = Nothing,
+          staticDuration = Nothing,
           distance = Nothing,
           distanceWithUnit = Nothing,
           boundingBox = Nothing,
@@ -629,8 +671,10 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           isPartOfIntelligentPool = False,
           pickupZone = False,
           specialZoneExtraTip = Nothing,
+          searchTags = Nothing,
+          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
-          goHomeReqId = Just ghrId,
+          goHomeReqId = if ghrId.getId == "specialLocWarriorGoHomeId" then Nothing else Just ghrId,
           isForwardRequest = False,
           previousDropGeoHash = Nothing
         }
@@ -639,6 +683,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
+          customerTags = Nothing,
           ..
         }
 
@@ -688,6 +733,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
+  logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
   pure driverPoolResult
   where
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
@@ -703,6 +749,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
+          customerTags = Nothing,
           ..
         }
 
@@ -746,6 +793,8 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
           isPartOfIntelligentPool = False,
           pickupZone = False,
           specialZoneExtraTip = Nothing,
+          searchTags = Nothing,
+          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
@@ -776,6 +825,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
                   { origin = dropLoc,
                     destination = scheduledPickup,
                     travelMode = Just TMaps.CAR,
+                    sourceDestinationMapping = Nothing,
                     distanceUnit = Meter
                   }
             let avgSpeedOfVehicleInKM = getVehicleAvgSpeed driverInfo.variant avgSpeeds
@@ -809,7 +859,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
           let timeDifference = diffUTCTime latestScheduledBooking now
            in timeDifference < scheduledRideFilterExclusionThresholdInSecs
 
-getVehicleAvgSpeed :: DVeh.Variant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
+getVehicleAvgSpeed :: DVeh.VehicleVariant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
 getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.SEDAN -> avgSpeedOfVehicle.sedan
   DVeh.SUV -> avgSpeedOfVehicle.suv
@@ -821,12 +871,18 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.BLACK -> avgSpeedOfVehicle.black
   DVeh.BLACK_XL -> avgSpeedOfVehicle.blackxl
   DVeh.BIKE -> avgSpeedOfVehicle.bike
+  DVeh.DELIVERY_BIKE -> avgSpeedOfVehicle.bike
   DVeh.AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_AC -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
   DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
+  DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
+  DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
+  DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
+  DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
@@ -901,7 +957,9 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   DST.CurrentSearchInfo ->
   m [DriverPoolWithActualDistResult]
 calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType batchNum currentSearchInfo = do
-  (thresholdRadius, driverPool) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
+  (thresholdRadius, driverPoolStraightLineFiltered) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
+  let countDriversToProccess = fromMaybe 10 driverPoolCfg.batchSizeOnRideWithStraightLineDistance
+  let driverPool = take countDriversToProccess $ sortOn (.distanceToPickup) driverPoolStraightLineFiltered
   logDebug $ "driverPoolcalculateDriverCurrentlyOnRideWithActualDist" <> show driverPool
   case driverPool of
     [] -> do
@@ -911,7 +969,10 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup driverPoolResultsWithDriverLocationAsDestinationLocation
-      driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
+      driverPoolWithActualDistFromCurrentLocation <- do
+        case driverPoolCfg.useOneToOneOsrmMapping of
+          Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox)
+          _ -> traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
           filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
@@ -929,10 +990,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       DriverPoolResult
         { lat = previousRideDropLat,
           lon = previousRideDropLon,
+          customerTags = Nothing,
           ..
         }
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {..}
+      let temp = DriverPoolResult {customerTags = Nothing, ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -946,6 +1008,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
                 ..
               }
         else Nothing
+    calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+      let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
+      let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
+      computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation
 
 computeActualDistanceOneToOne ::
   ( CacheFlow m r,
@@ -986,6 +1053,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],
           travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Nothing,
           distanceUnit
         }
   logDebug $ "get distance results" <> show getDistanceResults
@@ -1003,6 +1071,61 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           isPartOfIntelligentPool = False,
           pickupZone = False,
           specialZoneExtraTip = Nothing,
+          searchTags = Nothing,
+          tripDistance = Nothing,
+          keepHiddenForSeconds = Seconds 0,
+          goHomeReqId = Nothing,
+          isForwardRequest = False,
+          previousDropGeoHash = prevRideDropGeoHash
+        }
+
+computeActualDistanceOneToOneSrcAndDestMapping ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  DistanceUnit ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  NonEmpty LatLong ->
+  [Maybe LatLong] ->
+  NonEmpty DriverPoolResult ->
+  m (NonEmpty DriverPoolWithActualDistResult)
+computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults = do
+  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  getDistanceResults <-
+    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+      Maps.GetDistancesReq
+        { origins = driverPoolResults,
+          destinations = destinationLatLons,
+          travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Just Maps.OneToOne,
+          distanceUnit
+        }
+  logDebug $ "get distance results one to one mapping" <> show getDistanceResults
+  let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
+  driverPoolEntities <-
+    mapM
+      ( \(prevRideDropLatLn, getDistanceResult) -> do
+          prevRideDropGeoHash <- case prevRideDropLatLn of
+            Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
+            Nothing -> pure Nothing
+          return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash getDistanceResult
+      )
+      distanceAndDropPointsZipped
+  return $ NE.fromList driverPoolEntities
+  where
+    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash distDur = do
+      DriverPoolWithActualDistResult
+        { driverPoolResult = distDur.origin,
+          actualDistanceToPickup = distDur.distance,
+          actualDurationToPickup = distDur.duration,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+          isPartOfIntelligentPool = False,
+          pickupZone = False,
+          specialZoneExtraTip = Nothing,
+          searchTags = Nothing,
+          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
@@ -1017,6 +1140,7 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
         { distance = route'.distance,
           distanceWithUnit = route'.distanceWithUnit,
           duration = route'.duration,
+          staticDuration = route'.staticDuration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
           boundingBox = route'.boundingBox

@@ -19,10 +19,10 @@ import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
-import qualified Kernel.Streaming.Kafka.Producer.Types as KT
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerTools, buildKafkaProducerTools, castCompression)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
@@ -54,7 +54,7 @@ instance FromDhall ConsumerConfig where
         record $
           let cgId = field "groupId" strictText
               bs = field "brockers" (map BrokerAddress <$> list strictText)
-              kc = field "kafkaCompression" (KT.castCompression <$> auto)
+              kc = field "kafkaCompression" (castCompression <$> auto)
               isAutoCommitM = shouldAutoCommit <$> field "autoCommit" (maybe integer)
            in (\a b c d -> a <> logLevel KafkaLogInfo <> b <> c <> compression d)
                 . (groupId . ConsumerGroupId)
@@ -104,7 +104,15 @@ data AppCfg = AppCfg
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     kvConfigUpdateFrequency :: Int,
     metricsPort :: Int,
-    encTools :: EncTools
+    encTools :: EncTools,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
+    kafkaReadBatchSize :: Int,
+    kafkaReadBatchDelay :: Seconds,
+    consumerStartTime :: Maybe Integer,
+    consumerEndTime :: Maybe Integer
   }
   deriving (Generic, FromDhall)
 
@@ -139,7 +147,18 @@ data AppEnv = AppEnv
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     isShuttingDown :: Shutdown,
     httpClientOptions :: HttpClientOptions,
-    encTools :: EncTools
+    encTools :: EncTools,
+    kafkaProducerTools :: KafkaProducerTools,
+    serviceClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    kafkaReadBatchSize :: Int,
+    kafkaReadBatchDelay :: Seconds,
+    consumerStartTime :: Maybe Integer,
+    consumerEndTime :: Maybe Integer
   }
   deriving (Generic)
 
@@ -155,7 +174,8 @@ data HealthCheckAppCfg = HealthCheckAppCfg
     driverInactiveSmsTemplate :: Text,
     loggerConfig :: LoggerConfig,
     batchSize :: Integer,
-    numberOfShards :: Integer
+    numberOfShards :: Integer,
+    enabledMerchantCityIds :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -180,7 +200,11 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   isShuttingDown <- mkShutdown
+  serviceClickhouseEnv <- createConn serviceClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

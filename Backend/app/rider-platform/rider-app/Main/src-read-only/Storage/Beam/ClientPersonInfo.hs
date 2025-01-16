@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.ClientPersonInfo where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
-import qualified Domain.Types.BecknConfig
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -21,7 +20,7 @@ data ClientPersonInfoT f = ClientPersonInfoT
     personId :: B.C f Kernel.Prelude.Text,
     rideCount :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory)
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 

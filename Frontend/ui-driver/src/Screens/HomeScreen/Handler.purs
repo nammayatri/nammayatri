@@ -50,6 +50,9 @@ homeScreen = do
   (GlobalState updatedGlobalState) <- getState
   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { bgLocPopupShown = updatedGlobalState.globalProps.bgLocPopupShown || updatedGlobalState.homeScreen.props.bgLocationPopup }
   case action of
+    GoToCompleteProfile updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure GO_TO_COMPLETE_PROFILE_SCREEN
     GoToVehicleDetailScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_VEHICLE_DETAILS_SCREEN
@@ -108,9 +111,9 @@ homeScreen = do
     UpdateRoute updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_ROUTE updatedState)
-    FcmNotification notificationType screenState -> do 
+    FcmNotification notificationType notificationBody screenState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → screenState)
-      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState)
+      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState notificationBody)
     NotifyDriverArrived updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFY_CUSTOMER updatedState)
@@ -183,3 +186,40 @@ homeScreen = do
     GoToBookingPreferences updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
+    BenefitsScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_BENEFITS_SCREEN_FROM_HOME)
+    GotoAddUPIScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_ADD_UPI_SCREEN)
+    VerifyManualUPI updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ VERIFY_MANUAL_UPI updatedState)
+    SwitchPlan plan updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_FROM_HS plan updatedState)
+    GotoHotspotScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_HOTSPOT_SCREEN updatedState)
+    GoToRideReqScreen updatedState -> do
+      LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon updatedState.data.currentDriverLat updatedState.data.currentDriverLon 700 false true
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_REQ_SCREEN updatedState lat lon )
+    GoToRideSummary updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> pure GO_TO_RIDE_SUMMARY
+    GoToRideSummaryScreen  updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN  updatedState)
+    UploadParcelImage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_UPLOAD_PARCEL_IMAGE updatedState)
+    NotifyDriverReachedDestination updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NOTIFY_DRIVER_REACHED_DESTINATION updatedState)
+    UpdateToggleMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_METRO_WARRIOR updatedState)
+    GoToMetroWarriors updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_WARRIOR updatedState)

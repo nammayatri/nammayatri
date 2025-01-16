@@ -30,6 +30,7 @@ import JBridge(previewImage, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Helpers.Utils(getVehicleType)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -42,6 +43,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_image_clicked" "primary_edit_text"
     ToggleScreenMode -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "toggle_screen_mode"
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick -> do
@@ -71,6 +73,13 @@ data Action = NoAction
               | CallBackImageUpload String String String
               | AfterRender
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> VehicleDetailsScreenState -> Eval Action ScreenOutput VehicleDetailsScreenState
 eval AfterRender state = continue state
 
@@ -89,7 +98,7 @@ eval (PreviewImage) state = continueWithCmd state [do
   pure NoAction]
 
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
+  _ <- liftEffect $ uploadFile uploadFileConfig true
   pure NoAction]
 
 eval (CallBackImageUpload base_64 imageName imagePath) state = do

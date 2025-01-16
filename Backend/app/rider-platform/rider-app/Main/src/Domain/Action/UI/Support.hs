@@ -120,7 +120,14 @@ safetyCheckSupport (personId, merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId moCityId >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
   ticketRequest <- ticketReq ride person phoneNumber req.description merchant.kaptureDisposition riderConfig.kaptureQueue
-  when (not req.isSafe && riderConfig.enableSupportForSafety) $ void $ createTicket person.merchantId moCityId $ ticketRequest
+  if not req.isSafe && riderConfig.enableSupportForSafety
+    then do
+      logDebug $ "Safety req from frontend is not safe and creating ticket : " <> show req.isSafe
+      void $ createTicket person.merchantId moCityId $ ticketRequest
+      void $ QRide.updateSafetyJourneyStatus ride.id Ride.CSAlerted
+    else do
+      logDebug $ "Safety req from frontend is safe and maerking ride as safe : " <> show req.isSafe
+      void $ QRide.updateSafetyJourneyStatus ride.id Ride.Safe
   return Success
   where
     ticketReq ride person phoneNumber description disposition queue = do
@@ -138,7 +145,8 @@ safetyCheckSupport (personId, merchantId) req = do
             phoneNo = phoneNumber,
             personId = person.id.getId,
             classification = Ticket.CUSTOMER,
-            rideDescription = Just rideDesc
+            rideDescription = Just rideDesc,
+            becknIssueId = Nothing
           }
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
@@ -177,7 +185,8 @@ mkTicket issue person phoneNumber disposition queue = do
         phoneNo = phoneNumber,
         personId = person.id.getId,
         classification = Ticket.CUSTOMER,
-        rideDescription = Just rideDesc
+        rideDescription = Just rideDesc,
+        becknIssueId = Nothing
       }
 
 mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo

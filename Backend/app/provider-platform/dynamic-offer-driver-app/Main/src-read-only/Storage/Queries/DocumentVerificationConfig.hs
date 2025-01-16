@@ -6,7 +6,7 @@ module Storage.Queries.DocumentVerificationConfig (module Storage.Queries.Docume
 
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -31,7 +31,7 @@ findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithO
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Category -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
 findByPrimaryKey documentType merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.description description,
       Se.Set Beam.disableWarning disableWarning,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
+      Se.Set Beam.filterForOldApks filterForOldApks,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,

@@ -24,6 +24,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
+    stops' <- Storage.Queries.Extra.Transformers.Ride.getStops id hasStops
     toLocation' <- Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl trackingUrl
     pure $
@@ -43,6 +44,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
+            destinationReachedAt = destinationReachedAt,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverAccountId = driverAccountId,
             driverAlternateNumber = EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash,
@@ -57,9 +59,12 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             driversPreviousRideDropLoc = Storage.Queries.Extra.Transformers.Ride.mkLatLong driversPreviousRideDropLat driversPreviousRideDropLon,
             endOdometerReading = endOdometerReading,
             endOtp = endOtp,
+            estimatedEndTimeRange = Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd,
             fare = fmap (Kernel.Types.Common.mkPrice currency) fare,
             favCount = favCount,
+            feedbackSkipped = Kernel.Prelude.fromMaybe False feedbackSkipped,
             fromLocation = fromLocation',
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             isAlreadyFav = isAlreadyFav,
             isFreeRide = isFreeRide,
@@ -67,15 +72,19 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             onlinePayment = Kernel.Prelude.fromMaybe False onlinePayment,
             otp = otp,
-            paymentDone = Kernel.Prelude.fromMaybe True paymentDone,
+            paymentStatus = Kernel.Prelude.fromMaybe Domain.Types.Ride.Completed paymentStatus,
+            pickupRouteCallCount = pickupRouteCallCount,
             rideEndTime = rideEndTime,
             rideRating = rideRating,
             rideStartTime = rideStartTime,
             safetyCheckStatus = safetyCheckStatus,
+            safetyJourneyStatus = safetyJourneyStatus,
             shortId = Kernel.Types.Id.ShortId shortId,
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
             startOdometerReading = startOdometerReading,
             status = status,
+            stops = stops',
+            tipAmount = fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
             toLocation = toLocation',
             tollConfidence = tollConfidence,
             totalFare = fmap (Kernel.Types.Common.mkPrice currency) totalFare,
@@ -87,7 +96,8 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             vehicleModel = vehicleModel,
             vehicleNumber = vehicleNumber,
             vehicleServiceTierType = vehicleServiceTierType,
-            vehicleVariant = vehicleVariant
+            vehicleVariant = vehicleVariant,
+            wasRideSafe = wasRideSafe
           }
 
 instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
@@ -111,6 +121,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
+        Beam.destinationReachedAt = destinationReachedAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverAccountId = driverAccountId,
         Beam.driverAlternateNumberEncrypted = driverAlternateNumber <&> unEncrypted . (.encrypted),
@@ -128,9 +139,13 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.driversPreviousRideDropLon = Kernel.Prelude.fmap (.lon) driversPreviousRideDropLoc,
         Beam.endOdometerReading = endOdometerReading,
         Beam.endOtp = endOtp,
+        Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap (.end) estimatedEndTimeRange,
+        Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap (.start) estimatedEndTimeRange,
         Beam.currency = Kernel.Prelude.fmap (.currency) fare,
         Beam.fare = Kernel.Prelude.fmap (.amount) fare,
         Beam.favCount = favCount,
+        Beam.feedbackSkipped = Kernel.Prelude.Just feedbackSkipped,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAlreadyFav = isAlreadyFav,
         Beam.isFreeRide = isFreeRide,
@@ -138,15 +153,18 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.onlinePayment = Kernel.Prelude.Just onlinePayment,
         Beam.otp = otp,
-        Beam.paymentDone = Kernel.Prelude.Just paymentDone,
+        Beam.paymentStatus = Kernel.Prelude.Just paymentStatus,
+        Beam.pickupRouteCallCount = pickupRouteCallCount,
         Beam.rideEndTime = rideEndTime,
         Beam.rideRating = rideRating,
         Beam.rideStartTime = rideStartTime,
         Beam.safetyCheckStatus = safetyCheckStatus,
+        Beam.safetyJourneyStatus = safetyJourneyStatus,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.showDriversPreviousRideDropLoc = Kernel.Prelude.Just showDriversPreviousRideDropLoc,
         Beam.startOdometerReading = startOdometerReading,
         Beam.status = status,
+        Beam.tipAmount = Kernel.Prelude.fmap (.amount) tipAmount,
         Beam.tollConfidence = tollConfidence,
         Beam.totalFare = Kernel.Prelude.fmap (.amount) totalFare,
         Beam.trackingUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl trackingUrl,
@@ -158,5 +176,6 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.vehicleModel = vehicleModel,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleServiceTierType = vehicleServiceTierType,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleVariant = vehicleVariant,
+        Beam.wasRideSafe = wasRideSafe
       }

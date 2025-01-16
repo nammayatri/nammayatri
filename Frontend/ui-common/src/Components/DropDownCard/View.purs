@@ -1,4 +1,7 @@
-module Components.DropDownCard.View where
+module Components.DropDownCard.View
+  ( view
+  )
+  where
 
 import Prelude
 import Font.Style as FontStyle
@@ -9,9 +12,11 @@ import Effect (Effect)
 import Common.Types.App
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Mobility.Prelude (boolToVisibility)
-
-
-
+import Debug (spy)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
+import Engineering.Helpers.Commons(os)
+import Common.Animation.Config (estimateExpandingAnimationConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -19,43 +24,49 @@ view push config =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin $ Margin 16 0 16 16
-    , padding $ Padding 16 16 16 16
+    , margin $ config.cardMargin
+    , padding $ config.cardPadding
     , cornerRadius 16.0
     , stroke ("1," <> Color.grey900)
     , gravity CENTER_VERTICAL
     ]
-    ([ cardHeadingLayout config.title config push 
+    ([ cardHeadingLayout config push 
     , linearLayout
         [ width WRAP_CONTENT
-        , height $ V 20
         , visibility $ boolToVisibility $ config.isOpen
         ][]
     ] <> if config.isOpen then [config.layout] else [])
 
 
-cardHeadingLayout :: String -> Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-cardHeadingLayout heading config push = 
-  linearLayout
+cardHeadingLayout :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+cardHeadingLayout config push = 
+    PrestoAnim.animationSet
+    ([ Anim.fadeInWithDuration 200 true ] <>
+    (if os == "IOS" then []
+    else [ Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.0) true ]))
+  $linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
-    , padding $ Padding 2 2 2 2
-    , onClick push $ const OnClick
+    , padding $ config.headingPadding
+    , cornerRadius config.headingCornerRadius
+    , background $ config.titleBackground
+    , onClick push $ const $ OnClick config
     , gravity CENTER_VERTICAL
     ]
     [ textView $ 
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-        , text heading
+        , gravity CENTER_VERTICAL
+        , text config.title
         , weight 1.0
         , color Color.black800
-        ] <> FontStyle.h3 TypoGraphy
+        , margin $ MarginRight 4
+        ] <> FontStyle.subHeading1 TypoGraphy
     , imageView 
-        [ width $ V 26
-        , height $ V 26
-    , gravity CENTER_VERTICAL
+        [ width $ config.imageWidth
+        , height $ config.imageHeight
+        , gravity CENTER_VERTICAL
         , imageWithFallback $ if config.isOpen then config.openArrowImage else config.closeArrowImage
         , color Color.black800
         ]

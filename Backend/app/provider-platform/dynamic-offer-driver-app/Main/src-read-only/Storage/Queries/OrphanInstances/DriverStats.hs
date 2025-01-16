@@ -39,6 +39,7 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             totalCoinsConvertedCash = Kernel.Prelude.fromMaybe 0 totalCoinsConvertedCash,
             totalDistance = Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
+            totalPayoutAmountPaid = totalPayoutAmountPaid,
             totalPayoutEarnings = Storage.Queries.Transformers.DailyStats.getHighPrecMoney totalPayoutEarnings,
             totalRatingScore = totalRatingScore,
             totalRatings = totalRatings,
@@ -46,7 +47,10 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             totalRides = totalRides,
             totalRidesAssigned = totalRidesAssigned,
             totalValidActivatedRides = Kernel.Prelude.fromMaybe 0 totalValidActivatedRides,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            validCancellationTagsStatsStartDate = validCancellationTagsStatsStartDate,
+            validCustomerCancellationTagCount = Kernel.Prelude.fromMaybe 0 validCustomerCancellationTagCount,
+            validDriverCancellationTagCount = Kernel.Prelude.fromMaybe 0 validDriverCancellationTagCount
           }
 
 instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
@@ -69,6 +73,7 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalDistance = getTotalDistance totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
+        Beam.totalPayoutAmountPaid = totalPayoutAmountPaid,
         Beam.totalPayoutEarnings = Kernel.Prelude.Just totalPayoutEarnings,
         Beam.totalRatingScore = totalRatingScore,
         Beam.totalRatings = totalRatings,
@@ -76,5 +81,8 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalRides = totalRides,
         Beam.totalRidesAssigned = totalRidesAssigned,
         Beam.totalValidActivatedRides = Kernel.Prelude.Just totalValidActivatedRides,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.validCancellationTagsStatsStartDate = validCancellationTagsStatsStartDate,
+        Beam.validCustomerCancellationTagCount = Kernel.Prelude.Just validCustomerCancellationTagCount,
+        Beam.validDriverCancellationTagCount = Kernel.Prelude.Just validDriverCancellationTagCount
       }

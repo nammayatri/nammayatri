@@ -64,6 +64,7 @@ data BecknTagGroup
   | ROUTE_INFO
   | -- Custom tag groups
     REALLOCATION_INFO
+  | DRIVER_IDENTIFIER
   | CUSTOMER_INFO
   | ESTIMATIONS
   | CURRENT_LOCATION
@@ -85,6 +86,11 @@ data BecknTagGroup
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
   | SETTLEMENT_DETAILS
+  | DEVICE_ID_INFO
+  | DELIVERY
+  | DRIVER_REACHED_DESTINATION_INFO
+  | ESTIMATED_END_TIME_RANGE
+  | RIDE_DETAILS_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -99,6 +105,8 @@ instance CompleteTagGroup BecknTagGroup where
     BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
     REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
+    DELIVERY -> (Just "Delivery Information", Nothing)
+    DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -170,6 +178,16 @@ data BASE_STEP_FARE = BASE_STEP_FARE
 instance Show BASE_STEP_FARE where
   show (BASE_STEP_FARE startDist (Just endDist)) = "BASE_STEP_FARE" <> show startDist <> "_" <> show endDist
   show (BASE_STEP_FARE startDist Nothing) = "BASE_STEP_FARE" <> show startDist <> "_Above"
+
+data BASE_STEP_DISTANCE = BASE_STEP_DISTANCE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show BASE_STEP_DISTANCE where
+  show (BASE_STEP_DISTANCE startDist (Just endDist)) = "BASE_STEP_DISTANCE" <> show startDist <> "_" <> show endDist
+  show (BASE_STEP_DISTANCE startDist Nothing) = "BASE_STEP_DISTANCE" <> show startDist <> "_Above"
 
 data NIGHT_SHIFT_STEP_PERCENTAGE = NIGHT_SHIFT_STEP_PERCENTAGE
   { startThreshold :: Int,
@@ -263,6 +281,7 @@ data BecknTag
   | NIGHT_CHARGE_MULTIPLIER
   | NIGHT_SHIFT_START_TIME
   | NIGHT_SHIFT_END_TIME
+  | PER_STOP_CHARGES
   | NIGHT_SHIFT_START_TIME_IN_SECONDS
   | NIGHT_SHIFT_END_TIME_IN_SECONDS
   | NIGHT_SHIFT_CHARGE_PERCENTAGE
@@ -285,13 +304,17 @@ data BecknTag
   | PLATFORM_FEE_CGST
   | PLATFORM_FEE_SGST
   | TOLL_CHARGES
+  | TIP_OPTIONS
   | CONGESTION_CHARGE_PERCENTAGE
   | UPDATED_ESTIMATED_DISTANCE
   | VEHICLE_AGE
   | -- INFO
     DISTANCE_TO_NEAREST_DRIVER_METER
   | DURATION_TO_NEAREST_DRIVER_MINUTES
+  | SMART_TIP_SUGGESTION
+  | SMART_TIP_REASON
   | ETA_TO_NEAREST_DRIVER_MIN
+  | UPGRADE_TO_CAB
   | BUYER_FINDER_FEES_TYPE
   | BUYER_FINDER_FEES_PERCENTAGE
   | BUYER_FINDER_FEES_AMOUNT
@@ -323,6 +346,7 @@ data BecknTag
   | PLANNED_PER_KM_CHARGE_ROUND_TRIP
   | PER_KM_RATE
   | PER_DAY_MAX_HOUR_ALLOWANCE
+  | PER_DAY_MAX_ALLOWANCE_IN_MINS
   | -- | SETTLEMENT_DETAILS
     INSURANCE_CHARGE_PER_METER
   | INSURANCE_CHARGE_PER_MILE
@@ -343,9 +367,12 @@ data BecknTag
   | ROUND_TRIP
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
+  | -- Driver identifier tags
+    DRIVER_IDENTITY
   | -- Customer info tags
     CUSTOMER_LANGUAGE
   | CUSTOMER_DISABILITY
+  | CUSTOMER_NAMMA_TAGS
   | DASHBOARD_USER
   | CUSTOMER_PHONE_NUMBER
   | NIGHT_SAFETY_CHECK
@@ -392,6 +419,7 @@ data BecknTag
     OTHER_SELECT_ESTIMATES
   | -- Forward batching request info tags
     PREVIOUS_RIDE_DROP_LOCATION_LAT
+  | VEHICLE_ICON_URL
   | PREVIOUS_RIDE_DROP_LOCATION_LON
   | -- Toll related info tags
     TOLL_CONFIDENCE
@@ -402,6 +430,23 @@ data BecknTag
   | -- rating tags
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
+  | DEVICE_ID_FLAG
+  | TO_UPDATE_DEVICE_ID
+  | MEDIA_FILE_PATH
+  | RIDER_NAME
+  | SENDER_NUMBER
+  | SENDER_NAME
+  | SENDER_LOCATION_INSTRUCTIONS
+  | RECEIVER_NUMBER
+  | RECEIVER_NAME
+  | RECEIVER_LOCATION_INSTRUCTIONS
+  | INITIATED_AS
+  | DRIVER_REACHED_DESTINATION
+  | ESTIMATED_END_TIME_RANGE_START
+  | ESTIMATED_END_TIME_RANGE_END
+  | PARCEL_IMAGE_UPLOADED
+  | CUSTOMER_DISABILITY_DISABLE
+  | IS_VALID_RIDE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -418,6 +463,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> (Just "Round trip", Nothing)
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
+    DRIVER_IDENTITY -> (Just "Driver Identity", Nothing)
     BUYER_FINDER_FEES_PERCENTAGE -> (Just "Buyer Finder Fees", Nothing)
     SETTLEMENT_AMOUNT -> (Just "Settlement amount", Nothing)
     SETTLEMENT_WINDOW -> (Just "Settlement window", Nothing)
@@ -428,6 +474,18 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> (Just "Static Terms", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
+    SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
+    SENDER_LOCATION_INSTRUCTIONS -> (Just "Delivery Sender Location Instructions", Nothing)
+    RECEIVER_NUMBER -> (Just "Delivery Receiver Number", Nothing)
+    RECEIVER_NAME -> (Just "Delivery Receiver Name", Nothing)
+    RECEIVER_LOCATION_INSTRUCTIONS -> (Just "Delivery Receiver Location Instructions", Nothing)
+    INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
+    DRIVER_REACHED_DESTINATION -> (Just "Destination Reached Time", Nothing)
+    DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
+    ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
+    SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
+    UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -439,6 +497,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> ROUTE_INFO
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
+    DRIVER_IDENTITY -> DRIVER_IDENTIFIER
     BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
     SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
     SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
@@ -449,6 +508,22 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> SETTLEMENT_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    CUSTOMER_LANGUAGE -> CUSTOMER_INFO
+    DASHBOARD_USER -> CUSTOMER_INFO
+    CUSTOMER_DISABILITY -> CUSTOMER_INFO
+    CUSTOMER_NAMMA_TAGS -> CUSTOMER_INFO
+    SENDER_NUMBER -> DELIVERY
+    SENDER_NAME -> DELIVERY
+    SENDER_LOCATION_INSTRUCTIONS -> DELIVERY
+    RECEIVER_NUMBER -> DELIVERY
+    RECEIVER_NAME -> DELIVERY
+    RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
+    DRIVER_REACHED_DESTINATION -> DRIVER_REACHED_DESTINATION_INFO
+    DISTANCE_TO_NEAREST_DRIVER_METER -> GENERAL_INFO
+    ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO
+    SPECIAL_LOCATION_TAG -> GENERAL_INFO
+    UPGRADE_TO_CAB -> GENERAL_INFO
+    CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

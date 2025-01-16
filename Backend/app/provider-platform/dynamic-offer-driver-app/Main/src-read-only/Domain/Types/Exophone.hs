@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Exophone where
@@ -27,6 +26,6 @@ data Exophone = Exophone
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ExophoneType = CALL_RIDE | END_RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExophoneType = CALL_RIDE | END_RIDE | CALL_DELIVERY_SENDER | CALL_DELIVERY_RECEIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExophoneType)

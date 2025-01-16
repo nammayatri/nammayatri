@@ -1,5 +1,7 @@
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import ChatCompletion.Interface.Types as CIT
+import ChatCompletion.Types
 import qualified Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -47,12 +49,15 @@ getConfigJSON = \case
     Verification.SafetyPortalConfig cfg -> toJSON cfg
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> toJSON cfg
+    Call.TwillioCallConfig cfg -> toJSON cfg
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> toJSON cfg
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig cfg -> toJSON cfg
+  Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
@@ -71,6 +76,9 @@ getConfigJSON = \case
     BackgroundVerification.CheckrConfig cfg -> toJSON cfg
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> toJSON cfg
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI cfg -> toJSON cfg
+    CIT.Gemini cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -95,6 +103,7 @@ getServiceName = \case
     Verification.SafetyPortalConfig _ -> Domain.DriverBackgroundVerificationService Verification.SafetyPortal
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> Domain.CallService Call.Exotel
+    Call.TwillioCallConfig _ -> Domain.CallService Call.TwillioCall
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
@@ -102,6 +111,8 @@ getServiceName = \case
     Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
+  Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
@@ -119,6 +130,9 @@ getServiceName = \case
     BackgroundVerification.CheckrConfig _ -> Domain.BackgroundVerificationService BackgroundVerification.Checkr
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> Domain.IncidentReportService IncidentReport.ERSS
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI _ -> Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI
+    CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -138,11 +152,13 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfig <$> eitherValue configJSON
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
+  Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
@@ -154,6 +170,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> eitherValue configJSON
   Domain.BackgroundVerificationService BackgroundVerification.Checkr -> Domain.BackgroundVerificationServiceConfig . BackgroundVerification.CheckrConfig <$> eitherValue configJSON
   Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> eitherValue configJSON
+  Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
+  Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of

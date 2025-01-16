@@ -6,7 +6,7 @@ import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id, map)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.Prelude
+import Kernel.Prelude hiding (whenJust)
 import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,14 +38,16 @@ getFavouriteDrivers merchantId apiKey GetFavouriteDriverInfoReq {..} = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   numberHash <- getDbHash customerMobileNumber
-  rider <- B.runInReplica $ QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (InternalError "Rider does not exist")
-  correlationRes <- RDC.findFavDriversForRider rider.id True
-  let favDrivers = map (.driverId) correlationRes
-  favDriverResponse <- forM favDrivers $ \favDriver -> do
-    person <- B.runInReplica $ QP.findById favDriver >>= fromMaybeM (PersonNotFound favDriver.getId)
-    personStat <- B.runInReplica $ QDS.findById favDriver >>= fromMaybeM (InternalError $ "Driver stats not found for driverId : " <> favDriver.getId)
-    mkFavouriteDriverResp person personStat
-  pure favDriverResponse
+  mbRider <- B.runInReplica $ QRD.findByMobileNumberHashAndMerchant numberHash merchant.id -- >>= fromMaybeM (InternalError "Rider does not exist")
+  case mbRider of
+    Just rider -> do
+      correlationRes <- RDC.findFavDriversForRider rider.id True
+      let favDrivers = map (.driverId) correlationRes
+      forM favDrivers $ \favDriver -> do
+        person <- B.runInReplica $ QP.findById favDriver >>= fromMaybeM (PersonNotFound favDriver.getId)
+        personStat <- B.runInReplica $ QDS.findById favDriver >>= fromMaybeM (InternalError $ "Driver stats not found for driverId : " <> favDriver.getId)
+        mkFavouriteDriverResp person personStat
+    Nothing -> pure []
   where
     mkFavouriteDriverResp :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person.Person -> DriverStats -> m FavouriteDriverResp
     mkFavouriteDriverResp person personStat = do
@@ -63,6 +65,9 @@ removeFavouriteDriver merchantId driverId apiKey GetFavouriteDriverInfoReq {..} 
     throwError $ AuthBlocked "Invalid BPP internal api key"
   numberHash <- getDbHash customerMobileNumber
   rider <- B.runInReplica $ QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (InternalError "Rider does not exist")
-  RDC.updateFavouriteDriverForRider False rider.id driverId
-  QDS.decFavouriteRiderCount driverId
+  isfavourite' <- RDC.findByPrimaryKey driverId rider.id
+  whenJust isfavourite' $ \isfavourite -> do
+    when (isfavourite.favourite) $ do
+      RDC.updateFavouriteDriverForRider False rider.id driverId
+      QDS.decFavouriteRiderCount driverId
   pure APISuccess.Success

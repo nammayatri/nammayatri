@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.SocialLogin where
@@ -11,7 +10,11 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data OAuthProvider = Google | IOS deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data OAuthProvider
+  = Google
+  | IOS
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SocialLoginReq = SocialLoginReq
   { email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -19,14 +22,17 @@ data SocialLoginReq = SocialLoginReq
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    oauthProvider :: API.Types.UI.SocialLogin.OAuthProvider,
+    oauthProvider :: OAuthProvider,
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tokenId :: Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SocialLoginRes = SocialLoginRes {isNew :: Kernel.Prelude.Bool, token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SocialLoginRes = SocialLoginRes {isNew :: Kernel.Prelude.Bool, token :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SocialUpdateProfileReq = SocialUpdateProfileReq
   { email :: Kernel.Prelude.Text,
@@ -35,4 +41,5 @@ data SocialUpdateProfileReq = SocialUpdateProfileReq
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

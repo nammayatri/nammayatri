@@ -12,8 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Action.UI.Person where
 
@@ -61,4 +59,4 @@ getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
 
 roundToOneDecimal :: Centesimal -> Centesimal
-roundToOneDecimal x = fromIntegral (round (x * 10)) / 10
+roundToOneDecimal x = fromIntegral @Integer @Centesimal (round @Centesimal @Integer (x * 10)) / 10

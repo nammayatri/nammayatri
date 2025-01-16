@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Driver: Domain.Types.Person
   Booking: Domain.Types.Booking
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   Ride: Domain.Types.Ride
   Meters: Kernel.Types.Common
 
@@ -25,7 +25,7 @@ BusinessEvent:
     timeStamp : UTCTime
     bookingId : Maybe (Id Booking)
     whenPoolWasComputed : Maybe WhenPoolWasComputed
-    vehicleVariant : Maybe Variant
+    vehicleVariant : Maybe VehicleVariant
     distance : Maybe Meters
     distanceUnit: DistanceUnit
     duration : Maybe Seconds

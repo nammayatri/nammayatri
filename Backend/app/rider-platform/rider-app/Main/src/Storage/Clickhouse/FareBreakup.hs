@@ -20,11 +20,13 @@ import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data FareBreakupT f = FareBreakupT
   { bookingId :: C f (Id DB.Booking),
     description :: C f Text,
-    amount :: C f (Maybe HighPrecMoney)
+    amount :: C f (Maybe HighPrecMoney),
+    date :: C f UTCTime
   }
   deriving (Generic)
 
@@ -36,19 +38,21 @@ fareBreakupTTable =
   FareBreakupT
     { bookingId = "booking_id",
       description = "description",
-      amount = "amount"
+      amount = "amount",
+      date = "date"
     }
 
 type FareBreakup = FareBreakupT Identity
 
-$(TH.mkClickhouseInstances ''FareBreakupT)
+$(TH.mkClickhouseInstances ''FareBreakupT 'SELECT_FINAL_MODIFIER)
 
 findFareBreakupByBookingIdAndDescription ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DB.Booking ->
   Text ->
+  UTCTime ->
   m (Maybe FareBreakup)
-findFareBreakupByBookingIdAndDescription bookingId description = do
+findFareBreakupByBookingIdAndDescription bookingId description createdAt = do
   fareBreakup <-
     CH.findAll $
       CH.select $
@@ -56,6 +60,7 @@ findFareBreakupByBookingIdAndDescription bookingId description = do
           ( \fareBreakup _ ->
               fareBreakup.bookingId CH.==. bookingId
                 CH.&&. fareBreakup.description CH.==. description
+                CH.&&. fareBreakup.date >=. addUTCTime (-120) createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)
   return $ listToMaybe fareBreakup

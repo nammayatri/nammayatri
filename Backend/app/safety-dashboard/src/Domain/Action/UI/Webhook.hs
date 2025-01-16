@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Webhook where
 
@@ -13,7 +12,7 @@ import EulerHS.Prelude hiding (elem, filter, id, length, map, mapM_, whenJust)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Network.HTTP.Client
-import Network.HTTP.Client.TLS (getGlobalManager, tlsManagerSettings)
+import Network.HTTP.Client.TLS (getGlobalManager)
 import Network.HTTP.Types (HeaderName)
 
 sendWebHook :: [MC.MerchantConfigs] -> LBS.ByteString -> Environment.Flow ()

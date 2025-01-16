@@ -14,6 +14,8 @@ import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.NotificationChannelGroup;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -66,6 +68,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
+
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
@@ -117,6 +120,7 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String REFERRER = "REFERRER";
     private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
     private final FirebaseAnalytics mFirebaseAnalytics;
+    private VPAdapter vpAdapter;
 
     private MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
@@ -128,6 +132,8 @@ public class MobilityAppBridge extends HyperBridge {
     private static String storeCustomerCallBack = null;
     private static String storeDriverCallBack = null;
     private String storeAddRideStopCallBack = null;
+
+    private BridgeComponents bridgeComponents;
 
 
     // Permission request Code
@@ -150,13 +156,132 @@ public class MobilityAppBridge extends HyperBridge {
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
         traceElements = new HashMap<>();
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
         remoteConfigs = new MobilityRemoteConfigs(false, false);
         registerCallBacks();
+        createVPAdapter(bridgeComponents.getContext());
+        initNotificationChannel(bridgeComponents.getContext());
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
+    }
+
+    private void initNotificationChannel(Context context) {
+        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                notificationManager.deleteNotificationChannel("RINGING_ALERT");
+                notificationManager.deleteNotificationChannel("TRIP_STARTED");
+                notificationManager.deleteNotificationChannel("General");
+                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("DRIVER_QUOTE_INCOMING");
+                notificationManager.deleteNotificationChannel("DRIVER_ASSIGNMENT");
+                notificationManager.deleteNotificationChannel("REALLOCATE_PRODUCT");
+                notificationManager.deleteNotificationChannel("GENERAL_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("RIDE_STARTED");
+                notificationManager.deleteNotificationChannel("CANCELLED_PRODUCT");
+                notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
+                notificationManager.deleteNotificationChannel("TRIP_FINISHED");
+                notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
+            } catch(Exception e) {
+                System.out.println("Notification Channel doesn't exists");
+            }
+        }
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
+            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
+            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
+            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+                safetyGroup.setDescription("Notifications related to Safety");
+                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
+                serviceGroup.setDescription("Notifications related to Services");
+                promotionalGroup.setDescription("Notifications related to promotional");
+            }
+
+            notificationManager.createNotificationChannelGroup(safetyGroup);
+            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
+            notificationManager.createNotificationChannelGroup(serviceGroup);
+            notificationManager.createNotificationChannelGroup(promotionalGroup);
+        }
+
+
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_QUOTE_INCOMING);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_ASSIGNMENT);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.REALLOCATE_PRODUCT);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.GENERAL_NOTIFICATION);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.RIDE_STARTED);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.CANCELLED_PRODUCT);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.DRIVER_HAS_REACHED);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.SOS_TRIGGERED);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.SOS_RESOLVED);
+        NotificationUtils.createNotificationChannel(bridgeComponents.getContext(), NotificationUtils.NOSOUND_NOTIFICATION);
+    }
+
+    private void createVPAdapter(Context context) {
+        vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
+
+            @Override
+            public void onViewHolderBind(VPAdapter.ViewHolder holder, int position, Context context) {
+                ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
+                JSONObject margin = viewPagerItem.getDescriptionMargin();
+                JSONObject titleMargin = viewPagerItem.getTitleMargin();
+                String titleGravity = viewPagerItem.getTitleGravity();
+                int carouselGravity = viewPagerItem.getCarouselGravity();
+                String descriptionGravity = viewPagerItem.getDescriptionGravity();
+
+                float density = (Resources.getSystem().getDisplayMetrics().density);
+                // imageView Config ------------------------------------------
+                if ((viewPagerItem.getContentType()).equals("IMAGE")) {
+                    if (viewPagerItem.isImageUrl())
+                        Glide.with(context)
+                                .load(viewPagerItem.getImage())
+                                .into(holder.imageView);
+                    else
+                        holder.imageView.setImageResource(viewPagerItem.getImageID());
+                    holder.imageView.getLayoutParams().height = (int) (viewPagerItem.getImageHeight() * density);
+                    GradientDrawable gradientDrawable = new GradientDrawable();
+                    gradientDrawable.setShape(GradientDrawable.RECTANGLE);
+                    holder.imageView.setVisibility(View.VISIBLE);
+                    gradientDrawable.setCornerRadii(new float[]{20, 20, 20, 20, 0, 0, 0, 0});
+                    gradientDrawable.setColor(Color.parseColor(viewPagerItem.getImageBgColor()));
+                    holder.imageView.setBackground(gradientDrawable);
+                    holder.video.setVisibility(View.GONE);
+                } else {
+                    vpAdapter.embedYoutubeVideo(context, (viewPagerItem.getVideoData()).toString(), "PLAY", holder.video);
+                    holder.video.setVisibility(View.VISIBLE);
+                    holder.imageView.setVisibility(View.GONE);
+                }
+
+                // Heading text Config ------------------------------------------
+                holder.tvHeading.setTextSize(viewPagerItem.getTitleTextSize());
+                holder.tvHeading.setTextColor(Color.parseColor(viewPagerItem.getTitleColor()));
+                holder.tvHeading.setText(viewPagerItem.getTitleText());
+                ViewGroup.MarginLayoutParams titleLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvHeading.getLayoutParams();
+                titleLayoutParams.setMargins(titleMargin.optInt("left", 0), titleMargin.optInt("top", 0), titleMargin.optInt("right", 0), titleMargin.optInt("bottom", 0));
+                holder.tvHeading.setLayoutParams(titleLayoutParams);
+                holder.tvHeading.setGravity(Utils.getGravity(titleGravity));
+
+                // Description text Config ---------------------------------------
+                holder.tvDesc.setText(Html.fromHtml(viewPagerItem.getDescriptionText()));
+                if (viewPagerItem.getDescriptionText().equals("")) {
+                    holder.tvDesc.setVisibility(View.GONE);
+                }
+                holder.tvDesc.setTextSize(viewPagerItem.getDescriptionTextSize());
+                holder.tvDesc.setTextColor(Color.parseColor(viewPagerItem.getDescriptionColor()));
+                ViewGroup.MarginLayoutParams descLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvDesc.getLayoutParams();
+                descLayoutParams.setMargins(margin.optInt("left", 0) * 2, margin.optInt("top", 0), margin.optInt("right", 0), margin.optInt("bottom", 0));
+                holder.tvDesc.setLayoutParams(descLayoutParams);
+                holder.tvDesc.setGravity(Utils.getGravity(descriptionGravity));
+                holder.parentLinearLayout.setGravity(carouselGravity);
+            }
+        });
     }
 
     @JavascriptInterface
@@ -911,66 +1036,6 @@ public class MobilityAppBridge extends HyperBridge {
             youtubePlayer.loadVideo(videoId, 0);
     }
 
-
-    private final VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
-
-        @Override
-        public void onViewHolderBind(VPAdapter.ViewHolder holder, int position, Context context) {
-            ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
-            JSONObject margin = viewPagerItem.getDescriptionMargin();
-            JSONObject titleMargin = viewPagerItem.getTitleMargin();
-            String titleGravity = viewPagerItem.getTitleGravity();
-            int carouselGravity = viewPagerItem.getCarouselGravity();
-            String descriptionGravity = viewPagerItem.getDescriptionGravity();
-
-            float density = (Resources.getSystem().getDisplayMetrics().density);
-            // imageView Config ------------------------------------------
-            if ((viewPagerItem.getContentType()).equals("IMAGE")){
-                if (viewPagerItem.isImageUrl())
-                    Glide.with(context)
-                            .load(viewPagerItem.getImage())
-                            .into(holder.imageView);
-                else
-                    holder.imageView.setImageResource(viewPagerItem.getImageID());
-                holder.imageView.getLayoutParams().height = (int) (viewPagerItem.getImageHeight() * density);
-                GradientDrawable gradientDrawable = new GradientDrawable();
-                gradientDrawable.setShape(GradientDrawable.RECTANGLE);
-                holder.imageView.setVisibility(View.VISIBLE);
-                gradientDrawable.setCornerRadii(new float[] {20, 20, 20, 20, 0,0,0,0});
-                gradientDrawable.setColor(Color.parseColor(viewPagerItem.getImageBgColor()));
-                holder.imageView.setBackground(gradientDrawable);
-                holder.video.setVisibility(View.GONE);
-            }
-            else {
-                vpAdapter.embedYoutubeVideo(context, (viewPagerItem.getVideoData()).toString(), "PLAY", holder.video);
-                holder.video.setVisibility(View.VISIBLE);
-                holder.imageView.setVisibility(View.GONE);
-            }
-
-            // Heading text Config ------------------------------------------
-            holder.tvHeading.setTextSize(viewPagerItem.getTitleTextSize());
-            holder.tvHeading.setTextColor(Color.parseColor(viewPagerItem.getTitleColor()));
-            holder.tvHeading.setText(viewPagerItem.getTitleText());
-            ViewGroup.MarginLayoutParams titleLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvHeading.getLayoutParams();
-            titleLayoutParams.setMargins(titleMargin.optInt("left", 0), titleMargin.optInt("top", 0), titleMargin.optInt("right", 0), titleMargin.optInt("bottom", 0));
-            holder.tvHeading.setLayoutParams(titleLayoutParams);
-            holder.tvHeading.setGravity(Utils.getGravity(titleGravity));
-
-            // Description text Config ---------------------------------------
-            holder.tvDesc.setText(Html.fromHtml(viewPagerItem.getDescriptionText()));
-            if(viewPagerItem.getDescriptionText().equals(""))
-            {
-                holder.tvDesc.setVisibility(View.GONE);
-            }
-            holder.tvDesc.setTextSize(viewPagerItem.getDescriptionTextSize());
-            holder.tvDesc.setTextColor(Color.parseColor(viewPagerItem.getDescriptionColor()));
-            ViewGroup.MarginLayoutParams descLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvDesc.getLayoutParams();
-            descLayoutParams.setMargins(margin.optInt("left", 0) * 2, margin.optInt("top", 0), margin.optInt("right", 0), margin.optInt("bottom", 0));
-            holder.tvDesc.setLayoutParams(descLayoutParams);
-            holder.tvDesc.setGravity(Utils.getGravity(descriptionGravity));
-            holder.parentLinearLayout.setGravity(carouselGravity);
-                    }
-                });
                 
     @JavascriptInterface
     public void pauseYoutubeVideo() {
@@ -992,12 +1057,12 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void detectPhoneNumbers(final String callback) {
+        try {
         storeDetectPhoneNumbersCallBack = callback;
         HintRequest hintRequest = new HintRequest.Builder()
                 .setPhoneNumberIdentifierSupported(true)
                 .build();
         PendingIntent intent = Credentials.getClient(bridgeComponents.getContext()).getHintPickerIntent(hintRequest);
-        try {
             if (bridgeComponents.getActivity() != null) {
                 startIntentSenderForResult(bridgeComponents.getActivity(), intent.getIntentSender(), CREDENTIAL_PICKER_REQUEST, null, 0, 0, 0, new Bundle());
             }
@@ -1124,8 +1189,10 @@ public class MobilityAppBridge extends HyperBridge {
     @JavascriptInterface
     public void cleverTapSetLocation() {
         ExecutorManager.runOnBackgroundThread(() -> {
-        Location location = clevertapDefaultInstance.getLocation();
-        clevertapDefaultInstance.setLocation(location);
+            if (clevertapDefaultInstance != null) {
+                Location location = clevertapDefaultInstance.getLocation();
+                clevertapDefaultInstance.setLocation(location);
+            }
         });
     }
 
@@ -1138,7 +1205,7 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-
+    @JavascriptInterface
     public void askRequestedPermissions(String[] requests) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }

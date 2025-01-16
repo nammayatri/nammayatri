@@ -25,10 +25,10 @@ import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Components.RequestInfoCard as RequestInfoCard
 import Data.Array ((!!), singleton, null)
-import Data.Maybe as MB
+import Data.Maybe as MB 
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage,calculateBookingEndTime,formatDateInHHMM,fetchAddressDetails,calculateBookingEndTime,fetchAddressDetails,getCityConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
@@ -40,9 +40,12 @@ import Data.String
 import JBridge 
 import Data.Int (fromString)
 import PrestoDOM.Types.DomAttributes as PTD
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import ConfigProvider
-
+import Services.API as API
+import Screens.RentalBookingFlow.RentalScreen.ScreenData(dummyBookingDetails)
+import Data.String as DS
+import Storage (getValueToLocalStore,KeyStore(..))
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
   let
@@ -55,6 +58,11 @@ primaryButtonConfig state =
             _ -> ""
         , color = Color.yellow900
         , height = V 40
+        , accessibilityHint = case state.data.currentStage of
+            RENTAL_SELECT_PACKAGE -> getEN VIEW_FARES <> " Button"
+            RENTAL_SELECT_VARIANT -> getEN BOOK_RENTAL <> " Button"
+            RENTAL_CONFIRMATION -> getEN CONFIRM_RENTAL <> " Button"
+            _ -> ""
         }
       , gravity = CENTER
       , margin = MarginHorizontal 0 0
@@ -79,6 +87,7 @@ genericHeaderConfig _ = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
+      , accessibilityHint = "Back Button"
       }
     , textConfig {
         text = getString RENTAL_RIDE
@@ -123,6 +132,7 @@ incrementDecrementConfig state = let
 mapInputViewConfig :: RentalScreenState -> InputView.InputViewConfig
 mapInputViewConfig state = 
   let config = InputView.config 
+      currentCityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
       isSelectPackageStage = state.data.currentStage == RENTAL_SELECT_PACKAGE
       suffixButtonText = if state.data.startTimeUTC == ""
                           then getString NOW
@@ -136,8 +146,9 @@ mapInputViewConfig state =
           , suffixImage = "ny_ic_chevron_down"
           , padding = Padding 8 0 8 1
           , gravity = CENTER_VERTICAL
+          , accessibilityHint = if suffixButtonText == (getString NOW) then "Select to Schedule Ride" else "Selected Date : " <> suffixButtonText 
           }
-        , suffixButtonVisibility = GONE --boolToVisibility isSelectPackageStage -- TODO :: enable this once scheduled ride is handled properly. -- MERCY 
+        , suffixButtonVisibility = boolToVisibility currentCityConfig.enableScheduling
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
         , inputLayoutPading = if isSelectPackageStage then PaddingLeft 8 else PaddingLeft 0
         , inputView = map 
@@ -172,6 +183,7 @@ mapInputViewConfig state =
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
       , gravity : if isSelectPackageStage then LEFT else CENTER_HORIZONTAL
       , inputTextConfig : item
+      , alpha : 1.0
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)
@@ -309,3 +321,70 @@ rentalPolicyInfoConfig state = let
     }
   }
   in requestInfoCardConfig'
+
+scheduledRideExistsPopUpConfig :: RentalScreenState -> PopUpModal.Config
+scheduledRideExistsPopUpConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , margin = (MarginHorizontal 16 16)
+        , buttonLayoutMargin = (Margin 0 16 16 0)
+        , editTextVisibility = GONE
+        , dismissPopupConfig
+          { visibility = GONE
+          }
+        , primaryText
+          { text = (getString A_RIDE_ALREADY_EXISTS)
+          , gravity = CENTER
+          , margin = MarginTop 16
+          }
+        , secondaryText
+          { text = (invalidScheduledBookingDetails state)
+          , margin = MarginTop 4
+          }
+        , option1
+          { visibility = false
+          }
+        , option2
+          { text = (getString GOT_IT)
+          , padding = (Padding 16 0 16 0)
+          }
+        , cornerRadius = (PTD.Corners 15.0 true true true true)
+        , coverImageConfig
+          { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_time_conflicts"
+          , visibility = VISIBLE
+          , margin = Margin 16 16 16 24
+          , width = MATCH_PARENT
+          , height = V 200
+          }
+        }
+  in
+    popUpConfig'
+  where
+  invalidScheduledBookingDetails :: RentalScreenState -> String
+  invalidScheduledBookingDetails state = 
+    case state.data.overLappingBooking of
+      MB.Just (API.RideBookingRes overLappingBooking) ->
+        let 
+          (API.RideBookingAPIDetails details) = overLappingBooking.bookingDetails
+          (API.RideBookingDetails contents) = details.contents
+          (API.BookingLocationAPIEntity fromLocationResp) = overLappingBooking.fromLocation
+          stopLocation = MB.fromMaybe dummyBookingDetails (case details.fareProductType of 
+                                                                  "RENTAL" -> contents.stopLocation
+                                                                  "INTER_CITY" -> contents.toLocation
+                                                                  _ -> contents.toLocation)          
+          rideType = case details.fareProductType of 
+                              "INTER_CITY" -> "intercity"
+                              "RENTAL" -> "rental"
+                              _ -> "one way"
+          destinationNotGiven =  (details.fareProductType == "RENTAL" && (MB.isNothing contents.stopLocation))
+          rideScheduledTime = MB.fromMaybe "" overLappingBooking.rideScheduledTime
+          rideEndTime = calculateBookingEndTime (API.RideBookingRes overLappingBooking)
+          fromLocation = fetchAddressDetails  overLappingBooking.fromLocation
+          toLocation = fetchAddressDetails stopLocation
+        in
+          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
+                                 else getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
+      MB.Nothing -> ""

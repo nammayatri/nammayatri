@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.InvoiceExtra where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
@@ -8,20 +5,15 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
-import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
+import Domain.Types.Plan (ServiceNames)
 import Kernel.Beam.Functions
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKV', findOneWithKV, updateWithKV)
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Invoice as BeamI
-import qualified Storage.Queries.DriverFee as QDF
-import Storage.Queries.OrphanInstances.Invoice
+import Storage.Queries.OrphanInstances.Invoice ()
 
 -- Extra code goes here --
 

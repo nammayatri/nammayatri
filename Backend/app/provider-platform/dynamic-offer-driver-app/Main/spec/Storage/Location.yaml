@@ -54,6 +54,8 @@ Location:
       areaCode: Maybe Text
       area: Maybe Text
       fullAddress: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
       derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
     LocationAPIEntity:
       lat: Double
@@ -66,7 +68,18 @@ Location:
       areaCode: Maybe Text
       area: Maybe Text
       fullAddress: Maybe Text
+      instructions: Maybe Text
+      id : Id Location
+      extras: Maybe Text
       derive': Generic,Show,FromJSON,ToJSON,Data.OpenApi.ToSchema
+    Location': # sometimes we don't know MerchantOperatingCity, so defined this type without it
+      id: Id Location
+      lat: Double
+      lon: Double
+      address: LocationAddress
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      merchantId: Maybe (Id Merchant)
   fields:
     id: Id Location
     lat: Double
@@ -85,6 +98,8 @@ Location:
     areaCode: (.areaCode)|I
     area: (.area)|I
     fullAddress: (.fullAddress)|I
+    instructions: (.instructions)|I
+    extras: (.extras)|I
 
   fromTType:
     address: mkAddress
@@ -100,6 +115,8 @@ Location:
       areaCode: Maybe Text
       area: Maybe Text
       fullAddress: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -109,9 +126,13 @@ Location:
     findById:
       kvFunction: findOneWithKV
       where: id
-  excludedFields:
-    - merchantId
-    - merchantOperatingCityId
+    updateInstructionsAndExtrasById:
+      kvFunction: updateOneWithKV
+      params:
+        - instructions|B
+        - extras|B
+      where: id
+
 
   extraOperations:
     - EXTRA_QUERY_FILE

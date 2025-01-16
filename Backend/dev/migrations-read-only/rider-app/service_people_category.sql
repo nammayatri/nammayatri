@@ -19,3 +19,13 @@ ALTER TABLE atlas_app.service_people_category ADD COLUMN currency text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN cancellation_charges json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN time_bounds text  default 'Unbounded';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN pricing_type text  default 'AllDays';

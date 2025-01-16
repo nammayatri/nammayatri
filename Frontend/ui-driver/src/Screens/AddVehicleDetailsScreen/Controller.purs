@@ -17,7 +17,7 @@ module Screens.AddVehicleDetailsScreen.Controller where
 
 import Data.Maybe
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), UploadFileConfig(..))
 import Components.GenericMessageModal.Controller as GenericMessageModalController
 import Components.OnboardingHeader.Controller as OnboardingHeaderController
 import Components.PopUpModal.Controller as PopUpModal
@@ -57,6 +57,7 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -105,6 +106,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick -> pure unit
     ReferralMobileNumber -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "trigger_referral_mobile_number"
     GenericMessageModalAction act -> case act of
@@ -159,6 +161,7 @@ instance loggableAction :: Loggable Action where
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
+    ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
     _ -> pure unit
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
@@ -172,6 +175,8 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ActivateRC AddVehicleDetailsScreenState
                     | ChangeVehicle AddVehicleDetailsScreenState
                     | SelectLang AddVehicleDetailsScreenState
+                    
+                    
 
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
@@ -214,7 +219,20 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
+  | SelectAmbulanceFacility
+  | ListExpandAinmationEnd
+  | SelectAmbulanceVarient String
+  | OpenAmbulanceFacilityModal
+  | RequestAmbulanceFacility RequestInfoCard.Action
+  | AgreePopUp PopUpModal.Action
+  | ButtonClick
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
 eval AfterRender state = 
@@ -234,7 +252,7 @@ eval (BackPressed flag) state = do
             continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadFile]
         else do
             continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
-                _ <- liftEffect $ uploadFile false
+                _ <- liftEffect $ uploadFile uploadFileConfig true
                 pure NoAction]
     else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
@@ -263,9 +281,13 @@ eval RemoveUploadedFile state = do
   continue newState
 eval (VehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  if (length val == 10) then void $ pure $ EHE.addEvent (EHE.defaultEventObject "rc_number_entered") { module = "vehicle_registration_page", source = "RC"} 
+  else pure unit
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  if (length val == 10) then void $ pure $ EHE.addEvent (EHE.defaultEventObject "rc_number_confirmed") { module = "vehicle_registration_page", source = "RC"}
+  else pure unit
   continue newState
 eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")
@@ -310,7 +332,13 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         SUV       -> "SUV"
                         Hatchback -> "Hatchback"
                         Auto      -> "Auto"
-                        Bike      -> "Bike")
+                        Bike      -> "Bike"
+                        Ambulance_Taxi -> "Ambulance_Taxi"
+                        Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+                        Ambulance_AC -> "Ambulance_AC"
+                        Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
+                        Ambulance_Ventilator -> "Ambulance_Ventilator"
+                        Suv_Plus  -> "SUV_PLUS")
       }
     }
 
@@ -351,13 +379,26 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditText
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
-  else if (state.props.openHowToUploadManual == false) then 
+  let agreeTermsModalValue = state.data.vehicleCategory ==  Just (ST.AmbulanceCategory)
+  if agreeTermsModalValue && not state.props.openHowToUploadManual then continue state { props { agreeTermsModal = agreeTermsModalValue }}
+  else if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  else if (not state.props.openHowToUploadManual) then do
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_rc_clicked") { module = "vehicle_registration_page", source = "RC" }
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_rc_page_loaded") { module = "vehicle_registration_page", source = "RC" }
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile false
-     pure NoAction]
+    let _ = EHE.addEvent (EHE.defaultEventObject "take_rc_photo_clicked") { module = "vehicle_registration_page", source = "RC"}
+    _ <- liftEffect $ uploadFile uploadFileConfig true
+    pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
+
+eval ButtonClick state = do
+  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  else if (not state.props.openHowToUploadManual) then 
+    continue state {props {openHowToUploadManual = true}}
+  else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
+     _ <- liftEffect $ uploadFile uploadFileConfig true
+     pure NoAction]
 
 eval SkipButton state = exit $ ValidateDataAPICall state
 
@@ -374,6 +415,10 @@ eval PreviewImageAction state = continue state
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (AgreePopUp (PopUpModal.OnButton2Click)) state = continue $ (state {props {agreeTermsModal= false}})
+
+eval (AgreePopUp (PopUpModal.OnButton1Click)) state = continueWithCmd state{props{ agreeTermsModal = false}} [pure $ ButtonClick]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -392,12 +437,13 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
    else  
      continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
-     _ <- liftEffect $ uploadFile false
+     let _ = EHE.addEvent (EHE.defaultEventObject "retake_photo_clicked") { module = "vehicle_registration_page", source = "RC"}
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile false
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
@@ -470,6 +516,34 @@ eval OpenAcModal state = continue state { props { acModal = true}}
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval OpenAmbulanceFacilityModal state = continue state {props {ambulanceModal = true}}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.Close) state = continue state { props { ambulanceModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.BackPressed) state = continue state { props { ambulanceModal = false}}
+
+eval (SelectAmbulanceVarient varient) state = do
+  let {airConditioned , ventilator , oxygen} = case varient of
+                                                "AMBULANCE_TAXI" -> { airConditioned: Just false , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_TAXI_OXY" -> {airConditioned: Just false , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_AC" -> {airConditioned: Just true , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_AC_OXY" ->{ airConditioned: Just true , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_VENTILATOR" -> {airConditioned: Just true , ventilator: Just true , oxygen: Just true}
+                                                _ -> {airConditioned: Nothing , ventilator: Nothing , oxygen: Nothing}
+  continue state{data{airConditioned =  airConditioned  , ventilator = ventilator , oxygen = oxygen} , props{isvariant = varient , facilities = not state.props.facilities , showIssueOptions = true}}
+
+eval SelectAmbulanceFacility state = do
+  let old = state.props.facilities
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{props{facilities = not old , showIssueOptions = true}}
+
+
+eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
 eval _ state = update state
 

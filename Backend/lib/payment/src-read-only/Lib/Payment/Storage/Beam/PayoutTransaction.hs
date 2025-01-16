@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Storage.Beam.PayoutTransaction where
@@ -20,6 +18,7 @@ data PayoutTransactionT f = PayoutTransactionT
     gateWayRefId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutOrderId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Kernel.Prelude.Text,
     transactionRef :: B.C f Kernel.Prelude.Text,

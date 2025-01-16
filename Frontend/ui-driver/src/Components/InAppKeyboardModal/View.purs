@@ -28,9 +28,9 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, singleLine, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder)
+import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder, layoutGravity)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
@@ -38,6 +38,7 @@ import Language.Strings (getString)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
 import Data.Array as DA
 import JBridge (showKeyboard, requestKeyboardShow)
@@ -74,7 +75,15 @@ view push state =
                 , orientation HORIZONTAL
                 , margin $ if state.isDismissable then (MarginVertical 20 20 ) else  (Margin 20 20 20 20 )
                 , gravity CENTER_VERTICAL
-                ][  imageView
+                ][  
+                  linearLayout
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , gravity CENTER_VERTICAL
+                  ]
+                  [
+                   imageView
                     [ width (V 35)
                     , height (V 35)
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
@@ -94,7 +103,26 @@ view push state =
                     , padding state.headingConfig.padding
                     , weight state.headingConfig.weight
                     ]  <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)
-
+                  ],
+                  linearLayout
+                            [ height WRAP_CONTENT
+                            , weight 1.0
+                            , visibility $ boolToVisibility state.showRetakeParcelImage
+                            ][],
+                    textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text $ getString RETAKE_PHOTO
+                    , color Color.blue800
+                    , visibility $ boolToVisibility state.showRetakeParcelImage
+                    , padding $ Padding 4 4 4 4
+                    , cornerRadius 26.0
+                    , singleLine true
+                    , margin $ MarginRight 16
+                    , background Color.blue600
+                    , onClick push (const RetakeParcelImage)
+                    , layoutGravity "right"
+                  ] <> FontStyle.body1 TypoGraphy
                 ]
               , otpView push state
             ]

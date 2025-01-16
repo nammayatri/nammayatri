@@ -18,7 +18,6 @@ import androidx.core.content.FileProvider;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONException;
 import org.json.JSONObject;

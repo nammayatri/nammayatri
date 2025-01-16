@@ -1,12 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.BecknConfig where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
 import qualified Domain.Types.BecknConfig
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -34,7 +34,7 @@ data BecknConfigT f = BecknConfigT
     subscriberId :: B.C f Kernel.Prelude.Text,
     subscriberUrl :: B.C f Kernel.Prelude.Text,
     uniqueKeyId :: B.C f Kernel.Prelude.Text,
-    vehicleCategory :: B.C f Domain.Types.BecknConfig.VehicleCategory,
+    vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

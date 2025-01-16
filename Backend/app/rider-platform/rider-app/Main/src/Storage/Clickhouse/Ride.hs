@@ -58,19 +58,21 @@ rideTTable =
 
 type Ride = RideT Identity
 
-$(TH.mkClickhouseInstances ''RideT)
+$(TH.mkClickhouseInstances ''RideT 'SELECT_FINAL_MODIFIER)
 
 findRideByBookingId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DB.Booking ->
+  UTCTime ->
   m (Maybe Ride)
-findRideByBookingId bookingId = do
+findRideByBookingId bookingId createdAt = do
   ride <-
     CH.findAll $
       CH.select $
         CH.filter_
           ( \ride _ ->
               ride.bookingId CH.==. bookingId
+                CH.&&. ride.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
   return $ listToMaybe ride

@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
@@ -47,10 +48,12 @@ type API =
     :<|> "knowYourDriver"
       :> TokenAuth
       :> Capture "rideId" (Id DRide.Ride)
+      :> QueryParam "isImages" Bool
       :> Get '[JSON] DFeedback.DriverProfileResponse
     :<|> "knowYourFavDriver"
       :> TokenAuth
       :> Capture "driverId" Text
+      :> QueryParam "isImages" Bool
       :> Get '[JSON] DFeedback.DriverProfileResponse
 
 handler :: App.FlowServer API
@@ -68,8 +71,8 @@ rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag 
     when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
   pure Success
 
-knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourDriver (personId, _merchantId) rideId = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId
+knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
+knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId withImages
 
-knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourFavDriver (personId, merchantId) driverId = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId
+knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
+knowYourFavDriver (personId, merchantId) driverId withImages = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId withImages

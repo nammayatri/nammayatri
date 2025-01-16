@@ -1,15 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Station where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
-import qualified Domain.Types.Station
+import Domain.Types.Common ()
+import qualified Domain.Types.StationType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.TimeBound
 import Tools.Beam.UtilsTH
 
 data StationT f = StationT
@@ -21,7 +22,9 @@ data StationT f = StationT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    possibleTypes :: B.C f (Kernel.Prelude.Maybe [Domain.Types.StationType.StationType]),
+    timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

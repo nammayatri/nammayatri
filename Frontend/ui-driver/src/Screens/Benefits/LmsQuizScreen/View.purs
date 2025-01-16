@@ -48,7 +48,7 @@ import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (translateYAnimConfig)
 import Data.Foldable (foldl)
-import Language.Strings (getStringFromLocal)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Language.Types (STR(..))
 import Mobility.Prelude (groupAdjacent, boolToVisibility)
 import JBridge (toggleBtnLoader)
@@ -145,7 +145,7 @@ customHeaderView push state =
         , margin $ Margin 0 8 8 8
         ]
       , textView $
-        [ text $ moduleName <> " " <> (getStringFromLocal state.props.selectedLanguage QUIZ) 
+        [ text $ moduleName <> " " <> (StringsV2.getString state.props.selectedLanguage QUIZ) 
         , ellipsize true
         , width $ V 240
         , maxLines 1
@@ -165,7 +165,7 @@ customHeaderView push state =
             , margin $ Margin 0 0 3 0
            ]
           ,textView $
-           [ text $ getStringFromLocal state.props.selectedLanguage (getKeyAccordingtoSelectedLanguage state.props.selectedLanguage)
+           [ text $ StringsV2.getString state.props.selectedLanguage (getKeyAccordingtoSelectedLanguage state.props.selectedLanguage)
            , color Color.blue800
            , ellipsize true
            , maxLines 1
@@ -611,12 +611,12 @@ quizCompletedScreenInformationView push state =
   , gravity CENTER
   , clickable false
   ][ textView $
-     [ text $ show totalCorrectQuestions <> "/" <> show totalQuestions <> " " <> getStringFromLocal state.props.selectedLanguage CORRECT
+     [ text $ show totalCorrectQuestions <> "/" <> show totalQuestions <> " " <> StringsV2.getString state.props.selectedLanguage CORRECT
      , color Color.black800
      ] <> FontStyle.title2 LanguageStyle
   ,  quizStatusPillView push state (Margin sWidth 0 sWidth 0) (Padding 0 0 0 0)
   ,  textView $
-     [ text $ if isPassed then (getStringFromLocal state.props.selectedLanguage (YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName)) else getStringAccoringToPassingLimit totalQuestions moduleName
+     [ text $ if isPassed then (StringsV2.getString state.props.selectedLanguage (YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName)) else getStringAccoringToPassingLimit totalQuestions moduleName
      , width $ WRAP_CONTENT
      , height $ WRAP_CONTENT
      , margin $ MarginHorizontal (sWidth/2) (sWidth/2)
@@ -628,8 +628,8 @@ quizCompletedScreenInformationView push state =
     sWidth = (screenWidth unit) / 5
 
     getStringAccoringToPassingLimit totalQuestions moduleName  = let passingLimit = (getPassingLimit state) in
-                                                                    if totalQuestions == passingLimit then (getStringFromLocal state.props.selectedLanguage (ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName ))
-                                                                    else (show passingLimit) <> "/" <> (show totalQuestions) <> " " <> (getStringFromLocal state.props.selectedLanguage QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE) <> " " <> moduleName
+                                                                    if totalQuestions == passingLimit then (StringsV2.getString state.props.selectedLanguage (ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName ))
+                                                                    else (show passingLimit) <> "/" <> (show totalQuestions) <> " " <> (StringsV2.getString state.props.selectedLanguage QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE) <> " " <> moduleName
 
 getTotalCorrectQuestions :: LmsQuizScreenState -> Int
 getTotalCorrectQuestions state = foldl (\acc eQuestion -> acc + (if (isCorrectQuestion eQuestion)then 1 else 0)) 0 state.data.questions

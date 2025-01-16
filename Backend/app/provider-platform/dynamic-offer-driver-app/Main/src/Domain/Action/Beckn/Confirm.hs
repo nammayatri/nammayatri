@@ -16,8 +16,8 @@ module Domain.Action.Beckn.Confirm where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import Domain.Types
 import Domain.Types.Booking as DRB
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
@@ -27,6 +27,7 @@ import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -50,16 +51,18 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
+import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
-    vehicleVariant :: DVeh.Variant,
+    vehicleVariant :: DV.VehicleVariant,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
@@ -83,10 +86,12 @@ data DConfirmResp = DConfirmResp
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
     transporter :: DM.Merchant,
-    vehicleVariant :: DVeh.Variant,
+    vehicleVariant :: DV.VehicleVariant,
     quoteType :: ValidatedQuote,
     cancellationFee :: Maybe PriceAPIEntity,
-    paymentId :: Maybe Text
+    paymentId :: Maybe Text,
+    isAlreadyFav :: Maybe Bool,
+    favCount :: Maybe Int
   }
 
 data RideInfo = RideInfo
@@ -100,8 +105,9 @@ handler merchant req validatedQuote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   now <- getCurrentTime
+  let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
   unless isNewRider $ QRD.updateNightSafetyChecks req.nightSafetyCheck riderDetails.id
 
   case validatedQuote of
@@ -115,14 +121,14 @@ handler merchant req validatedQuote = do
       (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide)
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
+      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do
       otpCode <- generateUniqueOTPCode booking.merchantOperatingCityId.getId (0 :: Integer)
       QRB.updateSpecialZoneOtpCode booking.id otpCode
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      return $ mkDConfirmResp Nothing uBooking riderDetails
+      mkDConfirmResp Nothing uBooking riderDetails
 
     generateUniqueOTPCode merchantOperatingCityId cnt = do
       when (cnt == 100) $ throwError (InternalError "Please try again in some time") -- Avoiding infinite loop (Todo: fix with something like LRU later)
@@ -147,7 +153,7 @@ handler merchant req validatedQuote = do
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
-      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId False
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -156,11 +162,12 @@ handler merchant req validatedQuote = do
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = False
+                isRepeatSearch = False,
+                isAllocatorBatch = False
               }
       initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      return $ mkDConfirmResp Nothing uBooking riderDetails
+      mkDConfirmResp Nothing uBooking riderDetails
 
     updateBookingDetails isNewRider booking riderDetails = do
       when isNewRider $ QRD.create riderDetails
@@ -172,22 +179,38 @@ handler merchant req validatedQuote = do
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
-    mkDConfirmResp mbRideInfo uBooking riderDetails =
-      DConfirmResp
-        { booking = uBooking,
-          rideInfo = mbRideInfo,
-          riderDetails,
-          riderMobileCountryCode = req.customerMobileCountryCode,
-          riderPhoneNumber = req.customerPhoneNumber,
-          riderName = req.mbRiderName,
-          transporter = merchant,
-          fromLocation = uBooking.fromLocation,
-          toLocation = uBooking.toLocation,
-          vehicleVariant = req.vehicleVariant,
-          quoteType = validatedQuote,
-          cancellationFee = Nothing,
-          paymentId = req.paymentId
-        }
+    mkDConfirmResp mbRideInfo uBooking riderDetails = do
+      mDriverStats <-
+        if isNothing mbRideInfo
+          then pure Nothing
+          else QDriverStats.findById (fromJust mbRideInfo).driver.id
+      isFav <-
+        if isNothing mbRideInfo
+          then pure Nothing
+          else do
+            let rideInfo = fromJust mbRideInfo
+            isAlreadyFav' <- SQR.checkRiderFavDriver (fromMaybe "" uBooking.riderId) rideInfo.driver.id True
+            case isAlreadyFav' of
+              Just _ -> pure $ Just True
+              Nothing -> pure $ Just False
+      pure $
+        DConfirmResp
+          { booking = uBooking,
+            rideInfo = mbRideInfo,
+            riderDetails,
+            riderMobileCountryCode = req.customerMobileCountryCode,
+            riderPhoneNumber = req.customerPhoneNumber,
+            riderName = req.mbRiderName,
+            transporter = merchant,
+            fromLocation = uBooking.fromLocation,
+            toLocation = uBooking.toLocation,
+            vehicleVariant = req.vehicleVariant,
+            quoteType = validatedQuote,
+            cancellationFee = Nothing,
+            paymentId = req.paymentId,
+            isAlreadyFav = isFav,
+            favCount = mDriverStats <&> (.favRiderCount)
+          }
 
 validateRequest ::
   ( CacheFlow m r,
@@ -217,25 +240,28 @@ validateRequest subscriber transporterId req now = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  when (not isValueAddNP && booking.tripCategory /= DTC.OneWay DTC.OneWayOnDemandDynamicOffer) $
+  when (not isValueAddNP && booking.tripCategory /= OneWay OneWayOnDemandDynamicOffer) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
-    DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
-    DTC.OneWay DTC.OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
-    DTC.Rental DTC.RideOtp -> getRideOtpQuoteDetails booking transporter
-    DTC.RideShare DTC.RideOtp -> getRideOtpQuoteDetails booking transporter
-    DTC.OneWay DTC.OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    DTC.Rental DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    DTC.RideShare DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
-    DTC.InterCity DTC.OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
-    DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
-    DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
-    DTC.CrossCity DTC.OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
-    DTC.CrossCity DTC.OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
-    DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
-    DTC.Ambulance DTC.OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    DTC.Ambulance DTC.OneWayRideOtp -> getRideOtpQuoteDetails booking transporter -- should create new mode?
+    OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+    OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+    Rental RideOtp -> getRideOtpQuoteDetails booking transporter
+    RideShare RideOtp -> getRideOtpQuoteDetails booking transporter
+    OneWay OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    Rental OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    RideShare OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    InterCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
+    InterCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
+    InterCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
+    CrossCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
+    CrossCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
+    CrossCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
+    Ambulance OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+    Ambulance OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    Ambulance OneWayRideOtp -> getRideOtpQuoteDetails booking transporter -- should create new mode?
+    Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+    Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

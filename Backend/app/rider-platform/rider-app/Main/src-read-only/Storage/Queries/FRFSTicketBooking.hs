@@ -2,12 +2,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.FRFSTicketBooking where
+module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooking, module ReExport) where
 
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Person
+import qualified Domain.Types.Journey
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
+import Storage.Queries.FRFSTicketBookingExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 create = createWithKV
@@ -25,8 +26,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
-findAllByRiderId limit offset riderId = do findAllWithOptionsKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)] (Se.Desc Beam.createdAt) limit offset
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)]
 
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
@@ -67,12 +68,34 @@ updateFinalPriceById finalPrice id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateInterestDelayedByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateInterestDelayedByQuoteId bppDelayedInterest quoteId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.bppDelayedInterest bppDelayedInterest, Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
+
 updateIsBookingCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateOnInitDone journeyOnInitDone id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.journeyOnInitDone journeyOnInitDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePayoutOrderId cashbackPayoutOrderId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePayoutStatusById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePayoutStatusById cashbackStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.cashbackStatus cashbackStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePriceById price id = do
@@ -117,22 +140,33 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
     [ Se.Set Beam._type _type,
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,
+      Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppOrderId bppOrderId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.cancellationCharges cancellationCharges,
+      Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
+      Se.Set Beam.cashbackStatus cashbackStatus,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
+      Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
+      Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
+      Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
+      Se.Set Beam.journeyLegOrder journeyLegOrder,
+      Se.Set Beam.journeyOnInitDone journeyOnInitDone,
+      Se.Set Beam.lineColor lineColor,
+      Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
+      Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentTxnId paymentTxnId,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
@@ -143,7 +177,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.refundAmount refundAmount,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
+      Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
@@ -153,90 +189,3 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
-  fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    pure $
-      Just
-        Domain.Types.FRFSTicketBooking.FRFSTicketBooking
-          { _type = _type,
-            bppBankAccountNumber = bppBankAccountNumber,
-            bppBankCode = bppBankCode,
-            bppItemId = bppItemId,
-            bppOrderId = bppOrderId,
-            bppSubscriberId = bppSubscriberId,
-            bppSubscriberUrl = bppSubscriberUrl,
-            cancellationCharges = cancellationCharges,
-            customerCancelled = customerCancelled,
-            discountedTickets = discountedTickets,
-            estimatedPrice = Kernel.Types.Common.mkPrice currency estimatedPrice,
-            eventDiscountAmount = eventDiscountAmount,
-            finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
-            fromStationId = Kernel.Types.Id.Id fromStationId,
-            id = Kernel.Types.Id.Id id,
-            isBookingCancellable = isBookingCancellable,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
-            partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
-            paymentTxnId = paymentTxnId,
-            price = Kernel.Types.Common.mkPrice currency price,
-            providerDescription = providerDescription,
-            providerId = providerId,
-            providerName = providerName,
-            quantity = quantity,
-            quoteId = Kernel.Types.Id.Id quoteId,
-            refundAmount = refundAmount,
-            riderId = Kernel.Types.Id.Id riderId,
-            searchId = Kernel.Types.Id.Id searchId,
-            stationsJson = stationsJson,
-            status = status,
-            toStationId = Kernel.Types.Id.Id toStationId,
-            validTill = validTill,
-            vehicleType = vehicleType,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
-  toTType' (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
-    Beam.FRFSTicketBookingT
-      { Beam._type = _type,
-        Beam.bppBankAccountNumber = bppBankAccountNumber,
-        Beam.bppBankCode = bppBankCode,
-        Beam.bppItemId = bppItemId,
-        Beam.bppOrderId = bppOrderId,
-        Beam.bppSubscriberId = bppSubscriberId,
-        Beam.bppSubscriberUrl = bppSubscriberUrl,
-        Beam.cancellationCharges = cancellationCharges,
-        Beam.customerCancelled = customerCancelled,
-        Beam.discountedTickets = discountedTickets,
-        Beam.estimatedPrice = (.amount) estimatedPrice,
-        Beam.eventDiscountAmount = eventDiscountAmount,
-        Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
-        Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.isBookingCancellable = isBookingCancellable,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
-        Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
-        Beam.paymentTxnId = paymentTxnId,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
-        Beam.price = (.amount) price,
-        Beam.providerDescription = providerDescription,
-        Beam.providerId = providerId,
-        Beam.providerName = providerName,
-        Beam.quantity = quantity,
-        Beam.quoteId = Kernel.Types.Id.getId quoteId,
-        Beam.refundAmount = refundAmount,
-        Beam.riderId = Kernel.Types.Id.getId riderId,
-        Beam.searchId = Kernel.Types.Id.getId searchId,
-        Beam.stationsJson = stationsJson,
-        Beam.status = status,
-        Beam.toStationId = Kernel.Types.Id.getId toStationId,
-        Beam.validTill = validTill,
-        Beam.vehicleType = vehicleType,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

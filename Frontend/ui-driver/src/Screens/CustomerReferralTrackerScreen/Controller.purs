@@ -24,7 +24,7 @@ import Data.Array as DA
 import Data.Array (union, (!!), filter, length, (:), foldl, drop, take, replicate, updateAt, elemIndex, (..), last, find, catMaybes, sortBy, reverse)
 import Data.Either
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import PrestoDOM.Types.Core (class Loggable)
 import Data.Show (show)
 import Data.String as DS
@@ -33,7 +33,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
+import Helpers.Utils (getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, getCityConfig)
 import JBridge (pauseYoutubeVideo, copyToClipboard, toast, toggleBtnLoader, showDialer)
 import Language.Strings (getString)
 import Language.Types
@@ -46,6 +46,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.CustomerReferralTrackerScreen.Types
 import Screens.CustomerReferralTrackerScreen.Transformer (getDailyEarnings, getOrderStatus)
 import Domain.Payments as PP
+import Storage (getValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -79,7 +80,7 @@ instance loggableAction :: Loggable Action where
     DeleteUPIAction _ -> trackAppActionClick appId (getScreen CUSTOMER_REFERRAL_TRACKER_SCREEN) "delete_upi" "on_click"
 
 data ScreenOutput
-  = GoBack
+  = GoBack CustomerReferralTrackerScreenState
   | AddUPI CustomerReferralTrackerScreenState
   | DeleteUPI CustomerReferralTrackerScreenState
   | RefreshOrderStatus CustomerReferralTrackerScreenState
@@ -114,7 +115,7 @@ eval BackPressed state =
   case state.data.currentStage of 
     Tracker       -> if state.props.showMenu then 
                         continue state {props{showMenu = false}}
-                      else exit $ GoBack
+                      else exit $ GoBack state
     ReferralSteps -> continue state{data{currentStage = Tracker}}
     UPIDetails    -> if state.props.showDeleteUPIView then 
                         continue state{props{showDeleteUPIView = false, showUPIOptions = false}}
@@ -158,7 +159,8 @@ eval (SelectEarning earning) state = do
   case earning.status of 
     Success -> continue newState{data {currentStage = TransactionHistory}}
     Failed -> do 
-      void $ pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+      let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+      void $ pure $ showDialer cityConfig.supportNumber false
       update state
     _ -> continue newState{data {currentStage = ReferralSteps}}
 
@@ -257,8 +259,8 @@ eval (RideSummaryAPIResponseAction (API.ReferralEarningsResp referralEarningsRes
     currWeekMaxEarning = foldl getMax 0 currentWeekData
 
     orderStatus = getOrderStatus (fromMaybe PP.NEW referralEarningsResp.orderStatus) 
-    
-  continue state { 
+
+    newState = state { 
                   data { dailyEarningData = allWeeksData, 
                          currPayoutHistory = currPayoutHistory, 
                          currWeekData = currentWeekData, 
@@ -271,9 +273,12 @@ eval (RideSummaryAPIResponseAction (API.ReferralEarningsResp referralEarningsRes
                         }, 
                   props { currentWeekMaxEarning = currWeekMaxEarning, 
                           showShimmer = false, 
-                          callEarningsAPI = false 
+                          callEarningsAPI = false,
+                          openPP = false 
                         } 
                  }
+    
+  if state.props.openPP && (isNothing referralEarningsResp.vpaId) then updateAndExit newState $ AddUPI newState else continue newState
 
 eval NoAction state = update state
 

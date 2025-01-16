@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueReport where
 
@@ -40,7 +38,8 @@ data IssueReportT f = IssueReportT
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime,
     chats :: B.C f [Domain.Chat],
-    merchantId :: B.C f (Maybe Text)
+    merchantId :: B.C f (Maybe Text),
+    becknIssueId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

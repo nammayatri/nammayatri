@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Storage.Beam.PayoutOrder where
@@ -29,9 +27,13 @@ data PayoutOrderT f = PayoutOrderT
     id :: B.C f Kernel.Prelude.Text,
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNoEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNoHash :: B.C f Kernel.External.Encryption.DbHash,
     orderId :: B.C f Kernel.Prelude.Text,
+    responseCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    responseMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    retriedOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,

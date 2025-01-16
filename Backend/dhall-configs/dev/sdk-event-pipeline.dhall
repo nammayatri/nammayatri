@@ -24,6 +24,7 @@ in  { kafkaProducerCfg
     , graceTerminationPeriod = +90
     , riderSDKEventsKafkaTopic = "rider-sdk-events"
     , driverSDKEventsKafkaTopic = "driver-sdk-events"
+    , metroWebviewEventsKafkaTopic = "metro-webview-events"
     , apiRateLimitOptions = { limit = +1, limitResetTimeInSec = +60 }
     , driverAppConfig =
       { url = "http://127.0.0.1:8016/"

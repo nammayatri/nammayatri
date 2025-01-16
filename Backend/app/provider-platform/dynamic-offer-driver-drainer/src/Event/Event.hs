@@ -23,6 +23,7 @@ mkDBSyncMetric = do
       KafkaUpdateMissing -> inc (metrics </> #driver_kafka_update_missing)
       KafkaPushFailure action model -> inc (metrics </> #driver_kafka_push_failure) action model
       ProcessLatency processName latency -> observe (metrics </> #driver_process_latency) latency processName
+      KvConfigDecodeFailure -> inc (metrics </> #driver_kv_config_decode_failure)
   where
     collectionDBSyncMetric =
       driver_peek_db_command_error
@@ -36,4 +37,5 @@ mkDBSyncMetric = do
         .> driver_kafka_update_missing
         .> driver_kafka_push_failure
         .> driver_process_latency
+        .> driver_kv_config_decode_failure
         .> MNil

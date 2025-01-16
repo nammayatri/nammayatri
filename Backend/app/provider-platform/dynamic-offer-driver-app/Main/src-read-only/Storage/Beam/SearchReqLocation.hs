@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchReqLocation where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -19,10 +18,14 @@ data SearchReqLocationT f = SearchReqLocationT
     country :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     door :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    extras :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     full_address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    instructions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime

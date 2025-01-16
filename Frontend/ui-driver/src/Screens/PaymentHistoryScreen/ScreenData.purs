@@ -37,7 +37,8 @@ initData = {
             isAutoPayFailed : false,
             feeType : AUTOPAY_PAYMENT,
             numOfDriverFee : 0,
-            isCoinCleared : false
+            isCoinCleared : false,
+            isCoinDiscountApplied : false
         },
         planData : dummyPlanConfig,
         gradientConfig : [],

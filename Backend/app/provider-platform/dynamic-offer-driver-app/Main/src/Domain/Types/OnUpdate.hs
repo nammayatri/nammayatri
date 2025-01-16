@@ -43,10 +43,17 @@ data OnUpdateBuildReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
+  | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
+  | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
+  | ParcelImageUploadedBuildReq DParcelImageUploadedReq
 
 data DErrorObject = DErrorObject
   { errorCode :: Text,
     errorMessage :: Text
+  }
+
+newtype DParcelImageUploadedReq = DParcelImageUploadedReq
+  { bookingDetails :: BookingDetails
   }
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
@@ -93,3 +100,12 @@ newtype DTollCrossedBuildReq = DTollCrossedBuildReq
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE
   deriving (Show)
+
+data DDriverReachedDestinationReq = DDriverReachedDestinationReq
+  { bookingDetails :: BookingDetails,
+    destinationArrivalTime :: Maybe UTCTime
+  }
+
+newtype DRideEstimatedEndTimeRangeReq = DRideEstimatedEndTimeRangeReq
+  { bookingDetails :: BookingDetails
+  }

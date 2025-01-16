@@ -25,6 +25,7 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DerivingStrategies
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
@@ -68,6 +69,10 @@ dependencies:
   - euler-hs
   - passetto-client
   - exceptions
+  - jwt >= 0.11
+  - xml-conduit
+  - servant-xml
+  - xmlbf
   - hspec
   - http-client
   - lens
@@ -124,6 +129,12 @@ dependencies:
   - http-conduit
   - split
   - hashable
+  - json-logic-hs
+  - yudhishthira
+  - network-uri
+  - text-format
+  - scientific
+  - hex-text
 
 ghc-options:
   - -fwrite-ide-info
@@ -178,19 +189,19 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     when:
-    - condition: flag(Local)
-      then:
-        ghc-options:
-          - -O0
-          - -funfolding-use-threshold20
-          - -fno-cse
-          - -fmax-simplifier-iterations1
-          - -fno-specialise-aggressively
-          - -j4
-      else:
-        ghc-options:
-          - -O2
-          - -j4
+      - condition: flag(Local)
+        then:
+          ghc-options:
+            - -O0
+            - -funfolding-use-threshold20
+            - -fno-cse
+            - -fmax-simplifier-iterations1
+            - -fno-specialise-aggressively
+            - -j4
+        else:
+          ghc-options:
+            - -O2
+            - -j4
     dependencies:
       - dynamic-offer-driver-app
       - mobility-core

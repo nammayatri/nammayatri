@@ -20,7 +20,7 @@ import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 import ConfigProvider
-import Common.Types.App (CalendarDate, CalendarWeek)
+import Common.Types.App (CalendarDate, CalendarWeek, CalendarMonth)
 
 initData :: ReferralScreenState
 initData =  {
@@ -59,8 +59,10 @@ initData =  {
     , showDateSelector : false
     , days : []
     , weeks : []
+    , months : []
     , selectedDay : dummyDay
     , selectedWeek : dummyWeek
+    , selectedMonth : dummyMonth
     , rankersData : []
     , currentDriverData : dummyCurrentDriverData
     , showShimmer : true
@@ -91,4 +93,10 @@ dummyWeek = {
   , utcEndDate : ""
   , startMonth : ""
   , endMonth : ""
+}
+
+dummyMonth :: CalendarMonth
+dummyMonth = {
+    utcDate : ""
+  , month : 0
 }

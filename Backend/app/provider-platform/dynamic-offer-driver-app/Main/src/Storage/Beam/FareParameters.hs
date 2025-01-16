@@ -11,12 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.FareParameters where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -37,6 +37,7 @@ data FareParametersT f = FareParametersT
     nightShiftChargeAmount :: B.C f (Maybe HighPrecMoney),
     nightShiftRateIfApplies :: B.C f (Maybe Double),
     serviceCharge :: B.C f (Maybe Money),
+    stopCharges :: B.C f (Maybe HighPrecMoney),
     serviceChargeAmount :: B.C f (Maybe HighPrecMoney),
     parkingCharge :: B.C f (Maybe HighPrecMoney),
     fareParametersType :: B.C f Domain.FareParametersType,
@@ -45,12 +46,19 @@ data FareParametersT f = FareParametersT
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
     congestionCharge :: B.C f (Maybe Money),
+    congestionChargeViaDp :: B.C f (Maybe HighPrecMoney),
     congestionChargeAmount :: B.C f (Maybe HighPrecMoney),
     insuranceCharge :: B.C f (Maybe HighPrecMoney),
     cardChargeOnFare :: B.C f (Maybe HighPrecMoney),
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
+    platformFee :: B.C f (Maybe HighPrecMoney),
+    sgst :: B.C f (Maybe HighPrecMoney),
+    cgst :: B.C f (Maybe HighPrecMoney),
+    platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
     currency :: B.C f (Maybe Currency),
-    updatedAt :: B.C f (Maybe UTCTime)
+    updatedAt :: B.C f (Maybe UTCTime),
+    merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

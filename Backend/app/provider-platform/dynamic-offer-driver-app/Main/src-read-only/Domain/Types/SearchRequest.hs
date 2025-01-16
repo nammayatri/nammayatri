@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SearchRequest where
@@ -8,7 +7,9 @@ import Data.Aeson
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -28,13 +29,18 @@ data SearchRequest = SearchRequest
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     customerLanguage :: Kernel.Prelude.Maybe Tools.Maps.Language,
+    customerNammaTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverDefaultExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverIdForSearch :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Domain.Types.Location.Location,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     isAdvanceBookingEnabled :: Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -45,16 +51,22 @@ data SearchRequest = SearchRequest
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    searchTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
+    stops :: [Domain.Types.Location.Location],
+    toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)

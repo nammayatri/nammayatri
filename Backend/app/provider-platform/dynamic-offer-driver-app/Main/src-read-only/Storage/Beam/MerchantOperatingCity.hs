@@ -1,11 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantOperatingCity where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -39,3 +39,5 @@ type MerchantOperatingCity = MerchantOperatingCityT Identity
 $(enableKVPG ''MerchantOperatingCityT ['id] [])
 
 $(mkTableInstances ''MerchantOperatingCityT "merchant_operating_city")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantOperatingCityT)

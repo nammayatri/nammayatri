@@ -16,9 +16,8 @@
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
-import Prelude (show, unit, (<>), (==), (*))
-import Services.Config (getBaseUrl, getSpecialZoneBaseUrl)
-import ConfigProvider (isDebugBuild)
+import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
+import Services.Config (getBaseUrl)
 
 triggerOTP :: String -> String
 triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
@@ -65,6 +64,9 @@ getRideHistory limit offset isActive status day= do
 getRidesSummaryList :: Array String -> String
 getRidesSummaryList dateList = (getBaseUrl "") <> "/rideSummary/list"
 
+submitDriverProfile :: String -> String 
+submitDriverProfile dummyString = (getBaseUrl "") <> "/DriverProfileQues"
+
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
 
@@ -95,8 +97,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
+driverRegistrationStatus :: Boolean -> String
+driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -178,6 +180,9 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
+
+leaderBoardMonthly :: Int -> String
+leaderBoardMonthly month = (getBaseUrl "") <> "/driver/leaderBoard/monthly?month=" <> show month
 
 referredDrivers :: String -> String
 referredDrivers dummy = (getBaseUrl "") <> "/driver/referral/getReferredDrivers"
@@ -322,10 +327,10 @@ dummyRideRequest :: String -> String
 dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 
 specialLocationList :: String -> String
-specialLocationList _ = (if isDebugBuild unit then (getBaseUrl "") else (getSpecialZoneBaseUrl "")) <> "/specialLocation/list"
+specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
 
-onBoardingConfigs :: String -> String
-onBoardingConfigs qp = (getBaseUrl "") <> "/onboarding/configs" <> qp
+onBoardingConfigs :: Boolean -> Boolean -> String
+onBoardingConfigs showAadhaarProfilePan onlyVehicle = (getBaseUrl "") <> "/onboarding/configs?makeSelfieAadhaarPanMandatory=" <> show showAadhaarProfilePan <> "&onlyVehicle=" <> show onlyVehicle
 
 driverVehicleServiceTier :: String -> String
 driverVehicleServiceTier _ = (getBaseUrl "") <> "/driver/vehicleServiceTiers"
@@ -360,3 +365,51 @@ deleteVPA dummy = (getBaseUrl "") <> "/payout/delete/vpa"
 
 registerPayout :: String -> String
 registerPayout dummy = (getBaseUrl "") <> "/payout/registration"
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> expiry <> "&service=" <> serviceName
+
+getLiveSelfie :: String -> String
+getLiveSelfie status = (getBaseUrl "") <> "/driver/register/getLiveSelfie?status=" <> status
+
+registerPAN :: String -> String
+registerPAN _ = (getBaseUrl "") <> "/driver/register/pancard"
+
+registerAadhaar ::  String -> String 
+registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+getDriverProfile :: Boolean -> String 
+getDriverProfile isImages = (getBaseUrl "") <> "/DriverProfileQues?isImages=" <> (show isImages)
+
+verifyUPI :: String -> String
+verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"
+
+getCoinInfo :: String -> String
+getCoinInfo _ = (getBaseUrl "") <> "/coins/info"
+
+demandHotspots :: String -> String
+demandHotspots _ = (getBaseUrl "") <> "/driver/demandHotspots"
+
+getScheduledBookingList :: String -> String -> String -> String ->String -> String -> String -> String
+getScheduledBookingList limit offset from to  tripCategory lat lon  =  (getBaseUrl "") <> "/driver/scheduledBooking/list?limit="<>limit<>"&offset="<>offset<> (if from == "null" then "" else "&from=" <> from) <> (if to == "null" then "" else "&to=" <> to)<>(if lat == "0.0" || lon == "0.0" then ""  else ("&currentLocation=" <> lat <> "," <> lon)) <> ( if tripCategory == "" then "" else "&tripCategory=" <> tripCategory)  
+
+scheduleBookingAccept :: String -> String
+scheduleBookingAccept bookingId = (getBaseUrl "") <> "/driver/accept/scheduledBooking?bookingId="<>bookingId
+
+uploadParcelImage :: String -> String
+uploadParcelImage rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/uploadDeliveryImage"
+
+driverReachedDestination :: String -> String
+driverReachedDestination rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/arrived/destination"
+
+updateHVSdkCallLog :: String -> String
+updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"
+
+updateMetroWarriorInfo :: String -> String
+updateMetroWarriorInfo driverId = (getBaseUrl "") <> "/updateInfo/specialLocWarrior?driverId=" <> driverId
+
+getMetroWarriorInfo :: String -> String
+getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?driverId=" <> driverId
+
+specialLocationListCategory :: String -> String
+specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category

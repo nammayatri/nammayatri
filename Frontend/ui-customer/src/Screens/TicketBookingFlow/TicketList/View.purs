@@ -57,6 +57,7 @@ import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Helpers.CommonView as CommonView
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -81,7 +82,7 @@ screen initialState =
     if (any (_ == initialState.props.currentStage) [ST.DescriptionStage , ST.ViewTicketStage]) then do
       case initialState.data.placeInfo of
         Just (TicketPlaceResp place) -> do
-          servicesResp <- Remote.getTicketPlaceServicesBT place.id
+          servicesResp <- Remote.getTicketPlaceServicesBT place.id initialState.data.dateOfVisit
           lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp place) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
     else pure unit
@@ -106,47 +107,41 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-    PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
+  PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , onBackPressed push $ const BackPressed
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  ]
+  [ shimmerView state
+  , linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
-    , onBackPressed push $ const BackPressed
-    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+    , orientation VERTICAL
+    , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
+    , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
     ]
-    [ shimmerView state
-    , linearLayout 
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , background Color.white900
-        , orientation VERTICAL
-        , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
-        , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
-        ]
-        [ headerView state push
-        , linearLayout
-          [ height $ V 1 
+    [ headerView state push
+    , scrollView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , afterRender push $ const AfterRender
+      , fillViewport true
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , background Color.grey900
-          ] []
-        , separatorView Color.greySmoke
-        , scrollView
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , background Color.white900
-            , afterRender push $ const AfterRender
-            , fillViewport true
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , orientation VERTICAL
-                ]
-                (mainView state push)
-            ]
-        ]
-    , actionsView state push
+          , gravity CENTER
+          , orientation VERTICAL
+          ]
+          (mainView state push)
+      ]
     ]
+  , actionsView state push
+  ]
   where
   actionsView state push =
     case state.props.currentStage of
@@ -156,7 +151,14 @@ view push state =
       _ -> generalActionButtons state push
 
   headerView state push =
-    GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , CommonView.horizontalSeparatorView Color.grey900
+    ]
 
   mainView state push =
     [ ticketsListView state push ]
@@ -264,6 +266,7 @@ ticketsListView state push =
   , padding $ PaddingHorizontal 16 16
   ][ if DA.null state.props.ticketBookingList.booked then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
   ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  ,  if DA.null state.props.ticketBookingList.cancelled then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.cancelled "Cancelled Tickets"
   , emptyTicketsView state push
   ]
 
@@ -407,12 +410,14 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Pending -> "ny_ic_transaction_pending"
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
+  Cancelled -> "ny_ic_cancelled"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
   Pending -> { bgColor : Color.yellow900, statusText : "Pending" }
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of

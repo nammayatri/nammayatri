@@ -24,6 +24,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
+import Engineering.Helpers.Utils as EHU
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -90,7 +91,7 @@ checkAndStatus push state = do
       let errMessage = if err.code == 400 
                         then err.response.errorMessage 
                         else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-      void $ pure $ JB.toast errMessage
+      void $ pure $ EHU.showToast errMessage
   EHU.toggleLoader false
   where
   getLastRide checkPastRide =
@@ -469,7 +470,7 @@ userSettingsView state push visibility' =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     ]
-                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)) state.data.emergencyContactsList)
+                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false true) (push <<< ContactAction)) state.data.emergencyContactsList)
                 , textView
                     $ [ text $ getString if null state.data.emergencyContactsList then ADD_CONTACTS else EDIT
                       , color Color.blue900
@@ -525,7 +526,7 @@ userSettingsView state push visibility' =
                           , margin $ Margin 16 16 0 0
                           , gravity CENTER_VERTICAL
                           ]
-                          [ ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)
+                          [ ContactCircle.view (ContactCircle.getContactConfig item index false true) (push <<< ContactAction)
                           , toggleSwitchViewLayout (ChangeFollowing index) item.enableForFollowing item.name push true 12
                           ]
                     )

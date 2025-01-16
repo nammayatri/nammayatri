@@ -1,12 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SurgePricing where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceTierType
+import Domain.Types.Common ()
+import qualified Domain.Types.Common
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -19,7 +19,7 @@ data SurgePricingT f = SurgePricingT
     id :: B.C f Kernel.Prelude.Text,
     sourceHex :: B.C f Kernel.Prelude.Text,
     surgeMultiplier :: B.C f Kernel.Types.Common.Centesimal,
-    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
+    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
@@ -34,3 +34,5 @@ type SurgePricing = SurgePricingT Identity
 $(enableKVPG ''SurgePricingT ['id] [])
 
 $(mkTableInstances ''SurgePricingT "surge_pricing")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''SurgePricingT)

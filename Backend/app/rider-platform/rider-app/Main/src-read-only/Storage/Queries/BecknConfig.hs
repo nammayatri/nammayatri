@@ -2,10 +2,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.BecknConfig where
+module Storage.Queries.BecknConfig (module Storage.Queries.BecknConfig, module ReExport) where
 
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -15,12 +16,18 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as Beam
+import Storage.Queries.BecknConfigExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BecknConfig.BecknConfig -> m ())
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BecknConfig.BecknConfig] -> m ())
 createMany = traverse_ create
+
+findAllByMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BecknConfig.BecknConfig])
+findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -30,15 +37,15 @@ findByMerchantIdAndDomain ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m [Domain.Types.BecknConfig.BecknConfig])
 findByMerchantIdAndDomain merchantId domain = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.domain $ Se.Eq domain]]
 
-findByMerchantIdDomainAndVehicle ::
+findByMerchantIdDomainandMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
-findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
-  findOneWithKV
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BecknConfig.BecknConfig])
+findByMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId = do
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
           Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
         ]
     ]
 
@@ -78,75 +85,3 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
-  fromTType' (Beam.BecknConfigT {..}) = do
-    gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
-    registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
-    subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
-    pure $
-      Just
-        Domain.Types.BecknConfig.BecknConfig
-          { bapIFSC = bapIFSC,
-            buyerFinderFee = buyerFinderFee,
-            cancelTTLSec = cancelTTLSec,
-            collectedBy = collectedBy,
-            confirmBufferTTLSec = confirmBufferTTLSec,
-            confirmTTLSec = confirmTTLSec,
-            domain = domain,
-            gatewayUrl = gatewayUrl',
-            id = Kernel.Types.Id.Id id,
-            initTTLSec = initTTLSec,
-            paymentParamsJson = paymentParamsJson,
-            ratingTTLSec = ratingTTLSec,
-            registryUrl = registryUrl',
-            searchTTLSec = searchTTLSec,
-            selectTTLSec = selectTTLSec,
-            settlementType = settlementType,
-            settlementWindow = settlementWindow,
-            staticTermsUrl = staticTermsUrl',
-            statusTTLSec = statusTTLSec,
-            subscriberId = subscriberId,
-            subscriberUrl = subscriberUrl',
-            trackTTLSec = trackTTLSec,
-            uniqueKeyId = uniqueKeyId,
-            vehicleCategory = vehicleCategory,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
-  toTType' (Domain.Types.BecknConfig.BecknConfig {..}) = do
-    Beam.BecknConfigT
-      { Beam.bapIFSC = bapIFSC,
-        Beam.buyerFinderFee = buyerFinderFee,
-        Beam.cancelTTLSec = cancelTTLSec,
-        Beam.collectedBy = collectedBy,
-        Beam.confirmBufferTTLSec = confirmBufferTTLSec,
-        Beam.confirmTTLSec = confirmTTLSec,
-        Beam.domain = domain,
-        Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.initTTLSec = initTTLSec,
-        Beam.paymentParamsJson = paymentParamsJson,
-        Beam.ratingTTLSec = ratingTTLSec,
-        Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
-        Beam.searchTTLSec = searchTTLSec,
-        Beam.selectTTLSec = selectTTLSec,
-        Beam.settlementType = settlementType,
-        Beam.settlementWindow = settlementWindow,
-        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
-        Beam.statusTTLSec = statusTTLSec,
-        Beam.subscriberId = subscriberId,
-        Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
-        Beam.trackTTLSec = trackTTLSec,
-        Beam.uniqueKeyId = uniqueKeyId,
-        Beam.vehicleCategory = vehicleCategory,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

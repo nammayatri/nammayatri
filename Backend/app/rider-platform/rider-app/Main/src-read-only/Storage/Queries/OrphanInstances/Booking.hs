@@ -24,21 +24,22 @@ import qualified Storage.Queries.TripTerms
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    fromLocationAndBookingDetails' <- Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue
+    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
-    initialPickupLocation' <- Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst fromLocationAndBookingDetails')
+    initialPickupLocation' <- Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')
     merchantOperatingCityId' <- Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- parseBaseUrl providerUrl
     tripTerms' <- if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.Booking.Booking
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
-            bookingDetails = snd fromLocationAndBookingDetails',
+            bookingDetails = snd toBookingDetailsAndFromLocation',
             bppBookingId = Kernel.Types.Id.Id <$> bppBookingId,
             bppEstimateId = itemId,
             clientBundleVersion = clientBundleVersion',
@@ -47,20 +48,26 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
+            disabilityTag = disabilityTag,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
             estimatedDuration = estimatedDuration,
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
+            estimatedStaticDuration = estimatedStaticDuration,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
-            fromLocation = fst fromLocationAndBookingDetails',
+            fromLocation = fst toBookingDetailsAndFromLocation',
             fulfillmentId = fulfillmentId,
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             initialPickupLocation = initialPickupLocation',
+            initiatedBy = initiatedBy,
             isAirConditioned = isAirConditioned,
             isBookingUpdated = fromMaybe False isBookingUpdated,
             isDashboardRequest = isDashboardRequest,
+            isReferredRide = isReferredRide,
             isScheduled = fromMaybe False isScheduled,
+            journeyLegOrder = journeyLegOrder,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             paymentMethodId = paymentMethodId,
@@ -80,8 +87,10 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             startTime = startTime,
             status = status,
             transactionId = riderTransactionId,
+            tripCategory = tripCategory,
             tripTerms = tripTerms',
             updatedAt = updatedAt,
+            vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
@@ -95,6 +104,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.distance = Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.fareProductType = getFareProductType bookingDetails,
+        Beam.isUpgradedToCab = getIsUpgradedToCab bookingDetails,
         Beam.otpCode = getOtpCode bookingDetails,
         Beam.stopLocationId = getStopLocationId bookingDetails,
         Beam.toLocationId = getToLocationId bookingDetails,
@@ -109,6 +119,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.createdAt = createdAt,
+        Beam.disabilityTag = disabilityTag,
         Beam.discount = discount <&> (.amount),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
@@ -117,14 +128,19 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedDuration = estimatedDuration,
         Beam.currency = Just $ (.currency) estimatedFare,
         Beam.estimatedFare = (.amount) estimatedFare,
+        Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
         Beam.fulfillmentId = fulfillmentId,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initiatedBy = initiatedBy,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isBookingUpdated = Just isBookingUpdated,
         Beam.isDashboardRequest = isDashboardRequest,
+        Beam.isReferredRide = isReferredRide,
         Beam.isScheduled = Just isScheduled,
+        Beam.journeyLegOrder = journeyLegOrder,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.paymentMethodId = paymentMethodId,
@@ -144,8 +160,10 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.startTime = startTime,
         Beam.status = status,
         Beam.riderTransactionId = transactionId,
+        Beam.tripCategory = tripCategory,
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = updatedAt,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType

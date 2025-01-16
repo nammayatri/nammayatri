@@ -32,12 +32,19 @@ imports:
   NominalDiffTime: Kernel.Prelude
   Currency: Kernel.Types.Common
   FCMActions: Kernel.External.Notification.FCM.Types
+  SubCategory: Kernel.External.Notification.Interface.Types
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
-  ServiceTierType: Domain.Types.ServiceTierType
-  Category: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  Expand: Kernel.External.Payout.Interface.Types
+  TripCategory: Domain.Types.Trip
+  IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
+  LLMChatCompletionService: ChatCompletion.Types
+  ServiceName: Domain.Types.Extra.MerchantServiceConfig
+  GatewayAndRegistryService: Domain.Types
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -80,6 +87,7 @@ Merchant:
     info: Maybe Text
     registryUrl: BaseUrl
     onlinePayment: Bool
+    gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -93,8 +101,7 @@ Merchant:
     status: character varying (255)
     subscriberId: character varying (255)
     uniqueKeyId: character varying (255)
-
-
+    gatewayAndRegistryPriorityList: "text[]"
 
   default:
     city: "'Kochi'"
@@ -104,6 +111,7 @@ Merchant:
     registryUrl: "'http://localhost:8020'"
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
+    gatewayAndRegistryPriorityList: '''{"NY"}'''
 
   excludedFields:
     - merchantId
@@ -114,6 +122,7 @@ Merchant:
       destinationRestriction: GeoRestriction
   beamType:
     registryUrl: Text
+    gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
 
   constraints:
     subscriberId: SecondaryKey
@@ -123,10 +132,12 @@ Merchant:
     registryUrl: Kernel.Prelude.showBaseUrl|I
     originRestriction: Kernel.Types.Geofencing.origin|I
     destinationRestriction: Kernel.Types.Geofencing.destination|I
+    gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
 
   fromTType:
     geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction destinationRestriction|E
     registryUrl: Kernel.Prelude.parseBaseUrl|IM
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
 
   queries:
     findById:
@@ -138,16 +149,19 @@ Merchant:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
+    updateGatewayAndRegistryPriorityList:
+      kvFunction: updateWithKV
+      where: id
+      params: [gatewayAndRegistryPriorityList]
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
 
 MerchantMessage:
   derives: Generic,Show,'UsageSafety
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE
 
     MediaChannel:
       enum: SMS,WHATSAPP,OVERLAY,ALERT
@@ -160,6 +174,7 @@ MerchantMessage:
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
     senderHeader: Maybe Text
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -196,9 +211,50 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
-   - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+LlmPrompt:
+  derives: Generic,Show,'UsageSafety
+  types:
+    PromptKey:
+      enum: AzureOpenAI_DriverProfileGen_1
+    UseCase:
+      enum: DriverProfileGen, DriverSupport
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    serviceName: ServiceName
+    promptTemplate: Text
+    promptKey: PromptKey
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    useCase: UseCase
+  sqlType:
+    serviceName: character varying(255)
+    useCase: character varying(255)
+    promptKey: character varying(255)
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    serviceName: PrimaryKey
+    useCase: PrimaryKey
+    promptKey: PrimaryKey
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName, useCase, promptKey]
 
 MerchantOperatingCity:
   derives: Generic, FromJSON, ToJSON, Show, Eq, ToSchema
@@ -245,6 +301,10 @@ MerchantOperatingCity:
     location: Kernel.External.Maps.Types.LatLong lat lon|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -324,6 +384,7 @@ Overlay:
     toastMessage: Maybe Text
     secondaryActions: "Maybe [Text]"
     socialMediaLinks: "Maybe [FCMMediaLink]"
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     showPushNotification: Maybe Bool
 
   excludedFields:
@@ -334,6 +395,10 @@ Overlay:
     socialMediaLinks: "Maybe Value"
     actions2: Value
     secondaryActions2: Maybe Value
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
   toTType:
     socialMediaLinks: Data.Aeson.toJSON <$> socialMediaLinks|E
@@ -381,6 +446,23 @@ Overlay:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, overlayKey, language, udf1]
+    deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findAllByLanguageVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language, vehicleCategory]
+    findAllByOverlayKeyUdfVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -457,9 +539,23 @@ MerchantServiceUsageConfig:
     getBankAccount: PaymentService
     backgroundVerification: BackgroundVerificationService
     sdkVerificationService: VerificationService
+    llmChatCompletion: LLMChatCompletionService
+
+  beamType:
+    llmChatCompletion: Maybe LLMChatCompletionService
+
+  fromTType:
+    llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
+
+  toTType:
+    llmChatCompletion: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -491,13 +587,14 @@ MerchantServiceUsageConfig:
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
     backgroundVerification: text
+    llmChatCompletion: character varying(30)
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
-    snapToRoadProvidersList: "'{\"OSRM\", \"Google\"}'"
-    verificationProvidersPriorityList: "'{\"Idfy\"}'"
+    snapToRoadProvidersList: '''{"OSRM", "Google"}'''
+    verificationProvidersPriorityList: '''{"Idfy"}'''
     rectifyDistantPointsFailure: "'OSRM'"
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
@@ -505,6 +602,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"
+    llmChatCompletion: "'AzureOpenAI'"
 
   queries:
     findByMerchantOpCityId:
@@ -524,6 +622,18 @@ MerchantServiceUsageConfig:
         - smsProvidersPriorityList
         - snapToRoadProvidersList
       where: merchantOperatingCityId
+    updateSmsProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [smsProvidersPriorityList]
+    updateWhatsappProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [whatsappProvidersPriorityList]
+    updateSnapToRoadProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [snapToRoadProvidersList]
 
 DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety
@@ -621,12 +731,28 @@ DriverIntelligentPoolConfig:
     actualPickupDistanceWeightage: "0"
     numRidesWeightage: "2"
     maxNumRides: "336"
-    cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
-
+    cancellationAndRideFrequencyRatioWindowOption: '''{"period":7, "periodType":"Days"}'''
 
 TransporterConfig:
   derives: Generic,Show,'UsageSafety
   types:
+    CancellationRateBasedNudgingAndBlockingConfig:
+      cancellationRateThresholdDaily: Int
+      cancellationRateThresholdWeekly: Int
+      dailyMinRidesforBlocking: Int
+      weeklyMinRidesforBlocking: Int
+      dailyMinRidesforNudging: Int
+      weeklyMinRidesforNudging: Int
+      dailyOffenceSuspensionTimeHours: Int
+      weeklyOffenceSuspensionTimeHours: Int
+      dailyConditionCooldownTimeHours: Int
+      weeklyConditionCooldownTimeHours: Int
+    DemandHotspotsConfig:
+      enableDemandHotspots: Bool
+      precisionOfGeohash: Int
+      analysisDurationMinutes: Int
+      resultDurationMinutes: Int
+      noOfGeohashesToReturn: Int
     AadhaarImageResizeConfig:
       height: Int
       width: Int
@@ -644,12 +770,42 @@ TransporterConfig:
       black: Kilometers
       blackxl: Kilometers
       suvplus: Kilometers
+      heritagecab: Kilometers
+      evautorickshaw: Kilometers
+      deliveryLightGoodsVehicle: Kilometers
+      busAc: Kilometers
+      busNonAc: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
       whatsapp: Int
       overlay: Int
       alert: Int
+      derive': Generic, Show, ToJSON, FromJSON, Read
+    ArrivalTimeBufferOfVehicle:
+      sedan: Maybe Seconds
+      suv: Maybe Seconds
+      hatchback: Maybe Seconds
+      autorickshaw: Maybe Seconds
+      taxi: Maybe Seconds
+      taxiplus: Maybe Seconds
+      bike: Maybe Seconds
+      deliverybike: Maybe Seconds
+      ambulance: Maybe Seconds
+      premiumsedan: Maybe Seconds
+      black: Maybe Seconds
+      blackxl: Maybe Seconds
+      suvplus: Maybe Seconds
+      heritagecab: Maybe Seconds
+      evautorickshaw: Maybe Seconds
+      deliveryLightGoodsVehicle: Maybe Seconds
+      busNonAc: Maybe Seconds
+      busAc: Maybe Seconds
+      derive': Generic, Show, ToJSON, FromJSON, Read
+    DistanceRecomputeConfigs:
+      estimatedDistanceUpper: Meters
+      minThresholdPercentage: Int
+      minThresholdDistance: Meters
       derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
@@ -665,6 +821,7 @@ TransporterConfig:
     includeDriverCurrentlyOnRide: Bool
     defaultPopupDelay: Seconds
     popupDelayToAddAsPenalty: Maybe Seconds
+    fleetAlertThreshold: Maybe Seconds
     thresholdCancellationScore: Maybe Int
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
@@ -672,15 +829,20 @@ TransporterConfig:
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
     referralLinkPassword: Text
+    dpWhiteListedGeohash: Maybe [Text]
+    dpBlackListedGeohash: Maybe [Text]
+    dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     onboardingTryLimit: Int
     onboardingRetryTimeInHours: Int
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
+    scheduledRideSearchRepeatLimit: Int
     actualRideDistanceDiffThreshold: HighPrecMeters
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
     upwardsRecomputeBuffer: HighPrecMeters
+    upwardsRecomputeBufferPercentage: Maybe Int
     approxRideDistanceDiffThreshold: HighPrecMeters
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
@@ -757,7 +919,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
-    exotelStatusCheckSchedulerDelay : Int
+    exotelStatusCheckSchedulerDelay: Int
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -773,7 +935,7 @@ TransporterConfig:
     specialLocationTags: "[Text]"
     createdAt: UTCTime
     updatedAt: UTCTime
-    notificationRetryEligibleErrorCodes: '[Text]'
+    notificationRetryEligibleErrorCodes: "[Text]"
     notificationRetryCountThreshold: Int
     notificationRetryTimeGap: NominalDiffTime
     driverAutoPayExecutionTimeFallBack: NominalDiffTime
@@ -790,9 +952,9 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: NominalDiffTime
     minmRentalAndScheduledBookingLeadTimeHours: Hours
     scheduledRideFilterExclusionThresholdHours: Hours
-    fakeOtpMobileNumbers: '[Text]'
-    fakeOtpEmails: '[Text]'
-    variantsToEnableForSubscription: '[Domain.Types.Vehicle.Variant]'
+    fakeOtpMobileNumbers: "[Text]"
+    fakeOtpEmails: "[Text]"
+    variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
     considerDriversForSearch: Bool
     dlNumberVerification: Maybe Bool
     pastDaysRideCounter: Int
@@ -806,13 +968,34 @@ TransporterConfig:
     payoutBatchLimit: Int
     updatePayoutStatusBatchSize: Int
     lastNdaysToCheckForPayoutOrderStatus: Int
-    minRideDistanceThresholdForReferralPayout: HighPrecMeters
-    minPickupDistanceThresholdForReferralPayout: Meters
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
     createDocumentRequired: Maybe Bool
-    schedulePayoutForDay : Maybe Integer
+    schedulePayoutForDay: Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
+    cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
+    cancellationRateWindow: Maybe Int
+    cancellationRateCalculationThreshold: Maybe Int
+    arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
+    demandHotspotsConfig: Maybe DemandHotspotsConfig
+    cancellationRateThresholdDaily: Maybe Int
+    cancellationRateThresholdWeekly: Maybe Int
+    dailyMinRidesForBlocking: Maybe Int
+    weeklyMinRidesForBlocking: Maybe Int
+    dailyMinRidesForNudging: Maybe Int
+    weeklyMinRidesForNudging: Maybe Int
+    dailyOffenceSuspensionTimeHours: Maybe Int
+    weeklyOffenceSuspensionTimeHours: Maybe Int
+    dailyConditionCooldownTimeHours: Maybe Int
+    weeklyConditionCooldownTimeHours: Maybe Int
+    driverDrivenSearchReqExpiry: Maybe NominalDiffTime
+    otpRideStartRestrictionRadius: Maybe Meters
+    disableListScheduledBookingAPI: Bool
+    issueBreachConfig: Maybe [IssueBreachConfig]
+    recentScheduledBookingsSafeLimit: Int
+    minDistanceForStopFcm: HighPrecMeters
+    recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
+    minThresholdForPassThroughDestination: Maybe Meters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -850,6 +1033,18 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
     scheduledRideFilterExclusionThresholdHours: Maybe Int
     exotelStatusCheckSchedulerDelay: Maybe Seconds
+    cachedDevicesOSForSearchRequest: "Maybe [Text]"
+    arrivalTimeBufferOfVehicle: Maybe Value
+    demandHotspotsConfig: Maybe Value
+    scheduledRideSearchRepeatLimit: Maybe Int
+    driverDrivenSearchReqExpiry: Maybe Seconds
+    disableListScheduledBookingAPI: Maybe Bool
+    issueBreachConfig: Maybe Value
+    recentScheduledBookingsSafeLimit: Maybe Int
+    minDistanceForStopFcm: Maybe HighPrecMeters
+    recomputeDistanceThresholds: Maybe Value
+    minThresholdForPassThroughDestination: Maybe Meters
+
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -896,6 +1091,17 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
+    cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
+    arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
+    demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
+    scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
+    minDistanceForStopFcm: Just minDistanceForStopFcm|E
+    recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -944,7 +1150,21 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
-
+    cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
+    arrivalTimeBufferOfVehicle: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
+    demandHotspotsConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
+    scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    issueBreachConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
+    recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
+    minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
+    recomputeDistanceThresholds: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
+    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -995,6 +1215,12 @@ TransporterConfig:
     arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
+    arrivalTimeBufferOfVehicle: json
+    demandHotspotsConfig: json
+    issueBreachConfig: json
+    minDistanceForStopFcm: double precision
+    recomputeDistanceThresholds: json
+    minThresholdForPassThroughDestination: int
 
   default:
     mediaFileUrlPattern: |-
@@ -1004,6 +1230,9 @@ TransporterConfig:
     upwardsRecomputeBuffer: "2000"
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
+    dpGeoHashPercision: "5"
+    dpWhiteListedGeohash: "ARRAY[]::TEXT[]"
+    dpBlackListedGeohash: "ARRAY[]::TEXT[]"
     minLocationAccuracy: "50"
     driverPaymentCycleDuration: "86400"
     driverPaymentCycleStartTime: "36000"
@@ -1112,11 +1341,18 @@ TransporterConfig:
     payoutBatchLimit: "10"
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
-    minRideDistanceThresholdForReferralPayout: "1500.0"
-    minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
+    cachedDevicesOSForSearchRequest: "'{}'"
+    scheduledRideSearchRepeatLimit: "10"
+    dailyConditionCooldownTimeHours: "24"
+    weeklyConditionCooldownTimeHours: "168"
+    disableListScheduledBookingAPI: "false"
+    recentScheduledBookingsSafeLimit: "50"
+    minDistanceForStopFcm: "100"
+    recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
 
+    minThreshildForPassThroughDestination: "1000"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1134,6 +1370,7 @@ TransporterConfig:
         - rideTimeEstimatedThreshold
         - defaultPopupDelay
         - popupDelayToAddAsPenalty
+        - fleetAlertThreshold
         - thresholdCancellationScore
         - minRidesForCancellationScore
         - mediaFileUrlPattern
@@ -1142,6 +1379,7 @@ TransporterConfig:
         - onboardingRetryTimeInHours
         - checkImageExtractionForDashboard
         - searchRepeatLimit
+        - scheduledRideSearchRepeatLimit
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
         - driverPaymentCycleBuffer
@@ -1160,6 +1398,7 @@ TransporterConfig:
         - orderAndNotificationStatusCheckTimeLimit
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
+        - dpGeoHashPercision
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
@@ -1185,6 +1424,9 @@ MerchantServiceConfig:
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
   sqlType:
     serviceName: character varying(50)
     configJSON: json
@@ -1201,17 +1443,25 @@ MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
+    id: Id MerchantPushNotification
     key: Text
     title: Text
     body: Text
     language: Language
     fcmNotificationType: FCMNotificationType
+    fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
+  default:
+    id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:
-    key: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    language: PrimaryKey
+    id: PrimaryKey
+    # key: PrimaryKey
+    # merchantOperatingCityId: PrimaryKey
+    # language: PrimaryKey
+    # tripCategory: PrimaryKey
+    # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -1220,9 +1470,13 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityIdAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
 
 RideRelatedNotificationConfig:
-  tableName : ride_related_notification_config
+  tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     NotificationType:
@@ -1233,7 +1487,7 @@ RideRelatedNotificationConfig:
       enum: "PreEvent,PostEvent,OnEvent"
   fields:
     id: Id RideRelatedNotificationConfig
-    timeDiff : NominalDiffTime
+    timeDiff: NominalDiffTime
     timeDiffEvent: TimeDiffEvent
     notificationType: NotificationType
     notificationKey: Text
@@ -1262,7 +1516,7 @@ RideRelatedNotificationConfig:
         and: [merchantOperatingCityId, timeDiffEvent]
 
 PayoutConfig:
-  tableName : payout_config
+  tableName: payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -1272,13 +1526,15 @@ PayoutConfig:
     isPayoutEnabled: Bool
     thresholdPayoutAmountPerPerson: HighPrecMoney
     batchLimit: Int
-    vehicleCategory: Category
+    vehicleCategory: VehicleCategory|NoRelation
     maxRetryCount: Int
     payoutRegistrationFee: HighPrecMoney
     payoutRegistrationCgst: HighPrecMoney
     payoutRegistrationSgst: HighPrecMoney
     remark: Text
     orderType: Text
+    expand: Maybe Expand
+    maxPayoutReferralForADay: Maybe Int
   beamType:
     timeDiff: Seconds
   toTType:
@@ -1301,8 +1557,10 @@ PayoutConfig:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
   queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
     findByMerchantOpCityIdAndIsPayoutEnabled:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
-

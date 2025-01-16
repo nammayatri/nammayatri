@@ -1,16 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.FlaggedCategory where
 
 import API.Types.UI.FlaggedCategory
-import qualified API.Types.UI.FlaggedCategory
 import qualified API.Types.UI.Notification as Notification
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
-import Data.OpenApi (ToSchema)
-import qualified Domain.Types.FlaggedCategory as Domain.Types.FlaggedCategory
-import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified "lib-dashboard" Domain.Types.Person
+import qualified Domain.Types.FlaggedCategory
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
@@ -18,14 +13,12 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.FlaggedCategory as SQFC
 import qualified Storage.Queries.FlaggedCategoryExtra as SQFCE
 import "lib-dashboard" Tools.Auth
 import Tools.Error
-import "lib-dashboard" Tools.Error
 
 buildTransaction ::
   ( MonadFlow m

@@ -16,23 +16,28 @@ module Screens.RideBookingFlow.HomeScreen.Config where
 
 import Common.Types.App
 import ConfigProvider
+import Data.Int
 import Debug
 import Helpers.TipConfig
 import Language.Strings
 import Locale.Utils
+import MerchantConfig.Types
 import Mobility.Prelude
 import Prelude
 import PrestoDOM
 import Screens.RideBookingFlow.HomeScreen.BannerConfig
+
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (TicketType(..))
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
-import Components.ChatView as ChatView
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseYourRide as ChooseYourRide
+import Components.CommonComponentConfig as CommonComponentConfig
+import Components.DateTimeSelector.Controller as DateSelectorController
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
@@ -40,9 +45,12 @@ import Components.ErrorModal as ErrorModal
 import Components.LocationTagBarV2 as LocationTagBar
 import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
+import Components.MessagingView.Controller (ChatContacts(..))
+import Components.MessagingView.Controller as CMC
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -53,20 +61,25 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
+import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any, all)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Foldable (foldl)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
 import Data.Int as INT
+import Data.Lens ((^.))
 import Data.Lens ((^.), view)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.String as DS
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
+import Data.Tuple as DT
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
@@ -74,7 +87,7 @@ import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig, convertTo12HourFormat)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -82,18 +95,28 @@ import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..), Orientation(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import RemoteConfig as RemoteConfig
 import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
-import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
+import Resources.LocalizableV2.Strings (getEN)
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig, dummyRideBooking)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..), NewContacts(..), SearchLocationModelType(..), Currency(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
-
+import Debug (spy)
+import Data.Int
+import Components.CommonComponentConfig as CommonComponentConfig
+import RemoteConfig as RemoteConfig
+import MerchantConfig.Types
+import Data.Tuple as DT
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Components.MessagingView.Controller as CMC
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -145,7 +168,6 @@ cancelAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelAppConfig state =
   let
     config' = PopUpModal.config
-
     popUpConfig' =
       config'
         { gravity = BOTTOM
@@ -279,9 +301,10 @@ skipButtonConfig state =
     primaryButtonConfig'
   where 
     isRentalRide = state.data.fareProductType == FPT.RENTAL
+    isIntercityRide = state.data.fareProductType == FPT.INTER_CITY
     issueFlowClickable = (DA.null $ issueReportBannerConfigs state) || state.data.rideCompletedData.issueReportData.respondedValidIssues
     ratingFlowClickable = state.data.ratingViewState.selectedRating > 0
-    clickale = (if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable) || isRentalRide
+    clickale = (if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable) || isRentalRide || isIntercityRide
 
 
 
@@ -388,11 +411,11 @@ primaryButtonConfirmPickupConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonConfirmPickupConfig state =
   let
     config = PrimaryButton.config
-
+    isBtnClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString CONFIRM_LOCATION)
+          { text = if state.data.fareProductType == FPT.DELIVERY then (if state.props.isSource == Just true then getString CONFIRM_PICKUP else getString CONFIRM_DROP) else getString CONFIRM_LOCATION
           , color = state.data.config.primaryTextColor
           , accessibilityHint = "Confirm PickUp Location : Button"
           }
@@ -400,7 +423,9 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
-        , enableRipple = true
+        , isClickable = isBtnClickable
+        , alpha = if isBtnClickable then 1.0 else 0.5
+        , enableRipple = isBtnClickable
         , rippleColor = Color.rippleShade
         }
   in
@@ -879,7 +904,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isOtpRideFlow
   waitTimeConfig = textConfig isQuotes  
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -896,7 +921,7 @@ waitTimeInfoCardConfig state = let
     }
   , secondaryText {
       text = if not isQuotes then getVarString waitTimeConfig.secondaryText $ if state.data.vehicleVariant == "AUTO_RICKSHAW" then ["3", "1.5"] else ["5", "1"] else getString waitTimeConfig.secondaryText,
-      visibility = boolToVisibility waitTimeConfig.waitingChargeApplicable,
+      visibility = boolToVisibility $ waitTimeConfig.waitingChargeApplicable && state.data.currentCityConfig.enableWaitingConfig,
       padding = PaddingLeft 16,
       color = Color.black700,
       textStyle = FontStyle.ParagraphText,
@@ -921,33 +946,31 @@ waitTimeInfoCardConfig state = let
     textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR, waitingChargeApplicable :: Boolean}
     textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_, waitingChargeApplicable : true}
                           else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : waitingChargeInfo.chargePerMinute /= "₹0/min"}
-
-    waitingChargeInfo = case state.data.rateCardCache of
-                          Just rateCard -> 
-                            {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
+    waitingChargeInfo = 
+                      let rideType = state.data.fareProductType
+                          cityConfig = state.data.currentCityConfig
+                          autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+                          cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+                          waitingCharges = 
+                            if state.data.vehicleVariant == "AUTO_RICKSHAW" then
+                                autoWaitingCharges
+                            else 
+                                cabsWaitingCharges
+                          isIntercity = state.data.fareProductType == FPT.INTER_CITY
+                      in 
+                      case state.data.rateCardCache of
+                          Just rateCard ->                   
+                            if isIntercity then {freeMinutes : show waitingCharges.freeMinutes , chargePerMinute : "₹"<>show waitingCharges.perMinCharges <>"/min"}
+                                            else {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
                           Nothing -> do
-                            let rideType = state.data.fareProductType
-                                cityConfig = state.data.currentCityConfig
-                                autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
-                                cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
-                                waitingCharges = 
-                                  if state.data.vehicleVariant == "AUTO_RICKSHAW" then
-                                      autoWaitingCharges
-                                  else 
-                                      cabsWaitingCharges
                             {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "₹"<> show waitingCharges.perMinCharges <>"/min"}
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
-    config' = RateCard.config 
-
     bangaloreCode = HU.getCityCodeFromCity Bangalore
-
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-
-    rateCardConfig' =
-      config'
+  in RateCard.config 
         { isNightShift = state.data.rateCard.isNightShift
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
@@ -955,11 +978,83 @@ rateCardConfig state =
         , description = if state.data.rateCard.isNightShift then (getString $ NIGHT_TIME_CHARGES state.data.rateCard.nightChargeFrom state.data.rateCard.nightChargeTill) else (getString $ DAY_TIME_CHARGES state.data.rateCard.nightChargeTill state.data.rateCard.nightChargeFrom)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , title = getString RATE_CARD
-        , fareList = 
-            state.data.rateCard.extraFare 
+        , fareList = state.data.rateCard.extraFare 
         , driverAdditions = state.data.rateCard.driverAdditions
-        , otherOptions = otherOptions $ not DA.null state.data.rateCard.driverAdditions
+        , otherOptions = otherOptions $ (not DA.null state.data.rateCard.driverAdditions) && state.data.config.searchLocationConfig.showDriverAdditions
         , fareInfoDescription = state.data.rateCard.fareInfoDescription
+        , additionalStrings = 
+            (if state.data.config.searchLocationConfig.showDriverAdditions then 
+              [ {key : "DRIVER_ADDITIONS_OPTIONAL", val : getString DRIVER_ADDITIONS_OPTIONAL}
+              , {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC}
+              , {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE}
+              ] 
+            else []) 
+          <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then 
+              [ {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES}
+              , {key : "TOLL_CHARGES", val : getString TOLL_CHARGES}
+              , {key : "TOLL_CHARGES_DESC", val : getString TOLL_CHARGES_DESC}
+              , {key : "PARKING_CHARGE", val : getString PARKING_CHARGE}
+              , {key : "PARKING_CHARGES_DESC", val : getString PARKING_CHARGES_DESC}
+              ] 
+              else []) 
+          <> (if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [])
+          }
+  where
+  otherOptions :: Boolean -> Array FareList
+  otherOptions showAdditions =
+    (if showAdditions then [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ] else [])
+    <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]else [])
+
+intercityRateCardConfig :: ST.HomeScreenState -> RateCard.Config
+intercityRateCardConfig state = 
+  let 
+    config' = RateCard.config
+    driverAllowance = (DA.head $ DA.filter  (\item -> (item.key == "DRIVER_ALLOWANCE")) state.data.rateCard.extraFare)
+    driverAllowanceVal = case driverAllowance of 
+                              (Just driverAllowance') -> driverAllowance'.val
+                              _ -> ""
+    driverMaxAllowance = (DA.head $ DA.filter (\item -> (item.key == "PER_DAY_MAX_ALLOWANCE")) state.data.rateCard.extraFare)
+    driverMaxAllowanceVal = case driverMaxAllowance of 
+                              (Just driverMaxAllowance') -> driverMaxAllowance'.val
+                              _ -> ""
+    nightShiftCharges = ((DA.head $ DA.filter (\item -> (item.key == "Night Shift Charges*")) state.data.rateCard.extraFare))
+    nightShiftChargesVal = case nightShiftCharges of 
+                              (Just nightShiftCharges') -> nightShiftCharges'.val
+                              _ -> ""
+    baseFare = ((DA.head $ DA.filter (\item -> (item.key == "BASE_FARE")) state.data.rateCard.extraFare))
+    baseFareVal = case baseFare of 
+                              (Just baseFare') -> baseFare'.val
+                              _ -> "0.0"
+    plannedPerKmCharges = ((DA.head $ DA.filter (\item -> (item.key == "PLANNED_PER_KM_CHARGES")) state.data.rateCard.extraFare))
+    plannedPerKmChargesVal = case plannedPerKmCharges of 
+                              (Just plannedPerKmCharges') -> plannedPerKmCharges'.val
+                              _ -> "0.0"
+    driverAdditions = ((DA.head $ DA.filter (\item -> (item.key == "DRIVER_ALLOWANCE")) state.data.rateCard.extraFare))
+    nightChargeTill = fromMaybe "" $ convertTo12HourFormat state.data.rateCard.nightChargeTill
+    nightChargeFrom = fromMaybe "" $ convertTo12HourFormat state.data.rateCard.nightChargeFrom
+    intercityBaseFareLimit = "30"
+    expectedFareList = 
+                      (if baseFareVal /= "0.0" then[{key : (getString FIXED_CHARGES), val : (getCurrency appConfig) <> (baseFareVal)},{key:(getString DISTANCE_FARE),val :(getCurrency appConfig) <> (plannedPerKmChargesVal) <> " /km"}] else [{key : getString DISTANCE_FARE,val : ((getCurrency appConfig) <> plannedPerKmChargesVal <> " /km")}])<>
+                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "Night Shift Charges*", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
+    intercityRateCardConfig' = 
+      config'
+      {
+          currentRateCardType = state.data.rateCard.currentRateCardType
+        , onFirstPage = state.data.rateCard.onFirstPage
+        , showDetails = true
+        , title = getString RATE_CARD
+        , description = "Intercity Charges"
+        , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
+        , primaryButtonConfig {
+            margin = MarginTop 16,
+            text = getString GOT_IT,
+            color = Color.blue800,
+            height = V 40,
+            cornerRadius = 8.0,
+            background = Color.white900,
+            visibility = VISIBLE
+          }
+        , otherOptions  = otherOptions driverAdditions
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
@@ -967,22 +1062,30 @@ rateCardConfig state =
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
-          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
-          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
-          <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
-        }
-  in
-    rateCardConfig'
+          {key : "PARKING_CHARGES", val : ("Parking Charges")},
+          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)},
+          {key : "NIGHT_SHIFT",val : (getString NIGHT_CHARGES)},
+          {key : "NIGHT_SHIFT_CHARGES", val : (getVarString NIGHT_CHARGES_DESCRIPTION [nightShiftChargesVal, nightChargeFrom , nightChargeTill])},
+          {key : "STATE_PERMIT_CHARGES", val :(getString STATE_CHARGES_DESCRIPTION) },
+          {key : "PARKING_CHARGES_INTERCITY",val:(getString PARKING_CHARGES_DESCRIPTION) },
+          {key : "TOLL_CHARGES_INTERCITY",val : (getString TOLL_AND_PARKING_CHARGES_DESCRIPTION)},
+          {key : "STATE_CHARGES",val: (getString STATE_PERMIT_CHARGES)},
+          {key : "DRIVER_ALLOWANCE",val: ((getString TIME_FARE) <> "*")},
+          {key : "DRIVER_ALLOWANCE_STR_INTERCITY", val : (getString $ DRIVER_ALLOWANCE_DESCRIPTION driverAllowanceVal driverMaxAllowanceVal)}
+          ]
+        , fareList = expectedFareList
+      }
+    in intercityRateCardConfig'
   where
-  otherOptions :: Boolean -> Array FareList
-  otherOptions showAdditions =
-    ( if showAdditions then
-        [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ]
-      else
-        []
-    )
-      <> if state.data.rateCard.serviceTierName /= Just "Auto" then [ { key: "TOLL_OR_PARKING_CHARGES", val: getString TOLL_OR_PARKING_CHARGES } ] else []
-
+    otherOptions :: Maybe FareList ->  Array FareList
+    otherOptions driverAdditions  = do
+                let 
+                  driverAdditionsVal = case driverAdditions of 
+                              (Just driverAdditions') -> driverAdditions'.val
+                              _ -> "0.0"
+                (if driverAdditionsVal /= "0.0" then [{key : "DRIVER_ALLOWANCES", val : ((getString TIME_FARE) <> "*")}] else [])
+                <> [{key : "TOLL_AND_PARKING_CHARGES", val :(getString TOLL_AND_PARKING_CHARGES)}]
+                <> [{key : "NIGHT_SHIFT_CHARGES", val :(getString NIGHT_SHIFT_CHARGES)}]
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
   ( case vehicle of
@@ -990,6 +1093,9 @@ getVehicleTitle vehicle =
       "SUV" -> (getString SUV)
       "SEDAN" -> (getString SEDAN)
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+      "BIKE" -> "Bike Taxi"
+      "SUV_PLUS" -> "XL Plus"
+      "DELIVERY_BIKE" -> "2 Wheeler"
       _ -> ""
   )
     <> " - "
@@ -1027,12 +1133,13 @@ driverInfoCardViewState state = { props:
                                   , unReadMessages : state.props.unReadMessages
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
+                                  , isOtpRideFlow: state.props.isOtpRideFlow
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isRateCardAvailable : isJust state.data.rateCardCache
-                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
+                                  , isRateCardAvailable : (isJust state.data.rateCardCache) && (state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
+                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL || state.data.fareProductType == FPT.DELIVERY
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
                                   , endOTPShown : state.props.showEndOTP
@@ -1046,18 +1153,22 @@ messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
 messagingViewConfig state =
   let
     config = MessagingView.config
-
-    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+    DT.Tuple safetyCheckStartSeconds safetyCheckEndSeconds = case state.props.safetySettings of
+      Just (API.GetEmergencySettingsRes safetySettings) -> DT.Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
+      Nothing -> DT.Tuple Nothing Nothing
+    primaryContact = DA.head $ DA.filter (\item -> (isJust item.contactPersonId)) $ fromMaybe [] state.data.contactList
 
     messagingViewConfig' =
       config
         { userConfig
           { userName =
-            if state.props.isChatWithEMEnabled then case primaryContact of
-              Nothing -> state.data.driverInfoCardState.driverName
-              Just contact -> contact.name
-            else
-              state.data.driverInfoCardState.driverName
+            if state.props.isChatWithEMEnabled 
+              then 
+                case primaryContact of
+                  Nothing -> state.data.driverInfoCardState.driverName
+                  Just contact -> contact.name
+              else
+                state.data.driverInfoCardState.driverName
           , receiver =
             if state.props.isChatWithEMEnabled then case primaryContact of
               Nothing -> "Driver"
@@ -1072,7 +1183,7 @@ messagingViewConfig state =
           , showVehicleDetails = not state.props.isChatWithEMEnabled
           , enableSuggestions = state.data.config.feature.enableSuggestions
           }
-        , messages = state.data.messages
+        , messages = map (\{ message, sentBy, timeStamp, type: type_, delay } -> { message, sentBy, timeStamp, type: type_, delay }) state.data.messages
         , messagesSize = state.data.messagesSize
         , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber
         , chatSuggestionsList = getChatSuggestions state
@@ -1087,19 +1198,20 @@ messagingViewConfig state =
         , otp = state.data.driverInfoCardState.otp
         , suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
         , isKeyBoardOpen = state.props.isKeyBoardOpen
+        , showChatListPopUp = state.props.showChatListPopUp
+        , contactList = getChatDetails state $ fromMaybe [] state.data.contactList
+        , currentChatRecipient = state.data.driverInfoCardState.currentChatRecipient       
         }
   in
     messagingViewConfig'
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
-getDefaultPeekHeight state = do
-  let
-    isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
-
-    height = case state.props.currentStage == ST.RideAccepted of
-      true -> if isQuotes then 285 else 381
-      false -> if isQuotes then 377 else 368
-  height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
+getDefaultPeekHeight state =
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isOtpRideFlow
+      height = case state.props.currentStage == ST.RideAccepted of
+        true -> if isQuotes then 285 else 381
+        false -> if isQuotes then 377 else 368
+  in height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
 metersToKm distance towardsDrop =
@@ -1111,6 +1223,7 @@ driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
 driverInfoTransformer state =
   let
     cardState = state.data.driverInfoCardState
+    appConfig = state.data.config { driverInfoConfig { numberPlateBackground = if any (_ == cardState.vehicleVariant) ["BIKE", "DELIVERY_BIKE"] then Color.white900 else state.data.config.driverInfoConfig.numberPlateBackground}}
   in
     { otp : cardState.otp
     , driverName : (DS.toUpper (DS.take 1 cardState.driverName)) <> (DS.toLower (DS.drop 1 cardState.driverName))
@@ -1135,6 +1248,8 @@ driverInfoTransformer state =
     , driverArrived : cardState.driverArrived
     , estimatedDistance : cardState.estimatedDistance
     , driverArrivalTime : cardState.driverArrivalTime
+    , destinationReached : cardState.destinationReached
+    , destinationReachedAt : cardState.destinationReachedAt
     , estimatedDropTime : ""
     , isSpecialZone : state.props.isSpecialZone
     , isLocationTracking : state.props.isLocationTracking
@@ -1142,7 +1257,7 @@ driverInfoTransformer state =
     , bppRideId : ""
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
-    , config : state.data.config
+    , config : appConfig
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.currentSheetState
@@ -1158,6 +1273,11 @@ driverInfoTransformer state =
     , fareProductType : cardState.fareProductType
     , spLocationName : cardState.spLocationName
     , addressWard : cardState.addressWard
+    , hasToll : cardState.hasToll
+    , senderDetails : cardState.senderDetails
+    , receiverDetails : cardState.receiverDetails
+    , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
+    , requestorPartyRoles : state.data.requestorPartyRoles
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1169,40 +1289,6 @@ emergencyHelpModelViewState state =
   , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
   , showCallSuccessfulPopUp: state.props.emergencyHelpModelState.showCallSuccessfulPopUp
   , config: state.data.config
-  }
-
-ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardConfig
-ratingCardViewState state =
-  { data:
-      state.data.rideRatingState
-        { rating = state.data.ratingViewState.selectedRating
-        , feedbackList = state.data.rideRatingState.feedbackList
-        }
-  , feedbackPillData: customerFeedbackPillData state
-  , primaryButtonConfig:
-      PrimaryButton.config
-        { textConfig
-          { text = getString SUBMIT_FEEDBACK
-          , color = state.data.config.primaryTextColor
-          , accessibilityHint = "Submit Feedback Button" 
-          }
-        , background = state.data.config.primaryBackground
-        , margin = MarginHorizontal 16 16
-        , isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true
-        , alpha = if not (state.data.ratingViewState.selectedRating < 1) then 1.0 else 0.4
-        , id = "RateYourDriverButton"
-        , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
-        , enableRipple = true
-        , rippleColor = Color.rippleShade
-        }
-  , showProfileImg: true
-  , title: getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
-  , feedbackPlaceHolder : getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
-  , showFeedbackPill: true
-  , overallFeedbackArray: [ (getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE), (getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING) ]
-  , accessibility: ENABLE
-  , closeImgVisible: GONE
-  , driverImage : fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
   }
 
 getRateYourRideString :: String -> String -> String
@@ -1250,6 +1336,14 @@ searchLocationModelViewState state =
     , currentLocationText: state.props.currentLocation.place
     , isEditDestination : false
     , isDestViewEditable : true
+    , tripType : state.props.searchLocationModelProps.tripType
+    , pickupConfig : pickupConfig state
+    , returnConfig : returnConfig state
+    , totalRideDuration : state.props.searchLocationModelProps.totalRideDuration
+    , totalRideDistance : state.props.searchLocationModelProps.totalRideDistance
+    , showRideInfo : state.props.searchLocationModelProps.showRideInfo
+    , isIntercityFlow : state.props.isIntercityFlow
+    , fareProductType : state.data.fareProductType
     }
   where
   formatDate :: String -> String
@@ -1291,14 +1385,23 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                         }
                                     , headerText: getString TRIP_DETAILS_
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    , tripType : state.props.searchLocationModelProps.tripType
+                                    , pickupConfig : pickupConfig state
+                                    , returnConfig : returnConfig state
+                                    , totalRideDuration : state.props.searchLocationModelProps.totalRideDuration
+                                    , totalRideDistance : state.props.searchLocationModelProps.totalRideDistance
+                                    , showRideInfo : state.props.searchLocationModelProps.showRideInfo
+                                    , isIntercityFlow : state.props.isIntercityFlow
+                                    , fareProductType : state.data.fareProductType
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state =
   let
     vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
-
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+    tipProps = if state.props.showBoostSearch then getTipViewProps state.props.tipViewProps state.data.boostSearchEstimate.vehicleVariant Nothing Nothing
+                  else getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     { source: state.data.source
     , destination: state.data.destination
@@ -1307,14 +1410,14 @@ quoteListModelViewState state =
     , autoSelecting: state.props.autoSelecting
     , searchExpire: state.props.searchExpire
     , showProgress: isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-    , tipViewProps: getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+    , tipViewProps: tipProps
     , findingRidesAgain: state.props.findingRidesAgain
     , progress: state.props.findingQuotesProgress
     , appConfig: state.data.config
     , vehicleVariant: vehicleVariant
     , city: state.props.city
-    , customerTipArray: tipConfig.customerTipArray
-    , customerTipArrayWithValues: tipConfig.customerTipArrayWithValues
+    , customerTipArray: tipProps.customerTipArray
+    , customerTipArrayWithValues: tipProps.customerTipArrayWithValues
     , providerSelectionStage: state.data.iopState.providerSelectionStage
     , quoteList: state.data.specialZoneQuoteList
     , selectProviderTimer: state.data.iopState.timerVal
@@ -1322,6 +1425,11 @@ quoteListModelViewState state =
     , showAnim: not $ state.data.iopState.showMultiProvider && isLocalStageOn FindingQuotes
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
+    , hasToll : state.data.selectedEstimatesObject.hasTollCharges
+    , showBookAnyOptions : state.props.showBookAnyOptions
+    , showBoostSearch : state.props.showBoostSearch
+    , boostSearchEstimate : state.data.boostSearchEstimate
+    , fareProductType : state.data.fareProductType
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1500,17 +1608,18 @@ chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state =
   let
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-
     city = getValueToLocalStore CUSTOMER_LOCATION
-
     isIntercity = state.data.fareProductType == FPT.INTER_CITY
+    startTimeUTC = if state.data.startTimeUTC == "" then Nothing else Just state.data.startTimeUTC
+    returnTimeUTC = if state.data.returnTimeUTC == "" || state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then Nothing else Just state.data.returnTimeUTC
+    roundTrip = isJust returnTimeUTC
+    tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
       , rideDuration = state.data.rideDuration
       , activeIndex = state.data.selectedEstimatesObject.index
-      , quoteList = if (DA.any (_ == state.data.fareProductType) [ FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY ]) then state.data.quoteList else state.data.specialZoneQuoteList
-      , showTollExtraCharges = state.props.hasToll
+      , quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList
       , nearByDrivers = state.data.nearByDrivers
       , showPreferences = state.data.showPreferences
       , bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore
@@ -1518,14 +1627,17 @@ chooseYourRideConfig state =
       , intercity = isIntercity
       , selectedEstimateHeight = state.props.selectedEstimateHeight
       , zoneType = state.props.zoneType.sourceTag
-      , tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+      , tipViewProps = tipProps
       , tipForDriver = state.props.customerTip.tipForDriver
-      , customerTipArray = tipConfig.customerTipArray
-      , customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
-      , enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
+      , customerTipArray = tipProps.customerTipArray
+      , customerTipArrayWithValues = tipProps.customerTipArrayWithValues
+      , enableTips = not isIntercity && state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
       , currentEstimateHeight = state.props.currentEstimateHeight
       , fareProductType = state.data.fareProductType
       , showMultiProvider = state.data.iopState.showMultiProvider
+      , startTimeUTC = startTimeUTC
+      , returnTimeUTC =  returnTimeUTC
+      , roundTrip = roundTrip
       }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -1732,95 +1844,10 @@ chooseVehicleConfig state = let
     , showEditButton = true
     , editBtnText = getString CHANGE
     , validTill = selectedEstimates.validTill
+    , hasTollCharges = selectedEstimates.hasTollCharges
+    , hasParkingCharges = selectedEstimates.hasParkingCharges
     }
   in chooseVehicleConfig'
-
-rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
-rideCompletedCardConfig state = 
-  let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
-      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, topCardConfig.gradient] else [topCardConfig.background, topCardConfig.background]
-      waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
-      appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-      isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-      actualPrice =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
-      actualTollCharge =  actualPrice.amount
-      serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
-
-  in RideCompletedCard.config {
-        isDriver = false,
-        customerIssue = getCustomerIssueConfig
-
-      , topCard {
-          title =  getString RIDE_COMPLETED,
-          titleColor = topCardConfig.titleColor,
-          finalAmount = state.data.finalAmount,
-          initialAmount = state.data.driverInfoCardState.price,
-          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
-          gradient = topCardGradient,
-          infoPill {
-            text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
-            background = topCardConfig.rideDescription.background,
-            color = topCardConfig.rideDescription.textColor,
-            image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
-            imageVis = VISIBLE,
-            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
-          },
-          bottomText =  getString RIDE_DETAILS,
-          horizontalLineColor = topCardConfig.horizontalLineColor
-        },
-        customerBottomCard {
-          title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
-          subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName),
-          selectedRating = state.data.ratingViewState.selectedRating
-        , driverImage = fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
-        },
-        primaryButtonConfig = skipButtonConfig state,
-        enableContactSupport = state.data.config.feature.enableSupport,
-        showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
-        safetyTitle = getString SAFETY_CENTER,
-        needHelpText = getString NEED_HELP,
-        serviceTierAndAC = serviceTier
-      , toll {
-          actualAmount = actualTollCharge
-        , text = if state.data.rideCompletedData.toll.confidence == (Just Unsure) then (getString TOLL_CHARGES_MAYBE_APPLICABLE) else if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
-        , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
-        , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-        , imageVisibility = boolToVisibility $ actualTollCharge > 0.0
-        }
-      , showRentalRideDetails = state.data.fareProductType == FPT.RENTAL
-      , rentalBookingData
-        { baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
-        , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
-        , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
-        , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
-        , rideStartedAt = state.data.rideRatingState.rideStartTime
-        , rideEndedAt = state.data.rideRatingState.rideEndTime
-        , extraTimeFare = state.data.driverInfoCardState.rentalData.extraTimeFare
-        , extraDistanceFare = state.data.driverInfoCardState.rentalData.extraDistanceFare
-        }
-      , rentalRowDetails
-        { rideTime = getString RIDE_TIME
-        , rideDistance = getString RIDE_DISTANCE
-        , rideDistanceInfo = "( " <> getString CHARGEABLE <> " / " <> getString BOOKED <> " )"
-        , rideStartedAt = getString RIDE_STARTED_AT
-        , rideEndedAt = getString RIDE_ENDED_AT
-        , estimatedFare = getString ESTIMATED_FARE
-        , extraTimeFare = getString EXTRA_TIME_FARE
-        , extraDistanceFare = getString EXTRA_DISTANCE_FARE
-        , totalFare = getString TOTAL_FARE
-        , rideDetailsTitle = getString RIDE_DETAILS
-        , fareUpdateTitle = getString FARE_UPDATE
-        , surcharges = getString SURCHARGES
-        }
-      }
-  where
-    getCustomerIssueConfig = {
-      currentIndex : state.data.rideCompletedData.issueReportData.currentBannerIndex
-    , currentPageIndex : state.data.rideCompletedData.issueReportData.currentPageIndex
-    , bannerComputedView : state.data.rideCompletedData.issueReportData.bannerItem
-    , customerIssueCards : issueReportBannerConfigs state
-    , showIssueBanners : state.data.rideCompletedData.issueReportData.showIssueBanners
-    }
 
 getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do
@@ -1837,75 +1864,7 @@ getFareUpdatedStr diffInDist waitingChargeApplied = do
     false, true -> getVarString (if shorter then FARE_UPDATED_WITH_SHORTER_DIST else FARE_UPDATED_WITH_LONGER_DIST) [ distInKm ]
     true, true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [ distInKm ]
     false, false -> getString FARE_HAS_BEEN_UPDATED
-
-customerFeedbackPillData :: ST.HomeScreenState -> Array (Array (Array RatingCard.FeedbackItem))
-customerFeedbackPillData state = [ feedbackPillDataWithRating1 state, feedbackPillDataWithRating2 state, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state ]
-
-feedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating1 state =
-  [ [ { id: "6", text: getString RUDE_DRIVER }
-    , { id: "1", text: getString FELT_UNSAFE }
-    ]
-  , [ { id: "6", text: getString RECKLESS_DRIVING }
-    , { id: "6", text: getString DRIVER_CHARGED_MORE }
-    ]
-  , ( [ { id: "15", text: getString TRIP_DELAYED } ] <> acNotWorkingPill state
-    )
-  ]
-
-acNotWorkingPill :: ST.HomeScreenState -> Array RatingCard.FeedbackItem
-acNotWorkingPill state =
-  ( case state.data.ratingViewState.rideBookingRes ^. _serviceTierName of
-      Just serviceTierName ->
-        if ServiceTierCard.showACDetails serviceTierName Nothing then
-          [ { id: "14", text: getString AC_TURNED_OFF } ]
-        else
-          []
-      Nothing -> []
-  )
-
-feedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating2 state = feedbackPillDataWithRating1 state
-
-feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating3 state =
-  [ [ { id: "8", text: getString UNPROFESSIONAL_DRIVER }
-    , { id: "8", text: getString RASH_DRIVING }
-    ]
-  , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
-    ]
-  , [ { id: "3", text: getString TRIP_GOT_DELAYED }
-    , { id: "3", text: getString FELT_UNSAFE }
-    ]
-  ]
-
-feedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating4 state =
-  [ [ { id: "9", text: getString POLITE_DRIVER }
-    , { id: "9", text: getString EXPERT_DRIVING }
-    ]
-  , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
-    ]
-  , [ { id: "4", text: getString TRIP_GOT_DELAYED }
-    , { id: "4", text: getString SAFE_RIDE }
-    ]
-  ]
-
-feedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating5 state =
-  [ [ { id: "10", text: getString POLITE_DRIVER }
-    , { id: "5", text: getString EXPERT_DRIVING }
-    ]
-  , [ { id: "12", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB }
-    , { id: "10", text: getString ON_TIME }
-    ]
-  , [ { id: "10", text: getString SKILLED_NAVIGATOR }
-    , { id: "5", text: getString SAFE_RIDE }
-    ]
-  ]
-
+    
 getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map
@@ -2043,7 +2002,10 @@ locationTagBarConfig state =
         ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
           , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
+            <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
+            <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
+            <> if state.data.currentCityConfig.enableIntercityBus then [ { image: "ny_ic_intercity_bus", text: getString INTERCITY_BUS, id: "INTERCITY_BUS", background: Color.blue600', showBanner: GONE } ] else []
+            <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2109,35 +2071,61 @@ shareRideConfig state =
     config = PopupWithCheckboxController.config
 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-
+    contactList = DA.filter (\item -> item.shareTripWithEmergencyContactOption.key /= API.NEVER_SHARE) $ fromMaybe [] state.data.contactList
+    trustedContactsNotSetup = DA.null contactList
     shareRideConfig' =
       config
         { title = getString SHARE_RIDE
-        , description = getString $ SHARE_RIDE_DESCRIPTION appName
-        , secondaryButtonText = getString SHARE_LINK
-        , secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share"
-        , secondaryButtonVisibliity = true
-        , contactList = fromMaybe [] state.data.contactList
-        , primaryButtonConfig = shareRideButtonConfig state
+        , description = getString if trustedContactsNotSetup then TRACKING_NO_SETUP else AUTOMATIC_LIVE_TRACKING_DESC
+        , primaryOptionTitle = getString AUTOMATIC_LIVE_TRACKING
+        , contactList = contactList
+        , primaryButtonConfig = shareRideButtonConfig state trustedContactsNotSetup
+        , secondaryOption {
+            buttonConfig = shareLinkButtonConfig state,
+            title = getString MANUAL_LIVE_TRACKING,
+            description = getString MANUAL_LIVE_TRACKING_DESC,
+            visibility = true,
+            background = Color.blue600,
+            padding = Padding 12 12 12 12,
+            margin = Margin 16 16 16 16
+          }
+        , primaryOptionBackground = Color.blue600
         }
   in
     shareRideConfig'
 
-shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-shareRideButtonConfig state =
+shareRideButtonConfig :: ST.HomeScreenState -> Boolean -> PrimaryButton.Config
+shareRideButtonConfig state trustedContactsNotSetup =
   PrimaryButton.config
     { textConfig
-      { text = getString $ SHARE_RIDE_WITH_CONTACT $ show numberOfSelectedContacts
-      , accessibilityHint = "Share Ride Button"
+      { text = getString SETUP_NOW
+      , accessibilityHint = "Setup Now Button"
+      , color = Color.blue800
       }
-    , id = "ShareRideButton"
-    , enableLoader = (JB.getBtnLoader "ShareRideButton")
+    , background = Color.transparent
+    , stroke = "1," <> Color.blue800
+    , id = "SetupSafetyButton"
     , margin = MarginTop 20
-    , isClickable = numberOfSelectedContacts /= 0
-    , alpha = if numberOfSelectedContacts /= 0 then 1.0 else 0.5
+    , visibility = boolToVisibility trustedContactsNotSetup
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) $ fromMaybe [] state.data.contactList
+
+shareLinkButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareLinkButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString SHARE_LINK
+      , accessibilityHint = "Share Ride Link Button"
+      }
+    , id = "ShareRideLinkButton"
+    , margin = MarginTop 20
+    , prefixImageConfig {
+        imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_share_yellow"
+      , margin = MarginRight 8
+      }
+    , isPrefixImage = true
+    }
 
 referralPopUpConfig :: ST.HomeScreenState -> ST.ReferralComponentState
 referralPopUpConfig state =
@@ -2220,7 +2208,7 @@ acWorkingPopupConfig state =
   let
     config = PopUpModal.config
 
-    isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+    isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing state.data.fareProductType
 
     primaryText_ =
       getString
@@ -2376,7 +2364,7 @@ scheduledRideExistsPopUpConfig state =
           , margin = MarginTop 16
           }
         , secondaryText
-          { text = maybe "" textDetails $ DA.head $ DA.filter (\bookingDetail -> Just bookingDetail.bookingId == state.data.invalidBookingId) $ HU.decodeBookingTimeList FunctionCall
+          { text = (invalidScheduledBookingDetails state)
           , margin = MarginTop 4
           }
         , option1
@@ -2398,16 +2386,383 @@ scheduledRideExistsPopUpConfig state =
   in
     popUpConfig'
   where
+  invalidScheduledBookingDetails :: ST.HomeScreenState -> String
+  invalidScheduledBookingDetails state = 
+    case state.data.overLappingBooking of
+      Just (API.RideBookingRes overLappingBooking) ->
+        let 
+          (API.RideBookingAPIDetails details) = overLappingBooking.bookingDetails
+          (API.RideBookingDetails contents) = details.contents
+          (API.BookingLocationAPIEntity fromLocationResp) = overLappingBooking.fromLocation
+          stopLocation = fromMaybe dummyBookingDetails (case details.fareProductType of 
+                                                            "RENTAL" -> contents.stopLocation
+                                                            "INTER_CITY" -> contents.toLocation
+                                                            _ -> contents.toLocation)          
+          rideType = case details.fareProductType of 
+                              "INTER_CITY" -> "intercity"
+                              "RENTAL" -> "rental"
+                              _ -> "one way"
+          destinationNotGiven =  (details.fareProductType == "RENTAL" && (isNothing contents.stopLocation))
+          rideScheduledTime = fromMaybe "" overLappingBooking.rideScheduledTime
+          rideEndTime = HU.calculateBookingEndTime (API.RideBookingRes overLappingBooking)
+          fromLocation = HU.fetchAddressDetails  overLappingBooking.fromLocation
+          toLocation = HU.fetchAddressDetails stopLocation
+        in
+          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
+                                 else getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
+      Nothing -> ""
+
+
   textDetails :: ST.BookingTime -> String
   textDetails bookingDetails =
     let
       invalidBookingPopUpConfig = fromMaybe dummyInvalidBookingPopUpConfig state.data.invalidBookingPopUpConfig
-
       rideType = if invalidBookingPopUpConfig.fareProductType == FPT.RENTAL then "rental" else "intercity"
-
       rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds invalidBookingPopUpConfig.rideScheduledTime $ (invalidBookingPopUpConfig.maxEstimatedDuration + 30) * 60
     in
       getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, invalidBookingPopUpConfig.fromLocation, invalidBookingPopUpConfig.toLocation, formatDateInHHMM invalidBookingPopUpConfig.rideScheduledTime, rideEndTime ]
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+getMarkerActionImageConifg :: ST.HomeScreenState -> Boolean -> JB.ActionImageConfig 
+getMarkerActionImageConifg state driverWithinPickupThreshold = do
+  let isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
+      conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold && not isHybridFlowParcel
+      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) && not isHybridFlowParcel
+      imageName = if conditionForPickupImage then "ic_edit_pencil_white" else if conditionForDestinationImage then "ic_pencil_blue" else ""
+      bgForPickupMarker = if EHC.os == "IOS" then Color.blue800 else "ic_blue_bg"
+      bgForDestMarker = if EHC.os == "IOS" then Color.blue600 else "ic_blue600_bg"
+      backgroundColor = if conditionForPickupImage then bgForPickupMarker else if conditionForDestinationImage then bgForDestMarker else ""
+  if conditionForPickupImage || conditionForDestinationImage then
+    JB.defaultActionImageConfig {
+      image = imageName,
+      height = if EHC.os == "IOS" then 30 else 28,
+      width = if EHC.os == "IOS" then 30 else 28,
+      background = backgroundColor,
+      orientation = "HORIZONTAL",
+      padding = if EHC.os == "IOS" then {left : 12, top : 12, right : 12, bottom : 12} else {left : 16, top : 16, right : 16, bottom : 16},
+      layoutMargin = {left : 15, top : 13, right : 15, bottom : 15},
+      layoutPadding = {left : 0, top : 0, right : 0, bottom : 0}
+    }
+  else JB.defaultActionImageConfig
+
+nammaServices :: LazyCheck -> Array RemoteConfig.Service
+nammaServices dummy = 
+  let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      _ = spy "enabledServices" enabledServices
+      allServices = getAllServices FunctionCall
+      _ = spy "allServices" allServices
+  in DA.foldl (\acc x -> do 
+                          let mbService = DA.find(\service -> (show service.type == x)) allServices
+                          case mbService of 
+                            Just value -> acc <> [value]
+                            Nothing -> acc
+              ) [] enabledServices
+
+getAllServices :: LazyCheck -> Array RemoteConfig.Service
+getAllServices dummy = 
+  let config = getAppConfig appConfig
+      enableBusBooking = config.feature.enableBusBooking -- For backward Compatibility
+  in
+    [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [], secondaryPillColor : "#f2f9f3", hasSecondaryPill: false}
+    , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : [], secondaryPillColor : "#faeeee", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
+    , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : [], secondaryPillColor : "#fdf3ec", hasSecondaryPill: false}
+    , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"], secondaryPillColor : "#F0FAF0", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO_OFFER, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: true}
+    ] <> (if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
+      <> (if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
+
+getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
+getChatDetails state contacts = 
+  let createContact :: Maybe NewContacts -> ChatContacts
+      createContact Nothing = 
+        { name : state.data.driverInfoCardState.driverName
+        , number : ""
+        , uuid : state.data.driverInfoCardState.bppRideId
+        , recipient : CMC.DRIVER
+        , enableForShareRide : false
+        , contactPersonId : Nothing
+        , notifiedViaFCM : Nothing
+        , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+        }
+      createContact (Just item) = 
+        let channelId = if item.priority == 0 then state.data.driverInfoCardState.rideId else state.data.driverInfoCardState.rideId <> "$" <> fromMaybe "" item.contactPersonId
+        in { name : item.name
+            , number : item.number
+            , uuid : channelId
+            , recipient : CMC.USER
+            , enableForShareRide : item.enableForShareRide
+            , contactPersonId : item.contactPersonId
+            , notifiedViaFCM : item.notifiedViaFCM
+            , shareTripWithEmergencyContactOption : item.shareTripWithEmergencyContactOption.key
+          }
+
+      multiChatContacts = 
+        foldl (\acc item -> maybe acc (\_ -> acc <> [createContact (Just item)]) item.contactPersonId) [] contacts
+
+      driverChatContact = 
+        if state.props.stageBeforeChatScreen == ST.RideStarted && state.data.fareProductType /= FPT.RENTAL
+        then []
+        else [createContact Nothing]
+
+  in multiChatContacts <> driverChatContact
+
+editPickupPopupOnCancel :: ST.HomeScreenState -> PopUpModal.Config
+editPickupPopupOnCancel state = do
+  let config = PopUpModal.config
+      popUpConfig' = config {
+        gravity = BOTTOM
+      , cornerRadius = Corners 20.0 true true true true
+      , backgroundColor =  Color.black9000
+      , backgroundClickable = true
+      , dismissPopup = true
+      , padding = Padding 16 16 16 0
+      , optionButtonOrientation = "VERTICAL"
+      , primaryText {
+          text = getString EDIT_YOUR_PICKUP_LOCATION_INSTEAD
+        , margin = (Margin 10 20 10 10)
+        , gravity = CENTER
+        }
+      , secondaryText {visibility = GONE}
+      , option1 {
+          text = getString CHANGE_PICKUP_LOCATION
+        , color = Color.yellow900
+        , background = Color.black
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        , width = MATCH_PARENT
+        }
+      , option2 {
+          text = getString CANCEL_RIDE
+        , color = Color.black700
+        , background = Color.white900
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        , width = MATCH_PARENT
+        , margin = (MarginTop 12)
+        }
+      , coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_edit_pickup"
+        , visibility = VISIBLE
+        , height = V 225
+        , width = MATCH_PARENT
+      }
+      }
+  popUpConfig'
+
+
+pickupConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+pickupConfig state = 
+  let pickupConfig' =  {
+  baseWidth: MATCH_PARENT,
+  baseHeight: WRAP_CONTENT,
+  baseOrientation: VERTICAL,
+  baseMargin: Margin 16 0 16 20,
+  titleConfig: (getString PICKUP_DATE_AND_TIME),
+  textColor: Color.black900,
+  textMargin: MarginBottom 8,
+  pickerHeight: WRAP_CONTENT,
+  pickerWidth: MATCH_PARENT,
+  pickerCornerRadius: 8.0,
+  pickerBackground: Color.white900,
+  pickerPadding: Padding 20 15 20 15,
+  selectDateText: case state.data.tripTypeDataConfig.tripPickupData of 
+                   Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "DD MMM YYYY"
+                   Nothing -> (getString PICKUP_INPUT),
+  selectTimeText : case state.data.tripTypeDataConfig.tripPickupData of 
+                  Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "h:mm A"
+                  Nothing -> (getString PICKUP_INPUT),
+  dateHeight: WRAP_CONTENT,
+  dateWidth: WRAP_CONTENT,
+  dateColor: Color.black800,
+  iconHeight: V 22,
+  iconWidth: V 22,
+  iconMargin: MarginLeft 8,
+  iconGravity: BOTTOM,
+  id : "Pickup",
+  radioButtonViewVisibilty : true,
+  returnTextViewVisibilty : false,
+  isEnabled : state.props.isTripSchedulable,
+  radioButtonTextConfig : {
+    primaryText : (getString LEAVE_NOW),
+    primaryTextAccessibilityHint : (getEN LEAVE_NOW),
+    secondaryText : (getString RESERVE),
+    secondaryTextAccessibilityHint : (getEN RESERVE)
+  },
+  dateIconImage : "ny_ic_calendar",
+  timeIconImage : "ny_ic_clock_unfilled"
+}
+  in pickupConfig'
+
+returnConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+returnConfig state =
+  
+  let 
+    srcCity = fromMaybe (show state.props.city) state.data.sourceAddress.city 
+    returnConfig' =  {
+    baseWidth: MATCH_PARENT,
+    baseHeight: WRAP_CONTENT,
+    baseOrientation: VERTICAL,
+    baseMargin: Margin 16 8 16 20,
+    titleConfig: (getString $ DROP_BACK_IN_AT srcCity),
+    textColor: Color.black900,
+    textMargin: MarginBottom 8,
+    pickerHeight: WRAP_CONTENT,
+    pickerWidth: MATCH_PARENT,
+    pickerCornerRadius: 8.0,
+    pickerBackground: Color.white900,
+    pickerPadding: Padding 20 15 20 15,
+    selectDateText: case state.data.tripTypeDataConfig.tripReturnData of 
+                   Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "DD MMM YYYY"
+                   Nothing -> (getString PICKUP_INPUT),
+    selectTimeText : case state.data.tripTypeDataConfig.tripReturnData of 
+                  Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "h:mm A"
+                  Nothing -> (getString PICKUP_INPUT),
+    dateHeight: WRAP_CONTENT,
+    dateWidth: WRAP_CONTENT,
+    dateColor: Color.black800,
+    iconHeight: V 22,
+    iconWidth: V 22,
+    iconMargin: MarginLeft 8,
+    iconGravity: BOTTOM,
+    id : "Return",
+    radioButtonViewVisibilty : false,
+    returnTextViewVisibilty : true,
+    isEnabled : true,
+    radioButtonTextConfig : {
+      primaryText : (getString LEAVE_NOW),
+      primaryTextAccessibilityHint : (getEN LEAVE_NOW),
+      secondaryText : (getString RESERVE),
+      secondaryTextAccessibilityHint : (getEN RESERVE)
+    },
+  dateIconImage : "ny_ic_calendar",
+  timeIconImage : "ny_ic_clock_unfilled"
+  }
+  in returnConfig'
+
+fetchRideDetails :: ST.HomeScreenState -> ST.BookingAPIEntity
+fetchRideDetails state = 
+  let
+    isScheduled = (state.data.startTimeUTC > (EHC.getCurrentUTC ""))
+    returnTime = if state.data.returnTimeUTC == "" then "" else state.data.returnTimeUTC
+    startTime = if state.data.startTimeUTC == "" then (EHC.getCurrentUTC "") else state.data.startTimeUTC
+    currentSelectedEstimatesObject = state.data.selectedEstimatesObject
+    currIndex = currentSelectedEstimatesObject.index
+    selectedEstimatesObject = if (currIndex == 0) then (fromMaybe currentSelectedEstimatesObject ((state.data.quoteList)!!0)) else currentSelectedEstimatesObject
+                    
+    rideDetails =  ST.BookingAPIEntity{
+      currency : INR,
+      estimatedDistance : Just state.data.rideDistance,
+      estimatedDuration : Just state.props.searchLocationModelProps.totalRideDuration,
+      estimatedFare : selectedEstimatesObject.price,
+      fromLocation : ST.LocationInformation{
+        address : state.data.sourceAddress,
+        placeId  : fromMaybe "" state.props.sourcePlaceId,
+        fullAddress : state.data.source
+      },
+      id : fromMaybe "" state.data.selectedQuoteId,
+      isScheduled : isScheduled,
+      returnTime : Just returnTime,
+      roundTrip : Just (state.props.searchLocationModelProps.tripType == ROUND_TRIP),
+      isAirConditioned: selectedEstimatesObject.airConditioned,
+      startTime : startTime,
+      toLocation : Just (ST.LocationInformation {
+        address : state.data.destinationAddress,
+        placeId  : fromMaybe "" state.props.destinationPlaceId,
+        fullAddress : state.data.destination
+      }),
+      tripCategory : TripCategory {
+        contents : Nothing,
+        tag : InterCity
+      },
+      vehicleServiceTier : selectedEstimatesObject.vehicleVariant,
+      vehicleServiceTierAirConditioned : Nothing,
+      vehicleServiceTierName : fromMaybe "" selectedEstimatesObject.serviceTierName,
+      vehicleServiceTierSeatingCapacity : Just (fromMaybe 4 $ fromString selectedEstimatesObject.capacity)
+    }
+  in rideDetails
+
+fetchExtraFares :: ST.HomeScreenState -> Array FareList
+fetchExtraFares state = 
+  let 
+    currentSelectedEstimatesObject = state.data.selectedEstimatesObject
+    currIndex = currentSelectedEstimatesObject.index
+    selectedEstimatesObject = if (currIndex == 0) then (fromMaybe currentSelectedEstimatesObject ((state.data.quoteList)!!0)) else currentSelectedEstimatesObject
+    extraFares = selectedEstimatesObject.extraFare
+  in 
+    extraFares             
+
+  
+deliveryParcelImageAndOtpConfig :: ST.HomeScreenState -> DeliveryParcelImageAndOtp.Config
+deliveryParcelImageAndOtpConfig state =
+  let
+    config = DeliveryParcelImageAndOtp.config
+
+    deliveryParcelImageAndOtpConfig' =
+      config
+        { image = fromMaybe "" state.data.deliveryImage
+        , imageVisibility = isJust state.data.deliveryImage
+        , otp = state.data.driverInfoCardState.otp
+        , rideStarted = state.props.currentStage == ST.RideStarted
+        , refreshAnimation = state.props.loadingDeliveryImage
+        }
+  in
+    deliveryParcelImageAndOtpConfig'
+
+parcelFeedbackPillData :: ST.HomeScreenState -> Array ( Array (Array RatingCard.FeedbackItem))
+parcelFeedbackPillData state = [ parcelFeedbackPillDataWithRating1 state, parcelFeedbackPillDataWithRating2 state, parcelFeedbackPillDataWithRating3 state, parcelFeedbackPillDataWithRating4 state, parcelFeedbackPillDataWithRating5 state ]
+
+parcelFeedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating1 state =
+  [ [ { id: "6", text: getString RUDE_BEHAVIOUR }
+    , { id: "1", text: getString TOO_MANY_CALLS }
+    ]
+  , [ { id: "6", text: getString RECKLESS_HANDLING }
+    , { id: "6", text: getString ASKED_FOR_EXTRA_FARE }
+    ]
+  , ( [ { id: "15", text: getString DELIVERY_DELAYED } 
+      , { id: "15", text: getString ITEMS_MISSING } ]
+    )
+  ]
+
+parcelFeedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating2 state = parcelFeedbackPillDataWithRating1 state
+
+parcelFeedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating3 state =
+  [ [ { id: "8", text: getString UNPROFESSIONAL_DRIVER }]
+  , [ { id: "8", text: getString ASKED_FOR_EXTRA_FARE }
+    , { id: "11", text: getString TOO_MANY_CALLS}
+    ]
+  , [ { id: "3", text: getString DELIVERY_DELAYED }
+    , { id: "3", text: getString RUDE_BEHAVIOUR }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating4 state =
+  [ [ { id: "9", text: getString POLITE_ATTITUDE }
+    , { id: "9", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "9", text: getString SECURE_DELIVERY }
+    , { id: "11", text: getString ASKED_FOR_EXTRA_FARE}
+    ]
+  , [ { id: "4", text: getString DELIVERY_DELAYED }
+    , { id: "4", text: getString TOO_MANY_CALLS }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating5 state =
+  [ [ { id: "10", text: getString POLITE_ATTITUDE }
+    , { id: "5", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "12", text: getString ON_TIME }
+    , { id: "10", text: getString MINIMAL_CALLING }
+    ]
+  , [ { id: "10", text: getString SECURE_DELIVERY }]
+  ]

@@ -20,7 +20,9 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as BeamFPRDDB
+import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as BeamFPRDPS
 import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as QueriesFPRDB
+import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as QueriesFPRDPS
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyRentalDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq farePolicyId']
@@ -28,24 +30,29 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPRD.farePolicyId $ 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyRentalDetails -> m ()
 create farePolicyRentalDetails = do
   mapM_ QueriesFPRDB.create (map (fst farePolicyRentalDetails,) (NE.toList (snd farePolicyRentalDetails).distanceBuffers))
+  mapM_ QueriesFPRDPS.create (map (fst farePolicyRentalDetails,) (NE.toList (snd farePolicyRentalDetails).pricingSlabs))
   createWithKV farePolicyRentalDetails
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPRDB.delete farePolicyId
+  QueriesFPRDPS.delete farePolicyId
   deleteWithKV [Se.Is BeamFPRD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDetails where
   fromTType' farePolicyRentalDetails = do
     fullFPRDB <- QueriesFPRDB.findAll' (KTI.Id farePolicyRentalDetails.farePolicyId)
     fPRDB <- fromMaybeM (InternalError "No distance buffer found for rental") (NE.nonEmpty fullFPRDB)
-    pure . Just $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails fPRDB
+    fullFPRDPS <- QueriesFPRDPS.findAll' (KTI.Id farePolicyRentalDetails.farePolicyId)
+    fPRDPS <- fromMaybeM (InternalError "No pricing slab found for rental") (NE.nonEmpty fullFPRDPS) -- check it
+    pure . Just $ fromTTypeFarePolicyRentalDetails farePolicyRentalDetails fPRDB fPRDPS
 
 fromTTypeFarePolicyRentalDetails ::
   BeamFPRD.FarePolicyRentalDetails ->
   NonEmpty BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers ->
+  NonEmpty BeamFPRDPS.FullFarePolicyRentalDetailsPricingSlabs ->
   Domain.FullFarePolicyRentalDetails
-fromTTypeFarePolicyRentalDetails BeamFPRD.FarePolicyRentalDetailsT {..} fPRDB =
+fromTTypeFarePolicyRentalDetails BeamFPRD.FarePolicyRentalDetailsT {..} fPRDB fPRDPS =
   ( KTI.Id farePolicyId,
     Domain.FPRentalDetails
       { baseFare = mkAmountWithDefault baseFareAmount baseFare,
@@ -59,6 +66,7 @@ fromTTypeFarePolicyRentalDetails BeamFPRD.FarePolicyRentalDetailsT {..} fPRDB =
         maxAdditionalKmsLimit = maxAdditionalKmsLimit,
         totalAdditionalKmsLimit = totalAdditionalKmsLimit,
         distanceBuffers = snd <$> fPRDB,
+        pricingSlabs = snd <$> fPRDPS,
         waitingChargeInfo =
           ((,) <$> waitingCharge <*> freeWaitingTime) <&> \(waitingCharge', freeWaitingTime') ->
             Domain.WaitingChargeInfo

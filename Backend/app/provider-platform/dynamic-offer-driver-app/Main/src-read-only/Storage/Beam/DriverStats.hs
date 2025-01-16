@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverStats where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -30,6 +29,7 @@ data DriverStatsT f = DriverStatsT
     totalDistance :: B.C f Kernel.Prelude.Double,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    totalPayoutAmountPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalPayoutEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalRatingScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRatings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -37,7 +37,10 @@ data DriverStatsT f = DriverStatsT
     totalRides :: B.C f Kernel.Prelude.Int,
     totalRidesAssigned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalValidActivatedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validCancellationTagsStatsStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    validCustomerCancellationTagCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    validDriverCancellationTagCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 

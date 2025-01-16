@@ -27,7 +27,9 @@ data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
     building :: Maybe Text,
     areaCode :: Maybe Text,
     area :: Maybe Text,
-    full_address :: Maybe Text
+    full_address :: Maybe Text,
+    instructions :: Maybe Text,
+    extras :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

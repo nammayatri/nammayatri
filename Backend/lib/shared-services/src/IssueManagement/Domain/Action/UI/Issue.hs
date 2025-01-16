@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
@@ -7,6 +5,8 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -43,10 +43,14 @@ import qualified Kernel.Types.Beckn.City as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified "external" Slack.AWS.Flow as Slack
 import Text.Regex.TDFA (AllTextMatches (..), getAllTextMatches, (=~))
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id Ride -> Id Merchant -> m (Maybe Ride),
+    findByBookingId :: Id Booking -> m (Maybe Booking),
+    findOneByBookingId :: Id Booking -> Id Merchant -> m (Maybe Ride),
+    findByMerchantId :: Id Merchant -> m (Maybe Merchant),
     findPersonById :: Id Person -> m (Maybe Person),
     findMOCityById :: Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity),
     findMOCityByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
@@ -55,7 +59,10 @@ data ServiceHandle m = ServiceHandle
     updateTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp,
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
-    mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess)
+    mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
+    mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
+    mbFindRideByBookingId :: Maybe (Id Booking -> Id Merchant -> m (Maybe Ride)),
+    mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ())
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -95,12 +102,13 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
     mkIssueCategory (issueCategory, issueTranslation) =
       Common.IssueCategoryRes
         { issueCategoryId = issueCategory.id,
-          label = issueCategory.category & T.toUpper & T.replace " " "_",
+          label = fromMaybe (issueCategory.category & T.toUpper & T.replace " " "_") issueCategory.label,
           category = fromMaybe issueCategory.category $ issueTranslation <&> (.translation),
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
           isRideRequired = issueCategory.isRideRequired,
-          maxAllowedRideAge = issueCategory.maxAllowedRideAge
+          maxAllowedRideAge = issueCategory.maxAllowedRideAge,
+          allowedRideStatuses = issueCategory.allowedRideStatuses
         }
 
     shortId = case identifier of
@@ -122,7 +130,8 @@ getIssueOption ::
   Identifier ->
   m Common.IssueOptionListRes
 getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId mbLanguage issueHandle identifier = do
-  category <- CQIC.findById issueCategoryId identifier >>= fromMaybeM (InvalidRequest "Could not find an issue category with thr provided id.")
+  category <- CQIC.findById issueCategoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
+  mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueOptionId
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) mbRideId
   case (mbRideInfoRes, category.maxAllowedRideAge) of
     (Just rideInfo, Just maxAllowedRideAge) -> do
@@ -132,10 +141,11 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- CQI.findByMerchantOpCityId adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
+  processIssueReportTypeActions (personId, merchantId) mbIssueOption Nothing Nothing False identifier issueHandle
   issueMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
-  let issueMessages = mkIssueMessageList (Just issueMessageTranslationList) issueConfig mbRideInfoRes
+  let issueMessages = mkIssueMessageList (Just issueMessageTranslationList) language issueConfig mbRideInfoRes
   issueOptionTranslationList <- do
     case (issueOptionId, issueReportId) of
       (Just optionId, Just iReportId) -> do
@@ -151,7 +161,7 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
       else (filterOptions mbRideInfoRes category.label issueHandle) =<< CQIO.findAllActiveByMessageAndLanguage ((.id) $ last issueMessages) language identifier
   pure $
     Common.IssueOptionListRes
-      { options = map (mkIssueOptionList issueConfig mbRideInfoRes) issueOptionTranslationList,
+      { options = map (mkIssueOptionList issueConfig language mbRideInfoRes) issueOptionTranslationList,
         messages = issueMessages
       }
   where
@@ -160,21 +170,29 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
 
     filterOptions :: BeamFlow m r => Maybe RideInfoRes -> Maybe Text -> ServiceHandle m -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
     filterOptions mbRideInfoRes mbCategoryLabel iHandle optionsWithTranslations =
-      filterOptionsBasedOnVariants mbRideInfoRes
-        <$> filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle optionsWithTranslations
+      filterOptionsBasedOnVariantsAndRideStatus mbRideInfoRes
+        <$> filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations
 
-    filterOptionsBasedOnVariants :: Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> [(D.IssueOption, Maybe D.IssueTranslation)]
-    filterOptionsBasedOnVariants mbRideInfoRes = do
+    filterOptionsBasedOnVariantsAndRideStatus :: Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> [(D.IssueOption, Maybe D.IssueTranslation)]
+    filterOptionsBasedOnVariantsAndRideStatus mbRideInfoRes = do
       let mbRideVariant = (.vehicleVariant) =<< mbRideInfoRes
-      filter (\optionWithTranslation -> isNothing mbRideVariant || maybe True (\variant -> variant `notElem` (.restrictedVariants) (fst optionWithTranslation)) mbRideVariant)
+          mbRideStatus = (.rideStatus) <$> mbRideInfoRes
+      filter
+        ( \optionWithTranslation ->
+            (isNothing mbRideVariant || maybe True (\variant -> variant `notElem` (.restrictedVariants) (fst optionWithTranslation)) mbRideVariant)
+              && (isNothing mbRideStatus || maybe True (\rideStatus -> rideStatus `notElem` (.restrictedRideStatuses) (fst optionWithTranslation)) mbRideStatus)
+        )
 
-    filterOptionsBasedOnCategoryLabel :: BeamFlow m r => Maybe Text -> ServiceHandle m -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
-    filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle optionsWithTranslations = case mbCategoryLabel of
+    filterOptionsBasedOnCategoryLabel :: BeamFlow m r => Maybe Text -> ServiceHandle m -> Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
+    filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations = case mbCategoryLabel of
       Just "APP_RELATED" -> do
         person <- iHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
         case person.blocked of
           Just True -> return $ filterBlockOptions True optionsWithTranslations
           _ -> return $ filterBlockOptions False optionsWithTranslations
+      Just "PAYMENT_AND_FARE_RELATED" ->
+        return $
+          bool optionsWithTranslations (filter (\(option, _) -> option.label /= Just "SHOW_FARE_BREAKUP") optionsWithTranslations) (((.computedPrice) =<< mbRideInfoRes) == ((.estimatedFare) <$> mbRideInfoRes))
       _ -> return optionsWithTranslations
 
     filterBlockOptions :: Bool -> [(D.IssueOption, Maybe D.IssueTranslation)] -> [(D.IssueOption, Maybe D.IssueTranslation)]
@@ -193,7 +211,7 @@ issueReportList ::
 issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
-  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   issues <- mapM (processIssueReport issueConfig now language issueHandle) issueReports
   return $ Common.IssueReportListRes {issues}
@@ -242,8 +260,8 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
             createdAt = issueReport.createdAt
           }
 
-createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> m Common.IssueMediaUploadRes
-createMediaEntry url fileType = do
+createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> Text -> m Common.IssueMediaUploadRes
+createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
   return $ Common.IssueMediaUploadRes {fileId = fileEntity.id}
@@ -256,8 +274,46 @@ createMediaEntry url fileType = do
           { id,
             _type = fileType,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }
+
+issueMediaUpload' ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m),
+    EsqDBReplicaFlow m r
+  ) =>
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
+  ServiceHandle m ->
+  Common.IssueMediaUploadReq ->
+  Text ->
+  Text ->
+  m Common.IssueMediaUploadRes
+issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Common.IssueMediaUploadReq {..} domain identifier = do
+  contentType <- validateContentType
+  config <- issueHandle.findMerchantConfig merchantId merchantOperatingCityId (Just personId)
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath (domain <> "/") identifier fileType contentType
+  let fileUrl =
+        config.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" domain
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
+  createMediaEntry fileUrl fileType filePath
+  where
+    validateContentType = do
+      case fileType of
+        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Image | reqContentType == "image/png" -> pure "png"
+        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported reqContentType
 
 issueMediaUpload ::
   ( BeamFlow m r,
@@ -284,7 +340,7 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl fileType
+  createMediaEntry fileUrl fileType filePath
   where
     validateContentType = do
       case fileType of
@@ -302,15 +358,17 @@ fetchMedia _personId filePath =
 createIssueReport ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "sosAlertsTopicARN" r Text
   ) =>
   (Id Person, Id Merchant) ->
   Maybe Language ->
   Common.IssueReportReq ->
   ServiceHandle m ->
   Identifier ->
+  Maybe Text ->
   m Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier = do
+createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
@@ -331,12 +389,22 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
   now <- getCurrentTime
   mbRideInfoRes <- traverse (issueHandle.getRideInfo merchantId mocId) rideId
-  let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) issueConfig mbRideInfoRes
+  let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
-  processIssueReportTypeActions personId mbOption mbRide (Just config) True identifier issueHandle
+  processIssueReportTypeActions (personId, merchantId) mbOption mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
+  let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
+  when isLOFeedback $
+    fork "notify on slack" $ do
+      sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
+      moCity <-
+        issueHandle.findMOCityById mocId
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
+      msg <- generateMsg moCity mbRide mbRideInfoRes person description
+      let message = createJsonMessage msg
+      void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
     ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes person mocId config mediaFileUrls now issueHandle
@@ -370,8 +438,87 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             updatedAt = now,
             description,
             chats = updatedChats,
-            merchantId = Just merchantId
+            merchantId = Just merchantId,
+            becknIssueId
           }
+    createJsonMessage :: Text -> T.Text
+    createJsonMessage descriptionText =
+      let jsonValue :: A.Value
+          jsonValue =
+            A.object
+              [ "version" A..= ("1.0" :: String),
+                "source" A..= ("custom" :: String),
+                "content"
+                  A..= A.object
+                    [ "description" A..= descriptionText
+                    ]
+              ]
+       in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
+
+    generateMsg :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> Maybe Ride -> Maybe RideInfoRes -> Person -> Text -> m Text
+    generateMsg moCity mbRide mbRideInfoRes person desc = do
+      mbCustomerPhone <- mapM decrypt person.mobileNumber
+      now <- getCurrentTime
+      let customerName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
+          customerPhone = fromMaybe "N/A" mbCustomerPhone
+          currentTimeInIST = showTimeIst now
+      case (mbRide, mbRideInfoRes) of
+        (Just ride, Just rideInfo) -> do
+          let driverPhoneNumber = fromMaybe "N/A" rideInfo.driverPhoneNo
+              vehicleVariant = maybe "N/A" show (rideInfo.vehicleVariant)
+              dropLocation = fromMaybe "N/A" (rideInfo.customerDropLocation >>= \loc -> Just ("area - " <> fromMaybe "N/A" (loc.area) <> ", street - " <> fromMaybe "N/A" (loc.street)))
+              fromLocation = rideInfo.customerPickupLocation
+              pickupLocation = "area - " <> fromMaybe "N/A" (fromLocation.area) <> ", street - " <> fromMaybe "N/A" (fromLocation.street)
+              rideStartTime = maybe "N/A" showTimeIst rideInfo.rideStartTime
+          return $
+            "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
+              <> "Customer Phone No : "
+              <> customerPhone
+              <> "\n"
+              <> "Driver Name : "
+              <> rideInfo.driverName
+              <> "\n"
+              <> "Driver Phone No : "
+              <> driverPhoneNumber
+              <> "\n"
+              <> "City : "
+              <> show moCity.city
+              <> "\n"
+              <> "Variant : "
+              <> vehicleVariant
+              <> "\n"
+              <> "Pickup Location : "
+              <> pickupLocation
+              <> "\n"
+              <> "Drop Location : "
+              <> dropLocation
+              <> "\n"
+              <> "Ride Id : "
+              <> ride.id.getId
+              <> "\n"
+              <> "Ride Start Time : "
+              <> rideStartTime
+              <> "\n"
+              <> "Feedback Time : "
+              <> currentTimeInIST
+              <> "\n"
+              <> "Feedback Message : "
+              <> desc
+        _ -> do
+          return $
+            "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
+              <> "Customer Phone No : "
+              <> customerPhone
+              <> "\n"
+              <> "Feedback Time : "
+              <> currentTimeInIST
+              <> "\n"
+              <> "Feedback Message : "
+              <> desc
+              <> "\n"
+              <> "City : "
+              <> show moCity.city
+              <> "\n"
 
     buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Person -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
     buildTicket issue category mbOption mbRide mbRideInfoRes person moCityId merchantCfg mediaFileUrls now iHandle = do
@@ -390,7 +537,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             phoneNo = phoneNumber,
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
-            rideDescription = Just info
+            rideDescription = Just info,
+            becknIssueId
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => Id MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> ServiceHandle m -> m TIT.RideInfo
@@ -489,7 +637,7 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
         mediaFiles = mkMediaFiles mediaFiles,
         createdAt = issueReport.createdAt,
         chats = issueChats,
-        options = map (mkIssueOptionList issueConfig mbRideInfoRes) issueOptions,
+        options = map (mkIssueOptionList issueConfig language mbRideInfoRes) issueOptions,
         categoryId = issueReport.categoryId
       }
 
@@ -551,7 +699,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
       updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
       issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
       issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
-      let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) issueConfig mbRideInfoRes
+      let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
       now <- getCurrentTime
       let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
       QIR.updateChats issueReportId updatedChats
@@ -585,7 +733,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
-  Id Person ->
+  (Id Person, Id Merchant) ->
   Maybe D.IssueOption ->
   Maybe Ride ->
   Maybe MerchantConfig ->
@@ -593,13 +741,29 @@ processIssueReportTypeActions ::
   Identifier ->
   ServiceHandle m ->
   m ()
-processIssueReportTypeActions personId mbIssueOption mbRide mbMerchantConfig isIssueReportCreated identifier issueHandle = do
+processIssueReportTypeActions (personId, merchantId) mbIssueOption mbRide mbMerchantConfig isIssueReportCreated identifier issueHandle = do
   let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
   case mbIssueReportType of
     Just AC_RELATED_ISSUE -> processExternalIssueReporting AC_RELATED_ISSUE issueHandle
     Just DRIVER_TOLL_RELATED_ISSUE -> processExternalIssueReporting DRIVER_TOLL_RELATED_ISSUE issueHandle
+    Just SYNC_BOOKING -> processBookingSyncReq issueHandle
+    Just EXTRA_FARE_MITIGATION -> processExternalIssueReporting EXTRA_FARE_MITIGATION issueHandle
     Nothing -> return ()
   where
+    processBookingSyncReq :: BeamFlow m r => ServiceHandle m -> m ()
+    processBookingSyncReq iHandle =
+      case (iHandle.mbSyncRide, iHandle.mbFindLatestBookingByPersonId, iHandle.mbFindRideByBookingId, isIssueReportCreated) of
+        (Just syncRide, Just findLatestBookingByPersonId, Just findRideByBookingId, False) -> do
+          mbLatestBooking <- findLatestBookingByPersonId personId
+          whenJust mbLatestBooking $ \latestBooking -> do
+            mbLatestRide <- findRideByBookingId latestBooking.id merchantId
+            whenJust mbLatestRide $ \latestRide -> do
+              syncRes <- try @_ @SomeException $ syncRide latestRide.merchantId latestRide.id
+              case syncRes of
+                Right _ -> pure ()
+                Left err -> logTagInfo "Failed to sync ride for rideId-" (latestRide.id.getId <> "-error-" <> show err)
+        _ -> pure ()
+
     processExternalIssueReporting :: BeamFlow m r => IssueReportType -> ServiceHandle m -> m ()
     processExternalIssueReporting issueReportType iHandle =
       whenJust iHandle.mbReportIssue $ \reportIssue -> do
@@ -640,10 +804,11 @@ processIssueReportTypeActions personId mbIssueOption mbRide mbMerchantConfig isI
 
 mkIssueMessageList ::
   Maybe [(D.IssueMessage, D.DetailedTranslation, [Text])] ->
+  Language ->
   D.IssueConfig ->
   Maybe RideInfoRes ->
   [Common.Message]
-mkIssueMessageList mbList issueConfig mbRideInfoRes = case mbList of
+mkIssueMessageList mbList language issueConfig mbRideInfoRes = case mbList of
   Nothing -> []
   Just list ->
     map
@@ -665,40 +830,55 @@ mkIssueMessageList mbList issueConfig mbRideInfoRes = case mbList of
       list
   where
     messageTransformer :: [Text] -> Text -> Text
-    messageTransformer = transformText (getConfigValue issueConfig mbRideInfoRes)
+    messageTransformer = transformText (getConfigValue language issueConfig mbRideInfoRes)
 
 transformText :: (Text -> Text) -> [Text] -> Text -> Text
-transformText getCfgValue mediaFileUrls text = T.strip $ replaceNewLineChar $ foldl' replacePatterns (appendMediaFileUrls mediaFileUrls text) patterns
+transformText getCfgValue mediaFileUrls text =
+  T.strip $ replaceNewLineChar $ fst $ foldl' replacePatterns (text, mediaFileUrls) patterns
   where
     patterns :: [Text]
     patterns = do
       let regex :: Text = "\\{#[^#]*#\\}"
-      getAllTextMatches (text =~ regex :: AllTextMatches [] T.Text)
+      getAllTextMatches (text =~ regex :: AllTextMatches [] Text)
 
-    replacePatterns :: Text -> Text -> Text
-    replacePatterns msg pattern_ =
-      let key = extractKey pattern_
-          value = fromMaybe pattern_ (Just (getCfgValue key))
-       in T.replace pattern_ value msg
+    replacePatterns :: (Text, [Text]) -> Text -> (Text, [Text])
+    replacePatterns (msg, urls) pattern_
+      | "{#IMAGE_GROUP" `T.isPrefixOf` pattern_ =
+        replaceImageGroup pattern_ urls msg
+      | pattern_ == "{#IMAGE#}" =
+        (replaceFirstImage pattern_ urls msg, drop 1 urls)
+      | otherwise =
+        let key = extractKey pattern_
+            value = fromMaybe pattern_ (Just (getCfgValue key))
+         in (T.replace pattern_ value msg, urls)
 
     extractKey :: Text -> Text
     extractKey pattern_ = T.drop 2 $ T.dropEnd 2 pattern_
 
     replaceNewLineChar :: Text -> Text
-    replaceNewLineChar = T.replace "\\n" "<br>"
+    replaceNewLineChar = T.replace "\n" "<br>"
 
-    appendMediaFileUrls :: [Text] -> Text -> Text
-    appendMediaFileUrls urls text_ = foldl' replaceFirst text_ urls
-
-    replaceFirst :: Text -> Text -> Text
-    replaceFirst txt url =
-      let (before, after) = T.breakOn "{#IMAGE#}" txt
-       in if T.null after
+    replaceFirstImage :: Text -> [Text] -> Text -> Text
+    replaceFirstImage pattern_ urls txt =
+      let (before, after) = T.breakOn pattern_ txt
+       in if T.null after || null urls
             then txt
-            else before <> (" {SUBPART}{IMAGE}{!!!} " <> url <> " ") <> T.drop (T.length "{#IMAGE#}") after
+            else before <> (" {SUBPART}{IMAGE}{!!!} " <> head urls <> " ") <> T.drop (T.length pattern_) after
 
-getConfigValue :: D.IssueConfig -> Maybe RideInfoRes -> Text -> Text
-getConfigValue issueConfig mbRideInfoRes key = do
+    replaceImageGroup :: T.Text -> [T.Text] -> T.Text -> (T.Text, [T.Text])
+    replaceImageGroup pattern_ urls txt
+      | null urls = (txt, urls)
+      | otherwise =
+        let (before, after) = T.breakOn pattern_ txt
+            countText = T.takeWhile (/= '>') $ T.drop 20 pattern_
+            count = maybe 0 (\n -> n) (readMaybe (T.unpack countText) :: Maybe Int)
+            (groupUrls, remainingUrls) = splitAt count urls
+            replacement = T.unwords $ map (\url -> "{IMAGE} " <> url <> " ") groupUrls
+            newText = before <> "{SUBPART}{IMAGE_GROUP}{!!!} " <> replacement <> T.drop (T.length pattern_) after
+         in (newText, remainingUrls)
+
+getConfigValue :: Language -> D.IssueConfig -> Maybe RideInfoRes -> Text -> Text
+getConfigValue language issueConfig mbRideInfoRes key = do
   let estimatedDistance = fromMaybe 0.0 $ (.estimatedDistance) =<< mbRideInfoRes
       chargeableDistance = fromMaybe 0.0 $ (.chargeableDistance) =<< mbRideInfoRes
       distanceDifference = estimatedDistance - chargeableDistance
@@ -710,8 +890,15 @@ getConfigValue issueConfig mbRideInfoRes key = do
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
+      merchantName =
+        fromMaybe "" $
+          issueConfig.messageTransformationConfig
+            >>= ( \config ->
+                    ((.translation) <$> (find (\t -> t.language == language) =<< config.merchantNameWTranslations))
+                      <|> config.merchantName
+                )
    in case key of
-        "MERCHANT" -> fromMaybe "" ((.merchantName) =<< issueConfig.messageTransformationConfig)
+        "MERCHANT" -> merchantName
         "SUPPORT_MAIL" -> fromMaybe "" ((.supportEmail) =<< issueConfig.messageTransformationConfig)
         "ESTIMATED_DISTANCE" -> show estimatedDistance
         "FINAL_DISTANCE" -> show chargeableDistance
@@ -729,14 +916,14 @@ getConfigValue issueConfig mbRideInfoRes key = do
         "DRIVER_ADDITIONS" -> show driverAdditions
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
-        _ -> ""
+        others -> "{#" <> others <> "#}"
   where
     getFareFromArray :: Text -> [FareBreakup] -> Maybe FareBreakup
     getFareFromArray fareKey = find (\fareBreakup -> fareBreakup.description == fareKey)
 
 mkIssueOptionList ::
-  D.IssueConfig -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
-mkIssueOptionList issueConfig mbRideInfoRes (issueOption, issueTranslation) =
+  D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
+mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslation) =
   Common.IssueOptionRes
     { issueOptionId = issueOption.id,
       label = fromMaybe (issueOption.option & T.toUpper & T.replace " " "_") issueOption.label,
@@ -744,7 +931,7 @@ mkIssueOptionList issueConfig mbRideInfoRes (issueOption, issueTranslation) =
     }
   where
     transformOption :: Text -> Text
-    transformOption = transformText (getConfigValue issueConfig mbRideInfoRes) []
+    transformOption = transformText (getConfigValue language issueConfig mbRideInfoRes) []
 
 recreateIssueChats :: BeamFlow m r => D.IssueReport -> D.IssueConfig -> Maybe RideInfoRes -> Language -> Identifier -> m [ChatDetail]
 recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
@@ -752,12 +939,12 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
     ( \item -> case item.chatType of
         IssueMessage -> do
           mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
+          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
           let label = (.label) . fst_ =<< mbIssueMessageTranslation
           pure $ mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label
         IssueOption -> do
           mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbIssueOption = mkIssueOptionList issueConfig mbRideInfoRes <$> mbIssueOptionTranslation
+          let mbIssueOption = mkIssueOptionList issueConfig language mbRideInfoRes <$> mbIssueOptionTranslation
               label = (.label) . fst =<< mbIssueOptionTranslation
           pure $ mkChatDetail item.chatId item.timestamp Text USER (mbIssueOption <&> (.option)) Nothing Nothing label
         IssueDescription -> pure $ mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing

@@ -28,6 +28,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -55,6 +56,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -73,6 +75,7 @@ dependencies:
   - persistent
   - persistent-postgresql
   - esqueleto
+  - cassava
   - template-haskell
   - wai
   - singletons
@@ -82,6 +85,11 @@ dependencies:
   - servant-multipart
   - beckn-services
   - special-zone-a
+  - yudhishthira
+  - casing
+  - vector
+  - singletons-th
+  - shared-services
 
 ghc-options:
   - -Wall

@@ -14,7 +14,9 @@
 
 module Domain.Action.Internal.CustomerCancellationDues where
 
+import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
@@ -31,6 +33,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationCharges as QCC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
@@ -169,6 +172,41 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                   ..
                 }
         QCC.create cancellationCharges
+        localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+        mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
+        case mbDailyStats of
+          Just stats -> QDailyStats.updateTipAmountByDriverId (stats.cancellationCharges + amountPaid) ride.driverId (utctDay localTime)
+          Nothing -> do
+            logDebug $ "DailyStats not found during cancellation chanrges for driverId : " <> ride.driverId.getId
+            id' <- generateGUIDText
+            now <- getCurrentTime
+            let dailyStatsOfDriver' =
+                  DDS.DailyStats
+                    { id = id',
+                      driverId = ride.driverId,
+                      totalEarnings = 0.0,
+                      numRides = 0,
+                      totalDistance = 0,
+                      tollCharges = 0.0,
+                      bonusEarnings = 0.0,
+                      merchantLocalDate = utctDay localTime,
+                      currency = ride.currency,
+                      distanceUnit = ride.distanceUnit,
+                      activatedValidRides = 0,
+                      referralEarnings = 0.0,
+                      referralCounts = 0,
+                      payoutStatus = DDS.Initialized,
+                      payoutOrderId = Nothing,
+                      payoutOrderStatus = Nothing,
+                      createdAt = now,
+                      updatedAt = now,
+                      cancellationCharges = amountPaid,
+                      tipAmount = 0.0,
+                      totalRideTime = 0,
+                      merchantId = Just merchantId,
+                      merchantOperatingCityId = Just merchantOperatingCity.id
+                    }
+            QDailyStats.create dailyStatsOfDriver'
 
       disputeChances <-
         if transporterConfig.cancellationFee == 0.0

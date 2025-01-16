@@ -14,39 +14,46 @@
 
 module Domain.Action.UI.DriverCoin where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
-import Data.OpenApi hiding (title)
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins hiding (CoinStatus)
+import Data.OpenApi hiding (description, title, value)
+import qualified Data.Text as Text
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
 import Domain.Types.TransporterConfig ()
+import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types (Language (..))
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
-import qualified Lib.DriverCoins.Types as DCT
+import Lib.DriverCoins.Types
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.Coins.CoinHistory as CHistory
+import Storage.Queries.Coins.CoinsConfig as SQCC
 import Storage.Queries.DailyStatsExtra as DS
-import Storage.Queries.DriverPlan as DPlan
+import Storage.Queries.DriverPlan as SQPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
+import Storage.Queries.TranslationsExtra as SQT
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
-    eventFunction :: DCT.DriverCoinsFunctionType,
+    eventFunction :: DriverCoinsFunctionType,
     bulkUploadTitle :: Maybe DCoins.Translations,
     createdAt :: UTCTime
   }
@@ -99,6 +106,17 @@ data ConvertCoinToCashReq = ConvertCoinToCashReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type AccumulationResult = [(Text, Int, CoinStatus)]
+
+newtype CoinInfoRes = CoinInfoRes [CoinInfo]
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CoinInfo = CoinInfo
+  { coins :: Int,
+    key :: Text,
+    title :: Text,
+    description :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> Flow CoinTransactionRes
 getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
@@ -217,7 +235,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
+  whenM (noDriverPlan driverId) $
+    throwError $ NoPlanAgaintsDriver driverId.getId
   now <- getCurrentTime
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -230,6 +249,10 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   let istTime = addUTCTime timeDiffFromUtc now
       currentDate = show $ utctDay istTime
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
+  vehCategory <-
+    QVeh.findById driverId
+      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+      <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
   if coinBalance >= coins
     then do
       let history =
@@ -243,7 +266,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 currency,
                 createdAt = now,
                 updatedAt = now,
-                title = "converted from coins"
+                title = "converted from coins",
+                vehicleCategory = Just vehCategory
               }
       histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
       let result = accumulateCoins coins histories
@@ -256,6 +280,9 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
     else do
       throwError $ InsufficientCoins driverId.getId coins
   pure Success
+  where
+    noDriverPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
+    noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
@@ -271,3 +298,41 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
         [] -> False
         _ -> length dailyRideSummary >= transporterConfig.pastDaysRideCounter && all (\res -> res.numRides > transporterConfig.pastDaysRideCounter) dailyRideSummary
   pure $ RideStatusPastDaysRes {rideCountPopupValue = ridesExceedThreshold}
+
+getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinInfoRes
+getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId.getId
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  vehCategory <-
+    QVeh.findById driverId
+      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+      <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
+  let language = fromMaybe ENGLISH (driver.language)
+  activeConfigs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  coinConfigRes <-
+    mapM
+      ( \activeConfg -> do
+          let id = Text.strip (activeConfg.eventName <> "_" <> (show activeConfg.eventFunction))
+          translation <- SQT.findByErrorAndLanguage id language >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
+          case Text.splitOn " | " translation.message of
+            [title, description] ->
+              pure $
+                CoinInfo
+                  { coins = activeConfg.coins,
+                    key = id,
+                    title = title,
+                    description = description
+                  }
+            [title] ->
+              pure $
+                CoinInfo
+                  { coins = activeConfg.coins,
+                    key = id,
+                    title = title,
+                    description = ""
+                  }
+            _ -> throwError $ CoinInfoTranslationNotFound id (show language)
+      )
+      activeConfigs
+  pure $ CoinInfoRes coinConfigRes

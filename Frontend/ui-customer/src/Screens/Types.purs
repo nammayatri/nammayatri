@@ -41,21 +41,30 @@ import JBridge (Location)
 import Language.Types (STR(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
+import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), FRFSTicketBookingStatusAPIRes(..),FRFSStationAPI(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), FRFSConfigAPIRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..), RideBookingListRes, FRFSRouteAPI)
 import Components.SettingSideBar.Controller as SideBar
-import Components.MessagingView.Controller (ChatComponent)
+import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
 import PrestoDOM.List
-import JBridge (Location)
+import JBridge (Location, Locations)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
-import Services.API (DeadKmFare)
+import Services.API as API
+import Common.RemoteConfig.Types as CRT
+import Common.Types.App (FeedbackAnswer)
+import Styles.Types
+
 type Contacts = {
   name :: String,
   number :: String
+}
+
+type FeedbackItem = { 
+    id :: String
+  , text :: String
 }
 
 type NewContacts = {
@@ -65,7 +74,11 @@ type NewContacts = {
   enableForFollowing :: Boolean,
   enableForShareRide:: Boolean,
   onRide :: Boolean,
-  priority :: Int
+  priority :: Int,
+  contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean,
+  shareTripWithEmergencyContactOption :: DropDownOptions,
+  isFollowing :: Maybe Boolean
 }
 
 type NewContactsProp = {
@@ -203,7 +216,8 @@ type EnterMobileNumberScreenStateProps = {
   otpEdtFocused :: Boolean,
   editTextVal :: String,
   attemptLeft :: String,
-  countryCodeOptionExpanded :: Boolean
+  countryCodeOptionExpanded :: Boolean,
+  autoFillOTPEnabled ::  Boolean
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -223,6 +237,7 @@ type EnterMobileNumberScreenStateData = {
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
 derive instance genericGender :: Generic Gender _
+instance showGender :: Show Gender where show = genericShow
 instance eqGender :: Eq Gender where eq = genericEq
 
 type AccountSetUpScreenState =
@@ -308,7 +323,7 @@ type TripDetailsScreenProps =
     isContactSupportPopUp :: Boolean
   }
 
-data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
+data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat | RideCompletedScreen
 derive instance genericTripDetailsGoBackType :: Generic TripDetailsGoBackType _
 instance showTripDetailsGoBackType :: Show TripDetailsGoBackType where show = genericShow
 instance eqTripDetailsGoBackType :: Eq TripDetailsGoBackType where eq = genericEq
@@ -331,7 +346,8 @@ type InvoiceScreenData =
     selectedItem :: IndividualRideCardState,
     config :: AppConfig,
     logField :: Object Foreign,
-    pdfHeading :: String
+    pdfHeading :: String,
+    rideType :: FareProductType
   }
 
 type InvoiceScreenProps =
@@ -477,10 +493,12 @@ type IndividualRideCardState =
   , estimatedFare :: Int
   , showDestination :: String
   , rideScheduledTime :: String
+  , rideCreatedAt :: String
+  , rideStatus :: String
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS | DELIVERY_BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -512,7 +530,11 @@ type ItemState =
     variantImage :: PropValue,
     showVariantImage :: PropValue,
     showRepeatRide :: PropValue,
-    showDestination :: PropValue
+    showDestination :: PropValue,
+    itemRideType :: PropValue,
+    rideTypeVisibility :: PropValue,
+    rideTypeBackground :: PropValue,
+    cornerRadius :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -527,6 +549,128 @@ data PermissionScreenStage = NORMAL | LOCATION_DISABLED | INTERNET_ACTION | LOCA
 derive instance genericPermissionScreenStage :: Generic PermissionScreenStage _
 instance eqPermissionScreenStage :: Eq PermissionScreenStage where eq = genericEq
 instance showPermissionScreenStage :: Show PermissionScreenStage where show = genericShow
+
+
+-- ################################################ Rider RideCompletedScreen ##################################################
+
+type RiderRideCompletedScreenState =
+  {
+    topCard :: TopCard
+  , favDriverInfoCard :: Boolean
+  , isFreeRide :: Boolean
+  , accessibility :: Accessiblity
+  , isRatingCard :: Boolean 
+  , ratingCard :: RiderRatingCard
+  , driverInfoCardState :: DriverInfoCard
+  , needHelpText :: String
+  , recordedView :: Boolean
+  , rideId :: String
+  , timerId :: String
+  , timerValue :: String
+  , countDownValue :: String
+  , showRentalRideDetails :: Boolean
+  , rentalRowDetails :: RentalRowConfig
+  , rentalBookingData :: CTA.RentalBookingConfig
+  , rideRatingState :: RatingCard
+  , ratingViewState :: RatingViewState
+  , isSafetyCenterDisabled :: Boolean
+  , bookingId :: String
+  , config :: AppConfig
+  , rideDuration :: Maybe Int
+  , additionalCharges :: Array AdditionalCharges
+  , customerIssue :: CustomerIssueReportData
+  , showSafetyCenter :: Boolean
+  , isKeyBoardOpen :: Boolean
+  , goToLastBanner :: Boolean
+  }
+
+type CustomerIssueReportData = {
+  currentPageIndex :: Int
+, showIssueBanners :: Boolean
+, hasAccessibilityIssue :: Boolean
+, hasSafetyIssue :: Boolean
+, demandExtraTollAmountIssue :: Boolean
+, customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
+, respondedValidIssues :: Boolean
+, bannerComputedView :: Maybe ListItem
+, buttonActive :: Boolean
+}
+
+type AdditionalCharges = {
+  text :: String
+, visibility :: Visibility
+, textColor :: Color
+, image :: String
+}
+
+type RentalRowConfig = {
+    rideTime :: String
+  , rideDistance :: String
+  , rideDistanceInfo :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
+  , estimatedFare :: String
+  , extraTimeFare :: String
+  , extraDistanceFare :: String
+  , totalFare :: String
+  , rideDetailsTitle :: String
+  , fareUpdateTitle :: String
+  , surcharges :: String
+}
+
+type TopCard = {
+  title :: String,
+  finalAmount :: Int,
+  initialAmount :: Int,
+  fareUpdatedVisiblity :: Boolean,
+  infoPill :: FareUpdatePill
+}
+
+type TopPill = {
+  visible :: Boolean,
+  background :: String,
+  text :: String,
+  textColor :: String,
+  icon :: Maybe String
+}
+
+type RatingState = {
+    rideBookingRes :: RideBookingRes
+}
+
+type FareUpdatePill =
+  {
+    text :: String
+  , imageVis :: Visibility
+  , visible :: Visibility
+  }
+
+type RiderRatingCard =
+  {
+    rating :: Int 
+  , rideId :: String
+  , isRecording :: Boolean
+  , favDriver :: Boolean
+  , distanceDifference :: Int
+  , feedbackList :: Array FeedbackAnswer
+  , feedbackPillData :: Array (Array (Array FeedbackItem)) 
+  , recordAudioState :: RecordAudioState
+  , feedbackText :: String
+  }
+
+type RecordAudioState = {
+    isRecording :: Boolean 
+  , timer :: String
+  , recordingDone :: Boolean
+  , isUploading   :: Boolean
+  , recordedFile  :: Maybe String
+  , openAddAudioModel :: Boolean
+  , uploadedAudioId :: Maybe String
+  , recordedAudioUrl :: Maybe String
+  , isListening :: Boolean
+  , pauseLootie :: Boolean
+}
+
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -554,6 +698,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | EditPickUpLocation
            | ProviderSelection
            | RideSearch
            | ConfirmRentalRide
@@ -565,12 +710,14 @@ data Stage = HomeScreen
            | ConfirmingEditDestinationLoc
            | RevisedEstimate
            | FavouriteLocationModelEditDest
+           | GoToTripSelect
+           | GoToConfirmgDelivery
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
 
-data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | RouteMap
+data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | RouteMap | SelectTripType
 
 data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
 
@@ -589,9 +736,7 @@ type HomeScreenState =
 type HomeScreenStateData =
   {
     suggestedAmount :: Int
-  , finalAmount :: Int
-  , startedAt :: String
-  , endedAt :: String
+  , isBookingUpdated :: Boolean
   , source :: String
   , destination :: String
   , eta :: String
@@ -607,7 +752,8 @@ type HomeScreenStateData =
   , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
-  , driverInfoCardState :: DriverInfoCard
+  , driverInfoCardState :: DriverInfoCard 
+  , activeRidesList :: Array DriverInfoCard
   , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
@@ -655,9 +801,12 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
+  , manuallySharedFollowers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
   , startTimeUTC :: String
+  , returnTimeUTC :: String
+  , estReturnTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
   , fareProductType :: FareProductType
   , invalidBookingId :: Maybe String
@@ -671,7 +820,49 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
-  }
+  , chatPersonId :: String
+  , parking :: ParkingData
+  , toll :: TollData
+  , channelIdFromFCM :: String
+  , personIdFromFCM :: String
+  , sourceFromFCM :: String
+  , suggestedVehicalVarient :: Array (Maybe String)
+  , tripTypeDataConfig :: TripTypeConfig
+  , tripEstDuration :: Int
+  , latestScheduledRides :: Maybe RideBookingListRes
+  , overLappingBooking :: Maybe RideBookingRes
+  , upcomingRideDetails :: Maybe UpcomingRideDetails
+  , selectedService :: Maybe RC.Service
+  , intercityBus :: IntercityBusData
+  , deliveryImage :: Maybe String
+  , deliveryDetailsInfo :: Maybe API.DeliveryDetails
+  , requestorPartyRoles :: Maybe (Array String)
+  , boostSearchEstimate :: ChooseVehicle.Config
+}
+
+type UpcomingRideDetails = {
+  bookingId :: String,
+  rideScheduledAt :: String
+}
+
+type TollData = {
+  confidence :: Maybe CTA.Confidence
+, showAmbiguousPopUp :: Boolean
+, estimatedCharges :: Number 
+, showIncludedPopUp :: Boolean
+}
+
+type ParkingData = {
+  estimatedCharge :: Maybe Number
+}
+  
+
+type IntercityBusData = {
+  showPermissionPopUp :: Boolean
+, showWebView :: Boolean
+, hasPhoneNumberPermission :: Boolean
+, url :: Maybe String
+}
 
 type InteroperabilityState = {
   timerId :: String,
@@ -700,13 +891,21 @@ type RentalsInfo =
   , fareProductType :: FareProductType
   , nearestRideScheduledAtUTC :: String
   , vehicleVariant :: String
+  , driverInformation :: Maybe ScheduledRideDriverInfo
   }
+
+type ScheduledRideDriverInfo = {
+  driverName :: String,
+  vehicleNumber :: String
+}
   
 type Followers = {
   name :: Maybe String,
   bookingId :: String,
   mobileNumber :: String,
-  priority :: Int
+  priority :: Int,
+  isManualFollower :: Boolean,
+  personId :: Maybe String
 }
 
 type QuoteListItemState = 
@@ -746,12 +945,6 @@ type BannerCarousalData = {
 
 type RideCompletedData = {
   issueReportData :: IssueReportData
-, toll :: FinalTollData
-}
-
-type FinalTollData = {
-  confidence :: Maybe CTA.Confidence
-, showAmbiguousPopUp :: Boolean
 }
 
 type IssueReportData = {
@@ -787,6 +980,7 @@ type HomeScreenStateProps =
   {
     currentStage :: Stage
   , showCallPopUp :: Boolean
+  , homeScreenPrimaryButtonLottie :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
   , isSource :: Maybe Boolean
@@ -826,6 +1020,7 @@ type HomeScreenStateProps =
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
+  , userBlocked :: Boolean
   , showlocUnserviceablePopUp :: Boolean
   , isMockLocation :: Boolean
   , autoSelecting :: Boolean
@@ -834,6 +1029,7 @@ type HomeScreenStateProps =
   , showRateCard :: Boolean
   , showRevisedFareDetails :: Boolean
   , showRateCardIcon :: Boolean
+  , markerLabel :: String
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
@@ -911,7 +1107,6 @@ type HomeScreenStateProps =
   , hotSpot :: HotSpotProps
   , isBannerDataComputed :: Boolean
   , repeatRideVariant :: String
-  , hasToll :: Boolean
   , repeatRideServiceTierName :: Maybe String
   , isSearchCancelled :: Boolean
   , referralComponentProps :: ReferralComponentState
@@ -927,7 +1122,6 @@ type HomeScreenStateProps =
   , showNormalRideNotSchedulablePopUp :: Boolean
   , zoneOtpExpired :: Boolean
   , stageBeforeChatScreen :: Stage
-  , specialZoneType :: String
   , scheduledRidePollingDelay :: Number
   , startScheduledRidePolling :: Boolean
   , showScheduledRideExistsPopUp :: Boolean
@@ -937,9 +1131,28 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , showChatListPopUp :: Boolean
+  , isSharedLocationFlow :: Boolean
+  , isOtpRideFlow :: Boolean
+  , safetySettings :: Maybe API.GetEmergencySettingsRes
+  , editedPickUpLocation :: EditedLocation
+  , showEditPickupPopupOnCancel :: Boolean
+  , isIntercityFlow :: Boolean 
+  , isTripSchedulable :: Boolean
+  , isConfirmSourceCurrentLocation :: Boolean
+  , showDeliveryImageAndOtpModal :: Boolean
+  , loadingDeliveryImage :: Boolean
+  , showBookAnyOptions :: Boolean
+  , showBoostSearch :: Boolean
+  , busClicked :: Boolean
+  , ticketServiceType :: API.TicketServiceType
   }
 
-data BottomNavBarIcon = TICKETING | MOBILITY
+type EditedLocation = {
+  gps :: LatLong ,
+  address :: Address
+}
+data BottomNavBarIcon = TICKETING | MOBILITY | BUS_
 
 type BookingTime = {
   rideStartTime :: String,
@@ -986,6 +1199,18 @@ data City
   | Tirunelveli
   | Salem
   | Trichy
+  | Davanagere
+  | Shivamogga
+  | Hubli
+  | Mangalore
+  | Gulbarga
+  | Udupi
+  | Odisha
+  | Bhubaneswar
+  | Cuttack
+  | Puri
+  | Pudukkottai
+  | Bidar
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
@@ -998,6 +1223,21 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
+  , tripType :: CTA.TicketType
+  , totalRideDistance :: Int
+  , totalRideDuration :: Int
+  , showRideInfo :: Boolean
+}
+
+type TripTypeConfig = {
+  tripPickupData :: Maybe TripTypeData,
+  tripReturnData :: Maybe TripTypeData
+}
+
+type TripTypeData =  {
+  tripDateTimeConfig :: DateTimeConfig,
+  tripDateUTC :: String,
+  tripDateReadableString :: String 
 }
 
 type SearchLocationModelData = {
@@ -1042,7 +1282,8 @@ type RatingViewState = {
     issueReason :: Maybe String,
     issueDescription :: String,
     rideBookingRes :: RideBookingRes,
-    wasOfferedAssistance :: Maybe Boolean
+    wasOfferedAssistance :: Maybe Boolean,
+    nightSafety :: Maybe Boolean
 }
 
 type CustomerTipProps = {
@@ -1149,6 +1390,13 @@ type ReferralScreenState =
   }
 
 
+type EstimatesAndQuotesInfo = {
+    defaultQuote :: ChooseVehicle.Config
+  , nearByDrivers :: Maybe Int
+  , zoneType :: SpecialTags
+  , hasToll :: Boolean
+}
+
 -- ################################## SelectLanguageScreenState ###############################
 
 type SelectLanguageScreenState = {
@@ -1178,6 +1426,7 @@ type EmergencyContactsScreenData = {
   emergencyContactsList :: Array NewContacts,
   storedContactsList :: Array NewContacts,
   selectedContacts :: Array NewContacts,
+  selectedContact :: NewContacts,
   searchResult :: Array NewContacts,
   prestoListArrayItems :: Array NewContactsProp,
   loadMoreDisabled :: Boolean,
@@ -1185,14 +1434,25 @@ type EmergencyContactsScreenData = {
   offsetForEmergencyContacts :: Int,
   limitForEmergencyContacts :: Int,
   editedText :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  manualContactName :: String,
+  manualContactNumber :: String
 }
 
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
+  validManualContact :: Boolean,
+  validManualName :: Boolean,
+  showAddContactOptions :: Boolean,
+  addContactsManually :: Boolean,
   showInfoPopUp :: Boolean,
   fromSosFlow :: Boolean,
-  appName :: String
+  fromNewSafetyFlow :: Boolean,
+  appName :: String,
+  showDropDown :: Boolean,
+  getDefaultContacts :: Boolean,
+  saveEmergencyContacts :: Boolean,
+  isKeyBoardOpen :: Boolean
 }
 
 type ContactDetail = {
@@ -1280,6 +1540,8 @@ type DriverInfoCard =
   , price :: Int
   , sourceLat :: Number
   , sourceLng :: Number
+  , initialPickupLat :: Number
+  , initialPickupLon :: Number
   , destinationLat :: Number
   , destinationLng :: Number
   , driverLat :: Number
@@ -1289,6 +1551,8 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , destinationReached :: Boolean
+  , destinationReachedAt :: Int
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
@@ -1298,6 +1562,7 @@ type DriverInfoCard =
   , vehicleVariant :: String
   , sourceAddress :: Address
   , destinationAddress :: Address
+  , editPickupAttemptsLeft :: Int
   , status :: String
   , serviceTierName :: Maybe String
   , vehicleModel :: String
@@ -1310,6 +1575,15 @@ type DriverInfoCard =
   , driversPreviousRideDropLocLon :: Maybe Number
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , currentChatRecipient :: ChatContacts
+  , hasToll :: Boolean
+  , isAlreadyFav :: Boolean
+  , favCount :: Int
+  , rideDuration :: Maybe Int
+  , rideScheduledAtUTC :: Maybe String
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
+  , estimatedTimeToReachDestination :: Maybe String 
   }
 
 type RatingCard =
@@ -1361,13 +1635,51 @@ type SavedLocationScreenProps =
   , apiRespReceived :: Boolean
   }
 
+type FavouriteDriverTripsState =
+  {
+    data :: FavouriteDriverTripsData
+  }
+
+type FavouriteDriverTripsData =
+  {
+    driverNumber :: String
+  , driverName :: String
+  , driverId :: Maybe String
+  , details :: Array Details 
+  }
+
+type Details =
+  {    
+    rideRating :: Maybe Int
+  , fromLocation :: LocationAPIEntity
+  , toLocation :: Maybe LocationAPIEntity
+  , totalFare :: Maybe Int
+  , startTime :: Maybe String
+  , id :: Maybe String
+  }
+
 type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
   , config :: AppConfig
   , logField :: Object Foreign
+  , favouriteDriversList :: Array FavouriteDriverListItemState
+  , current :: String 
+  , driverNo :: String
+  , driverName :: String
+  , driverId :: Maybe String
   }
+
+type FavouriteDriverListItemState = {
+    driverName :: String
+  , driverPhone :: String
+  , driverRating :: Number
+  , favCount :: Int
+  , id :: Maybe String
+}
+
+data FavouriteDriverTripsType = SavedLocations
 
 type DistInfo =
   { locationName :: String
@@ -1489,11 +1801,13 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES | RENTALS | INTERCITY
+data SearchResultType = QUOTES FareProductType | ESTIMATES
 
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
 instance showSearchResultType :: Show SearchResultType where show = genericShow
+instance encodeSearchResultType :: Encode SearchResultType where encode = defaultEncode
+instance decodeSearchResultType:: Decode SearchResultType where decode = defaultDecode
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
@@ -1526,6 +1840,8 @@ type LocationListItemState = {
   , frequencyCount :: Maybe Int
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
+  , dynamicAction :: Maybe CRT.RemoteAC
+  , types :: Maybe (Array String)
 }
 
 type SuggestionsMap = Map SourceGeoHash Suggestions
@@ -1701,8 +2017,14 @@ type ServiceCategory =
     isSelected :: Boolean,
     peopleCategories :: Array PeopleCategoriesData,
     operationalDays :: Array OperationalDaysData,
+    operationalDate :: Maybe OperationalDate,
     validOpDay :: Maybe OperationalDaysData
   }
+
+type OperationalDate = {
+  startDate :: String,
+  endDate :: String
+}
 
 type FlattenedBusinessHourData =
   { id :: String,
@@ -1712,6 +2034,7 @@ type FlattenedBusinessHourData =
     specialDayDescription :: Maybe String,
     specialDayType :: Maybe String,
     operationalDays :: Array String,
+    operationalDate :: Maybe OperationalDate,
     category :: TicketCategoriesResp
   }
 
@@ -1792,7 +2115,8 @@ type TicketBookingItem =
 
 type TicketBookings = 
   { pendingBooking :: Array TicketBookingItem,
-    booked :: Array TicketBookingItem
+    booked :: Array TicketBookingItem,
+    cancelled :: Array TicketBookingItem
   }
 
 type TicketBookingScreenProps = {
@@ -1940,8 +2264,11 @@ type MetroTicketDetailsScreenData = {
 , metroRoute :: Array MetroRoute
 , ticketsInfo :: Array MetroTicketInfo
 , ticketType :: String
-, ticketPrice :: Int
+, ticketPrice :: Number
 , noOfTickets :: Int
+, vehicleType :: String
+, route :: Maybe (Array FRFSRouteAPI)
+, transactionId :: String
 }
 
 type MetroTicketInfo = {
@@ -1979,6 +2306,8 @@ type MetroTicketDetailsScreenProps = {
 , cancellationCharges :: Maybe Number
 , refundAmount :: Maybe Number
 , showLoader :: Boolean
+, fromScreen :: Maybe String
+, paymentDetailsExpanded :: Boolean
 }
 
 data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
@@ -2011,12 +2340,15 @@ type MetroMyTicketsScreenState = {
 type MetroMyTicketsScreenData = {
   activeTickets :: Array MetroTicketCardData
 , pastTickets :: Array MetroTicketCardData
+, userBlocked :: Boolean
 }
 
 type MetroMyTicketsScreenProps = {
   dummyProps :: String
 , showShimmer :: Boolean
 , entryPoint :: MetroMyTicketsEntry
+, fromScreen :: Maybe String
+, ticketServiceType :: API.TicketServiceType
 }
 
 type MetroTicketCardData = {
@@ -2024,7 +2356,7 @@ type MetroTicketCardData = {
   , destinationName :: String
   , createdAt :: String
   , noOfTickets :: Int
-  , metroTicketStatusApiResp :: MetroTicketBookingStatus
+  , metroTicketStatusApiResp :: FRFSTicketBookingStatusAPIRes
   , status :: String
   , validUntill :: String
 }
@@ -2074,6 +2406,7 @@ type TicketStatusScreenProps = {
 
 data TicketStatusEntry = MetroTicketToPaymentStatusEntry
                        | ZooTicketToPaymentStatusEntry
+                       | BusTicketToPaymentStatusEntry
 derive instance genericTicketStatusEntry :: Generic TicketStatusEntry _ 
 instance showTicketStatusEntry :: Show TicketStatusEntry where show = genericShow
 instance eqTicketStatusEntry :: Eq TicketStatusEntry where eq = genericEq
@@ -2106,7 +2439,15 @@ type SearchLocationScreenData =
     updatedMetroStations :: Array Station,
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
-    rideDetails :: RideDetails
+    rideDetails :: RideDetails,
+    listItem :: Maybe ListItem,
+    routeSearchedList :: Array FRFSRouteAPI,
+    stopsSearchedList :: Array FRFSStationAPI,
+    updatedStopsSearchedList :: Array FRFSStationAPI,
+    updatedRouteSearchedList :: Array FRFSRouteAPI,
+    ticketServiceType :: API.TicketServiceType,
+    rideType :: RideType,
+    searchRideType :: API.SearchRideType
   }
 
 type RideDetails = {
@@ -2122,6 +2463,7 @@ type Station = {
   stationName :: String,
   stationCode :: String
 }
+
 
 type SearchLocationScreenProps = 
   { searchLocStage :: SearchLocationStage
@@ -2141,11 +2483,25 @@ type SearchLocationScreenProps =
   , customerTip :: CustomerTipProps
   , fareProductType :: FareProductType
   , currentEstimateHeight :: Int
+  , routeSearch :: Boolean
+  , routeSelected :: String
+  , stopCodeSelected :: String
+  , stopNameSelected :: String
+  , autoCompleteBusStop :: Boolean
+  , srcLat :: Number 
+  , srcLong :: Number
+  , routeName :: String
   , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
                               | MetroStationSelectionAction
+                              | BusStationSelectionAction
+                              | BusSearchSelectionAction
+                              | BusRouteSelectionAction
+                              | BusStopSelectionAction
+                              | NoBusRouteSelectionAction
+                              
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
 instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
@@ -2180,16 +2536,91 @@ type LocationInfo =
     address :: String ,
     addressComponents :: Address ,
     metroInfo :: Maybe Station,
+    busStopInfo :: Maybe Station,
     stationCode :: String,
     city :: City
   }
   
+data RideType = ROUTES | STOP
+
+derive instance genericRideType :: Generic RideType _
+instance eqRideType :: Eq RideType where eq = genericEq
+instance showRideType :: Show RideType where
+  show ROUTES = "Routes"
+  show STOP = "Stops"
 -- ############################################## NammaSafetyScreenState #############################
 
 
 data SafetySetupStage =  SetNightTimeSafetyAlert
                         | SetDefaultEmergencyContacts
                         | SetPersonalSafetySettings
+
+data NammaSafetyStage = 
+    TrustedContacts (Array SafetyStageConfig)
+  | SafetyCheckIn (Array SafetyStageConfig)
+  | EmergencyActions (Array SafetyStageConfig)
+  | SafetyDrill (Array SafetyStageConfig)
+  | TrustedContactsActions (Array SafetyStageConfig)
+  | DriverSafetyStandards (Array SafetyStageConfig)
+
+data Component --TODO:: Discuss if this concept can be used and moved to a new component file all the components can be defined :)
+  = BoxContainer BoxContainerConfig
+  | DropDownWithHeader DropDownWithHeaderConfig
+  | NoteBox NoteBoxConfig
+  | Title TitleConfig
+  | SubTitle SubTitleConfig
+  | CheckBoxSelection CheckBoxSelectionConfig 
+  | ImageComponent ImageComponentConfig
+
+type CheckBoxSelectionConfig = {
+  title :: String,
+  contacts :: Array NewContacts,
+  selectedContact :: NewContacts
+}
+
+type ImageComponentConfig = {
+  imageUrl :: String
+}
+
+type BoxContainerConfig = {
+  title :: String,
+  subTitle :: String,
+  toggleButton :: Boolean,
+  noteText :: String,
+  noteImageIcon :: String
+}
+
+type NoteBoxConfig = {
+  noteText :: String,
+  noteImageIcon :: String,
+  noteSubTitle :: String
+}
+
+type TitleConfig = {
+  titleText :: String
+}
+
+type SubTitleConfig = {
+  subTitleText :: String
+}
+
+type DropDownWithHeaderConfig = {
+  headerText :: String,
+  currentValue :: DropDownOptions,
+  dropDownItems :: Array DropDownOptions
+}
+
+type SafetyStageConfig = {
+  dynamicViewData :: Array Component,
+  imageUrl :: String,
+  primaryButtonText :: String,
+  primaryButtonAction :: String
+}
+
+type DropDownOptions = {
+  key :: RideShareOptions,
+  value :: String
+}
 
 derive instance genericSafetySetupStage :: Generic SafetySetupStage _
 instance eqSafetySetupStage :: Eq SafetySetupStage where eq = genericEq
@@ -2203,6 +2634,7 @@ type NammaSafetyScreenState = {
 type NammaSafetyScreenData =  {
   shareToEmergencyContacts :: Boolean,
   nightSafetyChecks :: Boolean,
+  settingsAPIResponse :: API.GetEmergencySettingsRes,
   hasCompletedMockSafetyDrill :: Boolean,
   shareTripWithEmergencyContactOption :: RideShareOptions,
   shareOptionCurrent :: RideShareOptions,
@@ -2218,16 +2650,21 @@ type NammaSafetyScreenData =  {
   videoList :: Array RC.SafetyVideoConfig,
   sosType :: Maybe SosFlow,
   config :: AppConfig,
-  lastRideDetails :: Maybe IndividualRideCardState
+  lastRideDetails :: Maybe IndividualRideCardState,
+  bannerData :: BannerCarousalData,
+  safetySetupSteps :: Array SafetyStepsConfig,
+  extraSafetyExplaination :: Array SafetyStepsConfig,
+  autoCallDefaultContact :: Boolean,
+  currentLatLon :: Maybe LatLong
  }
 
 type NammaSafetyScreenProps =  {
   setupStage :: SafetySetupStage,
-  recordingState :: RecordingState,
   confirmPopup :: Boolean,
   timerId :: String,
   timerValue :: Int,
   enableLocalPoliceSupport :: Boolean,
+  isFromSafetyCenter :: Boolean,
   showInfoPopUp :: Boolean,
   localPoliceNumber :: String,
   showShimmer :: Boolean,
@@ -2246,13 +2683,65 @@ type NammaSafetyScreenProps =  {
   checkPastRide :: Boolean,
   reportPastRide :: Boolean,
   appName :: String,
-  isOffUs :: Boolean
+  isOffUs :: Boolean,
+  triggerSiren :: Boolean,
+  isAudioRecordingActive :: Boolean,
+  audioRecordingStatus :: CTA.RecordingState,
+  recordingTimerId :: String,
+  recordingTimer :: String,
+  recordedAudioUrl :: Maybe String,
+  showMenu :: Boolean,
+  policeCallTimerValue :: Int,
+  policeCallTimerId :: String,
+  defaultCallPopup :: Boolean,
+  fromScreen :: Maybe TripDetailsGoBackType
 }
-data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
-derive instance genericRecordingState :: Generic RecordingState _
-instance eqRecordingState :: Eq RecordingState where eq = genericEq
-instance showRecordingState :: Show RecordingState where show = genericShow
+type DataFetchScreenState = {
+  data :: DataFetchScreenData,
+  props :: DataFetchScreenProps,
+  config :: DataFetchScreenConfigs
+}
+
+type DataFetchScreenConfigs = {
+  appConfig :: AppConfig,
+  stage :: NammaSafetyStage,
+  stageSteps :: Int,
+  currentStep :: Int
+}
+
+type DataFetchScreenData = {
+  headerValue :: String,
+  bannerData :: BannerCarousalData,
+  emergencyContactsList :: Array NewContacts,
+  defaultSelectedContact :: NewContacts,
+  unExpectedEventChecks :: RideShareOptions,
+  postRideCheck :: RideShareOptions,
+  notifySafetyTeam :: Boolean,
+  emergencySOSShake :: Boolean,
+  autoCallDefaultContact :: Boolean,
+  informPoliceSos :: Boolean,
+  notifySosWithEmergencyContacts :: Boolean,
+  hasCompletedMockSafetyDrill :: Boolean
+}
+
+type DataFetchScreenProps = {
+    showLoader :: Boolean
+  , showDropDown :: Boolean
+  , dropDownAction :: String
+  , stageSetUpCompleted :: Boolean
+}
+
+type SafetyStepsConfig
+  = { title :: STR
+    , prefixImage :: String
+    , stepNumber :: String
+    , isCompleted :: Boolean
+    , prefixImageCompleted :: String
+    , labelText :: Maybe STR
+    , navigation :: NammaSafetyStage
+    }
+
 
 data FollowRideScreenStage = PersonList | FollowingRide | ChatWithEM | MockFollowRide | RideCompletedStage
 
@@ -2337,12 +2826,13 @@ type MetroStation = {
   , address :: Maybe String
   , stationType :: Maybe String
   , color :: Maybe String
+  , distance :: Maybe Int
   , sequenceNum :: Maybe Int
 }
 
 type MetroStations = {
   city :: City,
-  stations :: Array GetMetroStationResp,
+  stations :: Array FRFSStationAPI,
   lastUpdatedAt :: String
 }
 
@@ -2362,30 +2852,45 @@ type MetroTicketBookingScreenData = {
   , srcCode :: String
   , destCode :: String
   , searchId :: String
-  , ticketPrice :: Int
+  , ticketPrice :: Number
   , bookingId :: String
   , quoteId :: String
-  , quoteResp :: Array MetroQuote
-  , metroBookingConfigResp :: MetroBookingConfigRes
+  , quoteResp :: Array FrfsQuote
+  , routeSearchedList :: Array FRFSRouteAPI
+  , routeList :: Array FRFSRouteAPI
+  , stopsSearchedList :: Array FRFSStationAPI
+  , metroBookingConfigResp :: FRFSConfigAPIRes
   , eventDiscountAmount :: Maybe Int
+  , searchRideType :: API.SearchRideType
+  , discounts :: Array API.FRFSDiscountRes
+  , applyDiscounts :: Maybe (Array API.FRFSDiscountReq)
 }
 
 type MetroTicketBookingScreenProps = {
   isLimitExceeded :: Boolean
 , termsAndConditionsSelected :: Boolean
-, currentStage :: MetroTicketBookingStage
+, currentStage :: TicketBookingStage
 , isButtonActive :: Boolean
 , showMetroBookingTimeError :: Boolean
 , showShimmer :: Boolean
+, busClicked :: Boolean
+, routeList :: Boolean
+, showRouteOptions :: Boolean
+, isEmptyRoute :: String
+, ticketServiceType :: API.TicketServiceType
+, srcLat :: Number 
+, srcLong :: Number
+, routeName :: String
+, isRepeatRide :: Boolean
 }
 
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
+data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection | OfferSelection
 
-derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
-instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
-instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+derive instance genericTicketBookingStage :: Generic TicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq TicketBookingStage where eq = genericEq
+instance showTicketBookingStage :: Show TicketBookingStage where show = genericShow
 
-data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
@@ -2408,7 +2913,7 @@ type MetroTicketStatusScreenData = {
   keyValArray :: Array KeyVal,
   validUntil :: String,
   bookingId :: String,
-  resp :: MetroTicketBookingStatus,
+  resp :: FRFSTicketBookingStatusAPIRes,
   timerId :: String,
   quoteId :: String
 }
@@ -2419,7 +2924,7 @@ type MetroTicketStatusScreenProps = {
 , entryPoint :: MetroTicketStatusScreenEntry
 }
 
-data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus
+data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus | BusTicketToMetroTicketStatus
 
 type RideSearchProps = {
     sessionId :: String
@@ -2439,7 +2944,8 @@ derive instance genericLocationType :: Generic LocationType _
 instance eqLocationType :: Eq LocationType where eq = genericEq
 
 type GlobalFlowCache = {
-  savedLocations :: Maybe SavedLocationsListRes
+    savedLocations :: Maybe SavedLocationsListRes
+  , savedScheduledRides :: Maybe RideBookingListRes
 }
 
 type LocateOnMapProps = {
@@ -2534,6 +3040,8 @@ type RentalScreenData = {
   , searchId :: String
   , bookingId :: String
   , config :: AppConfig
+  , latestScheduledRides :: Maybe RideBookingListRes
+  , overLappingBooking :: Maybe RideBookingRes
 }
 
 type QuotesList = {
@@ -2543,7 +3051,18 @@ type QuotesList = {
   fareDetails :: FareDetails
 }
 
-
+type IntercityFareDetails = {
+  perDayMaxHourAllowance :: Int,
+  baseFare :: Maybe PriceAPIEntityDecimals ,
+  kmPerPlannedExtraHour :: Maybe DistanceWithUnit ,
+  perExtraKmRate :: Maybe PriceAPIEntityDecimals ,
+  perExtraMinRate :: Maybe PriceAPIEntityDecimals ,
+  perHourCharge :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateOneWay :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateRoundTrip :: Maybe PriceAPIEntityDecimals,
+  tollCharges :: Maybe PriceAPIEntityDecimals ,
+  deadKmFare :: Maybe PriceAPIEntityDecimals
+}
 type FareDetails = {
   plannedPerKmRate ::  Int,
   baseFare :: Int,
@@ -2574,6 +3093,8 @@ type RentalScreenProps = {
   , showPrimaryButton :: Boolean
   , showPopUpModal :: Boolean
   , showRentalPolicy :: Boolean
+  , isOtpRideFlow :: Boolean
+  , showScheduledRideExistsPopUp :: Boolean
 }
 
 type DateTimeConfig = {
@@ -2586,11 +3107,13 @@ type DateTimeConfig = {
 
 ----------------------------------------------------------------------
 
-data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | DELIVERY
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
 instance eqFareProductType :: Eq FareProductType where eq = genericEq
+instance encodeFareProductType :: Encode FareProductType where encode = defaultEncode
+instance decodeFareProductType :: Decode FareProductType where decode = defaultDecode
 
 data CancelSearchType = NORMAL_RIDE_CANCEL | RENTAL_SEARCH_CANCEL
 
@@ -2618,3 +3141,243 @@ type PickupInstructionsScreenData = {
 type PickupInstructionsScreenProps = {
   
 }
+
+-- ######################################### SelectFaqScreenState ####################################################
+
+
+type SelectFaqScreenState =
+  {
+    data :: SelectFaqScreenData,
+    props :: SelectFaqScreenProps
+  }
+
+type SelectFaqScreenData =
+  {
+    config :: AppConfig,
+    issueList :: Array IssueInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CTA.CategoryListType,
+    categoryName :: String
+  }
+
+type SelectFaqScreenProps =
+  {
+    apiFailure :: Boolean
+  , needIssueListApiCall :: Boolean
+  }
+
+-- ######################################### FaqScreenState ####################################################
+
+type FaqScreenState =
+  {
+    data :: FaqScreenData,
+    props :: FaqScreenProps
+  }
+
+type FaqScreenData =
+  {
+    config :: AppConfig,
+    dropDownList :: Array CTA.FaqCardDropDownInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CTA.CategoryListType,
+    categoryName :: String,
+    maxAllowedRideAge :: Maybe Int
+  }
+
+type FaqScreenProps =
+  {
+    apiFailure :: Boolean
+  , needIssueListApiCall :: Boolean
+  }
+
+
+-- ######################################### ParcelDeliveryFlow ####################################################
+
+data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
+
+derive instance genericParcelDeliveryScreenStage :: Generic ParcelDeliveryScreenStage _
+instance showParcelDeliveryScreenStage :: Show ParcelDeliveryScreenStage where show = genericShow
+instance eqParcelDeliveryScreenStage :: Eq ParcelDeliveryScreenStage where eq = genericEq
+
+type ParcelDeliveryScreenState = {
+  data :: ParcelDeliveryScreenData,
+  props :: ParcelDeliveryScreenProps
+}
+
+type ParcelDeliveryScreenData = {
+    currentStage :: ParcelDeliveryScreenStage
+  , sourceAddress :: Address
+  , destinationAddress :: Address
+  , route :: Maybe Route
+  , sourceLat :: Number
+  , sourceLong :: Number
+  , destinationLat :: Number
+  , destinationLong :: Number
+  , senderDetails :: PersonDeliveryDetails
+  , receiverDetails :: PersonDeliveryDetails
+  , initiatedAs :: API.InitiatedAs
+  , selectedQuote :: Maybe QuotesList
+  , parcelQuoteList :: ChooseVehicle.Config
+  , rateCard :: CTA.RateCard
+  , config :: AppConfig
+  , tipForDriver :: Maybe Int
+}
+
+type ParcelDeliveryScreenProps = {
+  editDetails :: PersonDeliveryDetails,
+  showRateCard :: Boolean,
+  isEditModal :: Boolean,
+  focusField :: String,
+  isValidInputs :: Boolean
+}
+
+type PersonDeliveryDetails = {
+  name :: String,
+  phone :: String,
+  extras :: String,
+  instructions :: Maybe String
+}
+
+
+newtype BookingAPIEntity = BookingAPIEntity {
+  currency :: Currency,
+  estimatedDistance ::Maybe String,
+  estimatedDuration ::Maybe Int,
+  estimatedFare :: String ,
+  fromLocation :: LocationInformation,
+  id :: String,
+  isAirConditioned ::Maybe Boolean ,
+  isScheduled :: Boolean,
+  returnTime :: Maybe String,
+  roundTrip :: Maybe Boolean,
+  startTime :: String ,
+  toLocation :: Maybe LocationInformation,
+  tripCategory :: CTA.TripCategory,
+  vehicleServiceTier :: String,
+  vehicleServiceTierAirConditioned :: Maybe Number ,
+  vehicleServiceTierName :: String,
+  vehicleServiceTierSeatingCapacity ::  Maybe Int
+}
+newtype LocationInformation =  LocationInformation {
+  address :: Address,
+  placeId  :: String,
+  fullAddress :: String
+}
+data Currency  = INR | USD | EUR 
+
+type NotificationBody = {
+  rideTime :: Maybe String,
+  bookingId :: Maybe String
+}
+
+-- ######################################### BusTicketBookingFlow ####################################################
+
+type BusTicketBookingState = {
+  data :: BusTicketBookingData,
+  props :: BusTicketBookingProps
+}
+
+type BusTicketBookingData = {
+    routeList :: Boolean
+  , showRouteOptions :: Boolean
+  , isEmptyRoute :: String
+  , ticketServiceType :: API.TicketServiceType
+  , ticketDetailsState :: Maybe MetroMyTicketsScreenState
+}
+
+type BusTicketBookingProps = {
+   srcLat :: Number
+ , srcLong :: Number
+ , showAllTickets :: Boolean
+}
+
+-- ######################################### MultiModalFlow ####################################################
+
+type BusTrackingScreenState = {
+  data :: BusTrackingScreenData,
+  props :: BusTrackingScreenProps
+}
+
+type BusTrackingScreenData = {
+  appConfig :: AppConfig,
+  busRouteCode :: String,
+  stopsList :: Array FRFSStationAPI,
+  sourceStation :: Maybe Station,
+  destinationStation :: Maybe Station,
+  bookingId :: String,
+  previousStopsMap :: DM.Map String FRFSStationAPI,
+  vehicleTrackingData :: DM.Map String (Array Number),
+  rideType :: Maybe RideType,
+  vehicleData :: Array VehicleData,
+  stationResponse :: Maybe (Array FRFSStationAPI),
+  routeShortName :: String,
+  routePts :: Locations
+}
+
+type VehicleData
+  = { vehicleId :: String
+    , nextStop :: String
+    , nextStopDistance :: Number
+    , vehicleLat :: Number
+    , vehicleLon :: Number
+    , nextStopLat ::Number
+    , nextStopLon ::Number
+    , nextStopSequence :: Int
+    , nextStopTravelTime :: Maybe Int
+    }
+
+type BusTrackingScreenProps = {
+  showRouteDetailsTab :: Boolean, 
+  expandStopsView :: Boolean, 
+  verticalLineHeight :: Int,
+  srcLat :: Number,
+  srcLon :: Number,
+  gotMapReady :: Boolean,
+  busNearSourceData :: Maybe VehicleData,
+  showShimmer :: Boolean,
+  individualBusTracking :: Boolean,
+  userAndBuslocationMatchCount :: Int,
+  vehicleTrackingId :: Maybe String,
+  previousScreen :: PreviousScreenForTracking,
+  destinationSequenceNumber :: Maybe Int
+}
+
+data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
+
+derive instance genericPreviousScreenForTracking :: Generic PreviousScreenForTracking _
+instance eqPreviousScreenForTracking :: Eq PreviousScreenForTracking where eq = genericEq
+
+
+type AlertWidgetConfig = {}
+
+--------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
+
+type AadhaarVerificationScreenState = {
+  data :: EnterAadhaarNumberScreenStateData,
+  props :: EnterAadhaarNumberScreenStateProps
+}
+
+type EnterAadhaarNumberScreenStateData = {
+    aadhaarNumber :: String
+  , timer :: String
+  , otp :: String
+  , driverName :: String
+  , driverGender :: String
+  , driverDob :: String
+}
+
+type EnterAadhaarNumberScreenStateProps = {
+  btnActive :: Boolean
+, isValid :: Boolean
+, resendEnabled :: Boolean
+, currentStage :: AadhaarStage
+, showErrorAadhaar :: Boolean
+, fromHomeScreen :: Boolean
+, showLogoutPopup :: Boolean
+, isDateClickable :: Boolean
+}
+
+data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
+
+derive instance genericAadhaarStage :: Generic AadhaarStage _
+instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq

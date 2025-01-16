@@ -5,6 +5,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   Text: Data.Text
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 
 Rating:
   tableName: rating
@@ -21,6 +22,7 @@ Rating:
     isSafe : Maybe Bool
     issueId : Maybe Text
     isFavourite: Maybe Bool
+    mediaId: Maybe (Id MediaFile)
 
   constraints:
     id: PrimaryKey
@@ -39,11 +41,10 @@ Rating:
 
     updateRating:
       kvFunction: updateOneWithKV
-      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance, isFavourite]
+      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance, isFavourite, mediaId]
       where:
         and: [id, driverId]
 
-  excludedFields: [merchantOperatingCityId, merchantId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

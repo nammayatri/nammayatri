@@ -23,6 +23,7 @@ CallStatus:
     recordingUrl : Maybe Text
     conversationDuration : Int
     merchantId : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
     callService : Maybe CallService
     callError : Maybe Text
     callAttempt : Maybe CallAttemptStatus
@@ -35,6 +36,7 @@ CallStatus:
     dtmfNumberUsed: character varying(255)
     id: character(36)
     merchantId: character(36)
+    merchangtOperatingCityId: character varying(36)
     recordingUrl: character varying(255)
     rideId: character(36)
     status: varchar(255)
@@ -51,10 +53,6 @@ CallStatus:
     findByCallId:
       kvFunction: findOneWithKV
       where: callId
-
-    findByRideId:
-      kvFunction: findOneWithKV
-      where: rideId
 
     updateCallStatus:
       kvFunction: updateWithKV
@@ -88,4 +86,5 @@ CallStatus:
 
   excludedDefaultQueries:
     - create
+
 

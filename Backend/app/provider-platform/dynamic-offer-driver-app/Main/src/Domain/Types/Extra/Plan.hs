@@ -1,22 +1,14 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.Plan where
 
 import Data.Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Common (HighPrecMoney, Money)
-import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 

@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.CallStatus where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.CallStatus
+import Domain.Types.Common ()
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
@@ -25,6 +24,7 @@ data CallStatusT f = CallStatusT
     entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Call.Interface.Types.CallStatus
   }

@@ -1,10 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketService where
 
 import Data.Aeson
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -19,6 +19,7 @@ data TicketService = TicketService
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
+    operationalDate :: Kernel.Prelude.Maybe Domain.Types.TicketService.OperationalDate,
     operationalDays :: [Kernel.Prelude.Text],
     placesId :: Kernel.Prelude.Text,
     service :: Kernel.Prelude.Text,
@@ -31,5 +32,7 @@ data TicketService = TicketService
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data OperationalDate = OperationalDate {eneDate :: Data.Time.Day, startDate :: Data.Time.Day} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExpiryType)
