@@ -635,10 +635,10 @@ PayoutConfig:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
-    findByCityIdAndVehicleCategoryAndIsPayoutEnabled:
+    findByCityIdAndVehicleCategory:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, vehicleCategory, isPayoutEnabled]
+        and: [merchantOperatingCityId, vehicleCategory]
 
   beamInstance:
     - MakeTableInstances
