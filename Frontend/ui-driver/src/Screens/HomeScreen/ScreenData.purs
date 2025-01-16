@@ -318,7 +318,6 @@ initData =
         , selectedRoute : Nothing
         , tripTransactionId : Nothing
         , selectedIndex : -1
-        , showStartBusTripModal : true
       }
       }
   }

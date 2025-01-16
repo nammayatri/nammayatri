@@ -414,9 +414,6 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
 
--- busAvailableRoutes :: String -> String 
--- busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes"
-
 busAvailableRoutes :: String -> String 
 busAvailableRoutes _ = (getBaseUrl "") <>  "/wmb/availableRoutes"
 

@@ -1446,8 +1446,7 @@ type WhereIsMyBusConfig = {
   selectRouteStage :: Boolean,
   selectedRoute :: Maybe API.AvailableRoutes,
   tripTransactionId :: Maybe String,
-  selectedIndex :: Int,
-  showStartBusTripModal :: Boolean
+  selectedIndex :: Int
 }
 
 type RideRequestPill = {

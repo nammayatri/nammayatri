@@ -96,6 +96,7 @@ view push state =
             , width $ WRAP_CONTENT
             , padding $ Padding 30 30 30 30
             , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_qr_frame" 
+            , accessibilityHint "SCAN QR"
             ]
         ]
     ]
