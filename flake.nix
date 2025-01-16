@@ -41,6 +41,8 @@
     };
 
     location-tracking-service.url = "github:nammayatri/location-tracking-service";
+
+    # https://github.com/nammayatri/passetto/pull/8
     passetto = {
       url = "github:nammayatri/passetto/use-crypton";
       inputs = {
