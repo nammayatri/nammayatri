@@ -1,17 +1,15 @@
 module Components.SelectRouteButton where
 
-import Prelude
-import PrestoDOM
-import Common.Types.App
+import Prelude (Unit, const, ($), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
+import Common.Types.App (LazyCheck(..))
 import Helpers.Utils as HU
 import Font.Style as FontStyle
-import Font.Size as FontSize
 import Styles.Colors as Colors
 import Mobility.Prelude (boolToVisibility)
 import Effect (Effect)
-import Font.Style (Style(..)) 
-import Font.Style as FontStyle
-import Styles.Types (FontStyle, Color)
+import Font.Style (Style)
+import Styles.Types (Color)
 
 data Action = NoAction | Click | Select Int String
 
@@ -122,7 +120,7 @@ locationText content fontSize =
     , ellipsize true
     , singleLine true
     , weight 1.0
-    , width $ V 80
+    -- , width $ V 
     ] <> (FontStyle.getFontStyle fontSize LanguageStyle)
 
 arrowText :: forall w. Style -> PrestoDOM (Effect Unit) w
