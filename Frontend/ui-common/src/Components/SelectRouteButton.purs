@@ -120,7 +120,6 @@ locationText content fontSize =
     , ellipsize true
     , singleLine true
     , weight 1.0
-    -- , width $ V 
     ] <> (FontStyle.getFontStyle fontSize LanguageStyle)
 
 arrowText :: forall w. Style -> PrestoDOM (Effect Unit) w

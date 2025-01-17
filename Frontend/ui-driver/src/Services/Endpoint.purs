@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Prelude (show, unit, (<>), (==), (*) , (&&), (||))
 import Services.Config (getBaseUrl)
 
@@ -97,8 +97,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: Boolean -> String
-driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
+driverRegistrationStatus :: Boolean -> Maybe String -> String
+driverRegistrationStatus queryParam onboardingVehicleCategory = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> (maybe "" (\vc -> "&onboardingVehicleCategory=" <> vc) onboardingVehicleCategory)
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -413,9 +413,6 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
-
--- busAvailableRoutes :: String -> String 
--- busAvailableRoutes vehicleNo = (getBaseUrl "") <> "/wmb/availableRoutes"
 
 busAvailableRoutes :: String -> String 
 busAvailableRoutes _ = (getBaseUrl "") <>  "/wmb/availableRoutes"

@@ -96,7 +96,6 @@ import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Services.Accessor as Acc
 import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
-import Screens.HomeScreen.ScreenData (dummyAvailableRoutes, dummyAvailableRoutesList, dummyBusVehicleDetails)
 import Data.Lens ((^.))
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -1027,21 +1026,34 @@ driverStatusIndicators = [
     }
 ]
 
-busDriverStatusIndicators :: Array ST.PillButtonState
-busDriverStatusIndicators = [
-    {
+busDriverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+busDriverStatusIndicators state = 
+  let isRideTracking = state.props.currentStage == ST.RideTracking
+      offlineIndicator = if isRideTracking then [] else [makeOfflineIndicator]
+      onlineIndicator = [makeOnlineIndicator isRideTracking]
+  in offlineIndicator <> onlineIndicator
+  where
+    makeOfflineIndicator = {
       status : ST.Offline,
       background : Color.red,
       imageUrl : fetchImage FF_ASSET "ic_driver_status_offline",
       textColor : Color.white900
-    },
-    {
-      status : ST.Online,
-      background : Color.darkMint,
-      imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
-      textColor : Color.white900
     }
-]
+    makeOnlineIndicator isRideTracking = 
+      if isRideTracking then 
+        {
+          status : ST.Online,
+          background : Color.lightMint,
+          imageUrl : HU.fetchImage HU.COMMON_ASSET "ic_outline_status_online_green",
+          textColor : Color.green900
+        }
+      else
+        {
+          status : ST.Online,
+          background : Color.darkMint,
+          imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
+          textColor : Color.white900
+        }
 
 getCancelAlertText :: String -> STR
 getCancelAlertText key = case key of

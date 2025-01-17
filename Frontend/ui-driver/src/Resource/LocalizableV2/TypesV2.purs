@@ -1818,6 +1818,8 @@ newtype Keymap
   , scan_the_qr_to_start_new_ride :: String
   , duty_started_depot_manager_will_assign_ride :: String
   , introducing_yatri_sathi_bus_tracking :: String
+  , on_ride :: String
+  , your_duty_has_started_please_start_the_ride :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7220,3 +7222,9 @@ duty_started_depot_manager_will_assign_ride = Proxy
 
 introducing_yatri_sathi_bus_tracking :: Proxy "introducing_yatri_sathi_bus_tracking"
 introducing_yatri_sathi_bus_tracking = Proxy
+
+on_ride :: Proxy "on_ride"
+on_ride = Proxy
+
+your_duty_has_started_please_start_the_ride :: Proxy "your_duty_has_started_please_start_the_ride"
+your_duty_has_started_please_start_the_ride = Proxy

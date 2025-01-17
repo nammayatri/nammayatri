@@ -50,6 +50,7 @@
                         <ImageView
                             android:id="@+id/close_button"
                             android:layout_width="24dp"
+                            android:contentDescription="@string/close"
                             android:layout_height="24dp"
                             android:layout_gravity="end"
                             android:src="@drawable/ic_dismiss_overlay"/>
@@ -57,7 +58,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Bus Number"
+                            android:text="@string/bus_number"
                             android:layout_marginTop="16dp"
                             android:textColor="#454545"
                             android:fontFamily="@font/plus_jakartasans_regular"
@@ -86,7 +87,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Bus Type"
+                            android:text="@string/route_number"
                             android:textColor="#454545"
                             android:layout_marginTop="16dp"
                             android:fontFamily="@font/plus_jakartasans_regular"
@@ -116,7 +117,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Route Number"
+                            android:text="@string/bus_type"
                             android:textColor="#454545"
                             android:layout_marginTop="16dp"
                             android:fontFamily="@font/plus_jakartasans_regular"
@@ -173,7 +174,7 @@
                             android:id="@+id/start_bus_ride_button"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Start Ride"
+                            android:text="@string/start_ride"
                             android:layout_marginTop="24dp"
                             android:paddingVertical="12dp"
                             android:textAllCaps="false"

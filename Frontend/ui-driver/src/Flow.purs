@@ -71,13 +71,13 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms, getReferralCode)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms, getReferralCode, whenJust, whenRight)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 import Helpers.Utils as HU
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeAllMarkers, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeAllMarkers, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig, RecentBusTrip)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -132,8 +132,8 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), ActiveTripTransaction(..), TripTransactionDetails(..), BusTripStatus(..), AvailableRoutes(..), AvailableRoutesList(..), RouteInfo(..), StopInfo(..), BusVehicleDetails(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _routeCode, _routeInfo, _busNumber, _routeInfo, _busNumber)
-import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _routeCode, _routeInfo, _busNumber, _routeInfo, _busNumber, _allowStartRideFromQR)
+import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates, makeDriverRegistrationStatusReq)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
@@ -182,6 +182,7 @@ import Screens.Benefits.BenefitsScreen.Controller as BSC
 import Screens.EducationScreen.Controller as EducationScreenController
 import PrestoDOM.Core (getPushFn)
 import Foreign.Generic (decodeJSON)
+import Helpers.LogicUtils (getBusDriverCurrentLocation, logBusRideStart, updateRecentBusRide, updateRecentBusView, giveFleetConsent, updateBusFleetConfig)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -820,7 +821,7 @@ onBoardingFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ makeDriverRegistrationStatusReq true
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -1277,7 +1278,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ makeDriverRegistrationStatusReq true
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -2397,7 +2398,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ makeDriverRegistrationStatusReq true
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
@@ -2585,7 +2586,7 @@ homeScreenFlow = do
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     if (HU.specialVariantsForTracking FunctionCall) then do 
         updateBusFleetConfig globalState.homeScreen
-        updateRecentBusView globalState.homeScreen 
+        updateRecentBusView 
       else do updateBannerAndPopupFlags
 
     void $ lift $ lift $ toggleLoader false
@@ -2949,6 +2950,7 @@ homeScreenFlow = do
         "WMB_TRIP_FINISHED" -> do
           void $ updateStage $ HomeScreenStage HomeScreen   
           currentRideFlow Nothing Nothing Nothing Nothing
+        "DRIVER_REQUEST_REJECTED" -> pure unit -- @arnab-dutta
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -5028,80 +5030,3 @@ handleStartRideError errorPayload = do
   
   void $ lift $ lift $ toggleLoader false
   homeScreenFlow
-
-
-getBusDriverCurrentLocation :: FlowBT String { lat :: String, lon :: String }
-getBusDriverCurrentLocation = do
-  let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
-      currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-  (LatLon lat lon _) <- getCurrentLocation 
-    currentDriverLat 
-    currentDriverLon 
-    currentDriverLat 
-    currentDriverLon 
-    500 
-    false 
-    true
-  pure { lat, lon }
-
-
-logBusRideStart :: FlowBT String Unit
-logBusRideStart = do
-  logField_ <- lift $ lift $ getLogFields
-  liftFlowBT $ logEvent logField_ "ny_driver_bus_ride_start"
-  void $ lift $ lift $ toggleLoader false
-
-updateRecentBusRide :: API.TripTransactionDetails -> FlowBT String Unit
-updateRecentBusRide tripDetails = lift $ lift $ liftFlow $ JB.saveRecentBusTrip (HU.tripDetailsToRecentTrip tripDetails)
-
-updateRecentBusView :: HomeScreenState -> FlowBT String Unit
-updateRecentBusView state = do
-  case state.data.whereIsMyBusData.trip of
-    Just _ -> pure unit
-    Nothing -> do
-      let recentBusTrip = JB.getRecentBusTrip
-      case recentBusTrip of
-        Just tripDetails -> do
-          let busVehicleNumberHash = getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
-          response <- lift $ lift $ Remote.getAvailableRoutes busVehicleNumberHash
-          case response of
-            Right (API.AvailableRoutesList availableRoutesList) -> do
-              let selectedRoundRoute = find (\(AvailableRoutes route) -> maybe false (_ == tripDetails.routeCode) route.roundRouteCode) availableRoutesList
-              let sameSelectedRoute = find (\(AvailableRoutes route) -> (route.routeInfo) ^. _routeCode == tripDetails.routeCode) availableRoutesList
-              
-              modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
-                { data {
-                    whereIsMyBusData { 
-                      availableRoutes = Just (AvailableRoutesList availableRoutesList),
-                      lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
-                      }
-                  },
-                  props {
-                    whereIsMyBusConfig {
-                      selectedRoute = selectedRoundRoute <|> sameSelectedRoute
-                    }
-                  }
-                }
-            Left _ -> pure unit
-        Nothing -> pure unit
-
-updateBusFleetConfig :: HomeScreenState -> FlowBT String Unit
-updateBusFleetConfig state = do
-  when (isNothing state.data.whereIsMyBusData.fleetConfig) $ do
-    response <- lift $ lift $ Remote.getBusFleetConfig ""
-    case response of
-      Right config -> do
-        modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
-          { data {
-              whereIsMyBusData {
-                fleetConfig = Just config
-              }
-            }
-          }
-      Left _ -> pure unit
-
-giveFleetConsent :: FlowBT String Unit
-giveFleetConsent = do
-  _ <- lift $ lift $ Remote.postFleetConsent ""
-  pure unit
-  

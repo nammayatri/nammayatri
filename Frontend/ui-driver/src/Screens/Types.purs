@@ -1446,8 +1446,7 @@ type WhereIsMyBusConfig = {
   selectRouteStage :: Boolean,
   selectedRoute :: Maybe API.AvailableRoutes,
   tripTransactionId :: Maybe String,
-  selectedIndex :: Int,
-  showStartBusTripModal :: Boolean
+  selectedIndex :: Int
 }
 
 type RideRequestPill = {
@@ -2001,6 +2000,7 @@ data NotificationType =  DRIVER_REACHED
                       | WMB_TRIP_ASSIGNED
                       | WMB_TRIP_STARTED
                       | WMB_TRIP_FINISHED
+                      | DRIVER_REQUEST_REJECTED
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow

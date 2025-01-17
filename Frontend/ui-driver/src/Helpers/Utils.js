@@ -632,18 +632,19 @@ export const startQRScanner =
           try {
             const cb = callbackMapper.map(function (data) {
               const parsedQrData = JSON.parse(data);
-              console.log(parsedQrData,parsedQrData.error,parsedQrData.data)
               callback(action(parsedQrData.error)(parsedQrData.data))();
               JBridge.stopScanning();
             })
             JBridge.startQRScanner(parentId, cb);
           } catch (e) {
             console.warn(e);
+            callback(action('PARSE_ERROR')(''))();
           }
         }
         else
         {
           console.log("QR Scanner not available");
+          callback(action('QR_SCANNER_NOT_AVAILABLE')(''))();
         }
       }
     }

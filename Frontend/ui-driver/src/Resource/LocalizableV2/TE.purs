@@ -1803,4 +1803,6 @@ getTe =
     , scan_the_qr_to_start_new_ride : "కొత్త రైడ్ ప్రారంభించడానికి బస్ లో అంటించిన QR స్కాన్ చేయండి"
     , duty_started_depot_manager_will_assign_ride : "మీ డ్యూటీ ప్రారంభమైంది. డిపో మేనేజర్ త్వరలో మీకు ఒక రైడ్ కేటాయిస్తారు"
     , introducing_yatri_sathi_bus_tracking : "యాత్రి సాథి బస్ ట్రాకింగ్ ప్రారంభించబడింది"
+    , on_ride : "ప్రయాణంలో"
+    , your_duty_has_started_please_start_the_ride : "మీ డ్యూటీ ప్రారంభమైంది, దయచేసి ప్రయాణాన్ని ప్రారంభించండి"
     }

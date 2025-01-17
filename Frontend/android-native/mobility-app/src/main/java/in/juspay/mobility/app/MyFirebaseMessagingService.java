@@ -298,10 +298,15 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.WMB_TRIP_ASSIGNED:
                         String jsonData = remoteMessage.getData().get("entity_data");
                         if (jsonData != null) {
-                            JSONObject notificationPayload = new JSONObject(jsonData);
-                            String notificationType_ =remoteMessage.getData().get("notification_type"); 
-                            if(notificationType_ != null) notificationPayload.put("notification_type", notificationType_);
-                            busTripAssignedOverlay(context,notificationPayload);
+                            try {
+                                JSONObject notificationPayload = new JSONObject(jsonData);
+                                String notificationType_ =remoteMessage.getData().get("notification_type"); 
+                                if(notificationType_ != null) notificationPayload.put("notification_type", notificationType_);
+                                busTripAssignedOverlay(context,notificationPayload);
+                            }
+                            catch (JSONException e) {
+                                Log.e("MyFirebaseMessagingService", "Invalid JSON in bus trip assignment: " + e.getMessage());
+                            }
                         }
                         break;
                     case NotificationTypes.CLEARED_FARE:

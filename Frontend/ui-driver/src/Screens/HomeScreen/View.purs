@@ -1300,9 +1300,10 @@ driverDetail push state =
       , weight 1.0
       , height MATCH_PARENT
       , orientation HORIZONTAL
-      , gravity CENTER_HORIZONTAL
+      , gravity $ if state.props.currentStage == ST.RideTracking then CENTER_VERTICAL else CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
               else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
+              else if state.props.currentStage == ST.RideTracking then ("0," <> Color.darkMint)
               else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
               else ("2," <> Color.blue800)
       , cornerRadius 50.0
@@ -1311,7 +1312,7 @@ driverDetail push state =
       , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag && rideAccStage && state.data.cityConfig.enableAdvancedBooking || state.data.activeRide.bookingFromOtherPlatform
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
-        ) $ if (HU.specialVariantsForTracking FunctionCall) then busDriverStatusIndicators else driverStatusIndicators
+        ) $ if (HU.specialVariantsForTracking FunctionCall) then busDriverStatusIndicators state else driverStatusIndicators
       ) 
 
     merchantLogoView =
@@ -1498,61 +1499,97 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
     ]
   ]
 
-driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
+type LayoutConfig = 
+  { height :: Length
+  , gravity :: Gravity
+  , margin :: Margin
+  , padding :: Padding
+  }
+
+getLayoutConfig :: Boolean -> LayoutConfig
+getLayoutConfig isOnRideTracking = 
+  { height: if isOnRideTracking then MATCH_PARENT else V 35
+  , gravity: if isOnRideTracking then LEFT else CENTER
+  , margin: if isOnRideTracking then Margin 0 0 0 0 else Margin 10 10 10 10
+  , padding: if isOnRideTracking then Padding 16 16 0 16 else Padding 0 0 0 0
+  }
+
+getStatusText :: DriverStatus -> Boolean -> Boolean -> String
+getStatusText status isSpecialTracking isOnRideTracking = case status of
+  Online -> if isSpecialTracking 
+            then if isOnRideTracking 
+                 then StringsV2.getStringV2 LT2.on_ride 
+                 else StringsV2.getStringV2 LT2.on_duty
+            else if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") 
+                 then getString DEMO 
+                 else getString ONLINE_
+  Offline -> if isSpecialTracking 
+             then StringsV2.getStringV2 LT2.end_duty 
+             else getString OFFLINE
+  Silent -> getString SILENT
+
+type ImageConfig = 
+  { visibility :: Visibility
+  , imageUrl :: String
+  }
+
+getImageConfig :: DriverStatusResult -> PillButtonState -> ImageConfig
+getImageConfig statusResult pillConfig = case statusResult of
+  ACTIVE -> { visibility: VISIBLE, imageUrl: pillConfig.imageUrl }
+  DEMO_ -> { visibility: VISIBLE, imageUrl: HU.fetchImage HU.FF_ASSET "ic_driver_status_demo" }
+  DEFAULT -> { visibility: GONE, imageUrl: "none" }
+
+driverStatusPill :: forall w. PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =
-  let isStatusBtnClickable = not (checkOnRideStage state ||  state.props.currentStage == RideTracking)
-      isSepcialTrackingVariants = HU.specialVariantsForTracking FunctionCall
+  let
+    isStatusBtnClickable = not (checkOnRideStage state || state.props.currentStage == RideTracking)
+    isSpecialTracking = HU.specialVariantsForTracking FunctionCall
+    isOnRideTracking = state.props.currentStage == ST.RideTracking
+    layoutConfig = getLayoutConfig isOnRideTracking
+    statusResult = getDriverStatusResult index state.props.driverStatusSet pillConfig.status
+    imageConfig = getImageConfig statusResult pillConfig
   in
-  linearLayout
-  [ weight 1.0
-  , height $ V 35
-  , gravity CENTER
-  , color Color.greyTextColor
-  , margin (Margin 10 10 10 10)
-  , background $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
-                    ACTIVE -> pillConfig.background
-                    DEMO_ -> Color.yellow900
-                    DEFAULT -> Color.white900
-  , cornerRadius 50.0
-  ][  linearLayout
-      ([ width MATCH_PARENT
-      , height MATCH_PARENT
-      , gravity CENTER
-      , orientation HORIZONTAL
-      , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable isStatusBtnClickable
-      , cornerRadius 20.0
-      , alpha $ if ((not isStatusBtnClickable) && (HU.specialVariantsForTracking FunctionCall)) then 0.5 else 1.0
-      ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
-      [ imageView
-        [ width $ V 15
-        , height $ V 15
-        , margin (Margin 3 0 5 0)
-        , visibility $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
-                    ACTIVE -> VISIBLE
-                    DEMO_ -> VISIBLE
-                    DEFAULT -> GONE
-        , imageWithFallback $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
-                    ACTIVE -> pillConfig.imageUrl
-                    DEMO_ ->   HU.fetchImage HU.FF_ASSET "ic_driver_status_demo"
-                    DEFAULT -> "none"
-        ]
-      , textView(
-        [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , padding (Padding 0 0 4 0)
-          , text $ case pillConfig.status of
-              Online -> if isSepcialTrackingVariants then StringsV2.getStringV2 LT2.on_duty else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
-              Offline -> if isSepcialTrackingVariants then StringsV2.getStringV2 LT2.end_duty else (getString OFFLINE)
-              Silent -> (getString SILENT)
-          , color $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
-                    ACTIVE -> pillConfig.textColor
-                    DEMO_ -> Color.black900
-                    DEFAULT -> Color.greyTextColor
-        ] <> FontStyle.body1 TypoGraphy
-      )
+    linearLayout
+      [ weight 1.0
+      , height layoutConfig.height
+      , gravity layoutConfig.gravity
+      , color Color.greyTextColor
+      , margin layoutConfig.margin
+      , padding layoutConfig.padding
+      , background case statusResult of
+          ACTIVE -> pillConfig.background
+          DEMO_ -> Color.yellow900
+          DEFAULT -> Color.white900
+      , cornerRadius 50.0
       ]
-  ]
+      [ linearLayout
+          ([ width MATCH_PARENT
+           , height MATCH_PARENT
+           , gravity if isOnRideTracking then CENTER_VERTICAL else CENTER
+           , orientation HORIZONTAL
+           , onClick push (const $ SwitchDriverStatus pillConfig.status)
+           , clickable isStatusBtnClickable
+           , cornerRadius 20.0
+           ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
+          [ imageView
+              [ width $ V 15
+              , height $ V 15
+              , margin (Margin 3 0 5 0)
+              , visibility imageConfig.visibility
+              , imageWithFallback imageConfig.imageUrl
+              ]
+          , textView
+              ([ width WRAP_CONTENT
+               , height WRAP_CONTENT
+               , padding (Padding 0 0 4 0)
+               , text $ getStatusText pillConfig.status isSpecialTracking isOnRideTracking
+               , color case statusResult of
+                   ACTIVE -> pillConfig.textColor
+                   DEMO_ -> Color.black900
+                   DEFAULT -> Color.greyTextColor
+               ] <> if isOnRideTracking then FontStyle.body26 TypoGraphy else FontStyle.body1 TypoGraphy)
+          ]
+      ]
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 statsModel push state =
@@ -3520,7 +3557,7 @@ qrScannerView push state =
                         (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
                         (not state.data.isVehicleSupported) ||
                         state.data.plansState.cityOrVehicleChanged
-      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig)
+      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig) && isNothing state.data.whereIsMyBusData.trip
   in
     linearLayout
     [ width MATCH_PARENT
@@ -3548,7 +3585,7 @@ qrScannerView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER_HORIZONTAL
-                , text if showQR then StringsV2.getStringV2 LT2.scan_the_qr_to_start_new_ride else StringsV2.getStringV2 LT2.duty_started_depot_manager_will_assign_ride
+                , text if showQR then StringsV2.getStringV2 LT2.scan_the_qr_to_start_new_ride else if isJust state.data.whereIsMyBusData.trip then StringsV2.getStringV2 LT2.your_duty_has_started_please_start_the_ride else StringsV2.getStringV2 LT2.duty_started_depot_manager_will_assign_ride
                 , margin $ Margin 16 0 16 0
                 , padding $ PaddingBottom 42
                 ] <> FontStyle.body2 TypoGraphy
