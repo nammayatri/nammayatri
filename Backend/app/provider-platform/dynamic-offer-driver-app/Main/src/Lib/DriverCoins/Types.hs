@@ -19,6 +19,7 @@ module Lib.DriverCoins.Types
     DCoins.CoinMessage (..),
     DCoins.CoinStatus (..),
     DCoins.MetroRideType (..),
+    DCoins.isMetroRideType,
   )
 where
 
