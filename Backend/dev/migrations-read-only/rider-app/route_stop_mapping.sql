@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.route_stop_mapping ADD PRIMARY KEY ( route_code, stop_code
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN estimated_travel_time_from_previous_stop integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN version_tag integer ;

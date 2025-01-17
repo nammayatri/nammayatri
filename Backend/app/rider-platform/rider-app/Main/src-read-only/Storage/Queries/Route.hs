@@ -70,6 +70,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.startLon ((.lon) startPoint),
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.versionTag versionTag,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

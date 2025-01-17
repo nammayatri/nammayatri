@@ -30,6 +30,7 @@ instance FromTType' Beam.Route Domain.Types.Route.Route where
             startPoint = Kernel.External.Maps.Types.LatLong startLat startLon,
             timeBounds = timeBounds,
             vehicleType = vehicleType,
+            versionTag = versionTag,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -51,6 +52,7 @@ instance ToTType' Beam.Route Domain.Types.Route.Route where
         Beam.startLon = (.lon) startPoint,
         Beam.timeBounds = timeBounds,
         Beam.vehicleType = vehicleType,
+        Beam.versionTag = versionTag,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
