@@ -3487,7 +3487,7 @@ data DriverCoinsFunctionType
   | BulkUploadFunction
   | BulkUploadFunctionV2
   | RidesCompleted Int
-  | MetroRideCompleted MetroRideType
+  | MetroRideCompleted MetroRideType (Maybe Int)
 
 data MetroRideType
   = ToMetro
