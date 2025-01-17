@@ -498,13 +498,9 @@ termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , visibility $ boolToVisibility (item /= "")
-           ][ textView $
-                  [ textFromHtml $ "&#8226;&ensp;"
-                  , color Color.black700
-                  ] <> FontStyle.paragraphText TypoGraphy
-                    <> if EHC.os == "IOS" then [width MATCH_PARENT, height WRAP_CONTENT] else []
-                , textView $
-                  [ textFromHtml $ item
+           ][ 
+                textView $
+                  [ textFromHtml $ "• " <> item
                   , color Color.black700
                   ] <> FontStyle.paragraphText TypoGraphy
                     <> if EHC.os == "IOS" then [width MATCH_PARENT, height WRAP_CONTENT] else []
