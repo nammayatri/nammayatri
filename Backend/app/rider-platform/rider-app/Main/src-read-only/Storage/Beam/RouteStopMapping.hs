@@ -26,6 +26,7 @@ data RouteStopMappingT f = RouteStopMappingT
     stopLon :: B.C f Kernel.Prelude.Double,
     timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    versionTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

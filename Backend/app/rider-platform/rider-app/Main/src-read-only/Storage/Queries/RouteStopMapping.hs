@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
       Se.Set Beam.stopLon ((.lon) stopPoint),
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.versionTag versionTag,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -72,6 +73,7 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
             stopPoint = Kernel.External.Maps.Types.LatLong stopLat stopLon,
             timeBounds = timeBounds,
             vehicleType = vehicleType,
+            versionTag = versionTag,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -91,6 +93,7 @@ instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopM
         Beam.stopLon = (.lon) stopPoint,
         Beam.timeBounds = timeBounds,
         Beam.vehicleType = vehicleType,
+        Beam.versionTag = versionTag,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

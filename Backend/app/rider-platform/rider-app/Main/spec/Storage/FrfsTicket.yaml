@@ -100,6 +100,7 @@ Station:
     timeBounds: TimeBound
     possibleTypes: Maybe [StationType]
     merchantOperatingCityId: Id MerchantOperatingCity
+    versionTag: Maybe Int
 
   default:
     timeBounds: "'Unbounded'"
@@ -619,6 +620,7 @@ Route:
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    versionTag: Maybe Int
   default:
     timeBounds: "'Unbounded'"
   sqlType:
@@ -680,6 +682,7 @@ RouteStopMapping:
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    versionTag: Maybe Int
   beamFields:
     stopPoint:
       stopLat: Double
