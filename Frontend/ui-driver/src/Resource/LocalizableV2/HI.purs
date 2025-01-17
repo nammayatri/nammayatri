@@ -1804,4 +1804,5 @@ getHi =
     , duty_started_depot_manager_will_assign_ride : "आपकी ड्यूटी शुरू हो गई है। डिपो मैनेजर जल्द ही आपको एक राइड आवंटित करेंगे"
     , introducing_yatri_sathi_bus_tracking : "यात्री साथी बस ट्रैकिंग पेश कर रहे हैं"
     , on_ride : "यात्रा पर"
+    , your_duty_has_started_please_start_the_ride : "आपकी ड्यूटी शुरू हो गई है, कृपया राइड शुरू करें"
     }

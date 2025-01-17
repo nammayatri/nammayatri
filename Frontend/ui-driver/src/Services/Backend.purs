@@ -321,6 +321,9 @@ startRide productId payload = do
     where
         unwrapResponse (x) = x
 
+makeDriverRegistrationStatusReq :: Boolean -> DriverRegistrationStatusReq
+makeDriverRegistrationStatusReq queryParam = DriverRegistrationStatusReq queryParam (mkCategory Nothing)
+
 makeStartRideReq :: String -> Maybe String -> Maybe String -> Number -> Number -> String -> StartRideReq
 makeStartRideReq otp odometerReading fileId lat lon ts = StartRideReq {
     "rideOtp": otp,
@@ -892,9 +895,9 @@ makeValidateImageReq image imageType rcNumber status transactionId category = Va
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam onboardingVehicleCategory) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus queryParam)) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam onboardingVehicleCategory)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack

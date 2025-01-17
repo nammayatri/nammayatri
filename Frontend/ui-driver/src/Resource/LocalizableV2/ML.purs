@@ -1804,4 +1804,5 @@ getMl =
     , duty_started_depot_manager_will_assign_ride : "നിങ്ങളുടെ ഡ്യൂട്ടി ആരംഭിച്ചു. ഡിപ്പോ മാനേജർ ഉടൻ തന്നെ നിങ്ങൾക്ക് ഒരു യാത്ര നൽകും"
     , introducing_yatri_sathi_bus_tracking : "യാത്രി സാതി ബസ് ട്രാക്കിംഗ് അവതരിപ്പിക്കുന്നു"
     , on_ride : "യാത്രയിൽ"
+    , your_duty_has_started_please_start_the_ride : "നിങ്ങളുടെ ഡ്യൂട്ടി ആരംഭിച്ചു, ദയവായി യാത്ര ആരംഭിക്കുക"
     }

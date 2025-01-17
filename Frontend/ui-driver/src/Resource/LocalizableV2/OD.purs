@@ -1804,4 +1804,5 @@ getOd =
     , duty_started_depot_manager_will_assign_ride : "ଆପଣଙ୍କ ଡିଉଟି ଆରମ୍ଭ ହୋଇଯାଇଛି। ଡିପୋ ପ୍ରବନ୍ଧକ ସତ୍ତ୍ଵରେ ଆପଣଙ୍କୁ ରାଇଡ୍ ଦେବେ"
     , introducing_yatri_sathi_bus_tracking : "ଯାତ୍ରୀ ସାଥୀ ବସ୍ ଟ୍ରାକିଂ ପରିଚୟ କରାଯାଉଛି"
     , on_ride : "ଯାତ୍ରାରେ"
+    , your_duty_has_started_please_start_the_ride : "ଆପଣଙ୍କ ଡିଉଟି ଆରମ୍ଭ ହୋଇଛି, ଦୟାକରି ଯାତ୍ରା ଆରମ୍ଭ କରନ୍ତୁ"
   }

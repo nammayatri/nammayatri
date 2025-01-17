@@ -455,4 +455,4 @@ seaGreen :: Color
 seaGreen = "#288B43"
 
 lightMint :: Color
-lightMint = "1A53BB6F"
+lightMint = "#1A53BB6F"

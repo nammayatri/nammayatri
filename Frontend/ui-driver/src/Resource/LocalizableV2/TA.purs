@@ -1804,4 +1804,5 @@ getTa =
     , duty_started_depot_manager_will_assign_ride : "உங்கள் கடமை தொடங்கப்பட்டது. டிப்போ மேலாளர் விரைவில் உங்களுக்கு ஒரு பயணம் ஒதுக்குவார்"
     , introducing_yatri_sathi_bus_tracking : "யாத்ரி சாதி பஸ் டிராக்கிங் அறிமுகமாகிறது"
     , on_ride : "பயணத்தில்"
+    , your_duty_has_started_please_start_the_ride : "உங்கள் கடமை தொடங்கப்பட்டுள்ளது, தயவுசெய்து பயணம் தொடங்கவும்"
     }

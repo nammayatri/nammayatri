@@ -3557,7 +3557,7 @@ qrScannerView push state =
                         (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || 
                         (not state.data.isVehicleSupported) ||
                         state.data.plansState.cityOrVehicleChanged
-      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig)
+      showQR = (maybe true (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig) && isNothing state.data.whereIsMyBusData.trip
   in
     linearLayout
     [ width MATCH_PARENT
@@ -3585,7 +3585,7 @@ qrScannerView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER_HORIZONTAL
-                , text if showQR then StringsV2.getStringV2 LT2.scan_the_qr_to_start_new_ride else StringsV2.getStringV2 LT2.duty_started_depot_manager_will_assign_ride
+                , text if showQR then StringsV2.getStringV2 LT2.scan_the_qr_to_start_new_ride else if isJust state.data.whereIsMyBusData.trip then StringsV2.getStringV2 LT2.your_duty_has_started_please_start_the_ride else StringsV2.getStringV2 LT2.duty_started_depot_manager_will_assign_ride
                 , margin $ Margin 16 0 16 0
                 , padding $ PaddingBottom 42
                 ] <> FontStyle.body2 TypoGraphy

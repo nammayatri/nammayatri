@@ -151,3 +151,6 @@ _destination = lens (unwrap >>> _.destination) (\oldRec newVal -> wrap ((unwrap 
 
 _vehicleDetails :: forall a b c. Newtype a { vehicleDetails :: b | c } => Lens' a b
 _vehicleDetails = lens (unwrap >>> _.vehicleDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleDetails = newVal }))
+
+_allowStartRideFromQR :: forall a b c. Newtype a { allowStartRideFromQR :: b | c } => Lens' a b
+_allowStartRideFromQR = lens (unwrap >>> _.allowStartRideFromQR) (\oldRec newVal -> wrap ((unwrap oldRec) { allowStartRideFromQR = newVal }))
