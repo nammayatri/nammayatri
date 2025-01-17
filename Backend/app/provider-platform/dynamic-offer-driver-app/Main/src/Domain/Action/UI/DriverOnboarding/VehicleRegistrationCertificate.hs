@@ -513,7 +513,6 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now
       VQuery.create vehicle
-      DIQuery.updateOnboardingVehicleCategory vehicle.category driverInfo.driverId
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()
 deactivateCurrentRC driverId = do

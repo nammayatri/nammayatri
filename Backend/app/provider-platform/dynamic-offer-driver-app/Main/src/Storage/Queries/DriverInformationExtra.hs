@@ -26,7 +26,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation ()
-import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
+import Storage.Queries.PersonExtra ()
 import Tools.Error
 
 -- Extra code goes here --
@@ -80,17 +80,6 @@ findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverId
           Se.Is BeamDI.driverId $ Se.In (getId <$> driverIds)
         ]
     ]
-
-fetchAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Driver] -> m [DriverInformation]
-fetchAllByIds merchantId driversIds = do
-  dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
-  persons <- findAllPersonWithDriverInfos dInfos merchantId
-  pure $ foldl' (getDriverInfoWithPerson persons) [] dInfos
-  where
-    getDriverInfoWithPerson persons acc dInfo' =
-      case find (\person -> person.id == dInfo'.driverId) persons of
-        Just _person -> dInfo' : acc
-        Nothing -> acc
 
 fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
 fetchAllDriversWithPaymentPending merchantOpCityId = do

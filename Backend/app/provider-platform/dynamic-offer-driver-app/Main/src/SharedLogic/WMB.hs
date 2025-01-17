@@ -143,7 +143,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
           updatedAt = now,
-          tripStartTime = Nothing,
+          tripStartTime = Just now,
           tripEndTime = Nothing,
           ..
         }

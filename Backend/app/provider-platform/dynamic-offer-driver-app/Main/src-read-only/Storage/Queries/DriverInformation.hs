@@ -8,7 +8,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -196,13 +195,6 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-updateOnboardingVehicleCategory ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateOnboardingVehicleCategory onboardingVehicleCategory driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegAmountRefunded payoutRegAmountRefunded driverId = do
