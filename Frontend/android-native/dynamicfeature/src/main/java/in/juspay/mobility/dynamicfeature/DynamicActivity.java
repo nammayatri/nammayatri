@@ -16,6 +16,7 @@ import com.finternet.sdk.Callback;
 import com.finternet.sdk.GullakCore;
 import com.finternet.sdk.GullakSDKResponse;
 import com.finternet.sdk.MyEventPackage;
+import com.google.android.play.core.splitcompat.SplitCompat;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
