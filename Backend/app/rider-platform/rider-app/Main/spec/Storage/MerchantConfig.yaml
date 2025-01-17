@@ -30,6 +30,8 @@ MerchantConfig:
   constraints:
     id: PrimaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findAllByMerchantOperatingCityId:
       kvFunction: findAllWithKV

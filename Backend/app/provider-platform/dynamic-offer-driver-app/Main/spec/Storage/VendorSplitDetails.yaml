@@ -25,6 +25,7 @@ VendorSplitDetails:
     area: PrimaryKey
     vehicleVariant: PrimaryKey
     vendorId: PrimaryKey
+  disableKVQueryConstraints: True  
 
   excludedFields: [merchantId]
 

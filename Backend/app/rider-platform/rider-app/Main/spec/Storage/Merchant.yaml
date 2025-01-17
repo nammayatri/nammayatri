@@ -265,6 +265,7 @@ MerchantServiceConfig:
   constraints:
     merchantId: PrimaryKey
     serviceName: PrimaryKey
+  disableKVQueryConstraints: True  
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configJSON|EM
 
@@ -479,6 +480,7 @@ MerchantMessage:
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findAllByMerchantOpCityId:
@@ -525,6 +527,7 @@ RideRelatedNotificationConfig:
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOperatingCityId:
       kvFunction: findAllWithKV
@@ -568,6 +571,7 @@ MerchantPushNotification:
     # language: PrimaryKey
     # tripCategory: PrimaryKey
     # fcmSubCategory: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -630,6 +634,7 @@ PayoutConfig:
     payoutEntity: "'PAYOUT_AWARD'"
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
       kvFunction: findOneWithKV

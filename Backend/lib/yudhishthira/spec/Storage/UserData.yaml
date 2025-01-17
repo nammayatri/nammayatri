@@ -18,6 +18,8 @@ UserData:
   sqlType:
     userDataValue: json
 
+  disableKVQueryConstraints: True
+
   queries:
     findAllByUserIdAndEventId:
       kvFunction: findAllWithKV

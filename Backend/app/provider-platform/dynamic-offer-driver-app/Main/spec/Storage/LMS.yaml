@@ -62,6 +62,8 @@ LmsModule:
     languagesAvailableForQuiz : "'{}'"
     languagesAvailableForVideos : "'{}'"
     moduleSection : "'BENEFITS'"
+  
+  disableKVQueryConstraints: True
 
   queries:
     getAllModules:
@@ -88,6 +90,7 @@ LmsModuleTranslation:
   constraints:
     moduleId : PrimaryKey
     language : PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     getByModuleIdAndLanguage:
@@ -118,6 +121,8 @@ LmsModuleVideoInformation:
 
   default:
     videoStatus: "'ACTIVE'"
+  
+  disableKVQueryConstraints: True
 
   queries:
     getAllVideos:
@@ -180,6 +185,7 @@ LmsVideoTranslation:
   constraints:
     videoId : PrimaryKey
     language : PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     getVideoByLanguageAndVideoId:
@@ -232,6 +238,7 @@ DriverModuleCompletion:
 
   constraints:
     completionId : PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findByDriverId:
@@ -283,6 +290,7 @@ ModuleCompletionInformation:
     entityId: PrimaryKey
     entity: PrimaryKey
     attempt: PrimaryKey
+  disableKVQueryConstraints: True  
 
   types:
     ModuleEntity:
@@ -323,6 +331,7 @@ QuestionModuleMapping:
   constraints:
     moduleId: PrimaryKey
     questionId: PrimaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     findAllWithModuleId:
@@ -355,6 +364,7 @@ QuestionInformation:
   constraints:
     questionId: PrimaryKey
     language: PrimaryKey
+  disableKVQueryConstraints: True  
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -391,6 +401,7 @@ LmsCertificate:
   constraints:
     id: PrimaryKey
     moduleCompletionId: SecondaryKey
+  disableKVQueryConstraints: True  
 
   queries:
     getAllCertificate:

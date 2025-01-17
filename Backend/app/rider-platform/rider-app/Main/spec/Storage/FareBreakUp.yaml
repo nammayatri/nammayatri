@@ -51,6 +51,8 @@ FareBreakup:
     bookingId: SecondaryKey
     entityId: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   queries:
     findById:
       kvFunction: findOneWithKV

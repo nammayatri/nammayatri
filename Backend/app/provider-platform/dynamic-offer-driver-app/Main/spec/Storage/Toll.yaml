@@ -32,6 +32,7 @@ Toll:
 
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True
 
   beamFields:
     price:

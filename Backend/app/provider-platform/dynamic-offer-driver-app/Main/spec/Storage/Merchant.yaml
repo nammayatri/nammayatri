@@ -199,6 +199,8 @@ MerchantMessage:
   constraints:
     merchantOperatingCityId: PrimaryKey
     messageKey: PrimaryKey
+  
+  disableKVQueryConstraints: True  
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -244,6 +246,7 @@ LlmPrompt:
     serviceName: PrimaryKey
     useCase: PrimaryKey
     promptKey: PrimaryKey
+  disableKVQueryConstraints: True  
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -305,6 +308,8 @@ MerchantOperatingCity:
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  disableKVQueryConstraints: True 
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -410,6 +415,7 @@ Overlay:
     secondaryActions2: Kernel.Utils.JSON.valueToMaybe =<< secondaryActions2|E
   constraints:
     overlayKey: SecondaryKey
+  disableKVQueryConstraints: True  
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1462,6 +1468,7 @@ MerchantPushNotification:
     # language: PrimaryKey
     # tripCategory: PrimaryKey
     # fcmSubCategory: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -1506,6 +1513,7 @@ RideRelatedNotificationConfig:
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOperatingCityId:
       kvFunction: findAllWithKV
@@ -1556,6 +1564,7 @@ PayoutConfig:
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV

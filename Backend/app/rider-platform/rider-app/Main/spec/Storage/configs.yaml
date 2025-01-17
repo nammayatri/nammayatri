@@ -35,6 +35,8 @@ MerchantOperatingCity:
     state: "'Karnataka'"
     country: "'India'"
 
+  disableKVQueryConstraints: True
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -84,6 +86,8 @@ ValueAddNP:
 
   constraints:
     subscriberId: PrimaryKey
+
+  disableKVQueryConstraints: True  
 
   excludedFields: [merchantId, merchantOperatingCityId]
 

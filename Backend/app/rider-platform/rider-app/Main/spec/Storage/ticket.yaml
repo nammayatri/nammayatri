@@ -58,6 +58,8 @@ TicketPlace:
     status: "'Active'"
     allowSameDayBooking: "true"
 
+  disableKVQueryConstraints: True
+
   queries:
     getTicketPlaces:
       kvFunction: findAllWithKV
@@ -113,6 +115,8 @@ TicketService:
     allowCancellation: "false"
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
+
+  disableKVQueryConstraints: True
 
   queries:
     findById:
@@ -345,6 +349,8 @@ TicketBooking:
     shortId: SecondaryKey
     personId: SecondaryKey
 
+  disableKVQueryConstraints: True  
+
   default:
     bookedSeats: "0"
 
@@ -417,6 +423,8 @@ TicketBookingService:
     btype: "'Duration 03:30:00 12:00:00'"
     bookedSeats: "0"
 
+  disableKVQueryConstraints: True
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -475,6 +483,8 @@ TicketBookingServiceCategory:
     CancelledBy:
       enum: "User,Merchant"
 
+  disableKVQueryConstraints: True
+
   queries:
     findAllByTicketBookingServiceId:
       kvFunction: findAllWithKV
@@ -521,6 +531,8 @@ TicketBookingPeopleCategory:
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+
+  disableKVQueryConstraints: True
 
   queries:
     findById:

@@ -18,6 +18,7 @@ VehicleDetails:
     vehicleVariant: VehicleVariant|NoRelation
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True
   queries:
     findById:
       kvFunction: findOneWithKV

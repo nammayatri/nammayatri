@@ -46,6 +46,8 @@ BecknConfig:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
 
+  disableKVQueryConstraints: True
+
   queries:
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
@@ -117,6 +119,8 @@ IntegratedBPPConfig:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
     domain: PrimaryKey
+
+  disableKVQueryConstraints: True
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

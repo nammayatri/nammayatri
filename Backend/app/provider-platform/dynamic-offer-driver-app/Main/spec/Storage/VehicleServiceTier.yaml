@@ -55,6 +55,7 @@ VehicleServiceTier:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
   constraints:
     id: PrimaryKey
+  disableKVQueryConstraints: True  
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
