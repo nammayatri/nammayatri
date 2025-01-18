@@ -356,7 +356,7 @@ getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
   where
     processCallRecord :: Text -> Maybe Text -> Call.CallStatus -> DCall.CallStatus -> Flow ()
     processCallRecord callSid mbdigitPressed validStatus res = do
-      let digitPressed = fromMaybe "0" $ T.replace "\"" "" <$> mbdigitPressed
+      let digitPressed = fromMaybe "1" $ T.replace "\"" "" <$> mbdigitPressed
       QCallStatus.updateCustomerIvrResponse callSid (Just digitPressed) validStatus
       logDebug $ "digitPressed : " <> digitPressed
       case res.rideId of
