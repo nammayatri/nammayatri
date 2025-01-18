@@ -400,6 +400,7 @@ type VariantConfig = {
   bookAny :: VariantInfo,
   bike :: VariantInfo,
   suvPlus :: VariantInfo,
+  heritageCab :: VariantInfo,
   deliveryBike :: VariantInfo
 }
 

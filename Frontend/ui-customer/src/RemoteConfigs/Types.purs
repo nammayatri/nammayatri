@@ -21,6 +21,7 @@ type TipsConfigRC = {
   taxiPlus :: Array Int,
   bike :: Array Int,
   suvPlus :: Array Int,
+  heritageCab :: Array Int,
   default :: Array Int,
   bookAny :: Array Int
 }
@@ -128,6 +129,7 @@ type VariantBasedBoostSearchConfig = {
   taxiPlus :: BoostSearchConfig,
   bike :: BoostSearchConfig,
   suvPlus :: BoostSearchConfig,
+  heritageCab :: BoostSearchConfig,
   default :: BoostSearchConfig,
   bookAny :: BoostSearchConfig
 }

@@ -311,6 +311,7 @@ getVehicleName config =
     "BOOK_ANY" -> "Book Any"
     "SUV_PLUS" -> "XL Plus"
     "DELIVERY_BIKE" -> "2 Wheeler"
+    "HERITAGE_CAB" -> "Heritage Cab"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

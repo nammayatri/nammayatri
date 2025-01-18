@@ -277,6 +277,7 @@ myRideListTransformerProp listres =
             TAXI -> "ny_ic_non_ac"
             TAXI_PLUS -> "ny_ic_sedan_ac"
             SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
+            HERITAGE_CAB_TIER -> "ny_ic_heritage_cab_side"
             _ -> "ny_ic_ac_mini"
 
           

@@ -319,6 +319,7 @@ defaultMetroWarriorConfig =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , heritageCab: Nothing
   , default: Nothing
   }
 

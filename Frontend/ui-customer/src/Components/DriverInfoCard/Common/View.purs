@@ -263,27 +263,19 @@ getVehicleImage variant vehicleDetail city = do
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 
-        case (getMerchant FunctionCall) of
-          YATRISATHI -> case variant of
-                          "SUV"       -> "ny_ic_suv_concept"
-                          "TAXI"      -> "ic_white_taxi"
-                          "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          "BIKE"      -> "ny_ic_bike_concept"
-                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
-                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
-                          _           -> "ny_ic_sedan_concept"
-          _          -> case variant of
-                          "TAXI"      -> "ny_ic_hatchback_concept"
-                          "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          "SUV"       -> "ny_ic_suv_concept"
-                          "SEDAN"     -> "ny_ic_sedan_concept"
-                          "HATCHBACK" -> "ny_ic_hatchback_concept"
-                          "ECO"       -> "ny_ic_hatchback_concept"
-                          "COMFY"     -> "ny_ic_sedan_concept"
-                          "BIKE"      -> "ny_ic_bike_concept"
-                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
-                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
-                          _           -> "ny_ic_sedan_concept"              
+        case variant of
+          "TAXI"      -> mkTaxiImage
+          "TAXI_PLUS" -> "ny_ic_sedan_concept"
+          "SUV"       -> "ny_ic_suv_concept"
+          "SEDAN"     -> "ny_ic_sedan_concept"
+          "HATCHBACK" -> "ny_ic_hatchback_concept"
+          "ECO"       -> "ny_ic_hatchback_concept"
+          "COMFY"     -> "ny_ic_sedan_concept"
+          "BIKE"      -> "ny_ic_bike_concept"
+          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+          "HERITAGE_CAB" -> "ny_ic_heritage_cab_concept"
+          _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String
       mkAutoImage city = 
@@ -292,7 +284,12 @@ getVehicleImage variant vehicleDetail city = do
           _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
           _ | HU.isKeralaCity city -> "ny_ic_black_auto"
           _ -> "ic_auto_rickshaw"
-
+      
+      mkTaxiImage :: String 
+      mkTaxiImage =
+        case (getMerchant FunctionCall) of
+          YATRISATHI -> "ic_white_taxi"
+          _ -> "ny_ic_hatchback_concept"
 
 ---------------------------------- tripDetailsView ---------------------------------------
 
