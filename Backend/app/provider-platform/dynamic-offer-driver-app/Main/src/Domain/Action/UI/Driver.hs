@@ -219,6 +219,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.EventTracking as ET
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -2197,35 +2198,48 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
   if transporterConfig.disableListScheduledBookingAPI
     then pure $ ScheduledBookingRes []
-    else case (mbFromDay, mbToDay, mbDLoc) of
-      (Just from, Just to, Just dLoc) -> do
-        when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
-        driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-        case driverInfo.latestScheduledBooking of
-          Just _ -> pure $ ScheduledBookingRes []
-          Nothing -> do
-            now <- getCurrentTime
-            vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-            -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-            cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-            let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-                vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
-                tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                currentDay = utctDay now
-                limit = fromMaybe 10 mbLimit
-                offset = fromMaybe 0 mbOffset
-                safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+    else do
+      driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+      let isDriverOnline = driverInfo.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT]
+      mbDLoc' <- do
+        case (mbDLoc, isDriverOnline) of
+          (Just dLoc, _) -> pure $ Just dLoc
+          (Nothing, True) -> getCurrentDriverLocUsingLTS personId
+          _ -> pure Nothing
+      case (mbFromDay, mbToDay, mbDLoc') of
+        (Just from, Just to, Just dLoc) -> do
+          when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
+          case driverInfo.latestScheduledBooking of
+            Just _ -> pure $ ScheduledBookingRes []
+            Nothing -> do
+              now <- getCurrentTime
+              vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+              -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
+              let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
+                  vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
+                  tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+                  currentDay = utctDay now
+                  limit = fromMaybe 10 mbLimit
+                  offset = fromMaybe 0 mbOffset
+                  safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
 
-            scheduledBookings <-
-              if currentDay >= from
-                then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
-                else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
+              scheduledBookings <-
+                if currentDay >= from
+                  then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
+                  else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
 
-            bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
-            let sortedBookings = sortBookingsByDistance (catMaybes bookings)
-            return $ ScheduledBookingRes sortedBookings
-      _ -> throwError (InvalidRequest "LOCATION_NOT_FOUND")
+              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
+              let sortedBookings = sortBookingsByDistance (catMaybes bookings)
+              return $ ScheduledBookingRes sortedBookings
+        _ -> throwError (InvalidRequest "LOCATION_NOT_FOUND")
   where
+    getCurrentDriverLocUsingLTS driverId = do
+      result <- try @_ @SomeException $ LTF.driversLocation [driverId]
+      return $ case result of
+        Left _ -> Nothing
+        Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
+
     possibleScheduledTripCategories :: [DTC.TripCategory]
     possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing]
 
