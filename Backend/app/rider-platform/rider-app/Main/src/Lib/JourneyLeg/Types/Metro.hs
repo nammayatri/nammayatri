@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Metro where
 
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -34,7 +35,9 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
 data MetroLegRequestCancelData = MetroLegRequestCancelData
 
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
-  { searchId :: Id FRFSSearch.FRFSSearch
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    isLastJustCompleted :: Bool
   }
 
 data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData

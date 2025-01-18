@@ -4,6 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJ
@@ -121,6 +122,7 @@ newtype SearchResponse = SearchResponse
 
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
+    statusChanged :: Bool,
     currentPosition :: Maybe LatLong,
     legOrder :: Int
   }
@@ -129,27 +131,6 @@ data JourneyLegState = JourneyLegState
 
 data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney}
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data JourneyLegStatus
-  = InPlan
-  | -- | Booking
-    -- | RetryBooking
-    Assigning
-  | -- | ReAssigning
-    Booked
-  | OnTime
-  | AtRiskOfMissing
-  | Departed
-  | Missed
-  | Delayed
-  | Arriving
-  | Skipped -- we might need this
-  | Ongoing
-  | Finishing
-  | Cancelled
-  | Completed
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInitData = JourneyInitData
@@ -279,11 +260,16 @@ getTexiLegStatusFromBooking booking mRide = do
     Just ride -> mapTaxiRideStatusToJourneyLegStatus ride.status
     Nothing -> mapTaxiBookingStatusToJourneyLegStatus booking.status
 
-getTexiLegStatusFromSearch :: JourneySearchData -> JourneyLegStatus
-getTexiLegStatusFromSearch journeyLegInfo =
+getTexiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
+getTexiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
   if journeyLegInfo.skipBooking
     then Skipped
-    else InPlan
+    else case mbEstimateStatus of
+      Nothing -> InPlan
+      Just DEstimate.NEW -> InPlan
+      Just DEstimate.COMPLETED -> Booked
+      Just DEstimate.CANCELLED -> Cancelled
+      _ -> Assigning
 
 mkLegInfoFromBookingAndRide :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
 mkLegInfoFromBookingAndRide booking mRide = do
@@ -319,12 +305,12 @@ mkLegInfoFromBookingAndRide booking mRide = do
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  mbFareRange <-
+  (mbFareRange, mbEstimateStatus) <-
     case journeyLegInfo'.pricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
-        return $ mbEst <&> (.totalFareRange)
-      Nothing -> return Nothing
+        return $ (mbEst <&> (.totalFareRange), mbEst <&> (.status))
+      Nothing -> return (Nothing, Nothing)
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   return $
     LegInfo
@@ -342,7 +328,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
-        status = getTexiLegStatusFromSearch journeyLegInfo',
+        status = getTexiLegStatusFromSearch journeyLegInfo' mbEstimateStatus,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -358,12 +344,20 @@ getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -
 getWalkLegStatusFromWalkLeg legData journeyLegInfo = do
   if journeyLegInfo.skipBooking
     then Skipped
-    else castWalkLegStatus legData.status
-  where
-    castWalkLegStatus :: DWalkLeg.WalkLegStatus -> JourneyLegStatus
-    castWalkLegStatus DWalkLeg.InPlan = InPlan
-    castWalkLegStatus DWalkLeg.Ongoing = Ongoing
-    castWalkLegStatus DWalkLeg.Completed = Completed
+    else castLegStatusFromWalkLegStatus legData.status
+
+castLegStatusFromWalkLegStatus :: DWalkLeg.WalkLegStatus -> JourneyLegStatus
+castLegStatusFromWalkLegStatus DWalkLeg.InPlan = InPlan
+castLegStatusFromWalkLegStatus DWalkLeg.Ongoing = Ongoing
+castLegStatusFromWalkLegStatus DWalkLeg.Finishing = Finishing
+castLegStatusFromWalkLegStatus DWalkLeg.Completed = Completed
+
+castWalkLegStatusFromLegStatus :: JourneyLegStatus -> DWalkLeg.WalkLegStatus
+castWalkLegStatusFromLegStatus InPlan = DWalkLeg.InPlan
+castWalkLegStatusFromLegStatus Ongoing = DWalkLeg.Ongoing
+castWalkLegStatusFromLegStatus Finishing = DWalkLeg.Finishing
+castWalkLegStatusFromLegStatus Completed = DWalkLeg.Completed
+castWalkLegStatusFromLegStatus _ = DWalkLeg.InPlan
 
 mkWalkLegInfoFromWalkLegData :: MonadFlow m => DWalkLeg.WalkLegMultimodal -> m LegInfo
 mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
@@ -397,10 +391,10 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.CONFIRMING -> Assigning
   DFRFSBooking.FAILED -> InPlan
   DFRFSBooking.CONFIRMED -> Booked
-  DFRFSBooking.CANCELLED -> Cancelled
-  DFRFSBooking.COUNTER_CANCELLED -> Cancelled
-  DFRFSBooking.CANCEL_INITIATED -> Cancelled
-  DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> Cancelled
+  DFRFSBooking.CANCELLED -> InPlan
+  DFRFSBooking.COUNTER_CANCELLED -> InPlan
+  DFRFSBooking.CANCEL_INITIATED -> InPlan
+  DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSBooking.FRFSTicketBooking -> m LegInfo
@@ -412,6 +406,11 @@ mkLegInfoFromFrfsBooking booking = do
   now <- getCurrentTime
   legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
   let startTime = fromMaybe now booking.startTime
+  let legStatus =
+        case booking.journeyLegStatus of
+          Nothing -> getFRFSLegStatusFromBooking booking
+          Just InPlan -> getFRFSLegStatusFromBooking booking
+          Just status -> status
   return $
     LegInfo
       { skipBooking = False,
@@ -428,7 +427,7 @@ mkLegInfoFromFrfsBooking booking = do
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
-        status = getFRFSLegStatusFromBooking booking,
+        status = legStatus,
         legExtraInfo =
           Metro $
             MetroLegExtraInfo
@@ -484,7 +483,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         merchantId = merchantId,
         merchantOperatingCityId,
         personId = riderId,
-        status = InPlan,
+        status = fromMaybe InPlan journeyLegStatus,
         legExtraInfo =
           Metro $
             MetroLegExtraInfo

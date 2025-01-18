@@ -5,15 +5,13 @@ module Lib.JourneyLeg.Metro where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
-import qualified Storage.Queries.FRFSSearch as QFRFSSearch
-import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 
 instance JT.JourneyLeg MetroLegRequest m where
   search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = do
@@ -52,26 +50,10 @@ instance JT.JourneyLeg MetroLegRequest m where
   cancel (MetroLegRequestCancel _) = return ()
   cancel _ = throwError (InternalError "Not supported")
 
-  getState (MetroLegRequestGetState req) = do
-    mbMetroBooking <- B.runInReplica $ QTBooking.findBySearchId req.searchId
-    case mbMetroBooking of
-      Just metroBooking -> do
-        journeyLegOrder <- metroBooking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        return $ JT.JourneyLegState {status = JT.getFRFSLegStatusFromBooking metroBooking, currentPosition = Nothing, legOrder = journeyLegOrder}
-      Nothing -> do
-        searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
-        return $ JT.JourneyLegState {status = JT.InPlan, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder}
+  getState (MetroLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (MetroLegRequestGetInfo req) = do
-    mbBooking <- QTBooking.findBySearchId req.searchId
-    case mbBooking of
-      Just booking -> do
-        JT.mkLegInfoFromFrfsBooking booking
-      Nothing -> do
-        searchReq <- QFRFSSearch.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        JT.mkLegInfoFromFrfsSearchRequest searchReq req.fallbackFare
+  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (MetroLegRequestGetFare _) = do

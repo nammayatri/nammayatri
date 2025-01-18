@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
+import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.SearchRequest as QSearchRequest
@@ -153,8 +154,10 @@ postMultimodalRiderLocation ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.RiderLocationReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalRiderLocation = do error "Logic yet to be decided"
+  Environment.Flow ApiTypes.JourneyStatus
+postMultimodalRiderLocation personOrMerchantId journeyId req = do
+  addPoint journeyId req
+  getMultimodalJourneyStatus personOrMerchantId journeyId
 
 postMultimodalJourneyCancel ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -192,10 +195,10 @@ getMultimodalJourneyStatus ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow [ApiTypes.LegStatus]
+  Environment.Flow ApiTypes.JourneyStatus
 getMultimodalJourneyStatus (_, _) journeyId = do
   legs <- JM.getAllLegsStatus journeyId
-  return $ map transformLeg legs
+  return $ ApiTypes.JourneyStatus {legs = map transformLeg legs}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =

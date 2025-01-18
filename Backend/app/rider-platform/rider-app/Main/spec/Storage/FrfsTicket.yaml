@@ -29,6 +29,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
   Journey: Domain.Types.Journey
+  JourneyLegStatus: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
 
 FRFSSearch:
@@ -47,6 +48,7 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    journeyLegStatus: Maybe JourneyLegStatus
     lineColor : Maybe Text
     lineColorCode : Maybe Text
     frequency : Maybe Int
@@ -80,6 +82,10 @@ FRFSSearch:
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
       where: id
 
   extraOperations:
@@ -258,6 +264,7 @@ FRFSTicketBooking:
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
+    journeyLegStatus: Maybe JourneyLegStatus
 
   default:
     customerCancelled: "false"
@@ -372,6 +379,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

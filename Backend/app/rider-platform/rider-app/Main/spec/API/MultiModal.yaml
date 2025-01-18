@@ -11,7 +11,7 @@ imports:
   JourneyLeg: Domain.Types.JourneyLeg
   LatLong: Kernel.External.Maps.Types
   Price: Kernel.Types.Common
-  JourneyLegStatus : Lib.JourneyModule.Types
+  JourneyLegStatus : Lib.JourneyLeg.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
 
@@ -36,6 +36,10 @@ types:
   LegStatus:
     legOrder: Int
     status: JourneyLegStatus
+
+  JourneyStatus:
+    recordType: NewType
+    legs: "[LegStatus]"
 
   ExtendLegReq:
     legId: Id JourneyLeg
@@ -118,7 +122,7 @@ apis:
       params:
         journeyId: Id Journey
       response:
-        type: "[LegStatus]"
+        type: JourneyStatus
 
   - POST:
       endpoint: multimodal/journey/{journeyId}/cancel
@@ -134,4 +138,4 @@ apis:
       request:
         type: RiderLocationReq
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyStatus

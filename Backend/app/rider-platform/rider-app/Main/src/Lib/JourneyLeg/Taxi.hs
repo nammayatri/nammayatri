@@ -3,20 +3,16 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
--- import qualified Domain.Types.JourneyLeg as DJourenyLeg
--- import qualified Domain.Types.SearchRequest as DSR
-
--- import qualified Storage.Queries.Estimate as QEstimate
--- import qualified Storage.Queries.Journey as QJourney
-
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.Booking
 import Domain.Types.ServiceTierType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
@@ -25,6 +21,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 
@@ -134,22 +131,23 @@ instance JT.JourneyLeg TaxiLegRequest m where
   cancel _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
-    mbBooking <- QBooking.findByTransactionId req.searchId.getId
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId activeBookingStatus
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
         let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegOrder}
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegOrder, statusChanged = False}
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
-        let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder}
+        mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
+        let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
+        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder, statusChanged = False}
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
-    mbBooking <- QBooking.findByTransactionId req.searchId.getId
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId activeBookingStatus
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id

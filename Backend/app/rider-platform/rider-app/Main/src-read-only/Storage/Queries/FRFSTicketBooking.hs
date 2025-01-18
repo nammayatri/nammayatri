@@ -16,6 +16,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.FRFSTicketBookingExtra as ReExport
@@ -79,6 +80,13 @@ updateIsBookingCancellableByBookingId ::
 updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateJourneyLegStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateJourneyLegStatus journeyLegStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.journeyLegStatus journeyLegStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateOnInitDone journeyOnInitDone id = do
@@ -159,6 +167,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
+      Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.lineColor lineColor,
       Se.Set Beam.lineColorCode lineColorCode,

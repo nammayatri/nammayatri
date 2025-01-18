@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Taxi where
 
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Extra.Ride as DR
 import qualified Domain.Types.JourneyLeg as DJourenyLeg
@@ -50,8 +51,10 @@ newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
   { searchId :: Id DSR.SearchRequest
   }
 
-newtype TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
-  { searchId :: Id DSR.SearchRequest
+data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
+  { searchId :: Id DSR.SearchRequest,
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    isLastJustCompleted :: Bool
   }
 
 data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData

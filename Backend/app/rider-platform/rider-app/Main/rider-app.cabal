@@ -279,6 +279,7 @@ library
       ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
       Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
       Lib.JourneyLeg.Metro
       Lib.JourneyLeg.Taxi
@@ -289,6 +290,7 @@ library
       Lib.JourneyLeg.Types.Walk
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
+      Lib.JourneyModule.Location
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
       SharedLogic.Cac

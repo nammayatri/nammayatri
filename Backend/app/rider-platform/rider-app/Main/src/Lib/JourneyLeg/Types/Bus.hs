@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Bus where
 
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -38,8 +39,10 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney
   }
 
-newtype BusLegRequestGetStateData = BusLegRequestGetStateData
-  { searchId :: Id FRFSSearch.FRFSSearch
+data BusLegRequestGetStateData = BusLegRequestGetStateData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    isLastJustCompleted :: Bool
   }
 
 data BusLegRequestGetFareData = BusLegRequestGetFareData

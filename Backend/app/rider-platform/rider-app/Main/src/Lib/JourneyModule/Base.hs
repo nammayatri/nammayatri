@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Base where
 
+import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified API.Types.UI.MultimodalConfirm as MultimodalConfirm
 import Data.List (sortBy)
 import Data.Ord (comparing)
@@ -17,11 +18,13 @@ import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyLeg.Metro ()
 import Lib.JourneyLeg.Taxi ()
+import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Bus
 import Lib.JourneyLeg.Types.Metro
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
+import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import SharedLogic.Search
@@ -94,7 +97,7 @@ getAllLegsInfo journeyId = do
             DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
             DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
-  return $ sortBy (comparing (.order)) allLegsInfo
+  return $ allLegsInfo
 
 getAllLegsStatus ::
   ( EsqDBFlow m r,
@@ -110,18 +113,37 @@ getAllLegsStatus ::
   m [JL.JourneyLegState]
 getAllLegsStatus journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
-  allLegsState <-
-    allLegsRawData `forM` \leg -> do
+  riderLastPoints <- getLastThreePoints journeyId
+  let sortedAllLegsRawData = sortBy (comparing (.sequenceNumber)) allLegsRawData
+  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (False, []) sortedAllLegsRawData
+  return allLegsState
+  where
+    processLeg ::
+      ( EsqDBFlow m r,
+        Monad m,
+        CacheFlow m r,
+        JL.JourneyLeg TaxiLegRequest m,
+        JL.JourneyLeg BusLegRequest m,
+        JL.JourneyLeg MetroLegRequest m,
+        JL.JourneyLeg WalkLegRequest m,
+        EncFlow m r
+      ) =>
+      [APITypes.RiderLocationReq] ->
+      (Bool, [JL.JourneyLegState]) ->
+      DJourneyLeg.JourneyLeg ->
+      m (Bool, [JL.JourneyLegState])
+    processLeg riderLastPoints (isLastJustCompleted, legsState) leg = do
       case leg.legSearchId of
         Just legSearchIdText -> do
           let legSearchId = Id legSearchIdText
-          case leg.mode of
-            DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId}
-            DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId}
-            DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId}
-            DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId}
+          legState <-
+            case leg.mode of
+              DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
+              DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId, riderLastPoints, isLastJustCompleted}
+              DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
+              DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
+          return (legState.statusChanged && legState.status == JL.Completed, legsState <> [legState])
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
-  return $ sortBy (comparing (.legOrder)) allLegsState
 
 startJourney ::
   ( JL.ConfirmFlow m r c,
@@ -283,7 +305,6 @@ getCurrentLeg ::
   m (Maybe JL.LegInfo)
 getCurrentLeg journeyId = do
   journeyLegs <- getAllLegsInfo journeyId
-  --let completedStatus = [] -- TODO: to be passed
   let currentLeg = find (\leg -> leg.status `notElem` JL.completedStatus) journeyLegs
   return currentLeg
 

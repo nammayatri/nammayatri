@@ -14,6 +14,7 @@ import qualified Kernel.External.Payment.Juspay.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.Types
 import Servant
 import Tools.Auth
@@ -48,7 +49,11 @@ data JourneyLegsReq = JourneyLegsReq {destinationAddress :: Domain.Types.Locatio
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegStatus = LegStatus {legOrder :: Kernel.Prelude.Int, status :: Lib.JourneyModule.Types.JourneyLegStatus}
+newtype JourneyStatus = JourneyStatus {legs :: [LegStatus]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LegStatus = LegStatus {legOrder :: Kernel.Prelude.Int, status :: Lib.JourneyLeg.Types.JourneyLegStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

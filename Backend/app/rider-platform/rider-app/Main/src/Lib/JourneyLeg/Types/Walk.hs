@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Walk where
 
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.JourneyLeg as DJourenyLeg
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
@@ -14,8 +15,10 @@ data WalkLegRequestSearchData = WalkLegRequestSearchData
     destination :: SearchReqLocation
   }
 
-newtype WalkLegRequestGetStateData = WalkLegRequestGetStateData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
+data WalkLegRequestGetStateData = WalkLegRequestGetStateData
+  { walkLegId :: Id DWalkLeg.WalkLegMultimodal,
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    isLastJustCompleted :: Bool
   }
 
 newtype WalkLegRequestGetInfoData = WalkLegRequestGetInfoData

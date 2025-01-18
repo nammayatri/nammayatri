@@ -21,6 +21,7 @@ data FRFSSearch = FRFSSearch
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

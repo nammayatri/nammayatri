@@ -50,6 +50,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.JourneyLeg.Types as JLT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -368,6 +369,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             journeyLegInfo = journeySearchData,
             lineColor = mbColor,
             lineColorCode = mbColorCode,
+            journeyLegStatus = Just JLT.InPlan,
             frequency = mbFrequency,
             ..
           }
@@ -496,6 +498,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 frequency = mbSearch >>= (.frequency),
                 lineColor = mbSearch >>= (.lineColor),
                 lineColorCode = mbSearch >>= (.lineColorCode),
+                journeyLegStatus = mbSearch >>= (.journeyLegStatus),
                 startTime = Just now, -- TODO
                 ..
               }

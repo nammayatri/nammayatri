@@ -107,7 +107,7 @@ type API =
       :> "status"
       :> Get
            '[JSON]
-           [API.Types.UI.MultimodalConfirm.LegStatus]
+           API.Types.UI.MultimodalConfirm.JourneyStatus
       :<|> TokenAuth
       :> "multimodal"
       :> "journey"
@@ -130,7 +130,7 @@ type API =
            API.Types.UI.MultimodalConfirm.RiderLocationReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           API.Types.UI.MultimodalConfirm.JourneyStatus
   )
 
 handler :: Environment.FlowServer API
@@ -208,7 +208,7 @@ getMultimodalJourneyStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Environment.FlowHandler [API.Types.UI.MultimodalConfirm.LegStatus]
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatus
   )
 getMultimodalJourneyStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalJourneyStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -227,6 +227,6 @@ postMultimodalRiderLocation ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     API.Types.UI.MultimodalConfirm.RiderLocationReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatus
   )
 postMultimodalRiderLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
