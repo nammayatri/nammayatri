@@ -61,6 +61,7 @@ FRFSSearch:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -69,6 +70,7 @@ FRFSSearch:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
@@ -265,6 +267,7 @@ FRFSTicketBooking:
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
     journeyLegStatus: Maybe JourneyLegStatus
+    isDeleted : Maybe Bool
 
   default:
     customerCancelled: "false"

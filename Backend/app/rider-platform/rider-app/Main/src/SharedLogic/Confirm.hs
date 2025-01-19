@@ -328,6 +328,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           hasStops = searchRequest.hasStops,
           isReferredRide = searchRequest.driverIdentifier $> True,
           journeyLegOrder = searchRequest.journeyLegInfo <&> (.journeyLegOrder),
+          isDeleted = Just False,
           ..
         },
       bookingParties

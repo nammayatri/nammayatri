@@ -52,7 +52,9 @@ types:
 
   SwitchLegReq:
     newMode: MultimodalTravelMode
-    currLocation: LatLong
+    legOrder : Int
+    originAddress: LocationAddress
+    destinationAddress: LocationAddress
 
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
@@ -91,9 +93,9 @@ apis:
         type: JourneyBookingPaymentStatus
 
   - POST:
-      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
+      endpoint: /multimodal/{journeyId}/switch                          # combine with other legs if they match
       params:
-        legId: Text
+        journeyId: Id Journey
       request:
         type: SwitchLegReq
       response:

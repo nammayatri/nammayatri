@@ -160,6 +160,7 @@ WalkLegMultimodal:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
@@ -178,6 +179,7 @@ WalkLegMultimodal:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -244,6 +246,11 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [legSearchId]
       where: id
+    updateMode:
+      kvFunction: updateOneWithKV
+      params: [mode]
+      where: id
+
 
   fromTType:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E

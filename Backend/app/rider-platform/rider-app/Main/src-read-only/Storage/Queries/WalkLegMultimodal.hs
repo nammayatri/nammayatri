@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
       Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
+      Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),
       Se.Set Beam.journeyId (Kernel.Prelude.fmap (.journeyId) journeyLegInfo),
       Se.Set Beam.journeyLegOrder (Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo),
       Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
