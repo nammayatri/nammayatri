@@ -4,11 +4,13 @@ on:
   push:
     branches: 
       - "main"
+      - "backend/ci/use-github-provided-free-arm-linux-runners-for-ci"
       - "prodHotPush-Common"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
+      - "backend/ci/use-github-provided-free-arm-linux-runners-for-ci"
       - "prodHotPush-Common"
   workflow_dispatch:
 
@@ -35,7 +37,6 @@ jobs:
       - name: Check global conditions
         id: evaluate
         run: |
-          # Check if workflow should proceed (non-matrix conditions)
           if [[ "${{ github.event.pull_request.merged }}" == "true" || 
                 "${{ github.event_name }}" != "pull_request" || 
                 "${{ github.event.action }}" != "closed" ]]; then
@@ -48,12 +49,11 @@ jobs:
         id: check-labels
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            sleep 5 # Small delay to ensure labels are applied
+            sleep 5
             response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels")
             has_backend=$(echo "$response" | jq 'map(select(.name == "backend")) | length > 0')
           else
-            # For direct pushes to main/prodHotPush-Common, assume backend changes
             has_backend=true
           fi
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
@@ -62,8 +62,7 @@ jobs:
       - name: Check docker push conditions
         id: check-docker-push
         run: |
-          # Moving the docker push conditions here from the build job
-          if [[ "${{ github.ref }}" == "refs/heads/main" || 
+          if [[ "${{ github.ref }}" == "refs/heads/backend/ci/use-github-provided-free-arm-linux-runners-for-ci" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
@@ -90,8 +89,7 @@ jobs:
       - name: Check matrix conditions
         id: check-conditions
         run: |
-          # Should build check (skip aarch64-linux on non-main)
-          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" != "refs/heads/backend/ci/use-github-provided-free-arm-linux-runners-for-ci" ]]; then
             echo "should_build=false" >> $GITHUB_OUTPUT
           else
             echo "should_build=true" >> $GITHUB_OUTPUT
@@ -101,7 +99,6 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
-      # Persist Nix's eval & git cache, so CI is faster when there's nothing new to compile
       - uses: actions/cache@v4
         with:
           path: ~/.cache/nix
@@ -114,25 +111,23 @@ jobs:
 
       - name: Build Docker image
         id: docker
-        if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && contains(matrix.system, 'linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         run: |
-          nix build .#dockerImage -o docker-image.tgz
+          echo "nix build .#packages.${{ matrix.system }}.dockerImage -o docker-image-${{ matrix.system }}.tgz"
+          nix build .#packages.${{ matrix.system }}.dockerImage -o docker-image-${{ matrix.system }}.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
       
       - name: Upload Docker image
-        if: steps.check-conditions.outputs.should_build == 'true' && matrix.system == 'x86_64-linux' && needs.check-conditions.outputs.should-push-docker == 'true'
+        if: steps.check-conditions.outputs.should_build == 'true' && contains(matrix.system, 'linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image
-          path: docker-image.tgz
-  # The previous job would have already built for macOS but we must do it again
-  # from NixOS host (via remote builder protocol) so as to populate its local
-  # Nix store, and thus provide macOS binaries as part of our Nix cache.
+          name: docker-image-${{ matrix.system }}
+          path: docker-image-${{ matrix.system }}.tgz
 
   macos-build-for-cache:
     runs-on: ${{ matrix.host }}
     needs: [build, check-conditions]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/backend/ci/use-github-provided-free-arm-linux-runners-for-ci'
     strategy:
       matrix:
         system: [aarch64-darwin]
@@ -146,19 +141,49 @@ jobs:
 
   push-docker:
     needs: [build, check-conditions]
-    runs-on: ubuntu-latest
     if: needs.check-conditions.outputs.should-push-docker == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            system: x86_64-linux
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+            system: aarch64-linux
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
-          name: docker-image
+          name: docker-image-${{ matrix.system }}
+          path: .
 
-      - name: Push Docker image
+      - name: Push Docker image for ${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker load < docker-image.tgz
-          docker push ${{ needs.build.outputs.docker-image-name }}
+          docker load < docker-image-${{ matrix.system }}.tgz
+          IMAGE_NAME="${{ needs.build.outputs.docker-image-name }}"
+          docker tag $IMAGE_NAME $IMAGE_NAME-${{ matrix.arch }}
+          docker push $IMAGE_NAME-${{ matrix.arch }}
+          docker logout ghcr.io
+
+  create-manifest:
+    needs: [push-docker, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create and push manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          IMAGE_NAME="${{ needs.build.outputs.docker-image-name }}"
+          
+          docker manifest create $IMAGE_NAME \
+            $IMAGE_NAME-amd64 \
+            $IMAGE_NAME-arm64
+          
+          docker manifest push $IMAGE_NAME
           docker logout ghcr.io
