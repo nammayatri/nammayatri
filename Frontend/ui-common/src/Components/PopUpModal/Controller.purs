@@ -118,6 +118,7 @@ type WhereIsMyBusConfig = {
   routeNumberLabel :: String,
   busType :: PrimaryEditTextController.Config,
   selectRouteButton :: RouteInfo,
+  isRouteSelected :: Boolean,
   availableRouteList :: Array RouteInfo
 }
 
@@ -774,6 +775,7 @@ config = {
         sourceText : "",
         destination : ""
       },
+    isRouteSelected : false,
     availableRouteList : []
   }
 }

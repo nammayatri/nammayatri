@@ -2472,6 +2472,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
     activeBusRidePatch (API.TripTransactionDetails tripDetails) = do
         void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
         void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
+        changeDriverStatus Online
         if tripDetails.status == API.TRIP_ASSIGNED then do
           updateStage $ HomeScreenStage TripAssigned
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
@@ -2575,7 +2576,7 @@ homeScreenFlow = do
   setValueToLocalStore LOGS_TRACKING "false"
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
     void $ pure $ cleverTapSetLocation unit
-    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
+    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer, TripAssigned, RideTracking])
       then do  
         currentRideFlow Nothing Nothing Nothing Nothing
       else do 
@@ -2624,6 +2625,13 @@ homeScreenFlow = do
         then logDriverStatus linkedVehicle.category status 
         else pure unit
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoRes.autoPayStatus == Nothing }})
+      let showEducationScreenForTracking = (HU.specialVariantsForTracking FunctionCall) && state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" && status == Online
+      when showEducationScreenForTracking $ do
+        modifyScreenState $ EducationScreenStateType (\educationScreen -> educationScreen { videoUrl = state.data.config.whereIsMyBusEducationVideo})
+        educationScreenFlow (\_ -> do
+          void $ pure $ setValueToLocalStore BUS_EDUCATION_SCREEN_VISTED "true"
+          pure unit
+        )
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
       let language = ( case getLanguageLocale languageKey of
@@ -3349,13 +3357,14 @@ homeScreenFlow = do
 scanBusQrCode :: HomeScreenState -> FlowBT String Unit
 scanBusQrCode state = do
   qrCodeScannerScreenFlow (\qrData -> do
+      void $ lift $ lift $ toggleLoader true
       let decodedBase64String = EHC.atobImpl qrData
           stringJson = if DS.length decodedBase64String > 2 then drop 1 (take (DS.length decodedBase64String - 2) decodedBase64String) else ""
       case runExcept $ decodeJSON $ stringJson of
         Right (response :: ST.BusQrCodeData) -> do
           void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response.vehicleNumber
           availableRoutes <- Remote.getAvailableRoutesBT response.vehicleNumber
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true }}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
           homeScreenFlow
         Left err -> pure unit
     )
@@ -4259,6 +4268,7 @@ logoutFlow = do
   deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
   deleteValueFromLocalStore GULLAK_TOKEN
+  pure $ JB.removeRecentBusTrip
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
@@ -4939,6 +4949,7 @@ updateWarriorSettings newSpecialLocationWarriorValue = do
 educationScreenFlow :: (_ -> FlowBT String Unit) -> FlowBT String Unit
 educationScreenFlow callback = do
   (GlobalState currentState) <- getState
+  void $ lift $ lift $ toggleLoader false
   action <- lift $ lift $ runScreen $ UI.educationScreen currentState.educationScreen
   case action of
     EducationScreenController.GoToHomeScreen -> do
