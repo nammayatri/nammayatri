@@ -2,6 +2,7 @@
 
 module Domain.Action.UI.WMB
   ( postWmbTripRequest,
+    getWmbRequestsStatus,
     postWmbRequestsCancel,
     driverRequestLockKey,
     postWmbAvailableRoutes,
@@ -155,6 +156,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
+        endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
         vehicleNumber = vehicleNumber,
         vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
@@ -172,6 +174,7 @@ getTripTransactionDetails tripTransaction = do
   return $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
+        endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
         vehicleNumber = tripTransaction.vehicleNumber,
         vehicleType = tripTransaction.vehicleServiceTierType,
         source = sourceStopInfo,
@@ -234,8 +237,6 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (InternalError "Fleet Association not found")
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
   when (tripTransaction.status == COMPLETED) $ throwError (InvalidRequest "Trip already ended.")
-  awaitingRequests <- QDR.findByStatus driverId AWAITING_APPROVAL
-  when (any (\ar -> case ar.requestData of EndRide endRideData -> endRideData.tripTransactionId == tripTransactionId; _ -> False) awaitingRequests) $ throwError (InvalidRequest "EndRide request already present.")
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InternalError "Route not found")
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config Info not found")
   let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
@@ -244,6 +245,9 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
     throwError $ InvalidRequest "Ride Not Eligible For Ending"
   if fleetConfig.rideEndApproval
     then do
+      whenJust tripTransaction.endRideApprovalRequestId $ \endRideApprovalRequestId -> do
+        approvalRequest <- QDR.findByPrimaryKey endRideApprovalRequestId
+        when ((approvalRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError (InvalidRequest "EndRide request already present.")
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       driverMobileNumber <- mapM decrypt driver.mobileNumber
       let requestData =
@@ -251,7 +255,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
               EndRideData
                 { lat = req.location.lat,
                   lon = req.location.lon,
-                  tripTransactionId = tripTransaction.id,
+                  tripTransactionId = tripTransaction.id.getId,
                   vehicleRegistrationNumber = tripTransaction.vehicleNumber,
                   driverName = driver.firstName <> " " <> (fromMaybe "" driver.lastName),
                   driverMobileNumber = driverMobileNumber,
@@ -300,6 +304,19 @@ postWmbRequestsCancel (mbPersonId, _, _) approvalRequestId = do
     QDR.updateStatusWithReason REVOKED (Just "Cancelled by driver") approvalRequestId
   pure Success
 
+getWmbRequestsStatus ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    Id ApprovalRequest ->
+    Flow ApprovalRequestResp
+  )
+getWmbRequestsStatus (mbPersonId, _, _) approvalRequestId = do
+  approvalRequest <- QDR.findByPrimaryKey approvalRequestId >>= fromMaybeM (InvalidRequest "Approval Request Id not found")
+  whenJust mbPersonId $ \personId -> unless (approvalRequest.requestorId == personId) $ throwError NotAnExecutor
+  pure $ ApprovalRequestResp {status = approvalRequest.status}
+
 postWmbTripRequest ::
   ( ( Maybe (Id Person),
       Id Merchant,
@@ -312,9 +329,10 @@ postWmbTripRequest ::
 postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId req = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   tripTransaction <- QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (InvalidRequest "Invalid trip transaction id")
-  awaitingRequests <- QDR.findByStatus tripTransaction.driverId AWAITING_APPROVAL
-  when (isJust $ find (\awaitingRequest -> getRequestType awaitingRequest.requestData == getRequestType req.requestData) awaitingRequests) $ throwError (InvalidRequest "Duplicate request")
   fleetDriverAssociation <- FDV.findByDriverId tripTransaction.driverId True >>= fromMaybeM (InvalidRequest "Driver is not part of this fleet")
+  whenJust tripTransaction.endRideApprovalRequestId $ \endRideApprovalRequestId -> do
+    approvalRequest <- QDR.findByPrimaryKey endRideApprovalRequestId
+    when ((approvalRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError (InvalidRequest "EndRide request already present.")
   driverReq <- createDriverRequest tripTransaction.driverId fleetDriverAssociation.fleetOwnerId req.title req.body req.requestData tripTransaction
   let maybeAppId = (HM.lookup FleetAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping -- currently only for END_RIDE
   whenJust transporterConfig.fleetAlertThreshold $ \threshold -> do
@@ -326,10 +344,6 @@ postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId re
           appletId = maybeAppId
         }
   pure $ DriverReqResp {requestId = driverReq.id.getId}
-  where
-    getRequestType = \case
-      EndRide _ -> END_RIDE
-      ChangeRoute _ -> CHANGE_ROUTE
 
 postFleetConsent ::
   ( ( Maybe (Id Person),
@@ -344,6 +358,7 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InternalError "Inactive Fleet Driver Association Not Found")
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
   FDV.upsert fleetDriverAssociation {isActive = True}
+  QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
@@ -371,6 +386,7 @@ createDriverRequest driverId requesteeId title body requestData tripTransaction 
             ..
           }
   QDR.create driverReq
+  QTT.updateEndRideApprovalRequestId (Just id) tripTransaction.id
   TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
   pure driverReq
 

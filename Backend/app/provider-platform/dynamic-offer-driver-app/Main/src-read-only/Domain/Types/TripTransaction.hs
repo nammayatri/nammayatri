@@ -5,6 +5,7 @@ module Domain.Types.TripTransaction where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.ApprovalRequest
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -22,6 +23,7 @@ data TripTransaction = TripTransaction
     deviationCount :: Kernel.Prelude.Int,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
     endStopCode :: Data.Text.Text,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,

@@ -7,6 +7,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+  ApprovalRequest: Domain.Types.ApprovalRequest
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -53,6 +54,7 @@ TripTransaction:
     allowEndingMidRoute: Bool
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
+    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -102,6 +104,10 @@ TripTransaction:
       kvFunction: updateOneWithKV
       params: [status]
       where: id
+    updateEndRideApprovalRequestId:
+      kvFunction: updateOneWithKV
+      params: [endRideApprovalRequestId]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -123,7 +129,7 @@ ApprovalRequest:
     EndRideData:
       lat: Double
       lon: Double
-      tripTransactionId: Id TripTransaction
+      tripTransactionId: Text
       tripCode: Maybe Text
       driverName: Text
       driverMobileNumber: Maybe Text
