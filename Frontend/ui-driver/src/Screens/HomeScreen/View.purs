@@ -95,7 +95,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
-import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _stopName)
+import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _routeInfo, _source, _destination)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -3633,19 +3633,19 @@ recentBusRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Pre
 recentBusRideView push state =
   let tripDetails = state.data.whereIsMyBusData.trip
   in case tripDetails of
-      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> startBusTripView tripDetails true
+      Just (ST.ASSIGNED_TRIP (TripTransactionDetails tripDetails)) -> startBusTripView tripDetails Nothing true
       Just _ -> linearLayout[][]
       Nothing -> case state.data.whereIsMyBusData.lastCompletedTrip of
-        Just (TripTransactionDetails tripDetails) -> startBusTripView tripDetails false
+        Just (TripTransactionDetails tripDetails) -> startBusTripView tripDetails state.props.whereIsMyBusConfig.selectedRoute false
         Nothing -> linearLayout[][]
   where
-    startBusTripView tripDetails isAssigned = 
+    startBusTripView tripDetails mbSelectedRoute isAssigned = 
       let title = if isAssigned then StringsV2.getStringV2 LT2.assigned_rides else StringsV2.getStringV2 LT2.recent_ride
           busNumber = tripDetails.vehicleNumber
           busType = tripDetails.vehicleType
-          routeNumber = tripDetails.routeInfo ^. _routeCode
-          sourceName = tripDetails.source ^. _stopName
-          destinationName = tripDetails.destination ^. _stopName
+          routeNumber = fromMaybe "" $ ((\route -> route ^. _routeInfo ^. _routeCode) <$> mbSelectedRoute)  <|> (Just $ tripDetails.routeInfo ^. _routeCode)
+          sourceName = fromMaybe "" $ ((\route -> route ^. _source ^. _stopName) <$> mbSelectedRoute) <|> (Just $ tripDetails.source ^. _stopName)
+          destinationName = fromMaybe "" $ ((\route -> route ^. _destination ^. _stopName) <$> mbSelectedRoute) <|> (Just $ tripDetails.destination ^. _stopName)
       in linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT

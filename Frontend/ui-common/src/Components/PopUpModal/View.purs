@@ -902,6 +902,8 @@ busType push state = PrimaryEditText.view (push <<< BusType) $ state.whereIsMyBu
 
 selectRoute :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 selectRoute push state =
+    let isRouteSelected = state.whereIsMyBusConfig.isRouteSelected
+    in
     linearLayout
     [ height WRAP_CONTENT,
     width MATCH_PARENT,
@@ -921,12 +923,12 @@ selectRoute push state =
             , destinationName = state.whereIsMyBusConfig.selectRouteButton.destination
             , onClick = SelectRouteButton.Click
             , showChevron = true
-            , routeNumberColor = Color.grey900
+            , routeNumberColor = if isRouteSelected then Color.black900 else Color.grey900
             , useHtmlFormatting = false
-            , showDot = false
-            , showRouteDetails = false
+            , showDot = isRouteSelected
+            , showRouteDetails = isRouteSelected
             , padding = Padding 20 16 20 16
-            , fontSize = FontStyle.SubHeading3
+            , fontSize = FontStyle.Body16
             }
     ]
 
@@ -939,7 +941,7 @@ selectAvailableBusRoutes push state =
     visibility $ boolToVisibility $ state.whereIsMyBusConfig.selectRouteStage 
     ][
         scrollView
-        [ height $ V (screenHeight unit - 600)
+        [ height $ V (screenHeight unit - 400)
         , width MATCH_PARENT
         ]
         [
@@ -964,7 +966,7 @@ routeItem push route index len =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , cornerRadius 8.0
-    , padding $ if index == len - 1 then Padding 0 0 0 32 else Padding 0 0 0 16
+    , margin $ if index == len - 1 then Margin 0 0 0 32 else Margin 0 0 0 16
     , gravity CENTER
     ] [ 
         SelectRouteButton.view (push <<< SelectRoute) $ SelectRouteButton.defaultConfig {

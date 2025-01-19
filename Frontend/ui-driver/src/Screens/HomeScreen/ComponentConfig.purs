@@ -3226,6 +3226,7 @@ chooseBusRouteModalPopup state =
         busType = primaryTextConfig (if vehicleDetails ^. Acc._busType == "BUS_AC" then StringsV2.getStringV2 LT2.ac else StringsV2.getStringV2 LT2.non_ac) (StringsV2.getStringV2 LT2.bus_type),
         routeNumberLabel = StringsV2.getStringV2 LT2.route_number,
         selectRouteButton = selectRouteButtonConfig state.props.whereIsMyBusConfig.selectedRoute,
+        isRouteSelected = isJust state.props.whereIsMyBusConfig.selectedRoute,
         availableRouteList = transformAvailableRouteList (API.AvailableRoutesList availableRoutesList)
     }
     , option1 {
