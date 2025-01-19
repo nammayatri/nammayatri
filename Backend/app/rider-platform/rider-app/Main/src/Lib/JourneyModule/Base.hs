@@ -115,7 +115,7 @@ getAllLegsStatus journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   riderLastPoints <- getLastThreePoints journeyId
   let sortedAllLegsRawData = sortBy (comparing (.sequenceNumber)) allLegsRawData
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (False, []) sortedAllLegsRawData
+  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) sortedAllLegsRawData
   return allLegsState
   where
     processLeg ::
