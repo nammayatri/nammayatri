@@ -61,9 +61,12 @@ findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCatego
         if null pns
           then do
             Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing) >>= \case
-              Just a' -> return a'
+              Just a' -> do
+                whenJust tripCategory $ \tripC -> cacheMerchantPushNotification merchantOperatingCityId messageKey (Just tripC) a'
+                return a'
               Nothing -> do
                 pnsWithOutTripCategory <- Queries.findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing
+                whenJust tripCategory $ \tripC -> cacheMerchantPushNotification merchantOperatingCityId messageKey (Just tripC) pnsWithOutTripCategory
                 cacheMerchantPushNotification merchantOperatingCityId messageKey Nothing pnsWithOutTripCategory
                 return pnsWithOutTripCategory
           else do
