@@ -1868,7 +1868,7 @@ eval (StartBusTrip PrimaryButtonController.OnClick) state =
 
 eval (SelectBusRoute RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 
-eval (ScanQrCode) state = if state.data.config.showBusEducationVideo && getValueToLocalStore BUS_EDUCATION_SCREEN_VISTED /= "true" then exit $ GoToBusEducationScreen state else exit $ GoToScanBusQR state
+eval (ScanQrCode) state = exit $ GoToScanBusQR state
 
 
 eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}

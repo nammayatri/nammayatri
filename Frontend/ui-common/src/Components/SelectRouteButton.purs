@@ -28,6 +28,7 @@ type RouteDisplayConfig = {
   , padding :: Padding
   , useHtmlFormatting :: Boolean
   , fontSize :: Style
+  , routeFontSize :: Style
 }
 
 defaultConfig :: RouteDisplayConfig
@@ -46,6 +47,7 @@ defaultConfig = {
   , padding: Padding 16 16 16 16
   , useHtmlFormatting: false
   , fontSize: FontStyle.Body16
+  , routeFontSize : FontStyle.SubHeading3
 }
 
 view :: forall w. (Action -> Effect Unit) -> RouteDisplayConfig -> PrestoDOM (Effect Unit) w
@@ -78,11 +80,11 @@ routeNumberView config =
         , width WRAP_CONTENT
         , maxLines 2
         , ellipsize true
-        ] <> (FontStyle.getFontStyle config.fontSize LanguageStyle)
+        ] <> (FontStyle.getFontStyle config.routeFontSize LanguageStyle)
     else textView $ [
           text config.routeNumber
         , color config.routeNumberColor
-        ] <> (FontStyle.getFontStyle config.fontSize LanguageStyle)
+        ] <> (FontStyle.getFontStyle config.routeFontSize LanguageStyle)
 
 dotSeparator :: forall w. RouteDisplayConfig -> PrestoDOM (Effect Unit) w
 dotSeparator config = 

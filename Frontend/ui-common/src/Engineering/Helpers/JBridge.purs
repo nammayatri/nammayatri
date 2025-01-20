@@ -1120,6 +1120,9 @@ type RecentBusTrip = {
 
 cacheKeyRecentTrips = "RECENT_BUS_TRIPS"
 
+removeRecentBusTrip :: Unit
+removeRecentBusTrip = removeKeysInSharedPrefs cacheKeyRecentTrips
+
 saveRecentBusTrip :: RecentBusTrip -> Effect Unit
 saveRecentBusTrip newTrip = setEnvInNativeSharedPrefKeysImpl cacheKeyRecentTrips (encodeJSON newTrip)
 
