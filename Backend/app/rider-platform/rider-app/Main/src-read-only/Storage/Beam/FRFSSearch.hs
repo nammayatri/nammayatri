@@ -15,6 +15,7 @@ data FRFSSearchT f = FRFSSearchT
   { frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

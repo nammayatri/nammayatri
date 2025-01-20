@@ -85,6 +85,11 @@ updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsFareChangedByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateIsFareChangedByQuoteId isFareChanged quoteId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.isFareChanged isFareChanged, Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
+
 updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateOnInitDone journeyOnInitDone id = do
   _now <- getCurrentTime
@@ -163,6 +168,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
       Se.Set Beam.isBookingCancellable isBookingCancellable,
+      Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,

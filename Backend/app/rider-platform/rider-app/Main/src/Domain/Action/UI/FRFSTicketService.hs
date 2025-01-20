@@ -369,6 +369,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             lineColor = mbColor,
             lineColorCode = mbColorCode,
             frequency = mbFrequency,
+            isOnSearchReceived = Nothing,
             ..
           }
   QFRFSSearch.create searchReq
@@ -466,6 +467,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
               (HighPrecMoney 0.0)
               selectedDiscounts
       let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
+      let isFareChanged = isJust oldCacheDump
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -497,6 +499,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 lineColor = mbSearch >>= (.lineColor),
                 lineColorCode = mbSearch >>= (.lineColorCode),
                 startTime = Just now, -- TODO
+                isFareChanged = Just isFareChanged,
                 googleWalletJWTUrl = Nothing,
                 ..
               }
@@ -520,6 +523,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
           tickets = [],
           discountedTickets = booking.discountedTickets,
           eventDiscountAmount = booking.eventDiscountAmount,
+          isFareChanged = booking.isFareChanged,
           googleWalletJWTUrl = booking.googleWalletJWTUrl,
           ..
         }
@@ -790,6 +794,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        isFareChanged = Just False,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         ..
       }

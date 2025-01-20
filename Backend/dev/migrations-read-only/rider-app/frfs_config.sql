@@ -43,3 +43,9 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN google_wallet_class_name text  default 'namma_yatri_metro';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_name text ;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_id text ;

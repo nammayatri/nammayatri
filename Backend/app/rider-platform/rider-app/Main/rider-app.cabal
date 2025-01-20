@@ -238,6 +238,7 @@ library
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
+      Domain.Types.Extra.FRFSCachedQuote
       Domain.Types.Extra.IntegratedBPPConfig
       Domain.Types.Extra.InterCityDetails
       Domain.Types.Extra.MerchantMessage
@@ -400,6 +401,7 @@ library
       Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
