@@ -1,0 +1,88 @@
+imports:
+  VehicleCategory: BecknV2.FRFS.Enums
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RawDataType: Domain.Types.Extra.Rollout
+  StageData: Domain.Types.Extra.Rollout
+
+Rollout:
+  tableName: rollout
+
+  fields:
+    id: Id Rollout
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    versionTag: Int
+
+
+
+  queries:
+    findByMerchantOperatingCityAndVehicleType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+Stage:
+  tableName: stage
+
+  types:
+    StageType:
+      enum: "PREPROCESSING,VALIDATION,UPLOAD"
+
+  fields:
+    id: Id Stage
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    name: StageType
+    order: Int
+
+
+  queries:
+    findByMerchantOperatingCityAndVehicleType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+
+Version:
+  tableName: version
+
+  fields:
+    id: Id Version
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    versionTag: Int
+    isReadyToApply: Bool
+
+
+
+  queries:
+    findAllByMerchantOperatingCityAndVehicleTypeAndDataType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType, inputDataType]
+
+VersionStopMapping:
+  tableName: version_stop_mapping
+
+  types:
+    Status:
+      enum: "Inprogress,Completed,Failed"
+
+  fields:
+    id: Id VersionStopMapping
+    versionId: Text
+    stageId: Text
+    status: Status
+    stageData: Maybe StageData # (GTFS GtfsDataType | FARE FareDataType)
+    failureReason: Maybe Text
+
+
+
+  queries:
+    findByVersionIdAndStageId:
+      kvFunction: findOneWithKV
+      where:
+        and: [versionId, stageId]

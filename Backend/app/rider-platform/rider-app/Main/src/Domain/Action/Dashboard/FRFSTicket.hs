@@ -96,7 +96,8 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
                 merchantOperatingCityId = merchantOpCity.id,
                 polyline = req.polyline,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                versionTag = Nothing
               }
       QRoute.create newRoute
       pure Success
@@ -296,7 +297,8 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
                 timeBounds = Kernel.Types.TimeBound.Unbounded,
                 merchantOperatingCityId = merchantOpCity.id,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                versionTag = Nothing
               }
       QStation.create newStation
       pure Success
