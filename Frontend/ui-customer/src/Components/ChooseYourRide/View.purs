@@ -816,6 +816,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
     title = case config.fareProductType of
               RENTAL -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Rental" <> " " <> name )
               INTER_CITY -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Intercity" <> " " <> name )
+              AMBULANCE -> getString $ BOOK ( fromMaybe "" selectedItem.serviceTierName )
               _ -> getString $ BOOK_FOR_ priceRange 
     
 

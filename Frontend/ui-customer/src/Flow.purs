@@ -33,7 +33,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, foldl, (:))
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, foldl, (:),all,notElem)
 import Data.Array as Arr
 import Helpers.Utils as HU
 import Data.Either (Either(..), either)
@@ -1721,7 +1721,7 @@ homeScreenFlow = do
                     }
               )
       rideSearchFlow "NORMAL_FLOW"
-    SEARCH_LOCATION input state -> do
+    SEARCH_LOCATION input state cacheInput -> do
       let
         config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
         cityConfig =
@@ -1736,11 +1736,11 @@ homeScreenFlow = do
       case DHM.lookup (DS.toLower input) state.props.rideSearchProps.cachedPredictions of
         Just locationList' -> do
           logInfo "auto_complete_cached_predictions" input
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { locationList = locationList' }, props { searchLocationModelProps { isAutoComplete = true, showLoader = false } } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { locationList = locationList' }, props { searchLocationModelProps { isAutoComplete = true, showLoader = false } , firstTimeAmbulanceSearch = false } })
         Nothing -> do
           logInfo "auto_complete_search_predictions" input
-          (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
-          let
+          (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input state.props.sourceLat state.props.sourceLong (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" (if state.props.firstTimeAmbulanceSearch then state.data.config.ambulanceConfig else cityConfig.geoCodeConfig) state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId  (if state.props.firstTimeAmbulanceSearch then state.props.types_ else Nothing))
+          let 
             sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
             predictionList = getLocationList sortedByDistanceList
@@ -1786,8 +1786,9 @@ homeScreenFlow = do
                         }
                 )
                 (filteredRecentsList <> filteredPredictionList)
-
-            cachedPredictions = DHM.insert (DS.toLower input) filteredLocationList state.props.rideSearchProps.cachedPredictions
+            cachedPredictions = if cacheInput
+              then state.props.rideSearchProps.cachedPredictions
+              else DHM.insert (DS.toLower input) filteredLocationList state.props.rideSearchProps.cachedPredictions
           modifyScreenState
             $ HomeScreenStateType
                 ( \homeScreen ->
@@ -1799,6 +1800,7 @@ homeScreenFlow = do
                           , showLoader = false
                           }
                         , rideSearchProps { cachedPredictions = cachedPredictions }
+                        , firstTimeAmbulanceSearch = false
                         }
                       }
                 )
@@ -3972,7 +3974,7 @@ addNewAddressScreenFlow input = do
   case flow of
     SEARCH_ADDRESS input state -> do
       (GlobalState newState) <- getState
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input newState.homeScreen.props.sourceLat newState.homeScreen.props.sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)) "" defaultCityConfig.geoCodeConfig Nothing "")
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input newState.homeScreen.props.sourceLat newState.homeScreen.props.sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)) "" defaultCityConfig.geoCodeConfig Nothing "" Nothing)
       let
         sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
@@ -5837,7 +5839,7 @@ searchLocationFlow = do
       cityConfig = case state.props.focussedTextField of
         Just SearchLocPickup -> config { geoCodeConfig { strictBounds = false } }
         _ -> config
-    (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig Nothing "")
+    (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig Nothing "" Nothing)
     let
       sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
@@ -7040,7 +7042,7 @@ fcmHandler notification state notificationBody= do
               currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
 
               currentMap = getSuggestionsMapFromLocal FunctionCall
-            if (state.data.fareProductType /= FPT.RENTAL && state.data.fareProductType /= FPT.DELIVERY && currTrip.destination /= "" && state.data.fareProductType /= FPT.INTER_CITY) then do
+            if (notElem state.data.fareProductType [FPT.RENTAL, FPT.AMBULANCE , FPT.DELIVERY , FPT.INTER_CITY] && currTrip.destination /= "") then do
               let
                 updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig false
               void $ pure $ setSuggestionsMap updatedMap
