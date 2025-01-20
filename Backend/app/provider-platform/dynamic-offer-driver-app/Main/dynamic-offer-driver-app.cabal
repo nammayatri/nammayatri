@@ -801,6 +801,7 @@ library
       Domain.Types.ModuleCompletionInformation
       Domain.Types.Notification
       Domain.Types.Overlay
+      Domain.Types.ParcelDetails
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PlaceNameCache
@@ -929,6 +930,7 @@ library
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.Notification
       Storage.Beam.Overlay
+      Storage.Beam.ParcelDetails
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
@@ -1126,6 +1128,7 @@ library
       Storage.Queries.OrphanInstances.VendorSplitDetails
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
+      Storage.Queries.ParcelDetails
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache

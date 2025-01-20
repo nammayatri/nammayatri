@@ -16,6 +16,7 @@ imports:
   Estimate: Domain.Types.Estimate
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   TripParty: Domain.Types.Trip
+  ParcelType: Domain.Types.ParcelType
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -81,6 +82,8 @@ Booking:
     isDashboardRequest: Bool
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
     initiatedAs: Maybe TripParty
     isReferredRide: Maybe Bool
 

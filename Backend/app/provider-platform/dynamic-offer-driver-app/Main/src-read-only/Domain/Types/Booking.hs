@@ -12,6 +12,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.RiderDetails
 import qualified Domain.Types.Trip
 import Kernel.Prelude
@@ -52,6 +53,8 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
