@@ -500,6 +500,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 lineColorCode = mbSearch >>= (.lineColorCode),
                 journeyLegStatus = mbSearch >>= (.journeyLegStatus),
                 startTime = Just now, -- TODO
+                isDeleted = Just False,
                 ..
               }
       QFRFSTicketBooking.create booking

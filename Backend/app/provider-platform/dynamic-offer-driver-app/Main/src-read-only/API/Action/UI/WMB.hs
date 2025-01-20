@@ -119,6 +119,16 @@ type API =
       :> Capture
            "approvalRequestId"
            (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest)
+      :> "status"
+      :> Get
+           '[JSON]
+           API.Types.UI.WMB.ApprovalRequestResp
+      :<|> TokenAuth
+      :> "wmb"
+      :> "requests"
+      :> Capture
+           "approvalRequestId"
+           (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest)
       :> "cancel"
       :> Post
            '[JSON]
@@ -138,7 +148,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+handler = postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
 
 postWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -223,6 +233,16 @@ postWmbTripRequest ::
     Environment.FlowHandler API.Types.UI.WMB.DriverReqResp
   )
 postWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getWmbRequestsStatus ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest ->
+    Environment.FlowHandler API.Types.UI.WMB.ApprovalRequestResp
+  )
+getWmbRequestsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbRequestsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postWmbRequestsCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

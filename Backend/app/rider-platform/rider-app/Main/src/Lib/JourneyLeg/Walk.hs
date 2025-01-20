@@ -26,7 +26,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               agency = journeyLegData.agency <&> (.name),
               skipBooking = False,
               convenienceCost = 0,
-              pricingId = Nothing
+              pricingId = Nothing,
+              isDeleted = Just False
             }
     let walkLeg =
           DWalkLeg.WalkLegMultimodal
@@ -54,7 +55,8 @@ instance JT.JourneyLeg WalkLegRequest m where
   update (WalkLegRequestUpdate _) = return ()
   update _ = throwError (InternalError "Not supported")
 
-  cancel (WalkLegRequestCancel _) = return ()
+  cancel (WalkLegRequestCancel legData) = do
+    QWalkLeg.updateIsCancelled legData.walkLegId (Just True)
   cancel _ = throwError (InternalError "Not supported")
 
   getState (WalkLegRequestGetState req) = do

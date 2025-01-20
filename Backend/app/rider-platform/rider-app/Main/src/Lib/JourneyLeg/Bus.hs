@@ -5,6 +5,7 @@ module Lib.JourneyLeg.Bus where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -12,6 +13,8 @@ import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 
 instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = do
@@ -21,6 +24,7 @@ instance JT.JourneyLeg BusLegRequest m where
               journeyLegOrder = journeyLeg.sequenceNumber,
               agency = journeyLeg.agency <&> (.name),
               skipBooking = False,
+              isDeleted = Just False,
               convenienceCost = 0,
               pricingId = Nothing
             }
@@ -53,7 +57,13 @@ instance JT.JourneyLeg BusLegRequest m where
     throwError (InternalError "Not supported")
   update _ = throwError (InternalError "Not supported")
 
-  cancel (BusLegRequestCancel _) = throwError (InternalError "Not supported")
+  cancel (BusLegRequestCancel legData) = do
+    mbBusBooking <- B.runInReplica $ QTBooking.findBySearchId legData.searchId
+    case mbBusBooking of
+      Just busBooking -> do
+        QTBooking.updateIsCancelled busBooking.id (Just True)
+      Nothing -> do
+        QFRFSSearch.updateIsCancelled legData.searchId (Just True)
   cancel _ = throwError (InternalError "Not supported")
 
   getState (BusLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted

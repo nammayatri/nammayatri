@@ -223,6 +223,7 @@ Booking:
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
     journeyLegOrder: Maybe Int
+    isDeleted : Maybe Bool
 
   beamFields:
     estimatedDistance:

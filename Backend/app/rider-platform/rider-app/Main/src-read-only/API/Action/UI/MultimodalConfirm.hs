@@ -62,8 +62,8 @@ type API =
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
-           "legId"
-           Kernel.Prelude.Text
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "switch"
       :> ReqBody
            '[JSON]
@@ -177,7 +177,7 @@ postMultimodalSwitch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Text ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
