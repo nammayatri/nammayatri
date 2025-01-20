@@ -18,6 +18,10 @@ data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ApprovalRequestResp = ApprovalRequestResp {status :: Domain.Types.ApprovalRequest.RequestStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AvailableRoute = AvailableRoute {destination :: StopInfo, roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -66,6 +70,7 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
 
 data TripTransactionDetails = TripTransactionDetails
   { destination :: StopInfo,
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
     routeInfo :: RouteInfo,
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,

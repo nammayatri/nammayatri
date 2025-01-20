@@ -7,6 +7,7 @@ import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
@@ -15,6 +16,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
+import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
@@ -52,13 +54,31 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId isActive = do
       when (fleetDriverAssociation.isActive /= isActive) $ do
         upsert fleetDriverAssociation {isActive}
 
-findAllActiveDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
-findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
-  findAllWithOptionsKV
-    [Se.And [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq True]]
-    (Se.Desc BeamFDVA.updatedAt)
-    (Just limit)
-    (Just offset)
+findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> Maybe DbHash -> m [FleetDriverAssociation]
+findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash = do
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (toInteger limit) $
+            B.offset_ (toInteger offset) $
+              B.orderBy_ (\(fleetDriverAssociation', _) -> B.desc_ fleetDriverAssociation'.updatedAt) $
+                B.filter_'
+                  ( \(fleetDriverAssociation, driver) ->
+                      fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
+                        B.&&?. fleetDriverAssociation.isActive B.==?. B.val_ True
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                  )
+                  do
+                    fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+                    driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
+                    pure (fleetDriverAssociation, driver)
+  case res of
+    Right res' -> do
+      let fleetDriverList = fst <$> res'
+      catMaybes <$> mapM fromTType' fleetDriverList
+    Left _ -> pure []
 
 findAllDriverByFleetOwnerIdAndMbIsActive ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

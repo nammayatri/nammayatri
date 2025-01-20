@@ -156,6 +156,7 @@ apis:
       query:
         - mblimit: Int
         - mboffset: Int
+        - mbMobileNumberString: Text
       response:
         type: FleetListDriverRes
       migrate:
@@ -169,6 +170,7 @@ apis:
             query:
               - limit: Int
               - offset: Int
+              - mobileNumberString: Text
             response:
               type: FleetListDriverRes
 
@@ -590,6 +592,7 @@ apis:
       query:
         - mbFrom: UTCTime
         - mbTo: UTCTime
+        - mbVehicleNumber: Text
       response:
         type: TripTransactionResp
       migrate:
@@ -607,6 +610,7 @@ apis:
             query:
               - mbFrom: UTCTime
               - mbTo: UTCTime
+              - mbVehicleNumber: Text
             response:
               type: TripTransactionResp
 

@@ -1,13 +1,11 @@
 WITH MerchantMessages AS (
   SELECT T1.merchant_id, 'FLEET_CONSENT_DEEPLINK_MESSAGE', CAST ('{"var1" : "https://nammayatri.in/p/?vp=fleet_consent"}' AS json),
-'Dear user,
-Welcome to {#fleetOwnerName#}!
-Please confirm your onboarding by clicking this link: {#var1#}
-- Namma Yatri' -- change merchant name as per requirement
-  , T1.id
+'Dear User,
+Welcome to {#fleetOwnerName#}! Please confirm your onboarding by clicking this link: {#var1#} -Namma Yatri' -- change merchant name as per requirement
+  , 'YTRISI', T1.id
   FROM atlas_driver_offer_bpp.merchant_operating_city AS T1
 )
-INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, json_data, message, merchant_operating_city_id)
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, json_data, message, sender_header, merchant_operating_city_id)
   (SELECT * FROM MerchantMessages);
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
