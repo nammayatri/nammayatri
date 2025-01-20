@@ -25,3 +25,9 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN updated_at timest
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_number text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vehicle_service_tier_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_ride_approval_request_id character varying(36) ;

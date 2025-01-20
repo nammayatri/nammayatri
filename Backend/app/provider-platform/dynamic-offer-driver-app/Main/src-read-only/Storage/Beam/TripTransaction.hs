@@ -20,6 +20,7 @@ data TripTransactionT f = TripTransactionT
     driverId :: B.C f Data.Text.Text,
     endLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    endRideApprovalRequestId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     endStopCode :: B.C f Data.Text.Text,
     fleetOwnerId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,

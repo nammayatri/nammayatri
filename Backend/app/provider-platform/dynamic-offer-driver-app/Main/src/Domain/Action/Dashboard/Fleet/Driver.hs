@@ -204,7 +204,7 @@ getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo 
         }
 
 castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
-castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = cast tripTransactionId, ..}
+castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = Id tripTransactionId, ..}
 castCommonReqData (DTR.ChangeRoute EmptyDynamicParam) = Common.ChangeRoute EmptyDynamicParam
 
 castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
@@ -244,7 +244,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
         case driverRequest.requestData of
           DTR.EndRide DTR.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config not found")
-            tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (InternalError "no trip transaction found")
+            tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (InternalError "no trip transaction found")
             void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon)
           _ -> pure ()
       _ -> pure ()
@@ -338,11 +338,13 @@ getDriverFleetGetAllDriver ::
   Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
   Flow Common.FleetListDriverRes
-getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
+getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  driverList <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset
+  mbMobileNumberHash <- mapM getDbHash mbMobileNumber
+  driverList <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberHash
   let driverIdList :: [Id DP.Person] = map DTFDA.driverId driverList
   driversInfo <- QPerson.getDriversByIdIn driverIdList
   fleetDriversInfos <- mapM convertToDriverAPIEntity driversInfo
@@ -764,9 +766,12 @@ getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive m
     Just driverPhNo -> do
       mobileNumberHash <- getDbHash driverPhNo
       let countryCode = fromMaybe "+91" mbCountryCode
-      driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-      fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
-      pure $ maybeToList fleetDriverAssociation
+      mbDriver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId DP.DRIVER
+      case mbDriver of
+        Just driver -> do
+          fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
+          pure $ maybeToList fleetDriverAssociation
+        Nothing -> pure $ []
     Nothing -> do
       let limit = min 10 $ fromMaybe 5 mbLimit
           offset = fromMaybe 0 mbOffset
@@ -1321,6 +1326,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
+            endRideApprovalRequestId = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -1333,13 +1339,14 @@ getDriverFleetTripTransactions ::
   Id Common.Driver ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Text ->
   Int ->
   Int ->
   Flow Common.TripTransactionResp
-getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo limit offset = do
+getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbVehicleNumber limit offset = do
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Just limit) (Just offset) (cast driverId) mbFrom mbTo
+  tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Just limit) (Just offset) (cast driverId) mbFrom mbTo mbVehicleNumber
   let trips = map buildTripTransactionDetails tripTransactions
       summary = Common.Summary {totalCount = 10000, count = length trips}
   pure Common.TripTransactionResp {trips = trips, totalTrips = length tripTransactions, summary = summary}

@@ -13,6 +13,7 @@ imports:
   HighPrecMeters: Kernel.Types.Distance
   FleetConfig: Domain.Types.FleetConfig
   RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+  RequestStatus: Domain.Types.ApprovalRequest
 
 module: WMB
 
@@ -48,6 +49,7 @@ types:
 
   TripTransactionDetails:
     tripTransactionId: Id TripTransaction
+    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
     vehicleNumber: Text
     vehicleType: ServiceTierType
     source: StopInfo
@@ -79,9 +81,11 @@ types:
   DriverReqResp:
     requestId: Text
 
+  ApprovalRequestResp:
+    status: RequestStatus
+
   AvailableRouteReq:
     vehicleNumber: Text
-
 
 apis:
   - POST: # Fetch available routes for a driver of private fleet.
@@ -160,6 +164,14 @@ apis:
         type: RequestDetails
       response:
         type: DriverReqResp
+
+  - GET: # Get approval request status by approval request ID.
+      endpoint: /wmb/requests/{approvalRequestId}/status
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        approvalRequestId: Id ApprovalRequest
+      response:
+        type: ApprovalRequestResp
 
   - POST: # Cancel a driver request by approval request ID.
       endpoint: /wmb/requests/{approvalRequestId}/cancel

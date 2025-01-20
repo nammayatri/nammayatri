@@ -143,6 +143,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
           updatedAt = now,
+          endRideApprovalRequestId = Nothing,
           tripStartTime = Just now,
           tripEndTime = Nothing,
           ..
@@ -195,7 +196,6 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId veh
     Just vehicle -> when (vehicle.driverId /= driverId) $ throwError (InvalidRequest "Vehicle is linked to some other driver, first unlink then try")
     Nothing -> pure ()
   tryLinkinRC vehicleRC
-  QDI.updateEnabledVerifiedState driverId True (Just True)
   return vehicleRC
   where
     tryLinkinRC vehicleRC = do
@@ -217,14 +217,13 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId veh
       DAQuery.create driverRCAssoc
 
 unlinkVehicleToDriver :: FleetConfig -> Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
-unlinkVehicleToDriver fleetConfig driverId merchantId merchantOperatingCityId vehicleNumber = do
+unlinkVehicleToDriver _fleetConfig driverId merchantId merchantOperatingCityId vehicleNumber = do
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = vehicleNumber,
             isActivate = False
           }
   void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
-  when (not fleetConfig.allowStartRideFromQR) $ QDI.updateEnabledVerifiedState driverId False (Just False)
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do
