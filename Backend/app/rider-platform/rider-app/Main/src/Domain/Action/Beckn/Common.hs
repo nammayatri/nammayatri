@@ -1060,7 +1060,7 @@ customerReferralPayout ::
 customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategoryAndIsPayoutEnabled merchantOperatingCityId True vehicleCategory
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory
   case mbPayoutConfig of
     Just payoutConfig -> do
       let isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt

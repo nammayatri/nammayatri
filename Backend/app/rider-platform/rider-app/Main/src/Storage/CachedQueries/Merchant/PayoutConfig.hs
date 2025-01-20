@@ -27,20 +27,20 @@ cachePayoutConfigForCityByEnabled id isPayoutEnabled payoutEntity cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> PayoutEntity -> Text
 makeMerchantOpCityIdKey id isPayoutEnabled payoutEntity = "CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> "-isPayoutEnabled:" <> show isPayoutEnabled <> "-payoutEntity:" <> show payoutEntity
 
-findByCityIdAndVehicleCategoryAndIsPayoutEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> VehicleCategory -> m (Maybe PayoutConfig)
-findByCityIdAndVehicleCategoryAndIsPayoutEnabled id isPayoutEnabled vehicleCategory =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory) >>= \case
+findByCityIdAndVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m (Maybe PayoutConfig)
+findByCityIdAndVehicleCategory id vehicleCategory =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdAndCategoryKey id vehicleCategory) >>= \case
     Just a -> return a
-    Nothing -> cachePayoutConfigForCityAndVehicleCategory id isPayoutEnabled vehicleCategory /=<< Queries.findByCityIdAndVehicleCategoryAndIsPayoutEnabled id (Just vehicleCategory) isPayoutEnabled
+    Nothing -> cachePayoutConfigForCityAndVehicleCategory id vehicleCategory /=<< Queries.findByCityIdAndVehicleCategory id (Just vehicleCategory)
 
-cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> Bool -> VehicleCategory -> Maybe PayoutConfig -> m ()
-cachePayoutConfigForCityAndVehicleCategory id isPayoutEnabled vehicleCategory cfg = do
+cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> VehicleCategory -> Maybe PayoutConfig -> m ()
+cachePayoutConfigForCityAndVehicleCategory id vehicleCategory cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory
+  let idKey = makeMerchantOpCityIdAndCategoryKey id vehicleCategory
   Hedis.setExp idKey cfg expTime
 
-makeMerchantOpCityIdAndCategoryKey :: Id MerchantOperatingCity -> Bool -> VehicleCategory -> Text
-makeMerchantOpCityIdAndCategoryKey id isPayoutEnabled vehicleCategory = "CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId <> "-isPayoutEnabled:" <> show isPayoutEnabled <> "-vehicleCategory:" <> show vehicleCategory
+makeMerchantOpCityIdAndCategoryKey :: Id MerchantOperatingCity -> VehicleCategory -> Text
+makeMerchantOpCityIdAndCategoryKey id vehicleCategory = "CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId <> "-vehicleCategory:" <> show vehicleCategory
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> PayoutEntity -> m ()
