@@ -1609,6 +1609,7 @@ newtype Keymap
   , remove_eyewere :: String
   , image_validation_exceed_limit :: String
   , parking_charges_included :: String -> String
+  , invoice_generated_from_driver_to_rider :: String
   , included :: String
   , db_check_and_name_match_failed :: String
   , complete_your_profile :: String
@@ -6570,6 +6571,9 @@ image_validation_exceed_limit = a
 
 parking_charges_included :: Proxy "parking_charges_included"
 parking_charges_included = a
+
+invoice_generated_from_driver_to_rider :: Proxy "invoice_generated_from_driver_to_rider"
+invoice_generated_from_driver_to_rider = a
 
 included :: Proxy "included"
 included = a

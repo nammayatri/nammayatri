@@ -1746,6 +1746,9 @@ getRideCompletedConfig state = let
     parkingChargesTitle = getString PLEASE_COLLECT_PARKING_CHARGES,
     parkingChargesDescription = getString INCURRED_DURING_TRIP
   }
+  , variant = getValueToLocalStore VEHICLE_VARIANT
+  , driverCity = getValueToLocalStore DRIVER_LOCATION
+  , driverInvoiceText = StringsV2.getStringV2 LT2.invoice_generated_from_driver_to_rider
   }
   in config'
 

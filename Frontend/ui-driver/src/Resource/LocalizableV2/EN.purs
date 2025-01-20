@@ -1589,6 +1589,7 @@ getEn =
     , remove_eyewere: "Please remove eyewear or sunglasses if any"
     , image_validation_exceed_limit: "Image validation limit exceeded."
     , parking_charges_included: (\amount -> amount <> " Parking Charges included")
+    , invoice_generated_from_driver_to_rider: "Invoice generated from driver to rider"
     , included: "included"
     , complete_your_profile: "Complete Your Profile"
     , add_photos: "Add your Photos"

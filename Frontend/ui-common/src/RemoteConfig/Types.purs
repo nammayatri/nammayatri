@@ -292,3 +292,9 @@ type BundleLottieConfig = {
   lottieUrl :: String
 , enable :: Boolean
 }
+
+type InvoiceConfig = {
+  isEnabled :: Maybe Boolean
+}
+
+type DriverInvoiceConfigVariantLevel = VariantLevelRemoteConfig (Maybe InvoiceConfig)
