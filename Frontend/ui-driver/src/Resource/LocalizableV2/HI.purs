@@ -1593,6 +1593,7 @@ getHi =
     , remove_eyewere: "कृपया यदि कोई आईवियर या धूप का चश्मा हो तो उसे हटा दें"
     , image_validation_exceed_limit: "छवि को सत्यापित करने के प्रयासों की संख्या पार हो गई"
     , parking_charges_included: (\amount -> amount <> " पार्किंग शुल्क शामिल")
+    , invoice_generated_from_driver_to_rider: "ड्राइवर से लेकर सवार तक का चालान काटा गया"
     , included: "शामिल"
     , db_check_and_name_match_failed: "पैन सत्यापन विफल हो गया है"
     , complete_your_profile: "अपनी प्रोफ़ाइल पूरी करें"

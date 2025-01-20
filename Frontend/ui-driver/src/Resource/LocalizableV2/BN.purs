@@ -1593,6 +1593,7 @@ getBn =
     , remove_eyewere: "অনুগ্রহ করে চশমা বা সানগ্লাস সরিয়ে ফেলুন যদি থেকে থাকে।"
     , image_validation_exceed_limit: "চিত্রের বৈধতা সীমা ছাড়িয়ে গেছে।"
     , parking_charges_included: (\amount -> amount <> " পার্কিং চার্জ অন্তর্ভুক্ত")
+    , invoice_generated_from_driver_to_rider: "চালক থেকে রাইডার পর্যন্ত চালান তৈরি হয়"
     , included: "অন্তর্ভুক্ত"
     , db_check_and_name_match_failed: "প্যান যাচাই ব্যর্থ হয়েছে।"
     , complete_your_profile: "আপনার প্রোফাইল সম্পূর্ণ করুন"

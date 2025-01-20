@@ -1593,6 +1593,7 @@ getMl =
     , remove_eyewere: "കണ്ണടകളോ സൺഗ്ലാസുകളോ ഉണ്ടെങ്കിൽ അത് നീക്കം ചെയ്യുക"
     , image_validation_exceed_limit: "ചിത്രം സാധൂകരിക്കാനുള്ള ശ്രമങ്ങളുടെ എണ്ണം കവിഞ്ഞു"
     , parking_charges_included: (\amount -> amount <> " പാർക്കിംഗ് ചാർജുകൾ ഉൾപ്പെടുന്നു")
+    , invoice_generated_from_driver_to_rider: "ഡ്രൈവറിൽ നിന്ന് റൈഡറിലേക്ക് ഇൻവോയ്സ് സൃഷ്ടിച്ചു"
     , included: "ഉൾപ്പെടുന്നു"
     , db_check_and_name_match_failed: "പാൻ സ്ഥിതീകരണം പരാജയപ്പെട്ടു"
     , complete_your_profile: "നിങ്ങളുടെ പ്രൊഫൈൽ പൂർത്തിയാക്കുക"

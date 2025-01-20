@@ -1593,6 +1593,7 @@ getTe =
     , remove_eyewere: "దయచేసి కళ్లద్దాలు లేదా సన్ గ్లాసెస్ ఏదైనా ఉంటే తీసివేయండి"
     , image_validation_exceed_limit: "చిత్రాన్ని ధృవీకరించడానికి చేసిన ప్రయత్నాల సంఖ్య మించిపోయింది"
     , parking_charges_included: (\amount -> amount <> " పార్కింగ్ ఛార్జీలు చేర్చబడ్డాయి")
+    , invoice_generated_from_driver_to_rider: "డ్రైవర్ నుండి రైడర్‌కు ఇన్‌వాయిస్ రూపొందించబడింది"
     , included: "చేర్చబడింది"
     , db_check_and_name_match_failed: "పాన్ ధృవీకరణ విఫలమైంది"
     , complete_your_profile: "మీ ప్రొఫైల్ పూర్తిచేయండి"

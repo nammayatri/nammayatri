@@ -1572,6 +1572,7 @@ getOd =
     , remove_eyewere: "ଦୟାକରି ଅନୁଷ୍ଠିତ ଆଖି ପରିଧାନ କିମ୍ବା ସନ୍ଗ୍ଲାସ୍ ହଟାନ୍ତୁ ଯଦି କିଛି ଅଛି"
     , image_validation_exceed_limit: "ଛବି ସତ୍ୟାପନ ସୀମା ଅତିକ୍ରମ ହୋଇଛି।"
     , parking_charges_included: (\amount -> amount <> " ପାର୍କିଂ ଚାର୍ଜ୍ ଅନ୍ତର୍ଭୁକ୍ତ")
+    , invoice_generated_from_driver_to_rider: "ଡ୍ରାଇଭରରୁ ଆରୋହୀ ପର୍ଯ୍ୟନ୍ତ ଇନଭଏସ୍ ସୃଷ୍ଟି |"
     , included: "ଅନ୍ତର୍ଭୁକ୍ତ"
     , complete_your_profile: "ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ୍ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ"
     , add_photos: "ଆପଣଙ୍କ ଫଟୋଗୁଡିକ ଯୋଡନ୍ତୁ"

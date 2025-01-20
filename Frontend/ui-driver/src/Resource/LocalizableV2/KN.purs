@@ -1592,6 +1592,7 @@ getKn =
     , remove_eyewere: "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
     , image_validation_exceed_limit: "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
     , parking_charges_included: (\amount -> amount <> " ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ")
+    , invoice_generated_from_driver_to_rider: "ಡ್ರೈವರ್‌ನಿಂದ ರೈಡರ್‌ಗೆ ಸರಕುಪಟ್ಟಿ ರಚಿಸಲಾಗಿದೆ"
     , included: "ಒಳಗೊಂಡಿದೆ"
     , db_check_and_name_match_failed: "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
     , complete_your_profile: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ತಿಮಾಡಿ"
