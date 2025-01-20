@@ -76,6 +76,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.media.MediaPlayer;
 
 import androidx.annotation.Nullable;
 
@@ -115,6 +116,7 @@ public class OverlayMessagingService extends Service {
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private String toastMessage;
     private String supportPhoneNumber;
+    public static MediaPlayer mediaPlayer;
 
     private double editLat, editlon;
 
@@ -209,6 +211,9 @@ public class OverlayMessagingService extends Service {
                 }
                 if(data.has("notification_type") && data.getString("notification_type").equals("WMB_TRIP_ASSIGNED"))
                 {
+
+                    mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.bus_allocation_request);
+                    mediaPlayer.start();
                     busDetailsLayout.setVisibility(View.VISIBLE);
                     originalOverlayContent.setVisibility(View.GONE);
                     busNumber.setText(data.has("vehicleNumber") ? data.getString("vehicleNumber") : "");
@@ -506,6 +511,8 @@ public class OverlayMessagingService extends Service {
         ImageView closeButton = messageView.findViewById(R.id.close_button);
         if (closeButton != null)
         {
+            if (mediaPlayer != null)
+                mediaPlayer.stop();
             closeButton.setOnClickListener(view -> {stopSelf();});
         }
 
@@ -525,6 +532,8 @@ public class OverlayMessagingService extends Service {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            if (mediaPlayer != null)
+                mediaPlayer.stop();
             stopSelf();
         });
     }

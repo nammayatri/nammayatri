@@ -550,7 +550,7 @@ view push state =
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.data.favPopUp.visibility then favPopUpView push state else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
-      , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
+      , if (not HU.specialVariantsForTracking FunctionCall) && dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
           completeYourProfile push state 
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
