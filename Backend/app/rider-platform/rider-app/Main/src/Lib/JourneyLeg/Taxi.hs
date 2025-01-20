@@ -78,7 +78,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             agency = journeyLegData.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
-            pricingId = Nothing
+            pricingId = Nothing,
+            isDeleted = Just False
           }
   search _ = throwError (InternalError "Not Supported")
 
@@ -127,7 +128,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
   --     newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   --     QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
-  cancel (TaxiLegRequestCancel _legData) = return ()
+  cancel (TaxiLegRequestCancel legData) = do
+    mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
+    case mbBooking of
+      Just booking -> do
+        QBooking.updateIsCancelled booking.id (Just True)
+      Nothing -> do
+        QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
   cancel _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do

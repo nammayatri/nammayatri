@@ -22,6 +22,7 @@ import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (all, find, forM_, id, map, sum)
 import Kernel.Prelude
@@ -29,11 +30,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.JourneyLeg as QJourneyLeg
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -143,10 +146,42 @@ postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch = do error "Logic yet to be decided"
+postMultimodalSwitch (_, _) journeyId req = do
+  journeyLegs <- JM.getJourneyLegs journeyId
+  allLegsInfo <- JM.getAllLegsInfo journeyId
+  let journeyLegData = find (\leg -> leg.sequenceNumber == req.legOrder) journeyLegs
+  let legInfo = find (\leg -> leg.order == req.legOrder) allLegsInfo
+  _ <- case legInfo of
+    Just legData -> do
+      case journeyLegData of
+        Just journeyLeg -> do
+          canSwitch <- JM.canBeSwitched legData req.newMode
+          isCancellable <- JM.checkIfCancellable legData
+          if isCancellable && canSwitch
+            then do
+              JM.cancelLeg legData
+              parentSearchReq <- QSearchRequest.findById (Id legData.searchId) >>= fromMaybeM (SearchRequestNotFound legData.searchId)
+              let currentLegRequest = ApiTypes.JourneyLegsReq {destinationAddress = req.destinationAddress, legNumber = legData.order, originAddress = req.originAddress}
+              case req.newMode of
+                DTrip.Walk -> do
+                  QJourneyLeg.updateMode req.newMode (journeyLeg.id)
+                  JM.addWalkLeg parentSearchReq journeyLeg currentLegRequest
+                DTrip.Taxi -> do
+                  QJourneyLeg.updateMode req.newMode (journeyLeg.id)
+                  resp <- JM.addTaxiLeg parentSearchReq journeyLeg currentLegRequest
+                  now <- getCurrentTime
+                  let fiveMinutes = secondsToNominalDiffTime 300
+                  when (diffUTCTime legData.startTime now <= fiveMinutes) $ do
+                    void $ JLI.confirm legData
+                  return resp
+                _ -> throwError $ InvalidRequest ("Mode not supported: " <> show req.newMode)
+            else throwError $ InvalidRequest "Leg can not be Cancelled or Switched"
+        Nothing -> throwError $ InvalidRequest "Leg not Present"
+    Nothing -> throwError $ InvalidRequest "Leg not Present"
+  pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

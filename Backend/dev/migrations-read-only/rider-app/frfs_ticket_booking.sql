@@ -146,6 +146,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolea
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_deleted boolean ;
 
 
 

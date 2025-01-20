@@ -46,6 +46,8 @@ data EditLocationRequest = EditLocationRequest
 data TaxiLegRequestUpdateData = EditLocation EditLocationRequest | ChangeServiceTier ChangeServiceTierData
 
 data TaxiLegRequestCancelData = TaxiLegRequestCancelData
+  { searchRequestId :: Id DSR.SearchRequest
+  }
 
 newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
   { searchId :: Id DSR.SearchRequest

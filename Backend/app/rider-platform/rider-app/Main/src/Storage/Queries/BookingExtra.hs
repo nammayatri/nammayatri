@@ -337,3 +337,9 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set BeamB.isDeleted isDeleted]
+    [Se.Is BeamB.id (Se.Eq reqId)]
