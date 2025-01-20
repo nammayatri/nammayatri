@@ -37,6 +37,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),

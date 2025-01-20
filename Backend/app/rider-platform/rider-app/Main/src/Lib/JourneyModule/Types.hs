@@ -163,7 +163,8 @@ data LegInfo = LegInfo
     legExtraInfo :: LegExtraInfo,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    personId :: Id DP.Person
+    personId :: Id DP.Person,
+    isDeleted :: Bool -- When it be true
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -291,6 +292,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
         status = getTexiLegStatusFromBooking booking mRide,
+        isDeleted = False,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -329,6 +331,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
         status = getTexiLegStatusFromSearch journeyLegInfo' mbEstimateStatus,
+        isDeleted = False,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -380,6 +383,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         merchantOperatingCityId,
         personId = riderId,
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
+        isDeleted = False,
         legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
       }
 
@@ -428,6 +432,7 @@ mkLegInfoFromFrfsBooking booking = do
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
         status = legStatus,
+        isDeleted = False,
         legExtraInfo =
           Metro $
             MetroLegExtraInfo
@@ -484,6 +489,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         merchantOperatingCityId,
         personId = riderId,
         status = fromMaybe InPlan journeyLegStatus,
+        isDeleted = False,
         legExtraInfo =
           Metro $
             MetroLegExtraInfo

@@ -33,6 +33,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
 data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,

@@ -20,6 +20,7 @@ data WalkLegMultimodalT f = WalkLegMultimodalT
     id :: B.C f Kernel.Prelude.Text,
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

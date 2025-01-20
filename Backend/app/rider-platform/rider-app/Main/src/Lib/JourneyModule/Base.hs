@@ -11,6 +11,7 @@ import qualified Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Common as Common
+import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -382,15 +383,16 @@ cancelLeg ::
   ) =>
   JL.LegInfo ->
   m ()
-cancelLeg journeyLeg = do
-  unless (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
-    throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show journeyLeg.status
-  case journeyLeg.travelMode of
-    DTrip.Taxi -> JL.cancel $ TaxiLegRequestCancel TaxiLegRequestCancelData
-    DTrip.Walk -> JL.cancel $ WalkLegRequestCancel WalkLegRequestCancelData
-    DTrip.Metro -> JL.cancel $ MetroLegRequestCancel MetroLegRequestCancelData
-    DTrip.Bus -> JL.cancel $ BusLegRequestCancel BusLegRequestCancelData
-  return ()
+cancelLeg leg = do
+  let legSearchId = Id (leg.searchId) -- No case needed; `searchId` is `Text`
+  case leg.travelMode of
+    DTrip.Taxi ->
+      JL.cancel $ TaxiLegRequestCancel $ TaxiLegRequestCancelData {searchRequestId = cast legSearchId}
+    DTrip.Walk ->
+      JL.cancel $ WalkLegRequestCancel $ WalkLegRequestCancelData {walkLegId = cast legSearchId}
+    DTrip.Metro ->
+      JL.cancel $ MetroLegRequestCancel $ MetroLegRequestCancelData {searchId = cast legSearchId}
+    _ -> throwError $ InvalidRequest ("Mode " <> show leg.travelMode <> " not supported!")
 
 cancelRemainingLegs ::
   ( CacheFlow m r,
@@ -411,7 +413,6 @@ cancelRemainingLegs journeyId = do
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InternalError $ "Failed to cancel some legs: " <> show failures
-  return ()
 
 skipLeg ::
   ( CacheFlow m r,
@@ -439,6 +440,58 @@ skipLeg journeyId legId = do
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
   cancelLeg skippingLeg
+
+cancelAllLegs ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  Id DJourney.Journey ->
+  m ()
+cancelAllLegs journeyId = do
+  allLegs <- getAllLegsInfo journeyId
+  mapM_ cancelLeg allLegs
+
+checkIfCancellable :: MonadFlow m => JL.LegInfo -> m Bool
+checkIfCancellable leg = pure $ case leg.legExtraInfo of
+  JL.Walk _ -> True
+  _ -> leg.status /= JL.Ongoing
+
+canBeSwitched ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  JL.LegInfo ->
+  DTrip.MultimodalTravelMode ->
+  m Bool
+canBeSwitched legToBeSwitched newMode = do
+  let currentMode = legToBeSwitched.travelMode
+  case (currentMode, newMode) of
+    (_, DTrip.Metro) -> return False
+    (_, DTrip.Bus) -> return False
+    (DTrip.Bus, DTrip.Taxi) -> return $ legToBeSwitched.status /= JL.Ongoing
+    (DTrip.Metro, DTrip.Taxi) -> return $ legToBeSwitched.status /= JL.Ongoing
+    (DTrip.Walk, DTrip.Taxi) -> return True
+    (DTrip.Taxi, DTrip.Walk) -> do
+      case legToBeSwitched.estimatedDistance of
+        Just distance ->
+          return $ getMeters (distanceToMeters distance) <= 1000
+        Nothing ->
+          throwError $ InvalidRequest "Leg Data NotPresent"
+    _ -> return False
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()
 -- deleteLeg leg = do

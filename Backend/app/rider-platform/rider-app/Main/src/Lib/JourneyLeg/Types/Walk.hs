@@ -30,6 +30,8 @@ data WalkLegRequestConfirmData = WalkLegRequestConfirmData
 data WalkLegRequestGetFareData = WalkLegRequestGetFareData
 
 data WalkLegRequestCancelData = WalkLegRequestCancelData
+  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
+  }
 
 data WalkLegRequestUpdateData = WalkLegRequestUpdateData
 
