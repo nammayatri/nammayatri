@@ -2,40 +2,17 @@
 
 module Lib.JourneyLeg.Metro where
 
-import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
-import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg MetroLegRequest m where
-  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = do
-    let journeySearchData =
-          JPT.JourneySearchData
-            { journeyId = journeyLeg.journeyId.getId,
-              journeyLegOrder = journeyLeg.sequenceNumber,
-              agency = journeyLeg.agency <&> (.name),
-              skipBooking = False,
-              convenienceCost = 0,
-              pricingId = Nothing
-            }
-    frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
-    let colorName = journeyLeg.routeDetails >>= (.shortName)
-    let routeColorCode = journeyLeg.routeDetails >>= (.color)
-    let frequency = Just 300 -- hard code to 5 seconds
-    res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) Spec.METRO frfsSearchReq Nothing Nothing colorName routeColorCode frequency
-    return $ JT.SearchResponse {id = res.searchId.getId}
-    where
-      buildFRFSSearchReq journeySearchData = do
-        fromStationCode <- journeyLeg.fromStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "From station code not found")
-        toStationCode <- journeyLeg.toStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "To station code not found")
-        let routeCode = Nothing
-        return $ API.FRFSSearchAPIReq {..}
+  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm req) = do
