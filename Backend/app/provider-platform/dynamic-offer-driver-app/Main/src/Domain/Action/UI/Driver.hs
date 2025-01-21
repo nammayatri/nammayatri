@@ -1198,7 +1198,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     case mSReqFD of
       Just srfd -> return srfd
       Nothing -> do
-        logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
+        logWarning $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
         throwError RideRequestAlreadyAccepted
   case req.response of
     Accept -> do

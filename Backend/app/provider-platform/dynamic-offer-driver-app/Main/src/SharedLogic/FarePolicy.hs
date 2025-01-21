@@ -820,7 +820,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                           ..
                         }
             A.Error err -> do
-              logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+              logWarning $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
               return $
                 Just $
                   CongestionChargeDetailsModel
