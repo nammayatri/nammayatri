@@ -121,6 +121,7 @@ import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
+import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
@@ -310,14 +311,11 @@ getDriverFleetGetAllVehicle ::
 getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  mbRegNumberStringHash <- getDbHash `traverse` mbRegNumberString
+  mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
+  logDebug $ "reg number hash: " <> show mbRegNumberStringHash <> " param-string: " <> show mbRegNumberString
   merchant <- findMerchantByShortId merchantShortId
   vehicleList <- RCQuery.findAllByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberStringHash
-  vehicles_ <- traverse convertToVehicleAPIEntity vehicleList
-  let vehicles =
-        case mbRegNumberString of
-          Just regNumberString -> filter (\vehicle -> T.isInfixOf regNumberString (T.toLower vehicle.registrationNo)) vehicles_
-          _ -> vehicles_
+  vehicles <- traverse convertToVehicleAPIEntity vehicleList
   return $ Common.ListVehicleRes vehicles
 
 convertToVehicleAPIEntity :: EncFlow m r => VehicleRegistrationCertificate -> m Common.VehicleAPIEntity
@@ -344,7 +342,9 @@ getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
+  logDebug $ "mobile number hash: " <> show mbMobileNumberHash <> " param-string: " <> show mbMobileNumber
   driverList <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberHash
+  logDebug $ "driver list for fleet: " <> show driverList
   let driverIdList :: [Id DP.Person] = map DTFDA.driverId driverList
   driversInfo <- QPerson.getDriversByIdIn driverIdList
   fleetDriversInfos <- mapM convertToDriverAPIEntity driversInfo
@@ -1149,13 +1149,15 @@ getDriverFleetRoutes ::
   Int ->
   Int ->
   Flow Common.RouteAPIResp
-getDriverFleetRoutes merchantShortId opCity _fleetOwnerId mbCurrentLocation mbSearchString limit offset = do
+getDriverFleetRoutes merchantShortId opCity fleetOwnerId mbCurrentLocation mbSearchString limit offset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let vehicleType = DVC.BUS
+  fleetRoutesByOwner <- QFRA.findAllByFleetOwnerIdAndCityId (Id fleetOwnerId) merchantOpCity.id
+  let existedRouteCodes = map (.routeCode) fleetRoutesByOwner
   allRoutes <- case mbSearchString of
-    Just searchString -> QRoute.findAllMatchingRoutes (Just searchString) (Just $ toInteger limit) (Just $ toInteger offset) merchantOpCity.id vehicleType
-    Nothing -> QRoute.findAllByMerchantOperatingCityAndVehicleType (Just limit) (Just offset) merchantOpCity.id vehicleType
+    Just searchString -> QRoute.findAllMatchingRoutes (Just searchString) (Just $ toInteger limit) (Just $ toInteger offset) merchantOpCity.id vehicleType existedRouteCodes
+    Nothing -> QRoute.findAllByMerchantOperatingCityAndVehicleType (Just limit) (Just offset) merchantOpCity.id vehicleType existedRouteCodes
   listItem <- case mbCurrentLocation of
     Nothing -> return $ map (\route -> createRouteRespItem route Nothing) allRoutes
     Just startLocation -> do
@@ -1231,12 +1233,14 @@ getDriverFleetPossibleRoutes ::
   Text ->
   Text ->
   Flow Common.RouteAPIResp
-getDriverFleetPossibleRoutes merchantShortId opCity _fleetOwnerId startStopCode = do
+getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId startStopCode = do
   merchant <- findMerchantByShortId merchantShortId
-  _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  merchanOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
   let day = dayOfWeek (utctDay now)
-  possibleRoutes <- QRTSM.findAllByStopCodeAndStopSequence startStopCode 1 1 day
+  fleetRoutesByOwner <- QFRA.findAllByFleetOwnerIdAndCityId (Id fleetOwnerId) merchanOperatingCity.id
+  let existedRouteCodes = map (.routeCode) fleetRoutesByOwner
+  possibleRoutes <- QRTSM.findAllByStopCodeAndStopSequenceAndRoutes startStopCode 1 1 day existedRouteCodes
   listItem <-
     mapM
       ( \rtsmData -> do

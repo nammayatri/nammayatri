@@ -35,16 +35,17 @@ findAllByRouteCodeForStops routeCode tripSequenceNum scheduledDay = do
         ]
     ]
 
-findAllByStopCodeAndStopSequence ::
+findAllByStopCodeAndStopSequenceAndRoutes ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Data.Time.DayOfWeek -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
-findAllByStopCodeAndStopSequence stopCode stopSequenceNum tripSequenceNum scheduledDay = do
+  (Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Data.Time.DayOfWeek -> [Kernel.Prelude.Text] -> m [Domain.Types.RouteTripStopMapping.RouteTripStopMapping])
+findAllByStopCodeAndStopSequenceAndRoutes stopCode stopSequenceNum tripSequenceNum scheduledDay routeCode = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.stopCode $ Se.Eq stopCode,
           Se.Is Beam.stopSequenceNum $ Se.Eq stopSequenceNum,
           Se.Is Beam.tripSequenceNum $ Se.Eq tripSequenceNum,
-          Se.Is Beam.scheduledDay $ Se.Eq scheduledDay
+          Se.Is Beam.scheduledDay $ Se.Eq scheduledDay,
+          Se.Is Beam.routeCode $ Se.In routeCode
         ]
     ]
 

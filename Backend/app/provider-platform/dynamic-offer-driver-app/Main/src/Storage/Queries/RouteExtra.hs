@@ -20,8 +20,8 @@ import qualified Storage.Beam.Route as BeamR
 import Storage.Queries.OrphanInstances.Route ()
 
 -- Extra code goes here --
-findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Route]
-findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do
+findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> [Text] -> m [Route]
+findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle routeCodes = do
   dbConf <- getMasterBeamConfig
   routes <-
     L.runDB dbConf $
@@ -33,6 +33,7 @@ findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 ( \BeamR.RouteT {..} ->
                     merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                       B.&&?. vehicleType B.==?. B.val_ vehicle
+                      B.&&?. B.sqlBool_ (code `B.in_` (B.val_ <$> routeCodes))
                       B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ code `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                                  B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ shortName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                                  B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ longName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
@@ -40,7 +41,7 @@ findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 )
                 $ B.all_ (BeamCommon.route BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] routes)
-findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
+findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle routeCodes = do
   dbConf <- getMasterBeamConfig
   routes <-
     L.runDB dbConf $
@@ -50,6 +51,7 @@ findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
             ( \BeamR.RouteT {..} ->
                 merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                   B.&&?. vehicleType B.==?. B.val_ vehicle
+                  B.&&?. B.sqlBool_ (code `B.in_` (B.val_ <$> routeCodes))
                   B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ code `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                              B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ shortName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                              B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ longName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
