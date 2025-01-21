@@ -1684,6 +1684,7 @@ homeScreenFlow = do
       void $ pure $ removeAllPolylines ""
       void $ lift $ lift $ liftFlow $ showMarker markerConfig 9.9 9.9 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
       void $ pure $ currentPosition ""
+      if state.homeScreen.props.estimateId /= "" then cancelEstimate state.homeScreen.props.estimateId else pure unit
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
       currentFlowStatus
