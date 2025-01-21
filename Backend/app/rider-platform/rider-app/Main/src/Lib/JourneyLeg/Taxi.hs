@@ -63,6 +63,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 isSpecialLocation = Just False, -- Fix it later
                 startTime = journeyLegData.fromDepartureTime,
                 isReallocationEnabled = Just True,
+                fareParametersInRateCard = Just True,
                 quotesUnifiedFlow = Just True,
                 sessionToken = Nothing,
                 placeNameSource = parentSearchReq.placeNameSource,

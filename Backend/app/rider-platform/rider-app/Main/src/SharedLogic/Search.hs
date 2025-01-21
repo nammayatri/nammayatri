@@ -39,6 +39,7 @@ data SearchRes = SearchRes
     duration :: Maybe Seconds,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
     isReallocationEnabled :: Maybe Bool,
+    fareParametersInRateCard :: Maybe Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     taggings :: Maybe Beckn.Taggings,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
@@ -95,6 +96,7 @@ data OneWaySearchReq = OneWaySearchReq
     isSpecialLocation :: Maybe Bool,
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
+    fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     sessionToken :: Maybe Text,
     placeNameSource :: Maybe Text,
@@ -112,6 +114,7 @@ data RentalSearchReq = RentalSearchReq
     estimatedRentalDuration :: Seconds,
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -128,6 +131,7 @@ data InterCitySearchReq = InterCitySearchReq
     sessionToken :: Maybe Text,
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -152,6 +156,7 @@ data SearchDetails = SearchDetails
     returnTime :: Maybe UTCTime,
     hasStops :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
     driverIdentifier_ :: Maybe DRL.DriverIdentifier
