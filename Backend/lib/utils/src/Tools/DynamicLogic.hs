@@ -29,7 +29,7 @@ getAppDynamicLogic merchantOpCityId domain localTime mbVersion = do
       when (null logics) $ logError $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain <> " and version: " <> show version
       return (logics <&> (.logic), Just version)
     Nothing -> do
-      logError $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
+      logWarning $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
       return ([], Nothing)
 
 selectAppDynamicLogicVersion ::
