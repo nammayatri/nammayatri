@@ -1139,7 +1139,7 @@ window.getMerchantConfig = function () {
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       },
-      "enableHvSdk" : false,
+      "enableHvSdk" : true,
       "purpleRideConfig" : {
         "purpleRideConfigForAuto" : {
           "vehicleVariant" : "Auto",
