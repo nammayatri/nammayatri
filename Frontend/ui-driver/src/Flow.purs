@@ -2477,8 +2477,14 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
         else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
           updateStage $ HomeScreenStage ST.RideTracking
+          if (isJust tripDetails.endRideApprovalRequestId) 
+            then void $ pure $ setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripDetails.endRideApprovalRequestId
+            else do
+              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
+              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
-          when (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL") do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{endRidePopUp = true}})
+          when (getValueToLocalStore WMB_END_TRIP_STATUS == "AWAITING_APPROVAL") do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{endRidePopUp = true}})
         else (pure unit)
     noActiveBusRidePatch = do
       -- deleteValueFromLocalStore WMB_END_TRIP_STATUS -- TODO@max-keviv: this is creating issue at app reload
@@ -2948,9 +2954,16 @@ homeScreenFlow = do
           void $ pure $ JB.exitLocateOnMap ""   
           currentRideFlow Nothing Nothing Nothing Nothing
         "WMB_TRIP_FINISHED" -> do
+          void $ pure $ removeAllMarkers ""
+          void $ pure $ removeAllPolylines ""
           void $ updateStage $ HomeScreenStage HomeScreen   
           currentRideFlow Nothing Nothing Nothing Nothing
-        "DRIVER_REQUEST_REJECTED" -> pure unit -- @arnab-dutta
+        "DRIVER_REQUEST_REJECTED" -> do
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "REVOKED"
+          modifyScreenState $ HomeScreenStateType (\state -> state {props {endRidePopUp = true}})
+          homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -3296,7 +3309,7 @@ homeScreenFlow = do
         Left errorPayload ->
           if(DS.contains (DS.Pattern "already present") errorPayload.response.errorMessage) 
             then do
-              setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
+              setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = true}})
               homeScreenFlow
           else do
@@ -3314,15 +3327,16 @@ homeScreenFlow = do
               void $ pure $ removeAllPolylines ""
               currentRideFlow Nothing Nothing Nothing Nothing
             "WAITING_FOR_ADMIN_APPROVAL" -> do 
-              setValueToLocalStore WMB_END_TRIP_STATUS "WAITING_FOR_ADMIN_APPROVAL"
-              -- setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+              setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
+              setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
               setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripEndResp.requestId
+              void $ pure $ removeAllMarkers ""
+              void $ pure $ removeAllPolylines ""
               modifyScreenState $ HomeScreenStateType (\state -> state{props{endRidePopUp = true}})
               homeScreenFlow
             _ -> homeScreenFlow
     WMB_CANCEL_END_TRIP state -> do
       cancelTripRespOrError <- lift $ lift $ Remote.postWmbRequestsCancel $ getValueToLocalStore WMB_END_TRIP_REQUEST_ID
-      let _ = spy "codex-coming-here" cancelTripRespOrError
       case cancelTripRespOrError of
         Left errorPayload -> do
           pure $ toast $ "Something Went Wrong"
@@ -3330,7 +3344,7 @@ homeScreenFlow = do
         Right _ -> do
           deleteValueFromLocalStore WMB_END_TRIP_STATUS
           deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-          deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
+          setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = false}})
           homeScreenFlow
     WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> do

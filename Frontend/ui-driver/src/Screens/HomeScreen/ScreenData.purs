@@ -453,17 +453,6 @@ dummyStopInfo = StopInfo
   , long: Just 77.594566
   }
 
-dummyTripTransactionDetails :: TripTransactionDetails
-dummyTripTransactionDetails = TripTransactionDetails
-  { tripTransactionId: "TTD001"
-  , vehicleNumber: "KA01AB1234"
-  , vehicleType: "Bus"
-  , source: dummyStopInfo
-  , destination: dummyStopInfo
-  , status: TRIP_COMPLETED
-  , routeInfo: dummyRouteInfo
-  }
-
 dummyRouteInfo :: RouteInfo
 dummyRouteInfo = RouteInfo
   { code : "RI001"

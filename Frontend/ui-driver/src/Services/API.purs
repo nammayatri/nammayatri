@@ -5478,6 +5478,7 @@ newtype TripTransactionDetails = TripTransactionDetails
   , destination :: StopInfo
   , status :: BusTripStatus
   , routeInfo :: RouteInfo
+  , endRideApprovalRequestId :: Maybe String
   }
 
 derive instance genericTripLinkResp :: Generic TripTransactionDetails _
@@ -5742,4 +5743,29 @@ instance encodePostWmbRequestsCancelReq :: Encode PostWmbRequestsCancelReq where
 
 instance makePostWmbRequestsCancelReq :: RestEndpoint PostWmbRequestsCancelReq where
     makeRequest reqBody@(PostWmbRequestsCancelReq approvalRequestId) headers = defaultMakeRequestWithoutLogs POST (EP.postWmbRequestsCancel approvalRequestId) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+------------------------------------------------------ WMB End Trip Status Request ------------------------------------------------------
+
+data GetWmbRequestsStatusReq = GetWmbRequestsStatusReq String
+
+newtype ApprovalRequestResp = ApprovalRequestResp
+  { status :: String
+  }
+
+derive instance genericGetWmbRequestsStatusReq :: Generic GetWmbRequestsStatusReq _
+instance showGetWmbRequestsStatusReq :: Show GetWmbRequestsStatusReq where show = genericShow
+instance standardEncodeGetWmbRequestsStatusReq :: StandardEncode GetWmbRequestsStatusReq where standardEncode _ = standardEncode {}
+instance decodeGetWmbRequestsStatusReq :: Decode GetWmbRequestsStatusReq where decode = defaultDecode
+instance encodeGetWmbRequestsStatusReq :: Encode GetWmbRequestsStatusReq where encode = defaultEncode
+
+derive instance genericApprovalRequestResp :: Generic ApprovalRequestResp _
+derive instance newtypeApprovalRequestResp :: Newtype ApprovalRequestResp _
+instance standardEncodeApprovalRequestResp :: StandardEncode ApprovalRequestResp where standardEncode (ApprovalRequestResp res) = standardEncode res
+instance showApprovalRequestResp :: Show ApprovalRequestResp where show = genericShow
+instance decodeApprovalRequestResp :: Decode ApprovalRequestResp where decode = defaultDecode
+instance encodeApprovalRequestResp :: Encode ApprovalRequestResp where encode = defaultEncode
+
+instance makeGetWmbRequestsStatusReq :: RestEndpoint GetWmbRequestsStatusReq where
+    makeRequest reqBody@(GetWmbRequestsStatusReq approvalRequestId) headers = defaultMakeRequestWithoutLogs GET (EP.getWmbRequestsStatus approvalRequestId) headers reqBody Nothing
     encodeRequest req = standardEncode req

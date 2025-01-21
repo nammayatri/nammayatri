@@ -1357,6 +1357,7 @@ recentTripToTripDetails trip =
         , startPoint: dummyLatLong
         , endPoint: dummyLatLong
         }
+    , endRideApprovalRequestId : Nothing
     }
   where
     dummyLatLong :: API.LatLong

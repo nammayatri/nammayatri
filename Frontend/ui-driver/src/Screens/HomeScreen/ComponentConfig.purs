@@ -199,9 +199,8 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    optionButtonOrientation = "VERTICAL",
-    option1 {text = StringsV2.getStringV2 LT2.send_request, enableRipple = true, width = MATCH_PARENT, margin = MarginHorizontal 16 16},
-    option2 {text = "Cancel", enableRipple = true, width = MATCH_PARENT,  margin = MarginHorizontal 16 16}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString END_RIDE), enableRipple = true}
   }
 in popUpConfig'
 
@@ -262,7 +261,7 @@ waitingForDepoRespPopUp state =
               visibility= VISIBLE,
               imageConfig = {
                 visibility: VISIBLE
-              , imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clock_unfilled_blue" 
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_black_red_clock" 
               , height : (V 88)
               , width : (V 88)
               , margin : (MarginVertical 24 8)
@@ -271,6 +270,40 @@ waitingForDepoRespPopUp state =
             }
           }
   in waitingForDepoRespPopUp'
+
+---------------------------------------- wmbEndRideRejectedPopUp -----------------------------------------
+wmbEndRideRejectedPopUp :: ST.HomeScreenState -> PopUpModal.Config
+wmbEndRideRejectedPopUp state =
+  let config' = PopUpModal.config
+      wmbEndRideRejectedPopUp' = 
+        config' {
+            primaryText {text =  "End ride request rejected by \n depot manager!"}, --StringsV2.getStringV2 LT2.waiting_for_depot_manager_response},
+            secondaryText {visibility=GONE},
+            option1 {
+              text = StringsV2.getStringV2 LT2.okay, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = Margin 16 12 16 4,
+              background = Color.black900,
+              color = Color.yellow900,
+              strokeColor = Color.black900
+              -- layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_excalmation_custom" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 16 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in wmbEndRideRejectedPopUp'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config

@@ -180,10 +180,10 @@ screen initialState (GlobalState globalState) =
           --   Nothing -> pure unit
 
           -- Polling to get the WMP Trip Details
-          if (getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isJust initialState.data.whereIsMyBusData.trip) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "WAITING_FOR_ADMIN_APPROVAL")) then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveWMBTripDetails push 3000.0 15 else pure unit
+          if (getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isJust initialState.data.whereIsMyBusData.trip) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "AWAITING_APPROVAL")) then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveWMBTripDetails push 3000.0 15 else pure unit
 
           -- Polling for endTripStatus CHange
-          if(getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL" && (getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "false")) then do
+          if(getValueToLocalStore WMB_END_TRIP_STATUS == "AWAITING_APPROVAL" && (getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "false")) then do
             void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "true"
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getEndTripStatusChange push 3000.0 
             else pure unit
@@ -408,21 +408,19 @@ getActiveWMBTripDetails push delayTimeInMilliSeconds retryCount =
           getActiveWMBTripDetails push (delayTimeInMilliSeconds) (retryCount - 1)
     else pure unit
     
--- May look duplicate kept it for better code readability
 getEndTripStatusChange :: (Action -> Effect Unit) -> Number -> FlowBT String Unit
 getEndTripStatusChange push delayTimeInMilliSeconds =
-  if (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL" && getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "true")
+  if (getValueToLocalStore WMB_END_TRIP_STATUS == "AWAITING_APPROVAL" && getValueToLocalStore WMB_END_TRIP_STATUS_POLLING == "true")
     then do
-      (APITypes.ActiveTripTransaction tripTransactions) <- Remote.getActiveTripBT 
-      case tripTransactions.tripTransactionDetails of
-        Just (APITypes.TripTransactionDetails tripDetails) -> do
-          if (not $ tripDetails.status `DA.elem` [API.PAUSED, API.IN_PROGRESS]) 
-            then lift $ lift $ doAff $ liftEffect $ push $ WMBEndTripAC
-            else do
-              void $ lift $ lift $ delay $ Milliseconds delayTimeInMilliSeconds
-              getEndTripStatusChange push (delayTimeInMilliSeconds)
-        Nothing -> do
-          lift $ lift $ doAff $ liftEffect $ push $ WMBEndTripAC
+      let currStatus = getValueToLocalStore WMB_END_TRIP_STATUS
+      eitherErrOrWMBReqStatusResp <- lift $ lift $ Remote.getWmbRequestsStatus $ getValueToLocalStore WMB_END_TRIP_REQUEST_ID
+      case eitherErrOrWMBReqStatusResp of
+        Left err -> pure unit
+        Right (API.ApprovalRequestResp resp) -> do
+          if (resp.status /= "AWAITING_APPROVAL") then lift $ lift $ doAff $ liftEffect $ push $ WMBEndTripAC resp.status
+          else do
+            void $ lift $ lift $ delay $ Milliseconds delayTimeInMilliSeconds
+            getEndTripStatusChange push (delayTimeInMilliSeconds)
     else pure unit
 
 playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
@@ -2588,13 +2586,15 @@ endRidePopView push state =
     ][popUpView]
   where
     popUpView = 
-      if (not $ HU.specialVariantsForTracking FunctionCall) then PopUpModal.view (push <<< PopUpModalAction) $ endRidePopUp state 
-      else do
-        case (getValueToLocalStore WMB_END_TRIP_STATUS) of 
-          "SUCCESS" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
-          "WAITING_FOR_ADMIN_APPROVAL" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
-          _ -> PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state
-      -- waitingForDepoRespPopUp state
+      let endTripStatus = (getValueToLocalStore WMB_END_TRIP_STATUS)
+      in
+        if (not $ HU.specialVariantsForTracking FunctionCall) then PopUpModal.view (push <<< PopUpModalAction) $ endRidePopUp state 
+        else do
+          case endTripStatus of 
+            _ | endTripStatus `DA.elem` ["SUCCESS", "ACCEPTED"] -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
+            "AWAITING_APPROVAL" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
+            _ | endTripStatus `DA.elem` ["REVOKED", "REJECTED"] -> PopUpModal.view (push <<< WMBEndTripModalAC) $ wmbEndRideRejectedPopUp state
+            _ -> PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
 dummyTextView =
