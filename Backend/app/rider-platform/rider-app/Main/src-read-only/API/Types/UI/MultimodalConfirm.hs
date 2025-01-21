@@ -4,6 +4,7 @@ module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Trip
@@ -57,5 +58,9 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SwitchLegReq = SwitchLegReq {currLocation :: Kernel.External.Maps.Types.LatLong, newMode :: Domain.Types.Trip.MultimodalTravelMode}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SwitchTaxiReq = SwitchTaxiReq {estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
