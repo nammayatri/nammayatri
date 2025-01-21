@@ -29,4 +29,4 @@ data RouteStopMapping = RouteStopMapping
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

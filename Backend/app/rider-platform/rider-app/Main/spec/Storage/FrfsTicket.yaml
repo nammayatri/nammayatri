@@ -49,9 +49,9 @@ FRFSSearch:
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
     journeyLegStatus: Maybe JourneyLegStatus
-    lineColor : Maybe Text
-    lineColorCode : Maybe Text
-    frequency : Maybe Int
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+    frequency: Maybe Int
 
   beamFields:
     journeyLegInfo:
@@ -170,11 +170,11 @@ FRFSQuote:
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
 
   beamFields:
     price:
@@ -249,18 +249,18 @@ FRFSTicketBooking:
     customerCancelled: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest : Maybe Int
-    lineColor : Maybe Text
-    lineColorCode : Maybe Text
-    frequency : Maybe Int
-    journeyLegOrder : Maybe Int
+    bppDelayedInterest: Maybe Int
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+    frequency: Maybe Int
+    journeyLegOrder: Maybe Int
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
@@ -405,7 +405,7 @@ FRFSTicket:
     qrRefreshAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
 
@@ -572,7 +572,7 @@ FRFSConfig:
     isCancellationAllowed: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
-    customDates: '[Text]'
+    customDates: "[Text]"
     customEndTime: Text
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
@@ -606,7 +606,6 @@ FRFSConfig:
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
-
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
@@ -679,6 +678,7 @@ Route:
 
 RouteStopMapping:
   tableName: route_stop_mapping
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
   fields:
     routeCode: Text
     stopCode: Text

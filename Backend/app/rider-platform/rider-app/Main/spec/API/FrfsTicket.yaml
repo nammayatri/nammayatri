@@ -23,6 +23,7 @@ imports:
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
+  RouteStopInfo: SharedLogic.FRFSUtils
 
 module: FRFSTicketService
 types:
@@ -140,13 +141,13 @@ types:
     derive: "Show"
 
   FRFSCanCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isCancellable : Maybe Bool
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
 
   FRFSCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
 
   FRFSConfigAPIRes:
     bookingStartTime: UTCTime
@@ -171,6 +172,7 @@ types:
     startPoint: LatLong
     endPoint: LatLong
     totalStops: Maybe Int
+    stops: Maybe [FRFSStationAPI]
     waypoints: Maybe [LatLong]
     timeBounds: Maybe TimeBound
     derive: "Show"
