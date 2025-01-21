@@ -297,7 +297,11 @@ public  class MyFirebaseMessagingService {
                         break;
                     case NotificationTypes.WMB_TRIP_ASSIGNED:
                         String jsonData = remoteMessage.getData().get("entity_data");
-                        if (jsonData != null) {
+                        String currentAppState = "";
+                        SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        if (sharedPrefs != null) currentAppState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+                        Boolean isAppNotOpen = (currentAppState.equals("onPause") || currentAppState.equals("onDestroy") || currentAppState.isEmpty());
+                        if (jsonData != null && isAppNotOpen) {
                             try {
                                 JSONObject notificationPayload = new JSONObject(jsonData);
                                 String notificationType_ =remoteMessage.getData().get("notification_type"); 
