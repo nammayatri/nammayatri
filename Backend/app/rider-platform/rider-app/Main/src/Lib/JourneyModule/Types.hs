@@ -1,6 +1,7 @@
 module Lib.JourneyModule.Types where
 
 import API.Types.RiderPlatform.Management.FRFSTicket
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -205,6 +206,7 @@ data BusLegExtraInfo = BusLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
     tickets :: Maybe [Text],
+    routeName :: Maybe Text,
     providerName :: Maybe Text
   }
   deriving stock (Show, Generic)
@@ -417,7 +419,7 @@ mkLegInfoFromFrfsBooking booking = do
         bookingAllowed = True,
         searchId = booking.searchId.getId,
         pricingId = Just booking.id.getId,
-        travelMode = DTrip.Metro,
+        travelMode = if booking.vehicleType == Spec.METRO then DTrip.Metro else DTrip.Bus,
         startTime = startTime,
         order = legOrder,
         estimatedDuration = Nothing, -------------- TODO : Should be changed
@@ -428,7 +430,12 @@ mkLegInfoFromFrfsBooking booking = do
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
         status = legStatus,
-        legExtraInfo =
+        legExtraInfo = mkLegExtraInfo fromStation toStation qrDataList
+      }
+  where
+    mkLegExtraInfo fromStation toStation qrDataList = do
+      if booking.vehicleType == Spec.METRO
+        then do
           Metro $
             MetroLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -439,8 +446,16 @@ mkLegInfoFromFrfsBooking booking = do
                 providerName = Just booking.providerName,
                 frequency = booking.frequency
               }
-      }
-  where
+        else do
+          Bus $
+            BusLegExtraInfo
+              { originStop = stationToStationAPI fromStation,
+                destinationStop = stationToStationAPI toStation,
+                tickets = Just qrDataList,
+                providerName = Nothing,
+                routeName = booking.lineColor
+              }
+
     stationToStationAPI station =
       FRFSStationAPI
         { name = station.name,
@@ -473,7 +488,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         bookingAllowed,
         searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
-        travelMode = DTrip.Metro,
+        travelMode = if vehicleType == Spec.METRO then DTrip.Metro else DTrip.Bus,
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
         estimatedDuration = Nothing, -- check with hemant if we can store estimatedDuration in frfsSearch table  --journeyLeg.duration,
@@ -484,7 +499,12 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         merchantOperatingCityId,
         personId = riderId,
         status = fromMaybe InPlan journeyLegStatus,
-        legExtraInfo =
+        legExtraInfo = mkLegExtraInfo fromStation toStation
+      }
+  where
+    mkLegExtraInfo fromStation toStation = do
+      if vehicleType == Spec.METRO
+        then
           Metro $
             MetroLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -495,8 +515,16 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
                 providerName = Nothing,
                 frequency = frequency
               }
-      }
-  where
+        else
+          Bus $
+            BusLegExtraInfo
+              { originStop = stationToStationAPI fromStation,
+                destinationStop = stationToStationAPI toStation,
+                tickets = Nothing,
+                providerName = Nothing,
+                routeName = lineColor
+              }
+
     stationToStationAPI station =
       FRFSStationAPI
         { name = station.name,
