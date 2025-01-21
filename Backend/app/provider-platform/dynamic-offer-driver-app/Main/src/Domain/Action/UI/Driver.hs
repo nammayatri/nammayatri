@@ -350,7 +350,8 @@ data DriverInformationRes = DriverInformationRes
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
-    onboardingVehicleCategory :: Maybe VehicleCategory
+    onboardingVehicleCategory :: Maybe VehicleCategory,
+    subscriptionDown :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -411,7 +412,8 @@ data DriverEntityRes = DriverEntityRes
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
-    onboardingVehicleCategory :: Maybe VehicleCategory
+    onboardingVehicleCategory :: Maybe VehicleCategory,
+    subscriptionDown :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1830,17 +1832,18 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   ----------------------------------------------------------
   invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
-  let sortedInvoices = mergeSortAndRemoveDuplicate invoices
-  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
+      sortedInvoices = mergeSortAndRemoveDuplicate invoices
+      splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
   clearDueResp <- do
     case sortedInvoices of
-      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData
+      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData
+        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData splitEnabled
   let mbPaymentLink = clearDueResp.orderResp.payment_links
       payload = clearDueResp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
@@ -2413,17 +2416,18 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
       dfee -> pure dfee
   invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
   let paymentService = subscriptionConfig.paymentServiceName
-  let sortedInvoices = mergeSortAndRemoveDuplicate invoices
-  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
+      sortedInvoices = mergeSortAndRemoveDuplicate invoices
+      splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
   resp <- do
     case sortedInvoices of
-      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData
+      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData splitEnabled
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
-        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice vendorFees mbDeepLinkData
+        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice vendorFees mbDeepLinkData splitEnabled
   let mbPaymentLink = resp.orderResp.payment_links
       payload = resp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
@@ -2667,7 +2671,8 @@ data DriverSpecificSubscriptionData = DriverSpecificSubscriptionData
     isSubscriptionEnabledAtCategoryLevel :: Bool,
     freeTrialDays :: Int,
     freeTrialRides :: Int,
-    totalRidesTaken :: Maybe Int
+    totalRidesTaken :: Maybe Int,
+    subscriptionDown :: Maybe Bool
   }
   deriving (Generic, Show, Eq, Ord)
 
@@ -2687,10 +2692,12 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
       freeTrialRides = fromMaybe 0 $ subscriptionConfig >>= (.numberOfFreeTrialRides)
       isSubscriptionEnabledAtCategoryLevel = fromMaybe False $ subscriptionConfig <&> (.isSubscriptionEnabledAtCategoryLevel)
       (isSubscriptionVehicleCategoryChanged, isSubscriptionCityChanged) = isPlanVehCategoryOrCityChanged opCityId mbDriverPlan mbVehicle
-  (isOnFreeTrial, totalRidesTaken) <- do
+  (isOnFreeTrial, totalRidesTaken, subscriptionDown) <- do
     case subscriptionConfig of
-      Just subsConfig -> DAPlan.isOnFreeTrial personId subsConfig freeTrialDaysLeft mbDriverPlan
-      Nothing -> return (True, Nothing)
+      Just subsConfig -> do
+        (ft, numRides) <- DAPlan.isOnFreeTrial personId subsConfig freeTrialDaysLeft mbDriverPlan
+        return (ft, numRides, subsConfig.subscriptionDown)
+      Nothing -> return (True, Nothing, Nothing)
   let planMandatoryForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       isEnabledForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
   return $ DriverSpecificSubscriptionData {..}

@@ -62,3 +62,7 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_vendor_spli
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_clearance_message_key text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN subscription_down SET DEFAULT false;

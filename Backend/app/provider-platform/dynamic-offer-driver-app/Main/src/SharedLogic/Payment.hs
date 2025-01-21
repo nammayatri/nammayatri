@@ -78,8 +78,9 @@ createOrder ::
   Maybe (Id INV.Invoice, Text) ->
   [VF.VendorFee] ->
   Maybe DeepLinkData ->
+  Bool ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData splitEnabled = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -92,7 +93,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
-      splitSettlementDetails = mkSplitSettlementDetails vendorFees amount
+      splitSettlementDetails = if splitEnabled then mkSplitSettlementDetails vendorFees amount else Nothing
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
@@ -112,7 +113,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             mandateStartDate = mbMandateOrder <&> (.mandateStartDate),
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
-            splitSettlementDetails = Just splitSettlementDetails,
+            splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing --- assigned in shared kernel
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -123,9 +124,9 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled -- call same function with no existing order
 
-mkSplitSettlementDetails :: [VF.VendorFee] -> HighPrecMoney -> SplitSettlementDetails
+mkSplitSettlementDetails :: [VF.VendorFee] -> HighPrecMoney -> Maybe SplitSettlementDetails
 mkSplitSettlementDetails vendorFees totalAmount = do
   let sortedVendorFees = sortBy (compare `on` VF.vendorId) vendorFees
       groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
@@ -133,11 +134,12 @@ mkSplitSettlementDetails vendorFees totalAmount = do
       vendorSplits = catMaybes mbVendorSplits
   let totalVendorAmount = sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-  SplitSettlementDetails
-    { marketplace = Marketplace marketplaceAmount,
-      mdrBorneBy = ALL,
-      vendor = Vendor vendorSplits
-    }
+  Just $
+    SplitSettlementDetails
+      { marketplace = Marketplace marketplaceAmount,
+        mdrBorneBy = ALL,
+        vendor = Vendor vendorSplits
+      }
   where
     roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
     computeSplit feesForVendor =

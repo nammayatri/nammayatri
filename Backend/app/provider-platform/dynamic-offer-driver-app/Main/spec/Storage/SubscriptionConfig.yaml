@@ -21,6 +21,7 @@ SubscriptionConfig:
     genericJobRescheduleTime: Data.Time.NominalDiffTime
     maxRetryCount: Int
     sendInAppFcmNotifications: Bool
+    subscriptionDown: Maybe Bool
     paymentServiceName: Domain.Types.MerchantServiceConfig.ServiceName
     allowDueAddition: Bool
     serviceName: Domain.Types.Plan.ServiceNames
@@ -79,6 +80,7 @@ SubscriptionConfig:
     allowManualPaymentLinks: "false"
     sendDeepLink: "false"
     sendInAppFcmNotifications: "false"
+    subscriptionDown: "false"
     allowDueAddition: "false"
     paymentServiceName: "'Payment_Juspay'"
     isTriggeredAtEndRide: "true"
