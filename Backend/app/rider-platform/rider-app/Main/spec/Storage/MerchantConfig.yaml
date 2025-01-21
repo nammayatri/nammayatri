@@ -32,7 +32,7 @@ MerchantConfig:
 
   queries:
     findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, enabled]
 

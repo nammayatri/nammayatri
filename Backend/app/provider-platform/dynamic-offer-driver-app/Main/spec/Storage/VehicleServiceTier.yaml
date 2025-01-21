@@ -57,14 +57,14 @@ VehicleServiceTier:
     id: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findByServiceTierTypeAndCityId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [serviceTierType, merchantOperatingCityId]
     findBaseServiceTierTypeByCategoryAndCityId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and:
           - vehicleCategory

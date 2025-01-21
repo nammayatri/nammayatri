@@ -41,7 +41,7 @@ findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName vehicleCategory isDeprecated = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.planType $ Se.Eq planType,
@@ -55,7 +55,7 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentMode serviceName vehicleVariant = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
@@ -68,7 +68,7 @@ findByMerchantOpCityIdTypeServiceNameVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
@@ -82,7 +82,7 @@ findByMerchantOpCityIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdWithServiceName merchantOpCityId serviceName = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.serviceName $ Se.Eq serviceName

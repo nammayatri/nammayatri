@@ -23,11 +23,11 @@ VehicleDetails:
       kvFunction: findOneWithKV
       where: id
     findByMakeAndYear:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [make, year]
     findByMakeAndModelAndYear:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [make, model, year]
 

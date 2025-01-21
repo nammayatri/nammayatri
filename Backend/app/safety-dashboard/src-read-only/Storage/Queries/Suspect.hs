@@ -27,7 +27,7 @@ findByDl :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe
 findByDl dl = do findOneWithKV [Se.Is Beam.dl $ Se.Eq dl]
 
 findByVoterId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Suspect.Suspect))
-findByVoterId voterId = do findOneWithKV [Se.Is Beam.voterId $ Se.Eq voterId]
+findByVoterId voterId = do findOneWithDb [Se.Is Beam.voterId $ Se.Eq voterId]
 
 updateFlaggedCounterByDl ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -47,7 +47,7 @@ updateFlaggedCounterByVoterId ::
   (Kernel.Prelude.Int -> Domain.Types.Suspect.FlaggedStatus -> [Domain.Types.Suspect.FlaggedBy] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateFlaggedCounterByVoterId flaggedCounter flaggedStatus flaggedBy voterId = do
   _now <- getCurrentTime
-  updateWithKV
+  updateWithDb
     [ Se.Set Beam.flaggedCounter flaggedCounter,
       Se.Set Beam.flaggedStatus flaggedStatus,
       Se.Set Beam.updatedAt _now,

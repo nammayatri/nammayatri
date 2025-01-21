@@ -30,6 +30,6 @@ VendorSplitDetails:
 
   queries:
     findAllByAreaCityAndVariant:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [area, merchantOperatingCityId, vehicleVariant]

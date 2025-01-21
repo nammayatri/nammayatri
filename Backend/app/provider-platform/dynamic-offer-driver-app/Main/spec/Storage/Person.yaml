@@ -136,6 +136,9 @@ Person:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
     alternateMobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    identifier: SecondaryKey
+    email: SecondaryKey
+
   sqlType:
     firstName: character varying (255)
     middleName: character varying (255)

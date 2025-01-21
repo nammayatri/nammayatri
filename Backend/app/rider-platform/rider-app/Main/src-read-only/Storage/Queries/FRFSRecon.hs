@@ -29,14 +29,14 @@ updateStatusByTicketBookingId ::
   (Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusByTicketBookingId ticketStatus frfsTicketBookingId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.ticketStatus ticketStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
+  updateWithDb [Se.Set Beam.ticketStatus ticketStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 updateTOrderValueAndSettlementAmountById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Common.Price -> Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateTOrderValueAndSettlementAmountById settlementAmount totalOrderValue frfsTicketBookingId = do
   _now <- getCurrentTime
-  updateWithKV
+  updateWithDb
     [ Se.Set Beam.settlementAmount ((.amount) settlementAmount),
       Se.Set Beam.totalOrderValue ((.amount) totalOrderValue),
       Se.Set Beam.updatedAt _now

@@ -25,10 +25,10 @@ createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.
 createMany = traverse_ create
 
 findAllByCustomerId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
-findAllByCustomerId customerId = do findAllWithKV [Se.Is Beam.customerId $ Se.Eq customerId]
+findAllByCustomerId customerId = do findAllWithDb [Se.Is Beam.customerId $ Se.Eq customerId]
 
 findAllWithStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
-findAllWithStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
+findAllWithStatus status = do findAllWithDb [Se.Is Beam.status $ Se.Eq status]
 
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -51,8 +51,8 @@ updateRetriedOrderId retriedOrderId orderId = do _now <- getCurrentTime; updateO
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
-findByPrimaryKey id orderId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.orderId $ Se.Eq orderId]]
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m ())
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
@@ -73,6 +73,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.mobileNoEncrypted (mobileNo & unEncrypted . encrypted),
       Se.Set Beam.mobileNoHash (mobileNo & hash),
+      Se.Set Beam.orderId orderId,
       Se.Set Beam.responseCode responseCode,
       Se.Set Beam.responseMessage responseMessage,
       Se.Set Beam.retriedOrderId retriedOrderId,
@@ -81,4 +82,4 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vpa vpa
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.orderId $ Se.Eq orderId]]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

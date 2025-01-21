@@ -39,6 +39,6 @@ instance B.Table SuspectFlagRequestT where
 
 type SuspectFlagRequest = SuspectFlagRequestT Identity
 
-$(enableKVPG ''SuspectFlagRequestT ['id] [])
+$(enableKVPG ''SuspectFlagRequestT ['id] [['dl]])
 
 $(mkTableInstances ''SuspectFlagRequestT "suspect_flag_request")

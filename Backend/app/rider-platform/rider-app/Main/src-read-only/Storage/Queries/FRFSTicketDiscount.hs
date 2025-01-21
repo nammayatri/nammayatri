@@ -28,7 +28,7 @@ findByCodeAndVehicleAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount))
 findByCodeAndVehicleAndCity code vehicleType merchantId merchantOperatingCityId = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.code $ Se.Eq code,
           Se.Is Beam.vehicleType $ Se.Eq vehicleType,

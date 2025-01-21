@@ -48,18 +48,18 @@ BecknConfig:
 
   queries:
     findByMerchantIdAndDomain:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, domain]
     findById:
       kvFunction: findOneWithKV
       where: id
     findByMerchantIdDomainandMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, domain, merchantOperatingCityId]
     findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
 
   extraOperations:
@@ -113,7 +113,7 @@ IntegratedBPPConfig:
     configJSON: json
 
   constraints:
-    merchantId: PrimaryKey
+    # merchantId: PrimaryKey -- can we remove it? then all primary keys will be in query
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
     domain: PrimaryKey

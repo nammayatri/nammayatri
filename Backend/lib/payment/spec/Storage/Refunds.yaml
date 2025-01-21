@@ -21,6 +21,8 @@ Refunds:
     initiatedBy : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
+  constraints:
+    shortId: SecondaryKey
 
   sqlType:
     id: character varying(36)
@@ -36,7 +38,7 @@ Refunds:
       kvFunction: findOneWithKV
       where: shortId
     findAllByOrderId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: orderId
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV

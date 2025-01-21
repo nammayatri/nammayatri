@@ -29,6 +29,6 @@ instance B.Table VehicleConfigT where
 
 type VehicleConfig = VehicleConfigT Identity
 
-$(enableKVPG ''VehicleConfigT ['id] [])
+$(enableKVPG ''VehicleConfigT ['id] [['becknConfigId]])
 
 $(mkTableInstances ''VehicleConfigT "beckn_vehicle_config")

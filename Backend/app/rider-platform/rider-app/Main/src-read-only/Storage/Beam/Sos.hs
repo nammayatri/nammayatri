@@ -31,6 +31,6 @@ instance B.Table SosT where
 
 type Sos = SosT Identity
 
-$(enableKVPG ''SosT ['id] [['rideId]])
+$(enableKVPG ''SosT ['id] [['rideId], ['ticketId]])
 
 $(mkTableInstances ''SosT "sos")

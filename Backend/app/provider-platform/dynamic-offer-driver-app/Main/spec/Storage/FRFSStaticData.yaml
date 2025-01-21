@@ -57,7 +57,7 @@ Station:
 
   queries:
     findByMerchantOperatingCityIdAndVehicleType:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and: [merchantOperatingCityId, vehicleType]
     findById:
@@ -127,13 +127,13 @@ Route:
       kvFunction: findOneWithKV
       where: id
     findAllByMerchantOperatingCityAndVehicleType:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and:
           - eq: [merchantOperatingCityId, vehicleType]
           - in: [code]
     findByRouteCodes:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb # is it correct?
       where:
         and:
           - in: [code]
@@ -186,21 +186,21 @@ RouteTripStopMapping:
     scheduledDay: PrimaryKey
   queries:
     findByLocation:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: stopPoint
     findAllRTSMappingByRouteAndDay:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [routeCode, scheduledDay]
     findByRouteCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: routeCode
     findAllByRouteCodeForStops:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [routeCode, tripSequenceNum, scheduledDay]
     findAllByStopCodeAndStopSequenceAndRoutes:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - eq: [stopCode, stopSequenceNum, tripSequenceNum, scheduledDay]
@@ -222,6 +222,6 @@ FleetRouteAssociation:
     id: PrimaryKey
   queries:
     findAllByFleetOwnerIdAndCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [fleetOwnerId, merchantOperatingCityId]

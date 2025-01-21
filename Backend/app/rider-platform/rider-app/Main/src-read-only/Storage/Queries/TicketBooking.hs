@@ -52,7 +52,7 @@ getAllBookingsByPlaceIdAndVisitDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Day -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
 getAllBookingsByPlaceIdAndVisitDate ticketPlaceId visitDate status = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.ticketPlaceId $ Se.Eq (Kernel.Types.Id.getId ticketPlaceId),
           Se.Is Beam.visitDate $ Se.Eq visitDate,

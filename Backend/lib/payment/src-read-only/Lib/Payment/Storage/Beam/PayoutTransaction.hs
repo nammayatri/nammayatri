@@ -27,11 +27,11 @@ data PayoutTransactionT f = PayoutTransactionT
   deriving (Generic, B.Beamable)
 
 instance B.Table PayoutTransactionT where
-  data PrimaryKey PayoutTransactionT f = PayoutTransactionId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PayoutTransactionId <$> id <*> transactionRef
+  data PrimaryKey PayoutTransactionT f = PayoutTransactionId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = PayoutTransactionId . id
 
 type PayoutTransaction = PayoutTransactionT Identity
 
-$(enableKVPG ''PayoutTransactionT ['id, 'transactionRef] [])
+$(enableKVPG ''PayoutTransactionT ['id] [['transactionRef]])
 
 $(mkTableInstancesGenericSchema ''PayoutTransactionT "payout_transaction")

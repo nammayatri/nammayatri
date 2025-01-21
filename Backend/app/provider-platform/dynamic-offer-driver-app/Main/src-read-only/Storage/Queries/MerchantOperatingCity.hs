@@ -26,12 +26,12 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Merc
 createMany = traverse_ create
 
 findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
-findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
+findAllByMerchantId merchantId = do findAllWithDb [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
 
 findAllByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
-findAllByMerchantIdAndState merchantId state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
+findAllByMerchantIdAndState merchantId state = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -41,12 +41,12 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByMerchantIdAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findByMerchantIdAndCity merchantId city = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.city $ Se.Eq city]]
+findByMerchantIdAndCity merchantId city = do findOneWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.city $ Se.Eq city]]
 
 findByMerchantShortIdAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findByMerchantShortIdAndCity merchantShortId city = do findOneWithKV [Se.And [Se.Is Beam.merchantShortId $ Se.Eq (Kernel.Types.Id.getShortId merchantShortId), Se.Is Beam.city $ Se.Eq city]]
+findByMerchantShortIdAndCity merchantShortId city = do findOneWithDb [Se.And [Se.Is Beam.merchantShortId $ Se.Eq (Kernel.Types.Id.getShortId merchantShortId), Se.Is Beam.city $ Se.Eq city]]
 
 instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
   fromTType' (Beam.MerchantOperatingCityT {..}) = do

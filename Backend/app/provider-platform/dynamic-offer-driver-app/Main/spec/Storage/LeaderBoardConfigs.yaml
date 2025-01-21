@@ -30,9 +30,9 @@ LeaderBoardConfigs:
 
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findLeaderBoardConfigbyType:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [leaderBoardType, merchantOperatingCityId]

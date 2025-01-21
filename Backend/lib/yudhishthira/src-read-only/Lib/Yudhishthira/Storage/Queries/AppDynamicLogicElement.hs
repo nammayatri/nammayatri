@@ -26,17 +26,17 @@ createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yud
 createMany = traverse_ create
 
 findByDomain :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
-findByDomain domain = do findAllWithKV [Se.Is Beam.domain $ Se.Eq domain]
+findByDomain domain = do findAllWithDb [Se.Is Beam.domain $ Se.Eq domain]
 
 findByDomainAndVersion ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Kernel.Prelude.Int -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
-findByDomainAndVersion limit offset domain version = do findAllWithOptionsKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.version $ Se.Eq version]] (Se.Asc Beam.order) limit offset
+findByDomainAndVersion limit offset domain version = do findAllWithOptionsDb [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.version $ Se.Eq version]] (Se.Asc Beam.order) limit offset
 
 findLatestVersion ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
-findLatestVersion limit offset domain = do findAllWithOptionsKV [Se.Is Beam.domain $ Se.Eq domain] (Se.Desc Beam.version) limit offset
+findLatestVersion limit offset domain = do findAllWithOptionsDb [Se.Is Beam.domain $ Se.Eq domain] (Se.Desc Beam.version) limit offset
 
 findByPrimaryKey ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>

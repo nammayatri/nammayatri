@@ -83,7 +83,7 @@ PartnerOrgConfig:
 
   queries:
     findAllByPartnerOrgId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: partnerOrgId
 
   excludedFields: [merchantId, merchantOperatingCityId]

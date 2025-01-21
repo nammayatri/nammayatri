@@ -13,6 +13,9 @@ VehicleConfig:
     blackListedSubscribers: "[Text]"
     buyerFinderFee: Text
 
+  constraints:
+    becknConfigId: SecondaryKey
+
   queries:
     findAllByBecknConfigId:
       kvFunction: findAllWithKV

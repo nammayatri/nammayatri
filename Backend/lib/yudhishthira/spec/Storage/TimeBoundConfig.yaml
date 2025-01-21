@@ -20,7 +20,7 @@ TimeBoundConfig:
 
   queries:
     findByCityAndDomain:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, timeBoundDomain]
 

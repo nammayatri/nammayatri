@@ -43,6 +43,6 @@ instance B.Table ReelsDataT where
 
 type ReelsData = ReelsDataT Identity
 
-$(enableKVPG ''ReelsDataT ['id] [])
+$(enableKVPG ''ReelsDataT ['id] [['reelKey]])
 
 $(mkTableInstances ''ReelsDataT "reels_data")

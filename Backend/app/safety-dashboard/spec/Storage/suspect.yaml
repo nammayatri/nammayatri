@@ -42,6 +42,7 @@ Suspect:
 
   constraints:
     id: PrimaryKey
+    dl: SecondaryKey
   types:
     FlaggedBy:
       partnerName : Maybe Text
@@ -68,14 +69,14 @@ Suspect:
       kvFunction: findOneWithKV
       where: dl
     findByVoterId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: voterId
     updateFlaggedCounterByDl:
       kvFunction: updateWithKV
       params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
       where: dl
     updateFlaggedCounterByVoterId:
-      kvFunction: updateWithKV
+      kvFunction: updateWithDb
       params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
       where: voterId
     updateFlaggedStatusById:
@@ -150,6 +151,7 @@ SuspectFlagRequest:
 
   constraints:
     id: PrimaryKey
+    dl: SecondaryKey
 
   types:
     AdminApproval:
@@ -177,7 +179,7 @@ SuspectFlagRequest:
       where:
         and: [merchantId, adminApproval, dl]
     findByMerchantIdAndAdminApprovalAndVoterId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantId, adminApproval, voterId]
     findAllByMerchantIdAndDl:
@@ -185,11 +187,11 @@ SuspectFlagRequest:
       where:
         and: [merchantId, dl]
     findAllByMerchantIdAndVoterId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, voterId]
     findByDlOrVoterId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         or: [dl, voterId]
   extraOperations:
@@ -216,7 +218,7 @@ FlaggedCategory:
 
   queries:
     findByName:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: name
     deleteById:
       kvFunction: deleteWithKV
@@ -247,10 +249,10 @@ MerchantConfigs:
       derive: "Ord,Eq,Read,'ListInstance"
   queries:
     findByMerchantId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: merchantId
     findByRequestWebHook:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: requestWebHook
     updateRequestWebHookById:
       kvFunction: updateWithKV
@@ -285,11 +287,11 @@ Notification :
       enum: "ADMIN_CHANGE_SUSPECT_STATUS,FLAG_REQUEST_UPLOAD,CHANGE_REQUEST_PARTNER_ADMIN,FLAG_REQUEST_APPROVED,PARTNER_FLAGGED_SUSPECT,FLAG_REQUEST_REJECTED,ADMIN_FLAGGED_SUSPECT,ADMIN_CHARGED_SUSPECT,ADMIN_CLEAN_SUSPECT"
   queries:
     findByMerchantIdAndreadStatus:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [notificationCategory, readStatus, merchantId]
     findByReceiverId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and: [receiverId]
     updateReadStatusById:
@@ -301,7 +303,7 @@ Notification :
       where:
         and: [receiverId, id]
     findByReceiverIdAndReadStatus:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and: [receiverId, readStatus]
 
@@ -327,20 +329,20 @@ SuspectStatusChangeRequest:
   queries:
 
     findBySuspectIdAndMerchantId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [suspectId, merchantId]
 
     findAllByMerchantId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantId
 
     findAllByReqStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: reqStatus
 
     findBySuspectId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: suspectId
 
 
@@ -364,5 +366,5 @@ PortalConfigs :
     id: PrimaryKey
   queries:
     findByConfigName:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: configName

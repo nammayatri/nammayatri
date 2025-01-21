@@ -34,7 +34,7 @@ findByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Station.Station])
 findByMerchantOperatingCityIdAndVehicleType limit offset merchantOperatingCityId vehicleType = do
-  findAllWithOptionsKV
+  findAllWithOptionsDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType

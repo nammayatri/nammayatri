@@ -274,7 +274,7 @@ MerchantServiceConfig:
 
   queries:
     findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
 
   extraOperations:
@@ -482,7 +482,7 @@ MerchantMessage:
 
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findByMerchantOperatingCityIdAndMessageKey:
       kvFunction: findOneWithKV
@@ -527,10 +527,10 @@ RideRelatedNotificationConfig:
     merchantOperatingCityId: PrimaryKey
   queries:
     findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findAllByMerchantOperatingCityIdAndTimeDiffEvent:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
 
@@ -570,14 +570,14 @@ MerchantPushNotification:
     # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findAllByMerchantOpCityIdAndMessageKey:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, key]
     findAllByMerchantOpCityAndMessageKeyAndTripCategory:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, key, tripCategory]
 
@@ -632,11 +632,11 @@ PayoutConfig:
     id: PrimaryKey
   queries:
     findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
     findByCityIdAndVehicleCategory:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantOperatingCityId, vehicleCategory]
 

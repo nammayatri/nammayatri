@@ -26,7 +26,7 @@ createMany = traverse_ create
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> m [Domain.Types.RouteStopFare.RouteStopFare])
-findByRouteCode farePolicyId routeCode = do findAllWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId), Se.Is Beam.routeCode $ Se.Eq routeCode]]
+findByRouteCode farePolicyId routeCode = do findAllWithDb [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId), Se.Is Beam.routeCode $ Se.Eq routeCode]]
 
 findByRouteStartAndStopCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

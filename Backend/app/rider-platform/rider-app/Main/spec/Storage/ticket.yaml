@@ -60,13 +60,13 @@ TicketPlace:
 
   queries:
     getTicketPlaces:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
       where: id
     findByNameAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [name, merchantOperatingCityId]
 
@@ -120,12 +120,12 @@ TicketService:
       where: id
 
     findByPlacesIdAndService:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [placesId, service]
 
     getTicketServicesByPlaceId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: placesId
 
   extraOperations:
@@ -364,7 +364,7 @@ TicketBooking:
       where:
         and: [personId, merchantOperatingCityId, status]
     getAllBookingsByPlaceIdAndVisitDate:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [ticketPlaceId, visitDate, status]
     updateStatusAndCancelledSeatsById:
@@ -417,6 +417,9 @@ TicketBookingService:
     btype: "'Duration 03:30:00 12:00:00'"
     bookedSeats: "0"
 
+  constraints:
+    shortId: SecondaryKey
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -425,10 +428,10 @@ TicketBookingService:
       kvFunction: findOneWithKV
       where: shortId
     findAllByBookingId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: ticketBookingId
     updateAllStatusByBookingId:
-      kvFunction: updateWithKV
+      kvFunction: updateWithDb
       params: [status, updatedAt]
       where: ticketBookingId
     updateVerificationById:
@@ -477,7 +480,7 @@ TicketBookingServiceCategory:
 
   queries:
     findAllByTicketBookingServiceId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: ticketBookingServiceId
     updateCancellationDetailsById:
       kvFunction: updateWithKV
@@ -487,7 +490,7 @@ TicketBookingServiceCategory:
       kvFunction: findOneWithKV
       where: id
     findAllByServiceCategoryIdDateAndBtype:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [serviceCategoryId, visitDate, btype]
 
@@ -527,7 +530,7 @@ TicketBookingPeopleCategory:
       kvFunction: findOneWithKV
       where: id
     findAllByServiceCategoryId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: ticketBookingServiceCategoryId
     updateTicketPeopleUnitsAndAmountById:
       kvFunction: updateWithKV

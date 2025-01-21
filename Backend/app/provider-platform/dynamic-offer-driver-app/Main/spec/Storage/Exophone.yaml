@@ -30,16 +30,16 @@ Exophone:
 
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
 
     findByMerchantOpCityIdServiceAndExophoneType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, callService, exophoneType]
 
     deleteByMerchantOpCityId:
-      kvFunction: deleteWithKV
+      kvFunction: deleteWithDb
       where: merchantOperatingCityId
 
   default :

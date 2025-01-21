@@ -47,6 +47,6 @@ Toll:
 
   queries:
     findAllTollsByMerchantOperatingCity:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         eq: [merchantOperatingCityId]

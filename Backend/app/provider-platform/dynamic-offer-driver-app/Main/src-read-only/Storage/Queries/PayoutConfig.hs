@@ -27,13 +27,13 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig])
-findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithDb [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndIsPayoutEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.isPayoutEnabled $ Se.Eq isPayoutEnabled

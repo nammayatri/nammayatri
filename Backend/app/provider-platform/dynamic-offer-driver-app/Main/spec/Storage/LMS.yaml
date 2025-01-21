@@ -65,13 +65,13 @@ LmsModule:
 
   queries:
     getAllModules:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
       where: id
     getAllModulesWithModuleSection:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
        and: [merchantOperatingCityId, moduleSection]
 
@@ -95,7 +95,7 @@ LmsModuleTranslation:
       where:
         and: [moduleId, language]
     getAllTranslationsByModuleId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: moduleId
 
 
@@ -121,7 +121,7 @@ LmsModuleVideoInformation:
 
   queries:
     getAllVideos:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - eq: [moduleId]
@@ -187,7 +187,7 @@ LmsVideoTranslation:
       where:
         and: [videoId, language]
     getAllTranslationsForVideoId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: videoId
     updateCompletedWatchCount:
       kvFunction: updateOneWithKV
@@ -232,6 +232,7 @@ DriverModuleCompletion:
 
   constraints:
     completionId : PrimaryKey
+    driverId: SecondaryKey
 
   queries:
     findByDriverId:
@@ -279,7 +280,7 @@ ModuleCompletionInformation:
   excludedFields: [merchantId, merchantOperatingCityId]
 
   constraints:
-    completionId: PrimaryKey
+    completionId: PrimaryKey|SecondaryKey
     entityId: PrimaryKey
     entity: PrimaryKey
     attempt: PrimaryKey
@@ -321,7 +322,7 @@ QuestionModuleMapping:
   excludedFields: [merchantId, merchantOperatingCityId]
 
   constraints:
-    moduleId: PrimaryKey
+    moduleId: PrimaryKey|SecondaryKey
     questionId: PrimaryKey
 
   queries:
@@ -353,7 +354,7 @@ QuestionInformation:
     options: convertOptionsToTable
 
   constraints:
-    questionId: PrimaryKey
+    questionId: PrimaryKey|SecondaryKey
     language: PrimaryKey
 
   excludedFields: [merchantId, merchantOperatingCityId]
@@ -391,6 +392,7 @@ LmsCertificate:
   constraints:
     id: PrimaryKey
     moduleCompletionId: SecondaryKey
+    driverId: SecondaryKey
 
   queries:
     getAllCertificate:

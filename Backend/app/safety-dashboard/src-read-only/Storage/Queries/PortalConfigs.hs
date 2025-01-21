@@ -22,7 +22,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Port
 createMany = traverse_ create
 
 findByConfigName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
-findByConfigName configName = do findOneWithKV [Se.Is Beam.configName $ Se.Eq configName]
+findByConfigName configName = do findOneWithDb [Se.Is Beam.configName $ Se.Eq configName]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PortalConfigs.PortalConfigs -> m (Maybe Domain.Types.PortalConfigs.PortalConfigs))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

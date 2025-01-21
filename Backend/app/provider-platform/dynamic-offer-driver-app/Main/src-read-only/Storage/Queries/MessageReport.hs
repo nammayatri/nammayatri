@@ -25,10 +25,10 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Mess
 createMany = traverse_ create
 
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
-deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+deleteByPersonId driverId = do deleteWithDb [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.MessageReport.MessageReport))
-findById messageId = do findOneWithKV [Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId)]
+findById messageId = do findOneWithDb [Se.Is Beam.messageId $ Se.Eq (Kernel.Types.Id.getId messageId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

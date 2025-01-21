@@ -186,6 +186,7 @@ Person:
     referralCode: SecondaryKey
     deviceToken: SecondaryKey
     customerReferralCode: SecondaryKey
+    deviceId: SecondaryKey
 
   sqlType:
     firstName: character varying(255)

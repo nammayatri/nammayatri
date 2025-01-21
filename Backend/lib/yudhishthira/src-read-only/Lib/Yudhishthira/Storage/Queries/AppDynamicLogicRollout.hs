@@ -29,7 +29,7 @@ findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.domain $ Se.Eq domain

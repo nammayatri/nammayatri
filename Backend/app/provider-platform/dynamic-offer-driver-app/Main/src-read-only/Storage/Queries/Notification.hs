@@ -24,7 +24,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Noti
 createMany = traverse_ create
 
 findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Notification.Notification))
-findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+findByShortId shortId = do findOneWithDb [Se.Is Beam.shortId $ Se.Eq shortId]
 
 updateNotificationStatusAndResponseInfoById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

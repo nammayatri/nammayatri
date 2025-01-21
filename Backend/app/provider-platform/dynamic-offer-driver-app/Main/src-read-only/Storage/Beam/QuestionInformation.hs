@@ -31,6 +31,6 @@ instance B.Table QuestionInformationT where
 
 type QuestionInformation = QuestionInformationT Identity
 
-$(enableKVPG ''QuestionInformationT ['language, 'questionId] [])
+$(enableKVPG ''QuestionInformationT ['language, 'questionId] [['questionId]])
 
 $(mkTableInstances ''QuestionInformationT "question_information")

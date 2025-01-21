@@ -33,6 +33,6 @@ instance B.Table SuspectT where
 
 type Suspect = SuspectT Identity
 
-$(enableKVPG ''SuspectT ['id] [])
+$(enableKVPG ''SuspectT ['id] [['dl]])
 
 $(mkTableInstances ''SuspectT "suspect")

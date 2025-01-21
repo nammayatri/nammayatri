@@ -26,6 +26,8 @@ ReelsData:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     rank: Int
+  constraints:
+    reelKey: SecondaryKey
 
   beamType:
     sideButtonConfig: Value

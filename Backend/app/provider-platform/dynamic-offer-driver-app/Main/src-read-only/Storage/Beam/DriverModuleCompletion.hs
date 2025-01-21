@@ -35,6 +35,6 @@ instance B.Table DriverModuleCompletionT where
 
 type DriverModuleCompletion = DriverModuleCompletionT Identity
 
-$(enableKVPG ''DriverModuleCompletionT ['completionId] [])
+$(enableKVPG ''DriverModuleCompletionT ['completionId] [['driverId]])
 
 $(mkTableInstances ''DriverModuleCompletionT "driver_module_completion")

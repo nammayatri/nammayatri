@@ -47,3 +47,4 @@ Sos:
   constraints:
     id: PrimaryKey
     rideId: SecondaryKey
+    ticketId: SecondaryKey

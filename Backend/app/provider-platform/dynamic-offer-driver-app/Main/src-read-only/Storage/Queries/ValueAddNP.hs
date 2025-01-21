@@ -21,7 +21,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Valu
 createMany = traverse_ create
 
 findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m [Domain.Types.ValueAddNP.ValueAddNP])
-findAll enabled = do findAllWithKV [Se.Is Beam.enabled $ Se.Eq enabled]
+findAll enabled = do findAllWithDb [Se.Is Beam.enabled $ Se.Eq enabled]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.ValueAddNP.ValueAddNP))
 findByPrimaryKey subscriberId = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]

@@ -27,7 +27,7 @@ findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
 findByRouteCode routeCode merchantId merchantOperatingCityId = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.routeCode $ Se.Eq routeCode,
           Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),

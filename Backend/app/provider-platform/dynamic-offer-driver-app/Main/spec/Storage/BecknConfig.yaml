@@ -43,18 +43,18 @@ BecknConfig:
 
   queries:
     findByMerchantIdDomainAndVehicle:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantId, domain, vehicleCategory]
     findByMerchantIdAndDomain:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, domain]
     findById:
       kvFunction: findOneWithKV
       where: id
     findAllByMerchantId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId]
 

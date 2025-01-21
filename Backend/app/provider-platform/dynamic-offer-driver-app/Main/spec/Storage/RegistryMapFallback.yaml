@@ -21,7 +21,6 @@ RegistryMapFallback:
     subscriberId: PrimaryKey
     uniqueId: PrimaryKey
 
-
   fromTType:
     registryUrl: parseBaseUrl|MI
 
@@ -30,11 +29,11 @@ RegistryMapFallback:
 
   queries:
     findBySubscriberId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: subscriberId
 
     findByUniqueId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: uniqueId
 
     findBySubscriberIdAndUniqueId:

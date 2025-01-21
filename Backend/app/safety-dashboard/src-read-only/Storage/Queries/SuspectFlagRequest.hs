@@ -43,12 +43,12 @@ findAllByMerchantIdAndDl merchantId dl = do findAllWithKV [Se.And [Se.Is Beam.me
 findAllByMerchantIdAndVoterId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
-findAllByMerchantIdAndVoterId merchantId voterId = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.voterId $ Se.Eq voterId]]
+findAllByMerchantIdAndVoterId merchantId voterId = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.voterId $ Se.Eq voterId]]
 
 findByDlOrVoterId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
-findByDlOrVoterId dl voterId = do findOneWithKV [Se.Or [Se.Is Beam.dl $ Se.Eq dl, Se.Is Beam.voterId $ Se.Eq voterId]]
+findByDlOrVoterId dl voterId = do findOneWithDb [Se.Or [Se.Is Beam.dl $ Se.Eq dl, Se.Is Beam.voterId $ Se.Eq voterId]]
 
 findByMerchantIdAndAdminApprovalAndDl ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -66,7 +66,7 @@ findByMerchantIdAndAdminApprovalAndVoterId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectFlagRequest.SuspectFlagRequest))
 findByMerchantIdAndAdminApprovalAndVoterId merchantId adminApproval voterId = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
           Se.Is Beam.adminApproval $ Se.Eq adminApproval,

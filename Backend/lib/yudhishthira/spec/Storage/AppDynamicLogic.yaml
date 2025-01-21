@@ -23,20 +23,20 @@ AppDynamicLogicElement:
 
   queries:
     findByDomainAndVersion:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       orderBy:
         field: order
         order: asc
       where:
         and: [domain, version]
     findLatestVersion:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       orderBy:
         field: version
         order: desc
       where: domain
     findByDomain:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: domain
 
   beamType:
@@ -72,7 +72,7 @@ AppDynamicLogicRollout:
 
   queries:
     findByMerchantOpCityAndDomain:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, domain]
 

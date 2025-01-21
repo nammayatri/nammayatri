@@ -26,7 +26,7 @@ findAllByFleetOwnerIdAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetRouteAssociation.FleetRouteAssociation])
 findAllByFleetOwnerIdAndCityId fleetOwnerId merchantOperatingCityId = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)

@@ -30,7 +30,7 @@ findAllByServiceCategoryIdDateAndBtype ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Domain.Types.BusinessHour.BusinessHourType -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
 findAllByServiceCategoryIdDateAndBtype serviceCategoryId visitDate btype = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.serviceCategoryId $ Se.Eq serviceCategoryId,
           Se.Is Beam.visitDate $ Se.Eq visitDate,
@@ -41,7 +41,7 @@ findAllByServiceCategoryIdDateAndBtype serviceCategoryId visitDate btype = do
 findAllByTicketBookingServiceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
-findAllByTicketBookingServiceId ticketBookingServiceId = do findAllWithKV [Se.Is Beam.ticketBookingServiceId $ Se.Eq (Kernel.Types.Id.getId ticketBookingServiceId)]
+findAllByTicketBookingServiceId ticketBookingServiceId = do findAllWithDb [Se.Is Beam.ticketBookingServiceId $ Se.Eq (Kernel.Types.Id.getId ticketBookingServiceId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

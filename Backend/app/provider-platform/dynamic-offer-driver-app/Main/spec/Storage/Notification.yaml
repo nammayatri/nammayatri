@@ -45,7 +45,7 @@ Notification:
 
   queries:
     findByShortId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: shortId
 
     updateNotificationStatusAndResponseInfoById:

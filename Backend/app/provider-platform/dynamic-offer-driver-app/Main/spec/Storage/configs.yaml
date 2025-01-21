@@ -107,7 +107,7 @@ DriverPoolConfig:
 
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where: merchantOperatingCityId
       orderBy: tripDistance
 
@@ -148,7 +148,7 @@ ValueAddNP:
 
   queries:
     findAll:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: enabled
 
 SurgePricing:
@@ -164,7 +164,7 @@ SurgePricing:
 
   queries:
     findByHexDayHourAndVehicleServiceTier:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
 

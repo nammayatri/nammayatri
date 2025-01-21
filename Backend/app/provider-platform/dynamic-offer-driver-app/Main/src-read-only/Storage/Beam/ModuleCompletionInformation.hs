@@ -31,6 +31,6 @@ instance B.Table ModuleCompletionInformationT where
 
 type ModuleCompletionInformation = ModuleCompletionInformationT Identity
 
-$(enableKVPG ''ModuleCompletionInformationT ['attempt, 'completionId, 'entity, 'entityId] [])
+$(enableKVPG ''ModuleCompletionInformationT ['attempt, 'completionId, 'entity, 'entityId] [['completionId]])
 
 $(mkTableInstances ''ModuleCompletionInformationT "module_completion_information")

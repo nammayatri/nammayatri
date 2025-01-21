@@ -6,7 +6,6 @@ module Storage.Queries.IntegratedBPPConfig where
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.IntegratedBPPConfig
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -39,12 +38,11 @@ findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCate
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
-findByPrimaryKey domain merchantId merchantOperatingCityId vehicleCategory = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByPrimaryKey domain merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
@@ -54,13 +52,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]

@@ -26,7 +26,7 @@ findByMerchantIdAndreadStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Notification.NotificationCategory -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.Notification.Notification))
 findByMerchantIdAndreadStatus notificationCategory readStatus merchantId = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.notificationCategory $ Se.Eq notificationCategory,
           Se.Is Beam.readStatus $ Se.Eq readStatus,
@@ -35,7 +35,7 @@ findByMerchantIdAndreadStatus notificationCategory readStatus merchantId = do
     ]
 
 findByReceiverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m [Domain.Types.Notification.Notification])
-findByReceiverId limit offset receiverId = do findAllWithOptionsKV [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId]] (Se.Desc Beam.createdAt) limit offset
+findByReceiverId limit offset receiverId = do findAllWithOptionsDb [Se.And [Se.Is Beam.receiverId $ Se.Eq receiverId]] (Se.Desc Beam.createdAt) limit offset
 
 findByReceiverIdAndId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -44,7 +44,7 @@ findByReceiverIdAndId receiverId id = do findOneWithKV [Se.And [Se.Is Beam.recei
 
 findByReceiverIdAndReadStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m [Domain.Types.Notification.Notification])
 findByReceiverIdAndReadStatus limit offset receiverId readStatus = do
-  findAllWithOptionsKV
+  findAllWithOptionsDb
     [ Se.And
         [ Se.Is Beam.receiverId $ Se.Eq receiverId,
           Se.Is Beam.readStatus $ Se.Eq readStatus

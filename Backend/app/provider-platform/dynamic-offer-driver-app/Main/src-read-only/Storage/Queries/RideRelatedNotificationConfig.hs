@@ -25,13 +25,13 @@ createMany = traverse_ create
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
-findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithDb [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndTimeDiffEvent ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
 findAllByMerchantOperatingCityIdAndTimeDiffEvent merchantOperatingCityId timeDiffEvent = do
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.timeDiffEvent $ Se.Eq timeDiffEvent

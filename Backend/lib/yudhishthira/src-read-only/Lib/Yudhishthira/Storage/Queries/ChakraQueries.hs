@@ -23,7 +23,7 @@ createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yud
 createMany = traverse_ create
 
 findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
-findAllByChakra chakra = do findAllWithKV [Se.Is Beam.chakra $ Se.Eq chakra]
+findAllByChakra chakra = do findAllWithDb [Se.Is Beam.chakra $ Se.Eq chakra]
 
 findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Text -> m (Maybe Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries))
 findByPrimaryKey chakra queryName = do findOneWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]

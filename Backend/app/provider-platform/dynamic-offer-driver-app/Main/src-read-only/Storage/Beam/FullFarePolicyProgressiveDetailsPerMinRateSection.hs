@@ -29,6 +29,6 @@ instance B.Table FullFarePolicyProgressiveDetailsPerMinRateSectionT where
 
 type FullFarePolicyProgressiveDetailsPerMinRateSection = FullFarePolicyProgressiveDetailsPerMinRateSectionT Identity
 
-$(enableKVPG ''FullFarePolicyProgressiveDetailsPerMinRateSectionT ['farePolicyId, 'rideDurationInMin] [])
+$(enableKVPG ''FullFarePolicyProgressiveDetailsPerMinRateSectionT ['farePolicyId, 'rideDurationInMin] [['farePolicyId]])
 
 $(mkTableInstances ''FullFarePolicyProgressiveDetailsPerMinRateSectionT "fare_policy_progressive_details_per_min_rate_section")

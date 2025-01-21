@@ -20,7 +20,7 @@ ChakraQueries:
 
   queries:
     findAllByChakra:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: chakra
 
   beamInstance: MakeTableInstancesGenericSchema

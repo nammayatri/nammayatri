@@ -27,7 +27,7 @@ createMany = traverse_ create
 getAllTranslationsForVideoId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m [Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
-getAllTranslationsForVideoId videoId = do findAllWithKV [Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)]
+getAllTranslationsForVideoId videoId = do findAllWithDb [Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)]
 
 getVideoByLanguageAndVideoId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

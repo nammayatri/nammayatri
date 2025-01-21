@@ -24,7 +24,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Tick
 createMany = traverse_ create
 
 findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m [Domain.Types.TicketBookingService.TicketBookingService])
-findAllByBookingId ticketBookingId = do findAllWithKV [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
+findAllByBookingId ticketBookingId = do findAllWithDb [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -39,7 +39,7 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 updateAllStatusByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ())
 updateAllStatusByBookingId status ticketBookingId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
+  updateWithDb [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

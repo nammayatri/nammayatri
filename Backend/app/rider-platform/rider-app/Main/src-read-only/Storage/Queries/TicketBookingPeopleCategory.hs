@@ -27,7 +27,7 @@ createMany = traverse_ create
 findAllByServiceCategoryId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m [Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory])
-findAllByServiceCategoryId ticketBookingServiceCategoryId = do findAllWithKV [Se.Is Beam.ticketBookingServiceCategoryId $ Se.Eq (Kernel.Types.Id.getId ticketBookingServiceCategoryId)]
+findAllByServiceCategoryId ticketBookingServiceCategoryId = do findAllWithDb [Se.Is Beam.ticketBookingServiceCategoryId $ Se.Eq (Kernel.Types.Id.getId ticketBookingServiceCategoryId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

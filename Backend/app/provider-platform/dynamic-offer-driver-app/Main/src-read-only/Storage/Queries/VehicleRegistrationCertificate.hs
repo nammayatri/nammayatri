@@ -28,7 +28,7 @@ createMany = traverse_ create
 findAllByFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
-findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId] (Se.Desc Beam.updatedAt) limit offset
+findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsDb [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId] (Se.Desc Beam.updatedAt) limit offset
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

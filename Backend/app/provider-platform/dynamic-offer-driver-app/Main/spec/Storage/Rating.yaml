@@ -27,6 +27,7 @@ Rating:
   constraints:
     id: PrimaryKey
     rideId: SecondaryKey
+    driverId: SecondaryKey
 
   queries:
     findRatingForRide:

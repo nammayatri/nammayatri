@@ -26,7 +26,7 @@ deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
-findByName name = do findOneWithKV [Se.Is Beam.name $ Se.Eq name]
+findByName name = do findOneWithDb [Se.Is Beam.name $ Se.Eq name]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FlaggedCategory.FlaggedCategory -> m (Maybe Domain.Types.FlaggedCategory.FlaggedCategory))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

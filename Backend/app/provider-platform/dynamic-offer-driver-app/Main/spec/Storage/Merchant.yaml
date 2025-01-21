@@ -205,7 +205,7 @@ MerchantMessage:
     - updateByPrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findByMerchantOpCityIdAndMessageKey:
       kvFunction: findOneWithKV
@@ -249,7 +249,7 @@ LlmPrompt:
     - updateByPrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey:
       kvFunction: findOneWithKV
@@ -314,18 +314,18 @@ MerchantOperatingCity:
       kvFunction: findOneWithKV
       where: id
     findAllByMerchantId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantId
     findByMerchantIdAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantId, city]
     findAllByMerchantIdAndState:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, state]
     findByMerchantShortIdAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantShortId, city]
 
@@ -428,14 +428,14 @@ Overlay:
     secondaryActions2: "json"
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     deleteByOverlayKeyMerchantOpCityIdUdf:
       kvFunction: deleteWithKV
       where:
         and: [merchantOperatingCityId, overlayKey, udf1]
     findAllByLanguage:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, language]
     findAllByOverlayKeyUdf:
@@ -451,7 +451,7 @@ Overlay:
       where:
         and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
     findAllByLanguageVehicleCategory:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, language, vehicleCategory]
     findAllByOverlayKeyUdfVehicleCategory:
@@ -1464,14 +1464,14 @@ MerchantPushNotification:
     # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findAllByMerchantOpCityIdAndMessageKey:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, key]
     findAllByMerchantOpCityIdAndMessageKeyAndTripCategory:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, key, tripCategory]
 
@@ -1508,10 +1508,10 @@ RideRelatedNotificationConfig:
     merchantOperatingCityId: PrimaryKey
   queries:
     findAllByMerchantOperatingCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findAllByMerchantOperatingCityIdAndTimeDiffEvent:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
 
@@ -1558,9 +1558,9 @@ PayoutConfig:
     vehicleCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findByMerchantOpCityIdAndIsPayoutEnabled:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]

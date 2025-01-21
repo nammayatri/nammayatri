@@ -26,7 +26,7 @@ findByHexDayHourAndVehicleServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.Common.ServiceTierType -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
 findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.sourceHex $ Se.Eq sourceHex,
           Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek,

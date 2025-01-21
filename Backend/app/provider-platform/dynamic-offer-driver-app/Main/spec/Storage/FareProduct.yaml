@@ -37,33 +37,33 @@ FareProduct:
 
   queries:
     findUnboundedByMerchantOpCityIdVariantArea:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and:
           - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
           - in: [searchSource]
 
     findAllUnboundedByMerchantOpCityIdVariantArea:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
           - in: [searchSource]
 
     findAllUnboundedFareProductForArea:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - eq: [merchantOperatingCityId, area, timeBounds, enabled]
           - in: [searchSource]
 
     findAllFareProductByMerchantOpCityId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOperatingCityId, enabled]
 
     findAllFareProductByFarePolicyId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [farePolicyId]
 

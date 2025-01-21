@@ -26,6 +26,6 @@ instance B.Table LmsCertificateT where
 
 type LmsCertificate = LmsCertificateT Identity
 
-$(enableKVPG ''LmsCertificateT ['id] [['moduleCompletionId]])
+$(enableKVPG ''LmsCertificateT ['id] [['driverId], ['moduleCompletionId]])
 
 $(mkTableInstances ''LmsCertificateT "lms_certificate")

@@ -25,7 +25,7 @@ createMany = traverse_ create
 findAllByStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> m [Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment])
-findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
+findAllByStatus status = do findAllWithDb [Se.Is Beam.status $ Se.Eq status]
 
 findAllTicketBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

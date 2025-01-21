@@ -30,7 +30,7 @@ RiderDriverCorrelation:
         and: [riderDetailId, driverId]
 
     findFavDriversForRider:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [riderDetailId, favourite]
 

@@ -94,7 +94,7 @@ TripTransaction:
         [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
       where: id
     findAllTripTransactionByDriverId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: driverId
     updateOnEnd:
       kvFunction: updateOneWithKV
@@ -160,7 +160,7 @@ ApprovalRequest:
       where: id
 
     findByStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [requestorId, status]
 

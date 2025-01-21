@@ -49,7 +49,7 @@ FareBreakup:
 
   constraints:
     bookingId: SecondaryKey
-    entityId: SecondaryKey
+    # entityId: SecondaryKey # not required because constraints work with beam fields
 
   queries:
     findById:

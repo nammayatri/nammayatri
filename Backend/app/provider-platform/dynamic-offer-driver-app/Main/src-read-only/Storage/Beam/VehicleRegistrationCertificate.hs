@@ -62,6 +62,6 @@ instance B.Table VehicleRegistrationCertificateT where
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
-$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
+$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash], ['documentImageId]])
 
 $(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")

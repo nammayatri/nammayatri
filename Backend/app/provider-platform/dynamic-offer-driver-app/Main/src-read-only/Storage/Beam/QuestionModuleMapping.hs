@@ -26,6 +26,6 @@ instance B.Table QuestionModuleMappingT where
 
 type QuestionModuleMapping = QuestionModuleMappingT Identity
 
-$(enableKVPG ''QuestionModuleMappingT ['moduleId, 'questionId] [])
+$(enableKVPG ''QuestionModuleMappingT ['moduleId, 'questionId] [['moduleId]])
 
 $(mkTableInstances ''QuestionModuleMappingT "question_module_mapping")

@@ -38,8 +38,8 @@ updatePayoutTransactionStatus status transactionRef = do
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction))
-findByPrimaryKey id transactionRef = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.transactionRef $ Se.Eq transactionRef]]
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m (Maybe Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction))
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction -> m ())
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction {..}) = do
@@ -54,9 +54,10 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.payoutOrderId (Kernel.Types.Id.getId payoutOrderId),
       Se.Set Beam.status status,
+      Se.Set Beam.transactionRef transactionRef,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.transactionRef $ Se.Eq transactionRef]]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction where
   fromTType' (Beam.PayoutTransactionT {..}) = do

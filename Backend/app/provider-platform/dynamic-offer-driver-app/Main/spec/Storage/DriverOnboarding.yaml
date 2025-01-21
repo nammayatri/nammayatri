@@ -202,6 +202,7 @@ VehicleRegistrationCertificate:
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId: "SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -215,7 +216,7 @@ VehicleRegistrationCertificate:
       where:
         and: [id, fleetOwnerId]
     findAllByFleetOwnerId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where: fleetOwnerId
       orderBy: updatedAt
     updateAirConditioned:
@@ -304,6 +305,7 @@ Image:
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
+    workflowTransactionId: SecondaryKey # is it correct ?
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -406,7 +408,7 @@ DocumentVerificationConfig:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where: merchantOperatingCityId
       orderBy:
         field: order
@@ -431,6 +433,7 @@ VehiclePermit:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+    documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -462,6 +465,7 @@ VehicleInsurance:
   constraints:
     id: PrimaryKey
     documentImageId: SecondaryKey
+    rcId: SecondaryKey # driverId: SecondaryKey ?
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -523,6 +527,7 @@ VehiclePUC:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+    documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -688,7 +693,7 @@ FleetOwnerDocumentVerificationConfig:
     dependencyDocumentType: text[]
   queries:
     findAllByMerchantOpCityId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where: merchantOperatingCityId
       orderBy:
         field: order
@@ -719,6 +724,7 @@ AadhaarCard:
   derives: "Generic,Show,ToJSON,FromJSON"
   constraints:
     driverId: PrimaryKey
+    aadhaarNumberHash: SecondaryKey
   queries:
     updateVerificationStatus:
       kvFunction: updateWithKV

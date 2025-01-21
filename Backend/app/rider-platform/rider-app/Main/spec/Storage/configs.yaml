@@ -40,15 +40,15 @@ MerchantOperatingCity:
       kvFunction: findOneWithKV
       where: id
     findByMerchantShortIdAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantShortId, city]
     findByMerchantIdAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [merchantId, city]
     findAllByMerchantIdAndState:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantId, state]
 
@@ -89,5 +89,5 @@ ValueAddNP:
 
   queries:
     findAll:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: enabled

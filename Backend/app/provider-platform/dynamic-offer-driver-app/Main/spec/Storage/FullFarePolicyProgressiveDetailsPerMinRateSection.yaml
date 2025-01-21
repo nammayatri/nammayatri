@@ -17,7 +17,7 @@ FullFarePolicyProgressiveDetailsPerMinRateSection:
     currency: "'INR'"
 
   constraints:
-    farePolicyId: PrimaryKey
+    farePolicyId: PrimaryKey|SecondaryKey
     rideDurationInMin: PrimaryKey
 
   excludedFields:

@@ -154,11 +154,11 @@ MessageReport:
 
   queries:
     findById:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: messageId
 
     deleteByPersonId:
-      kvFunction: deleteWithKV
+      kvFunction: deleteWithDb
       where: driverId
 
 

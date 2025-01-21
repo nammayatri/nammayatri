@@ -24,13 +24,13 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs])
-findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithDb [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findLeaderBoardConfigbyType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.LeaderBoardConfigs.LeaderBoardType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs))
 findLeaderBoardConfigbyType leaderBoardType merchantOperatingCityId = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.leaderBoardType $ Se.Eq leaderBoardType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)

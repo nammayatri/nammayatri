@@ -28,7 +28,7 @@ findByCityIdAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
 findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
@@ -39,7 +39,7 @@ findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> Domain.Types.PayoutConfig.PayoutEntity -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
 findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOperatingCityId isPayoutEnabled payoutEntity = do
-  findOneWithKV
+  findOneWithDb
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.isPayoutEnabled $ Se.Eq isPayoutEnabled,

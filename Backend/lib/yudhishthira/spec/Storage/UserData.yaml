@@ -20,7 +20,7 @@ UserData:
 
   queries:
     findAllByUserIdAndEventId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [userId, eventId]
 

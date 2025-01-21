@@ -20,4 +20,4 @@ import Storage.Queries.Transformers.PartnerOrgConfig
 findAllByPartnerOrgId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> m [Domain.Types.PartnerOrgConfig.PartnerOrgConfig])
-findAllByPartnerOrgId partnerOrgId = do findAllWithKV [Se.Is Beam.partnerOrgId $ Se.Eq (Kernel.Types.Id.getId partnerOrgId)]
+findAllByPartnerOrgId partnerOrgId = do findAllWithDb [Se.Is Beam.partnerOrgId $ Se.Eq (Kernel.Types.Id.getId partnerOrgId)]

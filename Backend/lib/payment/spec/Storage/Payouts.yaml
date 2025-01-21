@@ -54,7 +54,7 @@ PayoutOrder:
     updatedAt: timestamp with time zone
   constraints:
     id: PrimaryKey
-    orderId: PrimaryKey
+    orderId: SecondaryKey # is it correct? # PrimaryKey
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -67,10 +67,10 @@ PayoutOrder:
       params: [status]
       where: orderId
     findAllWithStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: status
     findAllByCustomerId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: customerId
     updatePayoutOrderTxnRespInfo:
       kvFunction: updateOneWithKV
@@ -107,7 +107,7 @@ PayoutTransaction:
     updatedAt: timestamp with time zone
   constraints:
     id: PrimaryKey
-    transactionRef: PrimaryKey
+    transactionRef: SecondaryKey # is it correct? # PrimaryKey
   beamFields:
     amount:
       currency: Maybe Currency

@@ -81,22 +81,22 @@ Plan:
         and: [id, paymentMode, serviceName]
 
     findByMerchantOpCityIdWithServiceName:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOpCityId, serviceName]
 
     findByMerchantOpCityIdAndTypeWithServiceName:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOpCityId, planType, serviceName, vehicleCategory, isDeprecated]
 
     findByMerchantOpCityIdTypeServiceNameVehicle:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOpCityId, paymentMode, serviceName, vehicleCategory, isDeprecated]
 
     findByMerchantOpCityIdAndTypeWithServiceNameAndVariant:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [merchantOpCityId, paymentMode, serviceName, vehicleVariant]
 

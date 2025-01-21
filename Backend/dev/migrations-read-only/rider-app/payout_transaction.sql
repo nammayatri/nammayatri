@@ -17,3 +17,9 @@ ALTER TABLE atlas_app.payout_transaction ADD PRIMARY KEY ( id, transaction_ref);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN merchant_operating_city_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_transaction DROP CONSTRAINT payout_transaction_pkey;
+ALTER TABLE atlas_app.payout_transaction ADD PRIMARY KEY ( id);

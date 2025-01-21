@@ -22,7 +22,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Rout
 createMany = traverse_ create
 
 findAllTripIdByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteTripMapping.RouteTripMapping])
-findAllTripIdByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+findAllTripIdByRouteCode routeCode = do findAllWithDb [Se.Is Beam.routeCode $ Se.Eq routeCode]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteTripMapping.RouteTripMapping))
 findByPrimaryKey tripCode = do findOneWithKV [Se.And [Se.Is Beam.tripCode $ Se.Eq tripCode]]

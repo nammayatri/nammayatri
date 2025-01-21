@@ -78,7 +78,7 @@ FRFSSearch:
 
   queries:
     getTicketPlaces:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
@@ -125,7 +125,7 @@ Station:
 
   queries:
     findByMerchantOperatingCityIdAndVehicleType:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and: [merchantOperatingCityId, vehicleType]
     findById:
@@ -317,7 +317,7 @@ FRFSTicketBooking:
       kvFunction: findOneWithKV
       where: searchId
     findAllByStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: status
     updateStatusById:
       kvFunction: updateWithKV
@@ -422,7 +422,7 @@ FRFSTicket:
       kvFunction: findOneWithKV
       where: id
     findAllByStatus:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: status
     findAllByTicketBookingId:
       kvFunction: findAllWithKV
@@ -476,7 +476,7 @@ FRFSTicketBookingPayment:
       kvFunction: findOneWithKV
       where: paymentOrderId
     findAllByStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: status
     updateStatusByTicketBookingId:
       kvFunction: updateWithKV
@@ -519,11 +519,11 @@ FRFSRecon:
 
   queries:
     updateTOrderValueAndSettlementAmountById:
-      kvFunction: updateWithKV
+      kvFunction: updateWithDb
       params: [settlementAmount, totalOrderValue, updatedAt]
       where: frfsTicketBookingId
     updateStatusByTicketBookingId:
-      kvFunction: updateWithKV
+      kvFunction: updateWithDb
       params: [ticketStatus, updatedAt]
       where: frfsTicketBookingId
 
@@ -663,11 +663,11 @@ Route:
       kvFunction: findOneWithKV
       where: id
     findAllByMerchantOperatingCityAndVehicleType:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithOptionsDb
       where:
         and: [merchantOperatingCityId, vehicleType]
     findByRouteCodes:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - in: [code]
@@ -707,17 +707,17 @@ RouteStopMapping:
     stopCode: PrimaryKey
   queries:
     findByRouteCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: routeCode
     findByRouteCodeAndStopCode:
       kvFunction: findOneWithKV
       where:
         and: [routeCode, stopCode]
     findByStopCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: stopCode
     findByRouteCodes:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and:
           - in: [routeCode]
@@ -737,7 +737,7 @@ FRFSRouteFareProduct:
     timeBounds: "'Unbounded'"
   queries:
     findByRouteCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [routeCode, merchantId, merchantOperatingCityId]
 
@@ -783,7 +783,7 @@ RouteStopFare:
     endStopCode: PrimaryKey
   queries:
     findByRouteCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where:
         and: [farePolicyId, routeCode]
     findByRouteStartAndStopCode:
@@ -812,7 +812,7 @@ FRFSStageFare:
     stage: PrimaryKey
   queries:
     findAllByFarePolicyId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: farePolicyId
 
 FRFSRouteStopStageFare:
@@ -855,7 +855,7 @@ FRFSTicketDiscount:
     id: PrimaryKey
   queries:
     findByCodeAndVehicleAndCity:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where:
         and: [code, vehicleType, merchantId, merchantOperatingCityId]
     findByIdAndVehicleAndCity:
@@ -897,5 +897,5 @@ RouteTripMapping:
     tripCode: PrimaryKey
   queries:
     findAllTripIdByRouteCode:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithDb
       where: routeCode

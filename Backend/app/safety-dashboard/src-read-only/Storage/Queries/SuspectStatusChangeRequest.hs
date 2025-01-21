@@ -26,18 +26,18 @@ createMany = traverse_ create
 findAllByMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m [Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest])
-findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
+findAllByMerchantId merchantId = do findAllWithDb [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
 
 findAllByReqStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.AdminApproval -> m [Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest])
-findAllByReqStatus reqStatus = do findAllWithKV [Se.Is Beam.reqStatus $ Se.Eq reqStatus]
+findAllByReqStatus reqStatus = do findAllWithDb [Se.Is Beam.reqStatus $ Se.Eq reqStatus]
 
 findBySuspectId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
-findBySuspectId suspectId = do findOneWithKV [Se.Is Beam.suspectId $ Se.Eq suspectId]
+findBySuspectId suspectId = do findOneWithDb [Se.Is Beam.suspectId $ Se.Eq suspectId]
 
 findBySuspectIdAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))
-findBySuspectIdAndMerchantId suspectId merchantId = do findOneWithKV [Se.And [Se.Is Beam.suspectId $ Se.Eq suspectId, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]]
+findBySuspectIdAndMerchantId suspectId merchantId = do findOneWithDb [Se.And [Se.Is Beam.suspectId $ Se.Eq suspectId, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
