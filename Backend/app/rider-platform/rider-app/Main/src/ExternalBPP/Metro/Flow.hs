@@ -41,7 +41,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
   let stations = mkStations fromStation toStation
   let routeStations = []
-  quote <- mkQuote fromStation toStation routeStations stations searchReq.vehicleType
+  mbQuote <- mkQuote fromStation toStation routeStations stations searchReq.vehicleType
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -51,7 +51,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
         providerName = "Metro",
-        quotes = [quote],
+        quotes = maybeToList mbQuote,
         validTill = validTill,
         transactionId = searchReq.id.getId,
         messageId = messageId,
@@ -71,20 +71,22 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
                 destination = getStationCode toStation.code,
                 ticketType = "SJT"
               }
-      amount <- CallAPI.getFareByOriginDest providerConfig req
-      let price =
-            Price
-              { amountInt = round amount,
-                amount = amount,
-                currency = INR -- fix later
-              }
+      mbAmount <- CallAPI.getFareByOriginDest providerConfig req
+      let mbPrice =
+            mbAmount <&> \amount ->
+              Price
+                { amountInt = round amount,
+                  amount = amount,
+                  currency = INR -- fix later
+                }
       return $
-        DQuote
-          { bppItemId = "Metro",
-            _type = DFRFSQuote.SingleJourney,
-            discounts = [],
-            ..
-          }
+        mbPrice <&> \price ->
+          DQuote
+            { bppItemId = "Metro",
+              _type = DFRFSQuote.SingleJourney,
+              discounts = [],
+              ..
+            }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init _merchant _merchantOperatingCity _providerConfig bapConfig (_mRiderName, _mRiderNumber) booking = do

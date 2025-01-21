@@ -23,14 +23,14 @@ data FareByOriginDestReq = FareByOriginDestReq
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data FareByOriginDestResInner = FareByOriginDestResInner
-  { result :: HighPrecMoney
+  { result :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data FareByOriginDestAPIRes = FareByOriginDestAPIRes
   { statusCode :: Int,
     message :: T.Text,
-    result :: FareByOriginDestResInner
+    result :: Maybe FareByOriginDestResInner
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -45,10 +45,10 @@ type FareByOriginDestAPI =
 fareByOriginDestAPI :: Proxy FareByOriginDestAPI
 fareByOriginDestAPI = Proxy
 
-getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> FareByOriginDestReq -> m HighPrecMoney
+getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> FareByOriginDestReq -> m (Maybe HighPrecMoney)
 getFareByOriginDest config fareReq = do
   accessToken <- getAuthToken config
   fareByODRes <-
     callAPI config.networkHostUrl (ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) fareReq.origin fareReq.destination fareReq.ticketType) "getFareByOriginDest" fareByOriginDestAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_FARE_BY_ORIGIN_DEST_API") config.networkHostUrl)
-  return fareByODRes.result.result
+  return (fareByODRes.result >>= (.result))
