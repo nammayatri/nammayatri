@@ -117,6 +117,7 @@ data FRFSRouteAPI = FRFSRouteAPI
     longName :: Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
+    stops :: Data.Maybe.Maybe [FRFSStationAPI],
     timeBounds :: Data.Maybe.Maybe Kernel.Types.TimeBound.TimeBound,
     totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int,
     waypoints :: Data.Maybe.Maybe [Kernel.External.Maps.Types.LatLong]

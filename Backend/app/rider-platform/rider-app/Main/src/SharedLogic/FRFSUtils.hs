@@ -17,7 +17,7 @@ module SharedLogic.FRFSUtils where
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson as A
-import Data.List (groupBy, nub)
+import Data.List (groupBy, nub, sortBy)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSTicket as DT
@@ -28,6 +28,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
+import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.Station as Station
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
@@ -125,6 +126,7 @@ data RouteStopInfo = RouteStopInfo
     startStopCode :: Text,
     endStopCode :: Text,
     totalStops :: Maybe Int,
+    stops :: Maybe [RouteStopMapping.RouteStopMapping],
     travelTime :: Maybe Seconds
   }
 
@@ -141,7 +143,8 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
           catMaybes $
             map
               ( \stops ->
-                  let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                  let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+                      mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
                    in find
                         ( \stop ->
                             maybe
@@ -149,38 +152,40 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
                               (\startStopSequence -> stop.stopCode == endStationCode && stop.sequenceNum > startStopSequence)
                               mbStartStopSequence
                         )
-                        stops
-                        <&> ( \stop -> do
+                        stopsSortedBySequenceNumber
+                        <&> ( \endStop -> do
                                 case mbStartStopSequence of
                                   Just startStopSequence ->
-                                    let totalStops = stop.sequenceNum - startStopSequence
+                                    let intermediateStops = filter (\stop -> stop.sequenceNum >= startStopSequence && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
+                                        totalStops = endStop.sequenceNum - startStopSequence
                                         totalTravelTime =
                                           foldr
-                                            ( \stop' acc ->
-                                                if stop'.sequenceNum > startStopSequence && stop'.sequenceNum <= stop.sequenceNum
-                                                  then case (acc, stop'.estimatedTravelTimeFromPreviousStop) of
+                                            ( \stop acc ->
+                                                if stop.sequenceNum > startStopSequence && stop.sequenceNum <= endStop.sequenceNum
+                                                  then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
                                                     (Just acc', Just travelTime) -> Just (acc' + travelTime)
                                                     _ -> Nothing
                                                   else acc
                                             )
                                             (Just $ Seconds 0)
                                             stops
-                                     in (stop.routeCode, Just totalStops, totalTravelTime)
-                                  Nothing -> (stop.routeCode, Nothing, Nothing)
+                                     in (endStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops)
+                                  Nothing -> (endStop.routeCode, Nothing, Nothing, Nothing)
                             )
               )
               groupedStops
-  routes <- QRoute.findByRouteCodes (map (\(routeCode, _, _) -> routeCode) possibleRoutes)
+  routes <- QRoute.findByRouteCodes (map (\(routeCode, _, _, _) -> routeCode) possibleRoutes)
   return $
     map
       ( \route ->
-          let routeData = find (\(routeCode, _, _) -> routeCode == route.code) possibleRoutes
+          let routeData = find (\(routeCode, _, _, _) -> routeCode == route.code) possibleRoutes
            in RouteStopInfo
                 { route,
-                  totalStops = (\(_, totalStops, _) -> totalStops) =<< routeData,
+                  totalStops = (\(_, totalStops, _, _) -> totalStops) =<< routeData,
+                  stops = (\(_, _, _, stops) -> stops) =<< routeData,
                   startStopCode = startStationCode,
                   endStopCode = endStationCode,
-                  travelTime = (\(_, _, travelTime) -> travelTime) =<< routeData
+                  travelTime = (\(_, _, travelTime, _) -> travelTime) =<< routeData
                 }
       )
       routes
@@ -199,6 +204,7 @@ getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
                     RouteStopInfo
                       { route,
                         totalStops = Just 6,
+                        stops = Nothing,
                         startStopCode = "MBTcSIip",
                         endStopCode = "TiulEaYs",
                         travelTime = Just $ Seconds 660
@@ -207,6 +213,7 @@ getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
                     RouteStopInfo
                       { route,
                         totalStops = Just 8,
+                        stops = Nothing,
                         startStopCode = "TiulEaYs",
                         endStopCode = "jQaLNViL",
                         travelTime = Just $ Seconds 1440

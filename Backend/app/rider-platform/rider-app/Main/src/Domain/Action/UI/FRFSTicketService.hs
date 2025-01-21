@@ -92,16 +92,35 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
       return $
         map
           ( \routeInfo ->
-              FRFSTicketService.FRFSRouteAPI
-                { code = routeInfo.route.code,
-                  shortName = routeInfo.route.shortName,
-                  longName = routeInfo.route.longName,
-                  startPoint = routeInfo.route.startPoint,
-                  endPoint = routeInfo.route.endPoint,
-                  totalStops = routeInfo.totalStops,
-                  timeBounds = Just routeInfo.route.timeBounds,
-                  waypoints = Nothing
-                }
+              let stops =
+                    ( mapWithIndex
+                        ( \idx stop ->
+                            FRFSStationAPI
+                              { name = stop.stopName,
+                                code = stop.stopName,
+                                lat = Just stop.stopPoint.lat,
+                                lon = Just stop.stopPoint.lon,
+                                stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
+                                sequenceNum = Just stop.sequenceNum,
+                                address = Nothing,
+                                distance = Nothing,
+                                color = Nothing,
+                                towards = Nothing
+                              }
+                        )
+                    )
+                      <$> routeInfo.stops
+               in FRFSTicketService.FRFSRouteAPI
+                    { code = routeInfo.route.code,
+                      shortName = routeInfo.route.shortName,
+                      longName = routeInfo.route.longName,
+                      startPoint = routeInfo.route.startPoint,
+                      endPoint = routeInfo.route.endPoint,
+                      totalStops = routeInfo.totalStops,
+                      stops = stops,
+                      timeBounds = Just routeInfo.route.timeBounds,
+                      waypoints = Nothing
+                    }
           )
           routesInfo
     _ -> do
@@ -109,9 +128,11 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
       routes <- B.runInReplica $ QRoute.findAllByMerchantOperatingCityAndVehicleType Nothing Nothing merchantOpCity.id _vehicleType
       return $
         map
-          ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
+          ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
           )
           routes
+  where
+    mapWithIndex f xs = zipWith f [0 ..] xs
 
 data StationResult = StationResult
   { code :: Kernel.Prelude.Text,
@@ -144,6 +165,7 @@ getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
         startPoint = route.startPoint,
         endPoint = route.endPoint,
         totalStops = Nothing,
+        stops = Nothing,
         timeBounds = Just route.timeBounds,
         waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
       }
@@ -937,6 +959,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset opCity origin vehicle = do
                       endPoint = route.endPoint,
                       timeBounds = Just route.timeBounds,
                       totalStops = Nothing,
+                      stops = Nothing,
                       waypoints = Nothing
                     }
               )

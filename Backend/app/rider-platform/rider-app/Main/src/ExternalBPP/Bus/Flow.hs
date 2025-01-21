@@ -51,6 +51,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
               RouteStopInfo
                 { route,
                   totalStops = Nothing,
+                  stops = Nothing,
                   startStopCode = fromStation.code,
                   endStopCode = toStation.code,
                   travelTime = Nothing
