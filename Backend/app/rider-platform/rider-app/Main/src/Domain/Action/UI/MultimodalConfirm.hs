@@ -2,7 +2,7 @@ module Domain.Action.UI.MultimodalConfirm
   ( postMultimodalInitiate,
     postMultimodalConfirm,
     getMultimodalBookingInfo,
-    getMultimodalSwitchTaxi,
+    postMultimodalOrderSwitchTaxi,
     getMultimodalBookingPaymentStatus,
     postMultimodalSwitch,
     postMultimodalRiderLocation,
@@ -16,23 +16,26 @@ where
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import Domain.Types.Estimate
+-- import Domain.Types.Estimate
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import Domain.Types.SearchRequest
+-- import Domain.Types.SearchRequest
 import Environment
-import EulerHS.Prelude hiding (all, find, forM_, id, map, sum)
+import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, sum, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
+import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -126,17 +129,43 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
             paymentOrder = Nothing
           }
 
-getMultimodalSwitchTaxi ::
+postMultimodalOrderSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest ->
-    Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
-    Environment.Flow Kernel.Types.APISuccess.APISuccess
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.SwitchTaxiReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
-  QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
-  pure Kernel.Types.APISuccess.Success
+postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  let mbPricingId = Id <$> journeyLegInfo.pricingId
+  let legSearchId = Id journeyLegInfo.searchId
+  mbEstimate <- maybe (pure Nothing) QEstimate.findById mbPricingId
+  QSearchRequest.updatePricingId legSearchId (Just req.estimateId.getId)
+
+  whenJust mbEstimate $ \estimate -> do
+    when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
+      throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm journeyLegInfo{pricingId = Just req.estimateId.getId}
+  updatedLegs <- JM.getAllLegsInfo journeyId
+  generateResponse journey updatedLegs
+  where
+    generateResponse journey updatedLegs = do
+      let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) updatedLegs
+      let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) updatedLegs
+      let mbCurrency = listToMaybe updatedLegs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+      return $
+        ApiTypes.JourneyInfoResp
+          { estimatedDuration = journey.estimatedDuration,
+            estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+            estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
+            estimatedDistance = journey.estimatedDistance,
+            legs = updatedLegs
+          }
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

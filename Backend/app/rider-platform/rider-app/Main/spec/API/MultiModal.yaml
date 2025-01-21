@@ -46,6 +46,9 @@ types:
     newMode: MultimodalTravelMode
     currLocation: LatLong
 
+  SwitchTaxiReq:
+    estimateId: Id Estimate
+
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
@@ -129,3 +132,13 @@ apis:
         type: RiderLocationReq
       response:
         type: JourneyStatus
+
+  - POST:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/switchTaxi
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: SwitchTaxiReq
+      response:
+        type: JourneyInfoResp
