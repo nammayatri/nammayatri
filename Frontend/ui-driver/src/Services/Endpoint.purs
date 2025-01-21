@@ -445,3 +445,6 @@ postFleetConsent _ = getBaseUrl "" <> "/fleet/consent"
 
 postWmbRequestsCancel :: String -> String
 postWmbRequestsCancel approvalRequestId = getBaseUrl "" <> "/wmb/requests/" <> approvalRequestId <> "/cancel"
+
+getWmbRequestsStatus :: String -> String
+getWmbRequestsStatus approvalRequestId = (getBaseUrl "") <> "/wmb/requests/" <> approvalRequestId <> "/status"

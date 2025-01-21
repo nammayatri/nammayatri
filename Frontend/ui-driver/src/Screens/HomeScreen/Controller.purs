@@ -512,7 +512,7 @@ data Action = NoAction
             | ScanQrCode
             | WMBTripActiveAction API.TripTransactionDetails
             | WMBEndTripModalAC PopUpModal.Action
-            | WMBEndTripAC
+            | WMBEndTripAC String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1286,13 +1286,24 @@ eval (RideStartRemainingTime seconds status timerId) state = do
 eval (WMBEndTripModalAC action) state = do
   case action of
     PopUpModal.OnButton1Click -> do
-      if (getValueToLocalStore WMB_END_TRIP_STATUS == "WAITING_FOR_ADMIN_APPROVAL") 
-        then exit $ WMBCancelEndTrip state
-        else exit $ WMBEndTrip state
+      let endTripStatus = getValueToLocalStore WMB_END_TRIP_STATUS 
+      case endTripStatus of
+        _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS 
+          continue state {props{endRidePopUp = false}}
+        "AWAITING_APPROVAL" -> exit $ WMBCancelEndTrip state
+        _ -> exit $ WMBEndTrip state
     PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
     _ -> continue state
 
-eval WMBEndTripAC state = exit $ WMBEndTrip state
+eval (WMBEndTripAC endTripStatus) state = 
+  case endTripStatus of
+    _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
+      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
+      void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+      continue state
+    _ -> exit $ WMBEndTrip state
   
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do

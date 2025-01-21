@@ -2016,3 +2016,12 @@ postWmbRequestsCancel approvalRequestId = do
         withAPIResult (EP.postWmbRequestsCancel approvalRequestId) unwrapResponse $ callAPI headers ((PostWmbRequestsCancelReq approvalRequestId))
     where
         unwrapResponse (x) = x
+
+--------------------------------- WMB End Trip Status Request ---------------------------------------------------------------------------------------------------------------------------------
+
+getWmbRequestsStatus :: String -> Flow GlobalState (Either ErrorResponse ApprovalRequestResp)
+getWmbRequestsStatus approvalRequestId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getWmbRequestsStatus approvalRequestId) unwrapResponse $ callAPI headers ((GetWmbRequestsStatusReq approvalRequestId))
+    where
+        unwrapResponse (x) = x
