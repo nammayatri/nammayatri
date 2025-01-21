@@ -41,6 +41,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    subscriptionDown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     subscriptionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     useOverlayService :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
