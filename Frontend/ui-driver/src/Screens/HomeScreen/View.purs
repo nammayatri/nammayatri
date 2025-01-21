@@ -503,6 +503,7 @@ view push state =
         -- , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
         ]
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
+      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
@@ -554,7 +555,6 @@ view push state =
           completeYourProfile push state 
         else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
-      , if state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then chooseBusRouteModal push state else dummyTextView
       , if (state.props.endRidePopUp) then endRidePopView push state else dummyTextView
   ]
   where 

@@ -1864,7 +1864,7 @@ eval (ChooseBusRoute action) state =
 eval (StartBusTrip PrimaryButtonController.OnClick) state =
       case state.data.whereIsMyBusData.trip of
         Just (ST.ASSIGNED_TRIP _) -> exit $ StartBusRide state
-        _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then exit $ LinkAndStartBusRide state else update state
+        _ -> if isJust state.data.whereIsMyBusData.lastCompletedTrip then continue state {props {whereIsMyBusConfig {selectRouteStage = false, showSelectAvailableBusRoutes = true}}} else update state
 
 eval (SelectBusRoute RouteDisplayController.Click) state = continue state { props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectRouteStage = true } }}
 
