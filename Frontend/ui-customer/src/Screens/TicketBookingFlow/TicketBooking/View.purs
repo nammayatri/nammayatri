@@ -336,7 +336,7 @@ termsAndConditionsView termsAndConditions isMarginTop =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
+         [ textFromHtml $ " •  " <> item
          , color Color.black700
          , height WRAP_CONTENT
          , width WRAP_CONTENT

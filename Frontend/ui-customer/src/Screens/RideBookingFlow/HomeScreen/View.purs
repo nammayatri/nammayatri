@@ -4808,7 +4808,7 @@ rentalBannerView state push =
                                       FPT.INTER_CITY -> (getString INTER_CITY_)
                                       FPT.RENTAL -> (getString RENTAL_STR)
                                       _ -> (getString SCHEDULED)
-            (getString DRIVER_ASSIGNED) <> " &#8226; " <> bookingInfoString <> "<br> <b>" <> driverName <> " &#8226; " <> vehicleNumber <> "</b>"
+            (getString DRIVER_ASSIGNED) <> " • " <> bookingInfoString <> "<br> <b>" <> driverName <> " • " <> vehicleNumber <> "</b>"
           _ -> do
             let timeUTC = rentalsInfo.rideScheduledAtUTC
                 fpt = rentalsInfo.fareProductType
