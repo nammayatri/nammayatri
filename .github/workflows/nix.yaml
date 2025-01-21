@@ -100,12 +100,6 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
-      # Persist Nix's eval & git cache, so CI is faster when there's nothing new to compile
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/nix
-          key: nixcache-${{ matrix.host }}-${{ matrix.system }}
-
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
