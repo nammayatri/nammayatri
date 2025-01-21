@@ -1241,7 +1241,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1256,7 +1256,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1566,10 +1566,16 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
             Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy = do
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
-      farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+      fareParamsBreakups =
+        case fareParametersInRateCard of
+          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardBreakupItem) fareParams
+          _ -> []
+      filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
+      combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
+      farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
@@ -1583,6 +1589,11 @@ mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp 
           tagGroupList = Just farePolicyBreakupsTags
         }
     ]
+  where
+    findDup :: [RateCardBreakupItem] -> RateCardBreakupItem -> Bool
+    findDup [] _ = False
+    findDup (farePolicyCard : nextFarePolicy) fareParameter =
+      if farePolicyCard.title == fareParameter.title then True else findDup nextFarePolicy fareParameter
 
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =

@@ -92,10 +92,8 @@ INSERT INTO atlas_driver_offer_bpp.vehicle_route_mapping (
     vehicle_number_hash,
     vehicle_number_encrypted,
     route_code,
-    vehicle_color,
-    vehicle_model,
-    vehicle_class,
-    vehicle_service_tier_type,
+    merchant_id,
+    merchant_operating_city_id,
     blocked
 )
 VALUES
@@ -104,10 +102,8 @@ VALUES
         '\xb75e10098121f04df118f6e5a1ab0bf536f9dd5211b3a91543619dc336d59744',
         '0.1.0|0|xgLuhzcv2xpOx6Ig1ZiJoxqgsWW+vB6E3cF6dSqmr3P2TnTDUHPWEtGKNfQ3KnDCzqLn5pvUd1DL4jxg', -- WB1234567
         'Route:1:S1',
-        'white',
-        'model',
-        'AC_BUS',
-        'BUS_AC',
+        'favorit0-0000-0000-0000-00000favorit',
+        'favorit0-0000-0000-0000-00000000city',
         false
     );
 
