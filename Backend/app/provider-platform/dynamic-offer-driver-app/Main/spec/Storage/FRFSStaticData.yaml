@@ -21,6 +21,7 @@ imports:
   StationType: Domain.Types.StationType
   DayOfWeek: Data.Time
   TimeOfDay: Data.Time
+  Person: Domain.Types.Person
 
 Station:
   tableName: station
@@ -128,7 +129,9 @@ Route:
     findAllByMerchantOperatingCityAndVehicleType:
       kvFunction: findAllWithOptionsKV
       where:
-        and: [merchantOperatingCityId, vehicleType]
+        and:
+          - eq: [merchantOperatingCityId, vehicleType]
+          - in: [code]
     findByRouteCodes:
       kvFunction: findAllWithKV
       where:
@@ -196,7 +199,29 @@ RouteTripStopMapping:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, tripSequenceNum, scheduledDay]
-    findAllByStopCodeAndStopSequence:
+    findAllByStopCodeAndStopSequenceAndRoutes:
       kvFunction: findAllWithKV
       where:
-        and: [stopCode, stopSequenceNum, tripSequenceNum, scheduledDay]
+        and:
+          - eq: [stopCode, stopSequenceNum, tripSequenceNum, scheduledDay]
+          - in: [routeCode]
+
+FleetRouteAssociation:
+  tableName: fleet_route_association
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    id: Id FleetRouteAssociation
+    routeCode: Text
+    fleetOwnerId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+  queries:
+    findAllByFleetOwnerIdAndCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, merchantOperatingCityId]

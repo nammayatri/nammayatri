@@ -29,12 +29,13 @@ deleteByRouteCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
 
 findAllByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Route.Route])
-findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> [Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
+findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType code = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.code $ Se.In code
         ]
     ]
     (Se.Desc Beam.createdAt)
