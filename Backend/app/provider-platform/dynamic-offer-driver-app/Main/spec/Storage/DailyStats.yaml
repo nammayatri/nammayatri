@@ -13,7 +13,7 @@ DailyStats:
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     PayoutStatus:
-      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa"
+      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa,Initialized"
   fields:
     id : Text
     driverId : Id Person
