@@ -89,7 +89,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             estimatedMinFare = estimatedMinFare,
             fromArrivalTime = fromArrivalTime,
             fromDepartureTime = fromDepartureTime,
-            fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopGtfsId fromStopGtfsId,
+            fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId,
             id = Kernel.Types.Id.Id id,
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
