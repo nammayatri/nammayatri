@@ -276,14 +276,17 @@ getSmsServiceFromReq = \case
   GupShupConfigUpdateReq _ -> SMS.GupShup
 
 buildSmsServiceConfig ::
-  EncFlow m r =>
+  ( EncFlow m r,
+    MonadFlow m
+  ) =>
   SmsServiceConfigUpdateReq ->
   m SMS.SmsServiceConfig
 buildSmsServiceConfig = \case
   MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq {..} -> do
     username' <- encrypt username
     password' <- encrypt password
-    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', ..}
+    token' <- encrypt token
+    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', token = token', ..}
   ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq {..} -> do
     apiKey' <- encrypt apiKey
     apiToken' <- encrypt apiToken
@@ -362,7 +365,8 @@ instance HideSecrets GupShupCfgUpdateReq where
 data MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateReq
   { username :: Text,
     password :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    token :: Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
