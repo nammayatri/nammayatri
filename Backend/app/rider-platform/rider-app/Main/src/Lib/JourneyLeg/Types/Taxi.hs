@@ -47,6 +47,8 @@ data TaxiLegRequestUpdateData = EditLocation EditLocationRequest | ChangeService
 
 data TaxiLegRequestCancelData = TaxiLegRequestCancelData
 
+data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData
+
 newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
   { searchId :: Id DSR.SearchRequest
   }
@@ -71,6 +73,7 @@ data TaxiLegRequest
   | TaxiLegRequestConfirm TaxiLegRequestConfirmData
   | TaxiLegRequestUpdate TaxiLegRequestUpdateData
   | TaxiLegRequestCancel TaxiLegRequestCancelData
+  | TaxiLegRequestIsCancellable TaxiLegRequestIsCancellableData
   | TaxiLegRequestGetInfo TaxiLegRequestGetInfoData
   | TaxiLegRequestGetState TaxiLegRequestGetStateData
   | TaxiLegRequestGetFare TaxiLegRequestGetFareData

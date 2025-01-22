@@ -100,6 +100,8 @@ type ConfirmJourneyLeg leg m = leg -> m ()
 
 type CancelJourneyLeg leg m = leg -> m ()
 
+type IsCancellableJourneyLeg leg m = leg -> m IsCancellableResponse
+
 type UpdateJourneyLeg leg m = leg -> m ()
 
 type GetJourneyLegState leg m = leg -> m JourneyLegState
@@ -111,6 +113,7 @@ class JourneyLeg leg m where
   confirm :: ConfirmFlow m r c => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m
+  isCancellable :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => IsCancellableJourneyLeg leg m
   getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLegState leg m
   getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLeg leg m
   getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
@@ -237,6 +240,10 @@ data UnifiedTicketQR = UnifiedTicketQR
 
 data Provider = CMRL | MTC
   deriving (Eq, Show)
+
+data IsCancellableResponse = IsCancellableResponse
+  { canCancel :: Bool
+  }
 
 mapTaxiRideStatusToJourneyLegStatus :: DRide.RideStatus -> JourneyLegStatus
 mapTaxiRideStatusToJourneyLegStatus status = case status of

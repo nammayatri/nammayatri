@@ -34,6 +34,8 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData
 
+data MetroLegRequestIsCancellableData = MetroLegRequestIsCancellableData
+
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
@@ -50,6 +52,7 @@ data MetroLegRequest
   | MetroLegRequestConfirm MetroLegRequestConfirmData
   | MetroLegRequestUpdate MetroLegRequestUpdateData
   | MetroLegRequestCancel MetroLegRequestCancelData
+  | MetroLegRequestIsCancellable MetroLegRequestIsCancellableData
   | MetroLegRequestGetFare MetroLegRequestGetFareData
   | MetroLegRequestGetState MetroLegRequestGetStateData
   | MetroLegRequestGetInfo MetroLegRequestGetInfoData

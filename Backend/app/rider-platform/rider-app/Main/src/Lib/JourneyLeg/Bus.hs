@@ -33,6 +33,9 @@ instance JT.JourneyLeg BusLegRequest m where
   cancel (BusLegRequestCancel _) = throwError (InternalError "Not supported")
   cancel _ = throwError (InternalError "Not supported")
 
+  isCancellable ((BusLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
+  isCancellable _ = throwError (InternalError "Not Supported")
+
   getState (BusLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
   getState _ = throwError (InternalError "Not supported")
 
