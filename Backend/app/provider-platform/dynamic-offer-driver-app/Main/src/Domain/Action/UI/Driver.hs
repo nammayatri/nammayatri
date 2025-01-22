@@ -2232,7 +2232,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
               let sortedBookings = sortBookingsByDistance (catMaybes bookings)
               return $ ScheduledBookingRes sortedBookings
-        _ -> throwError (InvalidRequest "LOCATION_NOT_FOUND")
+        _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS driverId = do
       result <- try @_ @SomeException $ LTF.driversLocation [driverId]
