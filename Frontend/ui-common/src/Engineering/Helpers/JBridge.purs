@@ -308,6 +308,7 @@ foreign import requestUninstallPackage :: String -> Boolean
 foreign import storeOnPauseCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 foreign import launchCustomTab :: forall action. EffectFn2 String action  Unit
 foreign import executeJS :: Fn2 (Array String) String String
+foreign import getResourceIdentifier :: String -> String -> Int
 
 type SliderConfig = { 
   id :: String,

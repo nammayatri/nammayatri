@@ -3000,3 +3000,20 @@ export const executeJS = (params, codeString) => {
   }
   
 }
+
+export const getResourceIdentifier = function (resourceName) {
+  return function(type){
+    try{
+      if(JBridge.getResourceIdentifier){
+        return JBridge.getResourceIdentifier(resourceName,type);
+      }
+      else
+      {
+        return 0;
+      }
+    } catch (err) {
+      console.log("Error in getResourceIdentifier", err);
+      return 0;
+    }
+  }
+}
