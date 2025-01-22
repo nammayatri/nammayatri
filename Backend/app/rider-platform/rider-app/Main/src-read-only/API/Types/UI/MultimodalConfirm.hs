@@ -6,7 +6,6 @@ import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
-import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -31,10 +30,6 @@ data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus {journeyId :: Ker
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyInfoReq = JourneyInfoReq {legsReq :: [JourneyLegsReq]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data JourneyInfoResp = JourneyInfoResp
   { estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -42,10 +37,6 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
     legs :: [Lib.JourneyModule.Types.LegInfo]
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data JourneyLegsReq = JourneyLegsReq {destinationAddress :: Domain.Types.LocationAddress.LocationAddress, legNumber :: Kernel.Prelude.Int, originAddress :: Domain.Types.LocationAddress.LocationAddress}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

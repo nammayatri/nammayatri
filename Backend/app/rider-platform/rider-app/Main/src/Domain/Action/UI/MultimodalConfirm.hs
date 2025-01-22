@@ -1,5 +1,5 @@
 module Domain.Action.UI.MultimodalConfirm
-  ( postMultimodalInfo,
+  ( postMultimodalInitiate,
     postMultimodalConfirm,
     getMultimodalBookingInfo,
     getMultimodalSwitchTaxi,
@@ -37,17 +37,16 @@ import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
-postMultimodalInfo ::
+postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    ApiTypes.JourneyInfoReq ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInfo (_personId, _merchantId) journeyId req = do
+postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
-    addAllLegs journeyId req.legsReq
+    addAllLegs journeyId
     journey <- JM.getJourney journeyId
     legs <- JM.getAllLegsInfo journeyId
     let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs

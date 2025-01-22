@@ -18,14 +18,6 @@ imports:
 module: MultimodalConfirm
 
 types:
-  JourneyInfoReq:
-    legsReq: [JourneyLegsReq]
-
-  JourneyLegsReq:
-    legNumber: Int
-    originAddress: LocationAddress
-    destinationAddress: LocationAddress  #regenerate the files to get proper 'destinationAddress' field
-
   JourneyInfoResp:
     estimatedDuration: Maybe Seconds
     estimatedMinFare: PriceAPIEntity
@@ -64,11 +56,9 @@ types:
 
 apis:
   - POST:
-      endpoint: /multimodal/{journeyId}/info
+      endpoint: /multimodal/{journeyId}/initiate
       params:
         journeyId: Id Journey
-      request:
-        type: JourneyInfoReq
       response:
         type: JourneyInfoResp
   - POST:

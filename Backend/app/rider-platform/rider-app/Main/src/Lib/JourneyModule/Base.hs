@@ -1,13 +1,14 @@
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
-import qualified API.Types.UI.MultimodalConfirm as MultimodalConfirm
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.LocationAddress as LA
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
+import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Common as Common
@@ -70,7 +71,9 @@ getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
-getJourneyLegs = QJourneyLeg.findAllByJourneyId
+getJourneyLegs journeyId = do
+  legs <- QJourneyLeg.findAllByJourneyId journeyId
+  return $ sortBy (comparing (.sequenceNumber)) legs
 
 getAllLegsInfo ::
   ( EsqDBFlow m r,
@@ -114,8 +117,7 @@ getAllLegsStatus ::
 getAllLegsStatus journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
   riderLastPoints <- getLastThreePoints journeyId
-  let sortedAllLegsRawData = sortBy (comparing (.sequenceNumber)) allLegsRawData
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) sortedAllLegsRawData
+  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
   return allLegsState
   where
     processLeg ::
@@ -166,28 +168,58 @@ addAllLegs ::
     JL.JourneyLeg WalkLegRequest m
   ) =>
   Id DJourney.Journey ->
-  [MultimodalConfirm.JourneyLegsReq] ->
   m ()
-addAllLegs journeyId legsReq = do
+addAllLegs journeyId = do
   journey <- getJourney journeyId
   journeyLegs <- getJourneyLegs journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-  forM_ journeyLegs $ \journeyLeg -> do
+  toLocation <- parentSearchReq.toLocation & fromMaybeM (InvalidRequest "To location nothing for parent search request")
+  forM_ (traverseWithTriplets journeyLegs) $ \(mbPrevJourneyLeg, journeyLeg, mbNextJourneyLeg) -> do
     when (isNothing journeyLeg.legSearchId) $ do
       -- In case of retry of this function, if search has already triggered then it will not do it again
       searchResp <-
         case journeyLeg.mode of
           DTrip.Taxi -> do
-            currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
-            addTaxiLeg parentSearchReq journeyLeg currentLegReq
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
+            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
+            addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress
           DTrip.Metro -> do
             addMetroLeg parentSearchReq journeyLeg
           DTrip.Walk -> do
-            currentLegReq <- find (\lg -> lg.legNumber == journeyLeg.sequenceNumber) legsReq & fromMaybeM (JourneyLegReqDataNotFound journeyLeg.sequenceNumber)
-            addWalkLeg parentSearchReq journeyLeg currentLegReq
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
+            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
+            addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress
           DTrip.Bus -> do
             addBusLeg parentSearchReq journeyLeg
       QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
+  where
+    traverseWithTriplets :: [a] -> [(Maybe a, a, Maybe a)]
+    traverseWithTriplets [] = []
+    traverseWithTriplets [x] = [(Nothing, x, Nothing)] -- Single element case
+    traverseWithTriplets xs = go Nothing xs
+      where
+        go _ [] = []
+        go prev [x] = [(prev, x, Nothing)] -- Last element case
+        go prev (x : y : rest) = (prev, x, Just y) : go (Just x) (y : rest)
+
+    mkAddress :: Maybe MultiModalStopDetails -> LA.LocationAddress -> LA.LocationAddress
+    mkAddress Nothing parentAddress = parentAddress
+    mkAddress (Just stopDetails) _ =
+      LA.LocationAddress
+        { street = Nothing,
+          door = Nothing,
+          city = Nothing,
+          state = Nothing,
+          country = Nothing,
+          building = Nothing,
+          areaCode = Nothing,
+          area = stopDetails.name,
+          ward = Nothing,
+          placeId = Nothing,
+          instructions = Nothing,
+          title = stopDetails.name,
+          extras = Nothing
+        }
 
 addTaxiLeg ::
   ( JL.SearchRequestFlow m r c,
@@ -198,11 +230,12 @@ addTaxiLeg ::
   ) =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
-  MultimodalConfirm.JourneyLegsReq ->
+  LA.LocationAddress ->
+  LA.LocationAddress ->
   m JL.SearchResponse
-addTaxiLeg parentSearchReq journeyLeg currentLegReq = do
-  let startLocation = JL.mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
+addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress = do
+  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
+  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
   JL.search taxiSearchReq
   where
@@ -223,11 +256,12 @@ addWalkLeg ::
   ) =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
-  MultimodalConfirm.JourneyLegsReq ->
+  LA.LocationAddress ->
+  LA.LocationAddress ->
   m JL.SearchResponse
-addWalkLeg parentSearchReq journeyLeg currentLegReq = do
-  let startLocation = JL.mkSearchReqLocation currentLegReq.originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation currentLegReq.destinationAddress journeyLeg.endLocation
+addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress = do
+  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
+  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
   let walkSearchReq = mkWalkSearchReq startLocation endLocation
   JL.search walkSearchReq
   where
