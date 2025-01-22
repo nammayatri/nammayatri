@@ -22,8 +22,8 @@ import Kernel.External.SMS.MyValueFirst.Types
 import Kernel.Utils.Error.FlowHandling (withFlowHandler')
 import Types.API.Sms
 
-sendSms :: Text -> Text -> Text -> Text -> Text -> FlowHandler SubmitSmsRes
-sendSms _username _password _from to text = withFlowHandler' $ do
+sendSms :: Maybe Text -> Text -> Text -> Text -> FlowHandler SubmitSmsRes
+sendSms _token _from to text = withFlowHandler' $ do
   asks smsMap >>= liftIO . (`modifyMVar_` (pure . set))
   return Sent
   where
