@@ -15,7 +15,7 @@ import qualified Tools.Beam.UtilsTH
 data Stage = Stage
   { id :: Kernel.Types.Id.Id Domain.Types.Stage.Stage,
     inputDataType :: Domain.Types.Extra.Rollout.RawDataType,
-    name :: Domain.Types.Stage.StageType,
+    name :: Domain.Types.Stage.StageName,
     order :: Kernel.Prelude.Int,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -25,6 +25,6 @@ data Stage = Stage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data StageType = PREPROCESSING | VALIDATION | UPLOAD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data StageName = PREPROCESSING | VALIDATION | UPLOAD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''StageType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StageName)

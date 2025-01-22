@@ -37,6 +37,7 @@ library
       Domain.Action.RiderPlatform.Management.FRFSTicket
       Domain.Action.RiderPlatform.Management.Invoice
       Domain.Action.RiderPlatform.Management.Merchant
+      Domain.Action.RiderPlatform.Management.MultiModal
       Domain.Action.RiderPlatform.Management.NammaTag
       Domain.Action.RiderPlatform.Management.Ride
       Domain.Action.RiderPlatform.Management.System
@@ -63,6 +64,7 @@ library
       API.Action.RiderPlatform.Management.FRFSTicket
       API.Action.RiderPlatform.Management.Invoice
       API.Action.RiderPlatform.Management.Merchant
+      API.Action.RiderPlatform.Management.MultiModal
       API.Action.RiderPlatform.Management.NammaTag
       API.Action.RiderPlatform.Management.Ride
       API.Action.RiderPlatform.Management.System

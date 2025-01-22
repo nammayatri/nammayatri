@@ -8,6 +8,7 @@ import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
+import qualified API.Types.RiderPlatform.Management.MultiModal
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.System
@@ -24,6 +25,7 @@ data ManagementUserActionType
   | FRFS_TICKET API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketUserActionType
   | INVOICE API.Types.RiderPlatform.Management.Invoice.InvoiceUserActionType
   | MERCHANT API.Types.RiderPlatform.Management.Merchant.MerchantUserActionType
+  | MULTI_MODAL API.Types.RiderPlatform.Management.MultiModal.MultiModalUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.RiderPlatform.Management.System.SystemUserActionType
@@ -37,6 +39,7 @@ instance Text.Show.Show ManagementUserActionType where
     FRFS_TICKET e -> "FRFS_TICKET/" <> show e
     INVOICE e -> "INVOICE/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
+    MULTI_MODAL e -> "MULTI_MODAL/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
@@ -75,6 +78,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "MERCHANT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( MULTI_MODAL v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "MULTI_MODAL/" r,
                    ( v1,
                      r2
                      ) <-

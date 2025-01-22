@@ -29,14 +29,14 @@ Stage:
   tableName: stage
 
   types:
-    StageType:
+    StageName:
       enum: "PREPROCESSING,VALIDATION,UPLOAD"
 
   fields:
     id: Id Stage
     vehicleType: VehicleCategory
     inputDataType: RawDataType
-    name: StageType
+    name: StageName
     order: Int
 
 

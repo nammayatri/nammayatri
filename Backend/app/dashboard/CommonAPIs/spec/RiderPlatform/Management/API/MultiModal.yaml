@@ -1,0 +1,63 @@
+imports:
+  Journey: Domain.Types.Journey
+  VehicleCategory: BecknV2.FRFS.Enums
+  RawDataType: Domain.Types.Extra.Rollout
+
+module: MultiModal
+
+types:
+  FileFormat:
+    enum: "GTFS,JSON,CSV"
+  StageInfo:
+    - stageName: Text
+    - stageStatus: StageStatus
+  PreprocessFRFSDataResp:
+    - versionId: Text
+    - versionTag: Int
+  FRFSDataStatusResp:
+    - versionId: Text
+    - status: StageInfo
+  ReadyVersionsResp:
+    - readyVersions: [PreprocessFRFSDataResp]
+  StageStatus:
+    enum: "INPROGRESS,COMPLETED,FAILED"
+
+apis:
+  - POST: # PreprocessFRFSDataAPI
+      endpoint: multimodal/frfs/data/preprocess
+      auth: ApiAuthV2
+      params: # city inferred from api path variable
+        vehicleType: VehicleCategory
+        fileFormat: FileFormat
+        file: FilePath
+        inputDataType: RawDataType
+      response:
+          type: PreprocessFRFSDataResp
+
+  - POST: # StatusCheckFRFSDataAPI
+      endpoint: multimodal/frfs/data/status
+      auth: ApiAuthV2
+      params:
+        versionId: Text
+      response:
+          type: FRFSDataStatusResp
+
+  - POST: # GetReadyVersionsAPI
+      endpoint: multimodal/frfs/data/version/isReady
+      auth: ApiAuthV2
+      params:
+        cityId: Text
+        vehicleType: VehicleCategory
+      response:
+        type: ReadyVersionsResp
+
+  - POST: # ApplyReadyVersionsAPI
+      endpoint: multimodal/frfs/data/version/apply
+      auth: ApiAuthV2
+      params:
+        cityId: Text
+        vehicleType: VehicleCategory
+        versionId: Text
+        versionTag: Text
+      response:
+        type: APISuccess

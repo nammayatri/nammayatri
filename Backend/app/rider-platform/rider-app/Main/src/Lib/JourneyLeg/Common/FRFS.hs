@@ -125,5 +125,6 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
               timeBounds = Kernel.Types.TimeBound.Unbounded,
               merchantOperatingCityId = merchantOpCityId,
               createdAt = now,
-              updatedAt = now
+              updatedAt = now,
+              versionTag = Nothing
             }
