@@ -684,7 +684,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide isBusRideActive = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
-            "wb_fleet_consent" -> void $ pure $ giveFleetConsent
+            "wmb_fleet_consent " -> void $ pure $ giveFleetConsent
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
@@ -3372,15 +3372,11 @@ scanBusQrCode :: HomeScreenState -> FlowBT String Unit
 scanBusQrCode state = do
   qrCodeScannerScreenFlow (\qrData -> do
       void $ lift $ lift $ toggleLoader true
-      let decodedBase64String = EHC.atobImpl qrData
-          stringJson = if DS.length decodedBase64String > 2 then drop 1 (take (DS.length decodedBase64String - 2) decodedBase64String) else ""
-      case runExcept $ decodeJSON $ stringJson of
-        Right (response :: ST.BusQrCodeData) -> do
-          void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response.vehicleNumber
-          availableRoutes <- Remote.getAvailableRoutesBT response.vehicleNumber
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
-          homeScreenFlow
-        Left err -> pure unit
+      let response = EHC.atobImpl qrData
+      void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response
+      availableRoutes <- Remote.getAvailableRoutesBT response
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
+      homeScreenFlow
     )
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
