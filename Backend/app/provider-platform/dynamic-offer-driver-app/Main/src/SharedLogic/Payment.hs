@@ -260,6 +260,10 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
                 var1 = amount,
                 var2 = Nothing,
                 var3 = Nothing,
+                var4 = Nothing,
+                var5 = Nothing,
+                var6 = Nothing,
+                var7 = Nothing,
                 ctaButtonUrl = Just webPaymentLink,
                 containsUrlButton = Just merchantMessage.containsUrlButton
               }

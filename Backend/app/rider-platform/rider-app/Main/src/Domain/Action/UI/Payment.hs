@@ -172,7 +172,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
       Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
       Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MultiModalServiceConfig vsc) -> pure vsc
+      Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
       _ -> throwError $ InternalError "Unknown Service Config"
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of

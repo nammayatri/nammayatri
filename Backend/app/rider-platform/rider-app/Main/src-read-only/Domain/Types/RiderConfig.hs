@@ -18,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
   { appUrl :: Kernel.Prelude.Text,
+    autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

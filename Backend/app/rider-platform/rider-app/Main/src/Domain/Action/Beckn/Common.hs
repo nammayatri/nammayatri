@@ -36,6 +36,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -73,6 +74,7 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -98,6 +100,7 @@ import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
+import qualified Tools.Whatsapp as Whatsapp
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -431,10 +434,14 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
+      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
+        fork "Sending Dashboard Ride Flow Booking Details" $ do
+          sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
+
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
-          riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
           mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
           senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
           receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
@@ -826,6 +833,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
+  when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
+    fork "Sending Dashboard Cancelled Ride Message" $ do
+      sendBookingCancelledMessageViaWhatsapp booking.riderId riderConfig
   where
     handleUpgradedToCabRideCancellation =
       case booking.bookingDetails of
@@ -1134,3 +1144,47 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
+
+sendRideBookingDetailsViaWhatsapp ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r
+  ) =>
+  Id DPerson.Person ->
+  DRide.Ride ->
+  DRB.Booking ->
+  DRC.RiderConfig ->
+  m ()
+sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  bookings <- QRB.findAllByTransactionId booking.transactionId
+  let phoneNumber = countryCode <> mobileNumber
+      trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+      messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
+      fare = show booking.estimatedTotalFare
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just driverNumber) (Just ride.vehicleNumber) (Just fare) (Just ride.otp) (Just trackLink) (Just riderConfig.appUrl) Nothing Nothing Nothing)
+  when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
+
+sendBookingCancelledMessageViaWhatsapp ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r
+  ) =>
+  Id DPerson.Person ->
+  DRC.RiderConfig ->
+  m ()
+sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
+      messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just riderConfig.appUrl) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+  when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
