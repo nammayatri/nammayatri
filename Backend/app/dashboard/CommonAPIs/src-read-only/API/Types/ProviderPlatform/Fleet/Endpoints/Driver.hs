@@ -324,7 +324,7 @@ data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails], summary :: Dashboard.Common.Summary}
+data TripPlannerReq = TripPlannerReq {driverPhoneNumber :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
