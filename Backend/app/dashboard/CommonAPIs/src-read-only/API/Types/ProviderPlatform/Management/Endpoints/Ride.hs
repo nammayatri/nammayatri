@@ -109,11 +109,9 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FParamsRentalDetails = FParamsRentalDetails
-  { timeBasedFare :: Kernel.Types.Common.Money,
-    distBasedFare :: Kernel.Types.Common.Money,
-    deadKmFare :: Kernel.Types.Common.PriceAPIEntity,
-    timeBasedFareWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
-    distBasedFareWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+  { deadKmFare :: Kernel.Types.Common.PriceAPIEntity,
+    timeFare :: Kernel.Types.Common.PriceAPIEntity,
+    distanceFare :: Kernel.Types.Common.PriceAPIEntity,
     extraDistance :: Kernel.Types.Common.Meters,
     extraDistanceWithUnit :: Kernel.Types.Common.Distance,
     extraDuration :: Kernel.Types.Common.Seconds

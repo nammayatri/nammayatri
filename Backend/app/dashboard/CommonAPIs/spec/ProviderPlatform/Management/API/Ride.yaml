@@ -371,11 +371,9 @@ types:
     - sgstWithCurrency: Maybe PriceAPIEntity
     - cgstWithCurrency: Maybe PriceAPIEntity
   FParamsRentalDetails:
-    - timeBasedFare: Money
-    - distBasedFare: Money
     - deadKmFare: PriceAPIEntity
-    - timeBasedFareWithCurrency: PriceAPIEntity
-    - distBasedFareWithCurrency: PriceAPIEntity
+    - timeFare: PriceAPIEntity
+    - distanceFare: PriceAPIEntity
     - extraDistance: Meters
     - extraDistanceWithUnit: Distance
     - extraDuration: Seconds
