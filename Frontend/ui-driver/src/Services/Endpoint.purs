@@ -98,7 +98,7 @@ callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
 driverRegistrationStatus :: Boolean -> Maybe String -> String
-driverRegistrationStatus queryParam onboardingVehicleCategory = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> (maybe "" (\vc -> "&onboardingVehicleCategory=" <> vc) onboardingVehicleCategory)
+driverRegistrationStatus queryParam onboardingVehicleCategory = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> (maybe "" (\vc -> "&onboardingVehicleCategory=" <> (show vc)) onboardingVehicleCategory)
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
