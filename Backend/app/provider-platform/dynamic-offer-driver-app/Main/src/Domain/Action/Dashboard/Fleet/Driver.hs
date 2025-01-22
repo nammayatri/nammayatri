@@ -81,7 +81,6 @@ import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
-import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
@@ -130,7 +129,6 @@ import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
-import qualified Storage.Queries.VehicleRouteMapping as VRM
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
@@ -431,12 +429,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     Just id -> pure id
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
-  forM_ rcReq $ \(registerRcReq, routes) -> do
-    void $ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq
-    when (not $ null routes) $ do
-      vehicleNumberHash <- getDbHash registerRcReq.vehicleRegistrationCertNumber
-      VRM.updateBlockedByVehicleNumberHash fleetOwnerId vehicleNumberHash True
-      forM_ routes (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber)
+  mapM_ (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId) rcReq
   pure Success
   where
     readCsv csvFile merchantOpCity = do
@@ -445,88 +438,27 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (parseVehicleInfo merchantOpCity) v >>= (pure . V.toList)
 
-    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, [DRoute.Route])
+    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow Common.RegisterRCReq
     parseVehicleInfo moc idx row = do
-      vehicleColour <- cleanCSVField idx row.color "Color"
-      vehicleModel <- cleanCSVField idx row.model "Model"
+      let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
-      vehicleManufacturer <- cleanCSVField idx row.vehicleManufacturer "Vehicle Manufacturer"
-      imageId <- generateGUID
-      let dateOfRegistration :: Maybe UTCTime = readMaybeCSVField idx row.dateOfRegistration "Registration Date"
-          operatingCity = show moc.city
-          airConditioned :: Maybe Bool = readMaybeCSVField idx row.airConditioned "Air Conditioned"
-          multipleRC = Just True
-          oxygen :: Maybe Bool = readMaybeCSVField idx row.oxygen "Oxygen"
-          ventilator :: Maybe Bool = readMaybeCSVField idx row.ventilator "Ventilator"
-          vehicleSeatBelts :: Maybe Int = readMaybeCSVField idx row.vehicleSeatBelts "Seat Belts"
-          vehicleDoors :: Maybe Int = readMaybeCSVField idx row.vehicleDoors "Vehicle Doors"
-          mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.vehicleDoors "Route Codes"
-      routes <-
-        case mbRouteCodes of
-          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route Not Found.")) routeCodes
-          Nothing -> pure []
-      pure (Common.RegisterRCReq {vehicleDetails = Just Common.DriverVehicleDetails {..}, ..}, routes)
-
-    buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
-      now <- getCurrentTime
-      vehicleNumber <- encrypt vehicleRegistrationNumber
-      vehicleNumberHash <- getDbHash vehicleRegistrationNumber
-      let vehicleRouteMapping =
-            DVRM.VehicleRouteMapping
-              { blocked = False,
-                routeCode = route.code,
-                createdAt = now,
-                updatedAt = now,
-                ..
-              }
-      VRM.upsert vehicleRouteMapping vehicleNumberHash
-
-    cleanField = replaceEmpty . T.strip
-
-    replaceEmpty :: Text -> Maybe Text
-    replaceEmpty = \case
-      "" -> Nothing
-      "no constraint" -> Nothing
-      "no_constraint" -> Nothing
-      x -> Just x
-
-    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
-    readMaybeCSVField _ fieldValue _ =
-      cleanField fieldValue >>= readMaybe . T.unpack
+      pure Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Just Common.DriverVehicleDetails {vehicleManufacturer = "", vehicleColour = "", vehicleModel = "", vehicleDoors = Nothing, vehicleSeatBelts = Nothing, ..}, ..}
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =
       cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
 data VehicleDetailsCSVRow = VehicleDetailsCSVRow
-  { airConditioned :: Text,
-    color :: Text,
-    registrationNo :: Text,
-    model :: Text,
-    oxygen :: Text,
-    ventilator :: Text,
-    vehicleDoors :: Text,
-    vehicleSeatBelts :: Text,
-    vehicleManufacturer :: Text,
-    dateOfRegistration :: Text,
-    route_codes :: Text
+  { registrationNo :: Text,
+    airConditioned :: Text
   }
   deriving (Show)
 
 instance FromNamedRecord VehicleDetailsCSVRow where
   parseNamedRecord r =
     VehicleDetailsCSVRow
-      <$> r .: "air_conditioned"
-      <*> r .: "color"
-      <*> r .: "registration_no"
-      <*> r .: "model"
-      <*> r .: "oxygen"
-      <*> r .: "ventilator"
-      <*> r .: "vehicle_doors"
-      <*> r .: "vehicle_seat_belts"
-      <*> r .: "vehicle_manufacturer"
-      <*> r .: "date_of_registration"
-      <*> r .: "route_codes"
+      <$> r .: "registration_no"
+      <*> r .: "air_conditioned"
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -1261,8 +1193,10 @@ postDriverFleetTripPlanner ::
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
+  mobileNumberHash <- getDbHash req.driverPhoneNumber
+  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverPhoneNumber)
+  vehicleRC <- WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
+  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC req.trips
   pure Success
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
@@ -1379,7 +1313,7 @@ data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
   }
 
 data DriverBusRouteDetails = DriverBusRouteDetails
-  { driverId :: Text,
+  { driverPhoneNo :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
     roundTripFreq :: Maybe Int
@@ -1388,7 +1322,7 @@ data DriverBusRouteDetails = DriverBusRouteDetails
 instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
   parseNamedRecord r =
     CreateDriverBusRouteMappingCSVRow
-      <$> r .: "driver_id"
+      <$> r .: "driver_phone_number"
       <*> r .: "vehicle_number"
       <*> r .: "route_code"
       <*> r .: "round_trip_freq"
@@ -1406,16 +1340,20 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     Just id -> pure id
   driverBusRouteDetails <- readCsv req.file
   when (length driverBusRouteDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go"
-  let groupedDetails = groupBy (\a b -> a.driverId == b.driverId) $ sortOn (.driverId) driverBusRouteDetails
+  let groupedDetails = groupBy (\a b -> a.driverPhoneNo == b.driverPhoneNo) $ sortOn (.driverPhoneNo) driverBusRouteDetails
 
   forM_ groupedDetails $ \case
     [] -> pure ()
     (driverGroup : driverGroups) -> do
-      let driverId = Id driverGroup.driverId
-          vehicleNumber = driverGroup.vehicleNumber
-          tripsReq = map makeTripPlannerReq ([driverGroup] <> driverGroups)
-      vehicleRC <- WMB.linkVehicleToDriver driverId merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
-      createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driverId) vehicleRC tripsReq
+      mobileNumberHash <- getDbHash driverGroup.driverPhoneNo
+      person <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER
+      case person of
+        Nothing -> pure () -- send in unprocessed array
+        Just driver -> do
+          let vehicleNumber = driverGroup.vehicleNumber
+              tripsReq = map makeTripPlannerReq ([driverGroup] <> driverGroups)
+          vehicleRC <- WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId vehicleNumber
+          createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC tripsReq
   pure Success
   where
     readCsv csvFile = do
@@ -1426,33 +1364,34 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 
     parseMappingInfo :: Int -> CreateDriverBusRouteMappingCSVRow -> Flow DriverBusRouteDetails
     parseMappingInfo idx row = do
-      driverId <- cleanCSVField idx row.driverId "Driver Id"
+      driverPhoneNo <- cleanCSVField idx row.driverId "Driver Phone number"
       vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
       routeCode <- cleanCSVField idx row.routeCode "Route code"
       let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
-      pure $ DriverBusRouteDetails driverId vehicleNumber routeCode roundTripFreq
-
-    cleanField = replaceEmpty . T.strip
-
-    replaceEmpty :: Text -> Maybe Text
-    replaceEmpty = \case
-      "" -> Nothing
-      "no constraint" -> Nothing
-      "no_constraint" -> Nothing
-      x -> Just x
+      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =
       cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
-
-    readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
-    readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
 
     makeTripPlannerReq driverGroup =
       Common.TripDetails
         { routeCode = driverGroup.routeCode,
           roundTrip = fmap (\freq -> Common.RoundTripDetail {frequency = freq}) driverGroup.roundTripFreq
         }
+
+readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
+readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
+
+cleanField :: Text -> Maybe Text
+cleanField = replaceEmpty . T.strip
+
+replaceEmpty :: Text -> Maybe Text
+replaceEmpty = \case
+  "" -> Nothing
+  "no constraint" -> Nothing
+  "no_constraint" -> Nothing
+  x -> Just x
 
 ---------------------------------------------------------------------
 data CreateDriversCSVRow = CreateDriversCSVRow
@@ -1529,15 +1468,6 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       driverMobileNumber <- cleanCSVField idx row.driverMobileNumber "Mobile number"
       driverOnboardingVehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
       pure $ DriverDetails driverName driverMobileNumber driverOnboardingVehicleCategory
-
-    cleanField = replaceEmpty . T.strip
-
-    replaceEmpty :: Text -> Maybe Text
-    replaceEmpty = \case
-      "" -> Nothing
-      "no constraint" -> Nothing
-      "no_constraint" -> Nothing
-      x -> Just x
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
