@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByFleetOwnerIdAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetRouteAssociation.FleetRouteAssociation]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetRouteAssociation.FleetRouteAssociation])
 findAllByFleetOwnerIdAndCityId fleetOwnerId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And

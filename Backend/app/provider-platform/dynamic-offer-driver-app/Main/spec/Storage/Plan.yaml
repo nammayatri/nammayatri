@@ -88,7 +88,7 @@ Plan:
     findByMerchantOpCityIdAndTypeWithServiceName:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOpCityId, planType, serviceName]
+        and: [merchantOpCityId, planType, serviceName, vehicleCategory, isDeprecated]
 
     findByMerchantOpCityIdTypeServiceNameVehicle:
       kvFunction: findAllWithKV
