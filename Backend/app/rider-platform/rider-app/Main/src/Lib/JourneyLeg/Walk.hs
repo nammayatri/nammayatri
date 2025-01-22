@@ -57,6 +57,9 @@ instance JT.JourneyLeg WalkLegRequest m where
   cancel (WalkLegRequestCancel _) = return ()
   cancel _ = throwError (InternalError "Not supported")
 
+  isCancellable ((WalkLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
+  isCancellable _ = throwError (InternalError "Not Supported")
+
   getState (WalkLegRequestGetState req) = do
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")

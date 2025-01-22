@@ -34,6 +34,8 @@ data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
 
+data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData
+
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
     fallbackFare :: Maybe HighPrecMoney
@@ -55,6 +57,7 @@ data BusLegRequest
   | BusLegRequestConfirm BusLegRequestConfirmData
   | BusLegRequestUpdate BusLegRequestUpdateData
   | BusLegRequestCancel BusLegRequestCancelData
+  | BusLegRequestIsCancellable BusLegRequestIsCancellableData
   | BusLegRequestGetFare BusLegRequestGetFareData
   | BusLegRequestGetState BusLegRequestGetStateData
   | BusLegRequestGetInfo BusLegRequestGetInfoData

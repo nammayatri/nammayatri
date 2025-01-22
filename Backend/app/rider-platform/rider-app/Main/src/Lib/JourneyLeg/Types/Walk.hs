@@ -31,6 +31,8 @@ data WalkLegRequestGetFareData = WalkLegRequestGetFareData
 
 data WalkLegRequestCancelData = WalkLegRequestCancelData
 
+data WalkLegRequestIsCancellableData = WalkLegRequestIsCancellableData
+
 data WalkLegRequestUpdateData = WalkLegRequestUpdateData
 
 data WalkLegRequest
@@ -38,6 +40,7 @@ data WalkLegRequest
   | WalkLegRequestConfirm WalkLegRequestConfirmData
   | WalkLegRequestUpdate WalkLegRequestUpdateData
   | WalkLegRequestCancel WalkLegRequestCancelData
+  | WalkLegRequestIsCancellable WalkLegRequestIsCancellableData
   | WalkLegRequestGetInfo WalkLegRequestGetInfoData
   | WalkLegRequestGetState WalkLegRequestGetStateData
   | WalkLegRequestGetFare WalkLegRequestGetFareData

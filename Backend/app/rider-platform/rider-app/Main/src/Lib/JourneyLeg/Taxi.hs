@@ -131,6 +131,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
   cancel (TaxiLegRequestCancel _legData) = return ()
   cancel _ = throwError (InternalError "Not Supported")
 
+  isCancellable ((TaxiLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
+  isCancellable _ = throwError (InternalError "Not Supported")
+
   getState (TaxiLegRequestGetState req) = do
     mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId activeBookingStatus
     case mbBooking of
