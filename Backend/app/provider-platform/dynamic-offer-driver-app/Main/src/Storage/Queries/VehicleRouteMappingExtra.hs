@@ -19,28 +19,20 @@ findAllRouteMappings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.E
 findAllRouteMappings vehicleNumberHash = do findAllWithKV [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.blocked $ Se.Eq False]
 
 findOneMapping :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Encryption.DbHash -> Data.Text.Text -> m (Maybe Domain.Types.VehicleRouteMapping.VehicleRouteMapping))
-findOneMapping vehicleNumberHash routeCode = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.blocked $ Se.Eq False]]
+findOneMapping vehicleNumberHash routeCode = do findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode]]
 
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRouteMapping -> DbHash -> m ()
 upsert a@VehicleRouteMapping {..} vehicleNumberHash = do
-  res <- findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+  res <- findOneWithKV [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode]]
   if isJust res
     then do
       now <- getCurrentTime
       updateOneWithKV
         [ Se.Set Beam.blocked blocked,
+          Se.Set Beam.fleetOwnerId fleetOwnerId.getId,
           Se.Set Beam.merchantId merchantId.getId,
           Se.Set Beam.merchantOperatingCityId merchantOperatingCityId.getId,
           Se.Set Beam.updatedAt now
         ]
-        [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+        [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.routeCode $ Se.Eq routeCode]]
     else createWithKV a
-
-updateBlockedByVehicleNumberHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Bool -> m ()
-updateBlockedByVehicleNumberHash fleetOwnerId vehicleNumberHash blocked = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.blocked blocked,
-      Se.Set Beam.updatedAt now
-    ]
-    [Se.And [Se.Is Beam.vehicleNumberHash $ Se.Eq vehicleNumberHash, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]]

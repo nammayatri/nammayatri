@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.DriverOnboarding where
+module SharedLogic.DriverOnboarding
+  ( module SharedLogic.DriverOnboarding,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
@@ -34,6 +38,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
+import Domain.Utils as Reexport
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -475,11 +480,6 @@ sortMaybe = DL.sortBy compareVehicles
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
-
-convertTextToUTC :: Maybe Text -> Maybe UTCTime
-convertTextToUTC a = do
-  a_ <- a
-  parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do
