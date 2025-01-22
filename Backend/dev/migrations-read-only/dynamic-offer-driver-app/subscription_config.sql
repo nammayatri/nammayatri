@@ -65,4 +65,4 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_cl
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN subscription_down SET DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_down boolean DEFAULT false;
