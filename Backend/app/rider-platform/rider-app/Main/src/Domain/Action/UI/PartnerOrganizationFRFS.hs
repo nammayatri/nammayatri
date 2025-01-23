@@ -28,6 +28,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, name)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
@@ -35,7 +36,6 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import qualified Domain.Types.PartnerOrgStation as DPOS
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -113,7 +113,8 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     toStation :: FRFSTypes.FRFSStationAPI,
     bookingPrice :: HighPrecMoney,
     paymentStatus :: FRFSTypes.FRFSBookingPaymentStatusAPI,
-    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
+    googleWalletJWTUrl :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -247,10 +248,23 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partner
         createdViaPartnerOrgId = Just partnerOrgId
       }
 
-getConfigByStationIds :: PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> Flow GetConfigResp
-getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
-  fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId fromPOrgStationId
-  toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId toPOrgStationId
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Flow GetConfigResp
+getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = do
+  let isGMMStationId = T.isPrefixOf "Ch" fromGMMStationId && T.isPrefixOf "Ch" toGMMStationId
+  (fromStation', toStation') <-
+    if isGMMStationId
+      then do
+        let fromPOrgStationId = Id fromGMMStationId
+        let toPOrgStationId = Id toGMMStationId
+        fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId fromPOrgStationId
+        toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId toPOrgStationId
+        return (fromStation', toStation')
+      else do
+        let fromStationId' = Id fromGMMStationId
+        let toStationId' = Id toGMMStationId
+        fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId fromStationId' partnerOrg.orgId
+        toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId toStationId' partnerOrg.orgId
+        return (fromStation', toStation')
   frfsConfig' <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityId fromStation'.merchantOperatingCityId >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
 
   unless (frfsConfig'.merchantId == partnerOrg.merchantId) $
@@ -294,6 +308,7 @@ shareTicketInfo ticketBookingId = do
         paymentStatus = Utils.mkTBPStatusAPI paymentBooking.status,
         partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
         city = city.city,
+        googleWalletJWTUrl = ticketBooking.googleWalletJWTUrl,
         ..
       }
   where

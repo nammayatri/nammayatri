@@ -8,6 +8,7 @@ module Domain.Types.Extra.PartnerOrgConfig where
 
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HMS
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
@@ -24,6 +25,7 @@ data ConfigType
   | RATE_LIMIT
   | TICKET_SMS
   | BPP_STATUS_CALL
+  | WALLET_CLASS_NAME
   deriving (Generic, Eq, Ord, Read, Show, ToSchema, ToParamSchema, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable ConfigType
 
@@ -34,6 +36,7 @@ data PartnerOrganizationConfig
   | RateLimit RateLimitConfig
   | TicketSMS TicketSMSConfig
   | BPPStatusCall BPPStatusCallConfig
+  | WalletClassName WalletClassNameConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RegistrationConfig = RegistrationConfig
@@ -44,6 +47,11 @@ data RegistrationConfig = RegistrationConfig
 
 newtype RateLimitConfig = RateLimitConfig
   { rateLimitOptions :: APIRateLimitOptions
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype WalletClassNameConfig = WalletClassNameConfig
+  { className :: HMS.HashMap Text Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -77,12 +85,14 @@ getConfigType (Registration _) = REGISTRATION
 getConfigType (RateLimit _) = RATE_LIMIT
 getConfigType (TicketSMS _) = TICKET_SMS
 getConfigType (BPPStatusCall _) = BPP_STATUS_CALL
+getConfigType (WalletClassName _) = WALLET_CLASS_NAME
 
 getConfigJSON :: PartnerOrganizationConfig -> A.Value
 getConfigJSON (Registration cfg) = A.toJSON cfg
 getConfigJSON (RateLimit cfg) = A.toJSON cfg
 getConfigJSON (TicketSMS cfg) = A.toJSON cfg
 getConfigJSON (BPPStatusCall cfg) = A.toJSON cfg
+getConfigJSON (WalletClassName cfg) = A.toJSON cfg
 
 getRegistrationConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m RegistrationConfig
 getRegistrationConfig (Registration cfg) = pure cfg
@@ -99,6 +109,10 @@ getTicketSMSConfig cfg = throwError . InternalError $ unknownConfigType TICKET_S
 getBPPStatusCallConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m BPPStatusCallConfig
 getBPPStatusCallConfig (BPPStatusCall cfg) = pure cfg
 getBPPStatusCallConfig cfg = throwError . InternalError $ unknownConfigType BPP_STATUS_CALL cfg
+
+getWalletClassNameConfig :: (MonadFlow m) => PartnerOrganizationConfig -> m WalletClassNameConfig
+getWalletClassNameConfig (WalletClassName cfg) = pure cfg
+getWalletClassNameConfig cfg = throwError . InternalError $ unknownConfigType WALLET_CLASS_NAME cfg
 
 unknownConfigType :: ConfigType -> PartnerOrganizationConfig -> Text
 unknownConfigType cfgType cfg = "Unknown Partner Org Config type, expected:" +|| cfgType ||+ " but got:" +|| cfg ||+ ""

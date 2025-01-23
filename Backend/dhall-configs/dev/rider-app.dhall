@@ -351,4 +351,5 @@ in  { esqDBCfg
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
+    , googleSAPrivateKey = sec.googleSAPrivateKey
     }

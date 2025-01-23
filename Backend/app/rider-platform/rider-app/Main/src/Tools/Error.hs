@@ -448,6 +448,29 @@ instance IsHTTPError StationError where
 
 instance IsAPIError StationError
 
+data GoogleWalletError
+  = JWTSignError Text
+  | FailedToCallWalletAPI Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GoogleWalletError
+
+instance IsBaseError GoogleWalletError where
+  toMessage = \case
+    JWTSignError msg -> Just $ "JWT Sign Error:-" <> msg
+    FailedToCallWalletAPI msg -> Just $ "Failed To Call Wallet API:-" <> msg
+
+instance IsHTTPError GoogleWalletError where
+  toErrorCode = \case
+    JWTSignError _ -> "JWT_SIGN_ERROR"
+    FailedToCallWalletAPI _ -> "FAILED_TO_CALL_WALLET_API"
+
+  toHttpCode = \case
+    JWTSignError _ -> E500
+    FailedToCallWalletAPI _ -> E400
+
+instance IsAPIError GoogleWalletError
+
 data PartnerOrgStationError
   = PartnerOrgStationNotFound Text Text
   | PartnerOrgStationNotFoundForStationId Text Text
