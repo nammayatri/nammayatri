@@ -81,6 +81,7 @@ import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
@@ -129,6 +130,7 @@ import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
+import qualified Storage.Queries.VehicleRouteMapping as VRM
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
@@ -420,7 +422,7 @@ postDriverFleetAddVehicles ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.CreateVehiclesReq ->
-  Flow APISuccess
+  Flow Common.AddVehiclesResp
 postDriverFleetAddVehicles merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -429,8 +431,33 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     Just id -> pure id
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
-  mapM_ (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId) rcReq
-  pure Success
+  unprocessed <-
+    foldlM
+      ( \unprocessedEntities (registerRcReq, routes) -> do
+          void $ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq
+          vehicleNumberHash <- getDbHash registerRcReq.vehicleRegistrationCertNumber
+          unprocessedVehicleRouteMappingEntities <-
+            foldlM
+              ( \unprocessedVehicleRouteMappingEntity route -> do
+                  VRM.findOneMapping vehicleNumberHash route.code
+                    >>= \case
+                      Just vehicleRouteMapping ->
+                        if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
+                          then pure $ unprocessedVehicleRouteMappingEntity <> ["Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again."]
+                          else do
+                            buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route
+                            pure unprocessedVehicleRouteMappingEntity
+                      Nothing -> do
+                        buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route
+                        pure unprocessedVehicleRouteMappingEntity
+              )
+              []
+              routes
+          return $ unprocessedEntities <> unprocessedVehicleRouteMappingEntities
+      )
+      []
+      rcReq
+  pure Common.AddVehiclesResp {unprocessedEntities = unprocessed}
   where
     readCsv csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
@@ -438,11 +465,30 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (parseVehicleInfo merchantOpCity) v >>= (pure . V.toList)
 
-    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow Common.RegisterRCReq
+    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, [DRoute.Route])
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
+          mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.routeCodes "Route Codes"
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
-      pure Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Just Common.DriverVehicleDetails {vehicleManufacturer = "", vehicleColour = "", vehicleModel = "", vehicleDoors = Nothing, vehicleSeatBelts = Nothing, ..}, ..}
+      routes <-
+        case mbRouteCodes of
+          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route Not Found.")) routeCodes
+          Nothing -> pure []
+      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Just Common.DriverVehicleDetails {vehicleManufacturer = "", vehicleColour = "", vehicleModel = "", vehicleDoors = Nothing, vehicleSeatBelts = Nothing, ..}, ..}, routes)
+
+    buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
+      now <- getCurrentTime
+      vehicleNumber <- encrypt vehicleRegistrationNumber
+      vehicleNumberHash <- getDbHash vehicleRegistrationNumber
+      let vehicleRouteMapping =
+            DVRM.VehicleRouteMapping
+              { blocked = False,
+                routeCode = route.code,
+                createdAt = now,
+                updatedAt = now,
+                ..
+              }
+      VRM.upsert vehicleRouteMapping vehicleNumberHash
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =
@@ -450,7 +496,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
 
 data VehicleDetailsCSVRow = VehicleDetailsCSVRow
   { registrationNo :: Text,
-    airConditioned :: Text
+    airConditioned :: Text,
+    routeCodes :: Text
   }
   deriving (Show)
 
@@ -459,6 +506,7 @@ instance FromNamedRecord VehicleDetailsCSVRow where
     VehicleDetailsCSVRow
       <$> r .: "registration_no"
       <*> r .: "air_conditioned"
+      <*> r .: "route_codes"
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -1213,7 +1261,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
   whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
     route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> tripTransaction.routeCode))
     (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-    WMB.assignTripTransaction tripTransaction route routeSourceStopInfo.point routeDestinationStopInfo.point
+    WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do

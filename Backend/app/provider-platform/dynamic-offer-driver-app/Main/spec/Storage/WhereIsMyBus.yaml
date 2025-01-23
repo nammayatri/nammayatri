@@ -24,6 +24,9 @@ VehicleRouteMapping:
     vehicleNumberHash: PrimaryKey
     routeCode: PrimaryKey
 
+  excludedDefaultQueries:
+    - findByPrimaryKey
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

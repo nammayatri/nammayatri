@@ -22,26 +22,9 @@ FleetDriverAssociation:
     fleetOwnerId: SecondaryKey
 
   queries:
-
-    findByDriverIdAndFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [driverId, fleetOwnerId, isActive]
-
-    findByDriverId:
-      kvFunction: findOneWithKV
-      where:
-        and: [driverId, isActive]
-
     findAllDriverByFleetOwnerId:
       kvFunction: findAllWithKV
       where: fleetOwnerId
-
-    updateFleetDriverActiveStatus:
-      kvFunction: updateOneWithKV
-      params: [isActive, associatedTill]
-      where:
-        and: [driverId, fleetOwnerId]
 
     deleteByDriverId:
       kvFunction: deleteWithKV

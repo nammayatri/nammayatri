@@ -3,7 +3,7 @@ module SharedLogic.WMB where
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
 import Data.List (sortBy)
-import Data.Time hiding (getCurrentTime)
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
@@ -17,6 +17,7 @@ import Domain.Types.TripTransaction
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
 import qualified Domain.Types.VehicleVariant as DVehVariant
+import Domain.Utils
 import Environment
 import qualified EulerHS.Prelude as EHS
 import Kernel.External.Encryption (getDbHash)
@@ -35,7 +36,6 @@ import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
-import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -50,29 +50,33 @@ data StopData = StopData
     stopLocation :: LatLong
   }
 
-findClosestStop :: LatLong -> [StopData] -> Maybe StopData
-findClosestStop loc stops =
-  if null stops
-    then Nothing
-    else Just $ minimumBy (EHS.comparing (KU.distanceBetweenInMeters loc . stopLocation)) stops
+findClosestStop :: Text -> LatLong -> Flow (Maybe StopData)
+findClosestStop routeCode loc = do
+  now <- getCurrentTime
+  allRTSList <- QRTS.findAllRTSMappingByRouteAndDay routeCode (utctTimeToDayOfWeek now)
+  if null allRTSList
+    then return Nothing
+    else do
+      let closestStop = minimumBy (EHS.comparing (KU.distanceBetweenInMeters loc . (.stopPoint))) allRTSList
+      return $ Just (StopData closestStop.tripCode closestStop.routeCode closestStop.stopCode closestStop.stopPoint)
 
 checkFleetDriverAssociation :: Id Person -> Id Person -> Flow Bool
 checkFleetDriverAssociation driverId fleetOwnerId = do
-  mbFleetDriverAssociation <- QFDV.findByDriverId driverId True
+  mbFleetDriverAssociation <- QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId.getId True
   case mbFleetDriverAssociation of
     Nothing -> return False
-    Just fleetDriverAssociation -> return $ fleetDriverAssociation.isActive && fleetDriverAssociation.fleetOwnerId == fleetOwnerId.getId
+    Just _ -> return True
 
 getSourceAndDestinationStopInfo :: Route -> Text -> Flow (StopInfo, StopInfo)
 getSourceAndDestinationStopInfo route routeCode = do
   now <- getCurrentTime
-  allRTSList <- QRTS.findAllRTSMappingByRouteAndDay routeCode (utctTimeToDayOfWeek now)
-  nonEmptyAllRTSList <-
-    case allRTSList of
+  stops <- QRTS.findAllByRouteCodeForStops routeCode 1 (utctTimeToDayOfWeek now)
+  nonEmptySortedStops <-
+    case stops of
       [] -> throwError $ InvalidRequest "RTS not found"
-      (a : as) -> pure $ a :| as
-  let sourceRouteTripMapping = minimumBy (EHS.comparing (\r -> KU.distanceBetweenInMeters route.startPoint r.stopPoint)) nonEmptyAllRTSList
-      destinationRouteTripMapping = minimumBy (EHS.comparing (\r -> KU.distanceBetweenInMeters route.endPoint r.stopPoint)) nonEmptyAllRTSList
+      (a : as) -> return $ NE.sortBy (EHS.comparing (.stopSequenceNum)) (a :| as)
+  let sourceRouteTripMapping = NE.head nonEmptySortedStops
+      destinationRouteTripMapping = NE.last nonEmptySortedStops
   pure (createStopInfo sourceRouteTripMapping route.startPoint, createStopInfo destinationRouteTripMapping route.endPoint)
   where
     createStopInfo routeTripMapping point =
@@ -81,9 +85,6 @@ getSourceAndDestinationStopInfo route routeCode = do
           code = routeTripMapping.stopCode,
           ..
         }
-
-    utctTimeToDayOfWeek :: UTCTime -> DayOfWeek
-    utctTimeToDayOfWeek utcTime = dayOfWeek (utctDay utcTime)
 
 findNextEligibleTripTransactionByDriverIdStatus :: Id Person -> TripStatus -> Flow (Maybe TripTransaction)
 findNextEligibleTripTransactionByDriverIdStatus driverId status = do
@@ -95,24 +96,23 @@ findNextEligibleTripTransactionByDriverIdStatus driverId status = do
 isNonTerminalTripStatus :: TripStatus -> Bool
 isNonTerminalTripStatus status = any (\status' -> status' == status) [TRIP_ASSIGNED, IN_PROGRESS]
 
-buildTripAssignedData :: Id TripTransaction -> ServiceTierType -> Text -> Text -> Text -> (Maybe Text) -> TN.WMBTripAssignedData
-buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCode shortName roundRouteCode =
+buildTripAssignedData :: Id TripTransaction -> ServiceTierType -> Text -> Text -> Text -> (Maybe Text) -> Bool -> TN.WMBTripAssignedData
+buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCode shortName roundRouteCode isFirstBatchTrip =
   TN.WMBTripAssignedData
     { tripTransactionId = tripTransactionId,
       routeCode = routeCode,
       routeShortname = shortName,
       vehicleNumber = vehicleNumber,
       vehicleServiceTierType = vehicleServiceTier,
-      roundRouteCode = roundRouteCode
+      roundRouteCode = roundRouteCode,
+      isFirstBatchTrip = isFirstBatchTrip
     }
 
 assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> LatLong -> Flow TripTransaction
 assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo currentLocation = do
   tripTransactionId <- generateGUID
   now <- getCurrentTime
-  allStops <- QRTSM.findByRouteCode route.code
-  let stops = map (\stop -> StopData stop.tripCode stop.routeCode stop.stopCode stop.stopPoint) allStops
-  closestStop <- findClosestStop currentLocation stops & fromMaybeM (InternalError "No closest stop found")
+  closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (InternalError "No closest stop found")
   vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber
   let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate
   QTT.create tripTransaction
@@ -160,7 +160,7 @@ endTripTransaction fleetConfig tripTransaction currentLocation = do
     Just advancedTripTransaction -> do
       route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
       (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
-      assignTripTransaction advancedTripTransaction route currentLocation destinationStopInfo.point
+      assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point
     Nothing -> do
       if fleetConfig.allowAutomaticRoundTripAssignment
         then do
@@ -169,7 +169,8 @@ endTripTransaction fleetConfig tripTransaction currentLocation = do
             (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
             vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
             vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
-            void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
+            when (not vehicleRouteMapping.blocked) $ do
+              void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
         else unlinkVehicleToDriver fleetConfig tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
 
 buildBusTripInfo :: Text -> Text -> LatLong -> LT.RideInfo
@@ -180,11 +181,11 @@ buildBusTripInfo vehicleNumber routeCode destinationLocation =
       ..
     }
 
-assignTripTransaction :: TripTransaction -> Route -> LatLong -> LatLong -> Flow ()
-assignTripTransaction tripTransaction route currentLocation destination = do
+assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> Flow ()
+assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation destination = do
   let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination
   void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
-  let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode route.shortName route.roundRouteCode
+  let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode route.shortName route.roundRouteCode isFirstBatchTrip
   TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" tripAssignedEntityData
 
 linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow VehicleRegistrationCertificate
@@ -232,8 +233,7 @@ getRouteDetails routeCode = do
         Just polyline -> Just (KEPP.decode polyline)
         Nothing -> Nothing
   now <- getCurrentTime
-  let day = dayOfWeek (utctDay now)
-  stops <- QRTSM.findAllByRouteCodeForStops routeCode 1 day
+  stops <- QRTS.findAllByRouteCodeForStops routeCode 1 (utctTimeToDayOfWeek now)
   let stopInfos = map (\stop -> StopInfo (stop.stopCode) (stop.stopName) (stop.stopPoint)) (sortBy (EHS.comparing (.stopSequenceNum)) stops)
   pure $
     Common.RouteDetails
