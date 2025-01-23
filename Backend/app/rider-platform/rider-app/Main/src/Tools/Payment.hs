@@ -135,6 +135,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.MetroPaymentServiceConfig vsc) -> func vsc req
     Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc req
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc req
+    Just (DMSC.MultiModalServiceConfig vsc) -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
