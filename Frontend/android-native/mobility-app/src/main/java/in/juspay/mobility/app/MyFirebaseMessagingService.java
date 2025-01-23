@@ -299,14 +299,19 @@ public  class MyFirebaseMessagingService {
                         String jsonData = remoteMessage.getData().get("entity_data");
                         String currentAppState = "";
                         SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                        if (sharedPrefs != null) currentAppState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-                        Boolean isAppNotOpen = (currentAppState.equals("onPause") || currentAppState.equals("onDestroy") || currentAppState.isEmpty());
-                        if (jsonData != null && isAppNotOpen) {
+                        if (jsonData != null) {
                             try {
                                 JSONObject notificationPayload = new JSONObject(jsonData);
-                                String notificationType_ =remoteMessage.getData().get("notification_type"); 
+                                String notificationType_ = remoteMessage.getData().get("notification_type"); 
                                 if(notificationType_ != null) notificationPayload.put("notification_type", notificationType_);
-                                busTripAssignedOverlay(context,notificationPayload);
+                                
+                                Boolean isFirstBatchTrip = notificationPayload.has("isFirstBatchTrip") && notificationPayload.getBoolean("isFirstBatchTrip");
+                                    
+                                if (sharedPrefs != null) currentAppState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+                                Boolean showBusTripOverlay = (currentAppState.equals("onPause") || currentAppState.equals("onDestroy") || currentAppState.isEmpty() || isFirstBatchTrip);
+                                if (showBusTripOverlay){
+                                    busTripAssignedOverlay(context,notificationPayload);
+                                }
                             }
                             catch (JSONException e) {
                                 Log.e("MyFirebaseMessagingService", "Invalid JSON in bus trip assignment: " + e.getMessage());
