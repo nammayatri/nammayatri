@@ -640,7 +640,7 @@ makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
   Common.RentalDetails
     Common.FParamsRentalDetails
       { timeFare = PriceAPIEntity timeBasedFare currency,
-        distFare = PriceAPIEntity distBasedFare currency,
+        distanceFare = PriceAPIEntity distBasedFare currency,
         deadKmFare = PriceAPIEntity deadKmFare currency,
         extraDistanceWithUnit = convertMetersToDistance distanceUnit extraDistance,
         ..

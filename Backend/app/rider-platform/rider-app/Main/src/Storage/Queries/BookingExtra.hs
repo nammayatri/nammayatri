@@ -337,3 +337,6 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findAllByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Booking]
+findAllByTransactionId transactionId = findAllWithKVAndConditionalDB [Se.Is BeamB.riderTransactionId $ Se.Eq transactionId] (Just (Se.Desc BeamB.createdAt))
