@@ -19,6 +19,7 @@ getPOrgConfigFromTypeAndJson config = \case
   RATE_LIMIT -> RateLimit <$> parseCfgJSON config RATE_LIMIT
   TICKET_SMS -> TicketSMS <$> parseCfgJSON config TICKET_SMS
   BPP_STATUS_CALL -> BPPStatusCall <$> parseCfgJSON config BPP_STATUS_CALL
+  WALLET_CLASS_NAME -> WalletClassName <$> parseCfgJSON config WALLET_CLASS_NAME
   where
     parseCfgJSON cfg cfgType = do
       case A.fromJSON cfg of

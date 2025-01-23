@@ -34,6 +34,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fromStationId :: B.C f Kernel.Prelude.Text,
+    googleWalletJWTUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -250,11 +250,12 @@ FRFSTicketBooking:
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest : Maybe Int
-    lineColor : Maybe Text
+    bppDelayedInterest  : Maybe Int
+    lineColor  : Maybe Text
     lineColorCode : Maybe Text
-    frequency : Maybe Int
-    journeyLegOrder : Maybe Int
+    googleWalletJWTUrl  : Maybe Text
+    frequency  : Maybe Int
+    journeyLegOrder  : Maybe Int
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
@@ -372,6 +373,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
