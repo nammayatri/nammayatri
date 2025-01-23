@@ -117,11 +117,6 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id text;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounts_json text ;
 
 
-
-------- SQL updates -------
-
-
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color text ;
@@ -152,3 +147,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolea
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text ;
