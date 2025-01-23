@@ -87,6 +87,7 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    googleWalletJWTUrl: Maybe Text
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType
