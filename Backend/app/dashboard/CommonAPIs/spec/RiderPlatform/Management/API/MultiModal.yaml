@@ -1,13 +1,14 @@
 imports:
-  Journey: Domain.Types.Journey
   VehicleCategory: BecknV2.FRFS.Enums
-  RawDataType: Domain.Types.Extra.Rollout
+  FilePath: EulerHS.Prelude
 
 module: MultiModal
 
 types:
   FileFormat:
     enum: "GTFS,JSON,CSV"
+  RawDataType:
+    enum: "GTFS_DATA,FARE_DATA"
   StageInfo:
     - stageName: Text
     - stageStatus: StageStatus
@@ -21,43 +22,52 @@ types:
     - readyVersions: [PreprocessFRFSDataResp]
   StageStatus:
     enum: "INPROGRESS,COMPLETED,FAILED"
+  PreprocessFRFSDataReq: # city inferred from api path variable
+    - vehicleType: VehicleCategory
+    - fileFormat: FileFormat
+    - file: FilePath
+    - inputDataType: RawDataType
+  FRFSDataStatus:
+    - versionId: Text
+  ReadyVersionReq:
+    - cityId: Text
+    - vehicleType: VehicleCategory
+  ApplyVersionReq:
+    - cityId: Text
+    - vehicleType: VehicleCategory
+    - versionId: Text
+    - versionTag: Text
+    - rolloutPercent: Int
 
 apis:
   - POST: # PreprocessFRFSDataAPI
       endpoint: multimodal/frfs/data/preprocess
       auth: ApiAuthV2
-      params: # city inferred from api path variable
-        vehicleType: VehicleCategory
-        fileFormat: FileFormat
-        file: FilePath
-        inputDataType: RawDataType
+      request:
+        type: PreprocessFRFSDataReq
       response:
           type: PreprocessFRFSDataResp
 
   - POST: # StatusCheckFRFSDataAPI
       endpoint: multimodal/frfs/data/status
       auth: ApiAuthV2
-      params:
-        versionId: Text
+      request:
+        type: FRFSDataStatus
       response:
           type: FRFSDataStatusResp
 
   - POST: # GetReadyVersionsAPI
       endpoint: multimodal/frfs/data/version/isReady
       auth: ApiAuthV2
-      params:
-        cityId: Text
-        vehicleType: VehicleCategory
+      request:
+        type: ReadyVersionReq
       response:
         type: ReadyVersionsResp
 
   - POST: # ApplyReadyVersionsAPI
       endpoint: multimodal/frfs/data/version/apply
       auth: ApiAuthV2
-      params:
-        cityId: Text
-        vehicleType: VehicleCategory
-        versionId: Text
-        versionTag: Text
+      request:
+        type: ApplyVersionReq
       response:
         type: APISuccess

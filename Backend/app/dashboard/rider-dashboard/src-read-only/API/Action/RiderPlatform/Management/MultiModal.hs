@@ -28,44 +28,44 @@ handler merchantId city = postMultiModalMultimodalFrfsDataPreprocess merchantId 
 
 type PostMultiModalMultimodalFrfsDataPreprocess =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_PREPROCESS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_PREPROCESS)
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataPreprocess
   )
 
 type PostMultiModalMultimodalFrfsDataStatus =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_STATUS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_STATUS)
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataStatus
   )
 
 type PostMultiModalMultimodalFrfsDataVersionIsReady =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_IS_READY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_IS_READY)
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataVersionIsReady
   )
 
 type PostMultiModalMultimodalFrfsDataVersionApply =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_APPLY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_APPLY)
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataVersionApply
   )
 
-postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
-postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity apiTokenInfo
+postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
+postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity apiTokenInfo req
 
-postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
-postMultiModalMultimodalFrfsDataStatus merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataStatus merchantShortId opCity apiTokenInfo
+postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatus -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
+postMultiModalMultimodalFrfsDataStatus merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataStatus merchantShortId opCity apiTokenInfo req
 
-postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
-postMultiModalMultimodalFrfsDataVersionIsReady merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataVersionIsReady merchantShortId opCity apiTokenInfo
+postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.MultiModal.ReadyVersionReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
+postMultiModalMultimodalFrfsDataVersionIsReady merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataVersionIsReady merchantShortId opCity apiTokenInfo req
 
-postMultiModalMultimodalFrfsDataVersionApply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postMultiModalMultimodalFrfsDataVersionApply merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataVersionApply merchantShortId opCity apiTokenInfo
+postMultiModalMultimodalFrfsDataVersionApply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.MultiModal.ApplyVersionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMultiModalMultimodalFrfsDataVersionApply merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.MultiModal.postMultiModalMultimodalFrfsDataVersionApply merchantShortId opCity apiTokenInfo req

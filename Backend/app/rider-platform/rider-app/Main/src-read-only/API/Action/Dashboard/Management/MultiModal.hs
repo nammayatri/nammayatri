@@ -22,14 +22,14 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.MultiModal.API)
 handler merchantId city = postMultiModalMultimodalFrfsDataPreprocess merchantId city :<|> postMultiModalMultimodalFrfsDataStatus merchantId city :<|> postMultiModalMultimodalFrfsDataVersionIsReady merchantId city :<|> postMultiModalMultimodalFrfsDataVersionApply merchantId city
 
-postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
-postMultiModalMultimodalFrfsDataPreprocess a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataPreprocess a2 a1
+postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
+postMultiModalMultimodalFrfsDataPreprocess a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataPreprocess a3 a2 a1
 
-postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
-postMultiModalMultimodalFrfsDataStatus a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataStatus a2 a1
+postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatus -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
+postMultiModalMultimodalFrfsDataStatus a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataStatus a3 a2 a1
 
-postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
-postMultiModalMultimodalFrfsDataVersionIsReady a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataVersionIsReady a2 a1
+postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.ReadyVersionReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
+postMultiModalMultimodalFrfsDataVersionIsReady a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataVersionIsReady a3 a2 a1
 
-postMultiModalMultimodalFrfsDataVersionApply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postMultiModalMultimodalFrfsDataVersionApply a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataVersionApply a2 a1
+postMultiModalMultimodalFrfsDataVersionApply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.ApplyVersionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMultiModalMultimodalFrfsDataVersionApply a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.MultiModal.postMultiModalMultimodalFrfsDataVersionApply a3 a2 a1
