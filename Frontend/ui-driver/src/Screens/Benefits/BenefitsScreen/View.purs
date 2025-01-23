@@ -78,6 +78,13 @@ screen initialState =
                 $ do
                     (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
                     lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
+                    if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
+                      response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
+                      case response of
+                        Right (GenerateReferralCodeRes referralCode) -> do
+                          lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes referralCode))
+                        Left _ -> pure unit
+                    else pure unit
                     (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
                     lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
             void $ launchAff $ flowRunner defaultGlobalState do
@@ -446,7 +453,7 @@ driverReferralCode push state =
                 , text state.data.referralCode
                 , color Color.black900
                 , fontStyle $ FontStyle.feFont LanguageStyle
-                , textSize FontSize.a_30
+                , textSize FontSize.a_20
                 , margin $ MarginTop 10
                 ]
             , linearLayout
