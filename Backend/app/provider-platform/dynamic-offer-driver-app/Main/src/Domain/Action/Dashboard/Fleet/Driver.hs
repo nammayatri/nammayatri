@@ -1241,10 +1241,8 @@ postDriverFleetTripPlanner ::
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  mobileNumberHash <- getDbHash req.driverPhoneNumber
-  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverPhoneNumber)
-  vehicleRC <- WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC req.trips
+  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
+  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
   pure Success
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()

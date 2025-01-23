@@ -85,7 +85,7 @@ FROM
     UNNEST(ARRAY['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) AS t(days_of_week)
     CROSS JOIN GENERATE_SERIES(1, 10) AS s(seq_num);
 
--- 9a9cf313-8aaf-4546-a4b7-82221a6b47f3 (fleet owner id) create fleet_driver_association and vehicle_route_mapping
+-- favorit-fleet-owner-0000000000000000 (fleet owner id) create fleet_driver_association and vehicle_route_mapping
 
 INSERT INTO atlas_driver_offer_bpp.vehicle_route_mapping (
     fleet_owner_id,
@@ -98,7 +98,7 @@ INSERT INTO atlas_driver_offer_bpp.vehicle_route_mapping (
 )
 VALUES
     (
-        '9a9cf313-8aaf-4546-a4b7-82221a6b47f3',
+        'favorit-fleet-owner-0000000000000000',
         '\xb75e10098121f04df118f6e5a1ab0bf536f9dd5211b3a91543619dc336d59744',
         '0.1.0|0|xgLuhzcv2xpOx6Ig1ZiJoxqgsWW+vB6E3cF6dSqmr3P2TnTDUHPWEtGKNfQ3KnDCzqLn5pvUd1DL4jxg', -- WB1234567
         'Route:1:S1',
@@ -120,11 +120,61 @@ INSERT INTO atlas_driver_offer_bpp.fleet_driver_association (
 VALUES
     (
         '9a9cf313-8aaf-4546-a4b7-82221a6b47f4',
-        'favorit-suv-000000000000000000000000',
+        'favorit-fleet-owner-0000000000000000',
         true,
-        '9a9cf313-8aaf-4546-a4b7-82221a6b47f3',
+        'favorit-fleet-owner-0000000000000000',
         NULL,
         NULL,
         now(),
         now()
     );
+
+INSERT INTO atlas_driver_offer_bpp.vehicle_registration_certificate (
+    id,
+    fleet_owner_id,
+    certificate_number_hash,
+    certificate_number_encrypted,
+    fitness_expiry,
+    created_at,
+    verification_status,
+    updated_at,
+    failed_rules,
+    document_image_id,
+    vehicle_variant,
+    merchant_id,
+    merchant_operating_city_id
+)
+VALUES
+    (
+        md5(random()::text || clock_timestamp()::text)::uuid,
+        'favorit-fleet-owner-0000000000000000',
+        '\xb75e10098121f04df118f6e5a1ab0bf536f9dd5211b3a91543619dc336d59744',
+        '0.1.0|0|xgLuhzcv2xpOx6Ig1ZiJoxqgsWW+vB6E3cF6dSqmr3P2TnTDUHPWEtGKNfQ3KnDCzqLn5pvUd1DL4jxg',
+        '2027-03-30 00:00:00+00',
+        now(),
+        'VALID',
+        now(),
+        '{}',
+        '6bf6fac7-76c0-4f7b-9718-8c33844e4e03',
+        'BUS_AC',
+        'favorit0-0000-0000-0000-00000favorit',
+        'favorit0-0000-0000-0000-00000000city'
+    );
+
+INSERT INTO atlas_driver_offer_bpp.fleet_route_association (
+  fleet_owner_id,
+  id,
+  merchant_id,
+  merchant_operating_city_id,
+  route_code,
+  created_at,
+  updated_at
+) VALUES
+( 'favorit-fleet-owner-0000000000000000',
+  md5(random() :: text || clock_timestamp() :: text) :: uuid,
+  'favorit0-0000-0000-0000-00000favorit',
+  'favorit0-0000-0000-0000-00000000city',
+  'Route:1:S1',
+  now(),
+  now()
+);
