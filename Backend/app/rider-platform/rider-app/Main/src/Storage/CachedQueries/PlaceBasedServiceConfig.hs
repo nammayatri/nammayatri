@@ -30,6 +30,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.PlaceBasedServiceConfig as Queries
+import Utils.Common.JWT.Config as GW
 
 findByPlaceIdAndServiceName :: (CacheFlow m r, EsqDBFlow m r) => Id TicketPlace -> ServiceName -> m (Maybe PlaceBasedServiceConfig)
 findByPlaceIdAndServiceName id serviceName =
@@ -97,3 +98,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
+  WalletServiceConfig walletCfg -> case walletCfg of
+    GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet

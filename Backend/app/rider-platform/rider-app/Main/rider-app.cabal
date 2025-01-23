@@ -130,6 +130,7 @@ library
       Beckn.OnDemand.Utils.OnSearch
       Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.GWLink
       Domain.Action.Beckn.FRFS.OnCancel
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
@@ -1022,6 +1023,7 @@ library
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , payment
@@ -1155,6 +1157,7 @@ executable rider-app-exe
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , persistent

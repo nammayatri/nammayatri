@@ -30,7 +30,7 @@ SELECT org_id as partner_org_id, id as station_id, 'Edapally' as name, 'ChIJrwwk
 ----------------------------------------------------------------------------** END **--------------------------------------------------------------------------------------------
 
 
--- INSERT entries for partner_org_config for each partner_organization for REGISTRATION, RATE_LIMIT, TICKET_SMS and BPP_STATUS_CALL config types
+-- INSERT entries for partner_org_config for each partner_organization for REGISTRATION, RATE_LIMIT, TICKET_SMS, BPP_STATUS_CALL and WALLET_CLASS_NAME config types
 WITH RCfg AS (SELECT 'REGISTRATION' as config_type, '{ "fakeOtp": "7891", "sessionConfig": {"attempts": 0, "authExpiry": 0, "tokenExpiry": 1} }'::json as config_json)
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, RCfg.config_type as config_type, RCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN RCfg;
@@ -46,3 +46,9 @@ SELECT org_id as partner_org_id, TSCfg.config_type as config_type, TSCfg.config_
 WITH BPPStCallCfg AS (SELECT 'BPP_STATUS_CALL' as config_type, '{ "intervalInSec": 10 }'::json as config_json)
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, BPPStCallCfg.config_type as config_type, BPPStCallCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN BPPStCallCfg;
+
+-- Don't Run in Master or Prod. Only for Local Testing
+
+WITH WalletClassNameCfg AS (SELECT 'WALLET_CLASS_NAME' as config_type, '{ "className": {"namma-yatri-0-0000-0000-00000000city":"namma_yatri_metro_kmrl"} }'::json as config_json)
+INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
+SELECT org_id as partner_org_id, WalletClassNameCfg.config_type as config_type, WalletClassNameCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN WalletClassNameCfg;
