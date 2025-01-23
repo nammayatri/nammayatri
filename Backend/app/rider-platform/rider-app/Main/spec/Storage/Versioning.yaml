@@ -13,6 +13,7 @@ Rollout:
     vehicleType: VehicleCategory
     inputDataType: RawDataType
     versionTag: Int
+    percentage: Int
 
 
 

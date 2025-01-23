@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.Rollout.Rollout {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.inputDataType inputDataType,
+      Se.Set Beam.percentage percentage,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.versionTag versionTag,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -58,6 +59,7 @@ instance FromTType' Beam.Rollout Domain.Types.Rollout.Rollout where
         Domain.Types.Rollout.Rollout
           { id = Kernel.Types.Id.Id id,
             inputDataType = inputDataType,
+            percentage = percentage,
             vehicleType = vehicleType,
             versionTag = versionTag,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -71,6 +73,7 @@ instance ToTType' Beam.Rollout Domain.Types.Rollout.Rollout where
     Beam.RolloutT
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.inputDataType = inputDataType,
+        Beam.percentage = percentage,
         Beam.vehicleType = vehicleType,
         Beam.versionTag = versionTag,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
