@@ -25,7 +25,7 @@ apis:
       multipart:
         type: CreateVehiclesReq
       response:
-        type: APISuccess
+        type: AddVehiclesResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
 
@@ -938,6 +938,9 @@ types:
     - waypoints: Maybe [LatLong]
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
+  AddVehiclesResp:
+    - recordType: NewType
+    - unprocessedEntities: [Text]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
