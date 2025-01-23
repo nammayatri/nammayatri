@@ -682,6 +682,9 @@ getInformation (personId, merchantId, merchantOpCityId) toss tnant' context = do
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
+  when isNothing driverReferralCode $ do
+    fork "create referral entry " $ do
+      void $ generateReferralCode (personId, merchantId, merchantOpCityId)
   driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId)
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
