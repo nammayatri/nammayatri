@@ -2542,13 +2542,19 @@ rideTrackingModalView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , alignParentBottom "true,-1"
+  , margin $ Margin 0 0 0 0
+  , gravity BOTTOM  
   , visibility $ boolToVisibility $ state.props.currentStage == RideTracking
   ][  coordinatorLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , margin $ Margin 0 0 0 0
+      , padding $ Padding 0 0 0 0
       ][  bottomSheetLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , margin $ Margin 0 0 0 0
+          , padding $ Padding 0 0 0 0
           , PP.sheetState COLLAPSED
           , peakHeight $ if (DA.elem state.data.peekHeight [518,470,0]) || state.data.peekHeight < 450 then getPeekHeight state else state.data.peekHeight
           , topShift 0.0

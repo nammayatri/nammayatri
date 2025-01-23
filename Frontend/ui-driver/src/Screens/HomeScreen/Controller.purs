@@ -1882,7 +1882,7 @@ eval (SelectBusRoute RouteDisplayController.Click) state = continue state { prop
 eval (ScanQrCode) state = exit $ GoToScanBusQR state
 
 
-eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+eval (RideTrackingModalAction (RideTrackingModal.NoAction)) state = continue state {data{peekHeight = getPeekHeight state}}
 
 eval (RideTrackingModalAction (RideTrackingModal.EndRide)) state = continue state {props{endRidePopUp = true}}
 

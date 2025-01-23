@@ -32,7 +32,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, frameLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -58,10 +58,11 @@ import Resource.Localizable.StringsV2 as StringV2
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
-  linearLayout
+  frameLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , afterRender push $ const NoAction
     ][ 
         modalHeader, 
         activeTrackingView push config
@@ -217,6 +218,7 @@ journeyDetailsView push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginVertical 24 24
+    , afterRender push $ const NoAction
     ][  
       journeyIndicators config
     , stopsInfo push config
@@ -262,6 +264,7 @@ stopsInfo push config =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
+    , afterRender push $ const NoAction
     ][  
       sourceStopText config push
     , destinationStopText config push
