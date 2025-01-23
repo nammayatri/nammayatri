@@ -7062,6 +7062,11 @@ fcmHandler notification state notificationBody= do
         isPersonDeliveryInitiator = HU.isDeliveryInitiator state.data.requestorPartyRoles
 
       void $ pure $ metaLogEvent "ny_user_ride_completed"
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ [{key : "Source", value : unsafeToForeign (take 99 (state.data.driverInfoCardState.source))},
+                                                                                              {key : "Destination", value : unsafeToForeign (take 99 (state.data.driverInfoCardState.destination))},
+                                                                                              {key : "Ride Amount", value : unsafeToForeign state.data.driverInfoCardState.price},
+                                                                                              {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
+                                                                                              {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating}]
       void $ updateLocalStage HomeScreen
       setValueToLocalStore IS_SOS_ACTIVE "false"
       deleteValueFromLocalStore SELECTED_VARIANT
