@@ -1,5 +1,7 @@
 let ondclogsUrl = "https://logs.ondc.in"
 
+let googleSAPrivateKey = "some-secret-private-key-for-google-service-account"
+
 let ondcTokenMap
     : List
         { mapKey : { merchantId : Text, domain : Text }
@@ -30,4 +32,5 @@ in  { dbUserId = "atlas_app_user"
     , clickHouseUsername = "default"
     , clickHousePassword = ""
     , ondcTokenMap
+    , googleSAPrivateKey
     }

@@ -31,6 +31,7 @@ import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
+import qualified Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
 findByMerchantOpCityIdAndService ::
@@ -127,3 +128,5 @@ getServiceNameConfigJSON = \case
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
+  Domain.WalletServiceConfig walletCfg -> case walletCfg of
+    GW.GoogleWalletConfig cfg -> (Domain.WalletService GW.GoogleWallet, toJSON cfg)

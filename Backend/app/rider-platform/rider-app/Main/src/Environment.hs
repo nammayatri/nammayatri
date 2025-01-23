@@ -143,7 +143,8 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    googleSAPrivateKey :: String
   }
   deriving (Generic, FromDhall)
 
@@ -231,7 +232,8 @@ data AppEnv = AppEnv
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
     sosAlertsTopicARN :: Text,
-    psqlConn :: PG.Connection
+    psqlConn :: PG.Connection,
+    googleSAPrivateKey :: String
   }
   deriving (Generic)
 
