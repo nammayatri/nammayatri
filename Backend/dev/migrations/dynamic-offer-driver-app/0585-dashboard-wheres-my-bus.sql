@@ -24,3 +24,25 @@ SELECT
     CURRENT_TIMESTAMP
 FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
+
+INSERT INTO atlas_driver_offer_bpp.fleet_owner_information
+  (
+    blocked,
+    enabled,
+    fleet_owner_person_id,
+    fleet_type,
+    merchant_id,
+    verified,
+    created_at,
+    updated_at
+  ) VALUES
+  (
+    false,
+    true,
+    'favorit-fleet-owner-0000000000000000',
+    'NORMAL_FLEET',
+    '94bbea0d-3c52-479b-81f5-eca4969ae797',
+    true,
+    now(),
+    now()
+  );

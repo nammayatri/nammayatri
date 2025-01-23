@@ -725,7 +725,7 @@ types:
     - routeCode: Text
     - roundTrip: Maybe RoundTripDetail
   TripPlannerReq:
-    - driverPhoneNumber: Text
+    - driverId: Id Driver
     - vehicleNumber: Text
     - trips: [TripDetails]
     - summary: Summary
