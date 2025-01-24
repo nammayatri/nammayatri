@@ -44,20 +44,21 @@ instance FromField RawDataType where
 
 instance FromBackendRow Postgres RawDataType
 
-fromFieldStageData ::
-  Field ->
-  Maybe ByteString ->
-  Conversion StageData
-fromFieldStageData f mbValue = do
-  value <- fromField f mbValue
-  case fromJSON value of
-    Success a -> pure a
-    _ -> returnError ConversionFailed f "Conversion failed"
+-- fromFieldStageData ::
+--   Field ->
+--   Maybe ByteString ->
+--   Conversion StageData
+-- fromFieldStageData f mbValue = do
+--   value <- fromField f mbValue
+--   case fromJSON value of
+--     Success a -> pure a
+--     _ -> returnError ConversionFailed f "Conversion failed"
 
-data GtfsDataType = GtfsDataType
-  { id :: Text
-  }
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+-- data GtfsDataType = GtfsDataType
+--   { gtfsFilePath :: Maybe Text,
+--     customFilePath :: Maybe Text
+--   }
+--   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- instance HasSqlValueSyntax be Value => HasSqlValueSyntax be GtfsDataType where
 --   sqlValueSyntax = sqlValueSyntax . toJSON
@@ -69,10 +70,10 @@ data GtfsDataType = GtfsDataType
 
 -- instance FromBackendRow Postgres GtfsDataType
 
-data FareDataType = FareDataType
-  { id :: Text
-  }
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+-- data FareDataType = FareDataType
+--   { id :: Text
+--   }
+--   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- instance HasSqlValueSyntax be Value => HasSqlValueSyntax be FareDataType where
 --   sqlValueSyntax = sqlValueSyntax . toJSON
@@ -84,17 +85,17 @@ data FareDataType = FareDataType
 
 -- instance FromBackendRow Postgres FareDataType
 
-data StageData = GTFSData GtfsDataType | FAREData FareDataType
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+-- data StageData = GTFSData GtfsDataType | FAREData FareDataType
+--   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''StageData)
+-- $(mkHttpInstancesForEnum ''StageData)
 
-instance HasSqlValueSyntax be Value => HasSqlValueSyntax be StageData where
-  sqlValueSyntax = sqlValueSyntax . toJSON
+-- instance HasSqlValueSyntax be Value => HasSqlValueSyntax be StageData where
+--   sqlValueSyntax = sqlValueSyntax . toJSON
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be StageData
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be StageData
 
-instance FromField StageData where
-  fromField = fromFieldStageData
+-- instance FromField StageData where
+--   fromField = fromFieldStageData
 
-instance FromBackendRow Postgres StageData
+-- instance FromBackendRow Postgres StageData

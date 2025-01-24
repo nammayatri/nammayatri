@@ -25,7 +25,7 @@ data ApplyVersionReq = ApplyVersionReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSDataStatus = FRFSDataStatus {versionId :: Kernel.Prelude.Text}
+data FRFSDataStatusReq = FRFSDataStatusReq {versionId :: Kernel.Prelude.Text, operatingCityId :: Kernel.Prelude.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -77,7 +77,7 @@ type API = ("multiModal" :> (PostMultiModalMultimodalFrfsDataPreprocess :<|> Pos
 
 type PostMultiModalMultimodalFrfsDataPreprocess = ("multimodal" :> "frfs" :> "data" :> "preprocess" :> ReqBody '[JSON] PreprocessFRFSDataReq :> Post '[JSON] PreprocessFRFSDataResp)
 
-type PostMultiModalMultimodalFrfsDataStatus = ("multimodal" :> "frfs" :> "data" :> "status" :> ReqBody '[JSON] FRFSDataStatus :> Post '[JSON] FRFSDataStatusResp)
+type PostMultiModalMultimodalFrfsDataStatus = ("multimodal" :> "frfs" :> "data" :> "status" :> ReqBody '[JSON] FRFSDataStatusReq :> Post '[JSON] FRFSDataStatusResp)
 
 type PostMultiModalMultimodalFrfsDataVersionIsReady = ("multimodal" :> "frfs" :> "data" :> "version" :> "isReady" :> ReqBody '[JSON] ReadyVersionReq :> Post '[JSON] ReadyVersionsResp)
 
@@ -85,7 +85,7 @@ type PostMultiModalMultimodalFrfsDataVersionApply = ("multimodal" :> "frfs" :> "
 
 data MultiModalAPIs = MultiModalAPIs
   { postMultiModalMultimodalFrfsDataPreprocess :: PreprocessFRFSDataReq -> EulerHS.Types.EulerClient PreprocessFRFSDataResp,
-    postMultiModalMultimodalFrfsDataStatus :: FRFSDataStatus -> EulerHS.Types.EulerClient FRFSDataStatusResp,
+    postMultiModalMultimodalFrfsDataStatus :: FRFSDataStatusReq -> EulerHS.Types.EulerClient FRFSDataStatusResp,
     postMultiModalMultimodalFrfsDataVersionIsReady :: ReadyVersionReq -> EulerHS.Types.EulerClient ReadyVersionsResp,
     postMultiModalMultimodalFrfsDataVersionApply :: ApplyVersionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

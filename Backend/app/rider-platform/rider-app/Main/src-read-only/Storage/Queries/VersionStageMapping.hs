@@ -2,9 +2,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.VersionStopMapping where
+module Storage.Queries.VersionStageMapping where
 
-import qualified Domain.Types.VersionStopMapping
+import qualified Domain.Types.VersionStageMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -13,24 +13,24 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Storage.Beam.VersionStopMapping as Beam
+import qualified Storage.Beam.VersionStageMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VersionStopMapping.VersionStopMapping -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VersionStageMapping.VersionStageMapping -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VersionStopMapping.VersionStopMapping] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VersionStageMapping.VersionStageMapping] -> m ())
 createMany = traverse_ create
 
-findByVersionIdAndStageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VersionStopMapping.VersionStopMapping))
+findByVersionIdAndStageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VersionStageMapping.VersionStageMapping))
 findByVersionIdAndStageId versionId stageId = do findOneWithKV [Se.And [Se.Is Beam.versionId $ Se.Eq versionId, Se.Is Beam.stageId $ Se.Eq stageId]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VersionStopMapping.VersionStopMapping -> m (Maybe Domain.Types.VersionStopMapping.VersionStopMapping))
+  (Kernel.Types.Id.Id Domain.Types.VersionStageMapping.VersionStageMapping -> m (Maybe Domain.Types.VersionStageMapping.VersionStageMapping))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VersionStopMapping.VersionStopMapping -> m ())
-updateByPrimaryKey (Domain.Types.VersionStopMapping.VersionStopMapping {..}) = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VersionStageMapping.VersionStageMapping -> m ())
+updateByPrimaryKey (Domain.Types.VersionStageMapping.VersionStageMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.failureReason failureReason,
@@ -45,11 +45,11 @@ updateByPrimaryKey (Domain.Types.VersionStopMapping.VersionStopMapping {..}) = d
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-instance FromTType' Beam.VersionStopMapping Domain.Types.VersionStopMapping.VersionStopMapping where
-  fromTType' (Beam.VersionStopMappingT {..}) = do
+instance FromTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.VersionStageMapping where
+  fromTType' (Beam.VersionStageMappingT {..}) = do
     pure $
       Just
-        Domain.Types.VersionStopMapping.VersionStopMapping
+        Domain.Types.VersionStageMapping.VersionStageMapping
           { failureReason = failureReason,
             id = Kernel.Types.Id.Id id,
             stageData = stageData,
@@ -62,9 +62,9 @@ instance FromTType' Beam.VersionStopMapping Domain.Types.VersionStopMapping.Vers
             updatedAt = updatedAt
           }
 
-instance ToTType' Beam.VersionStopMapping Domain.Types.VersionStopMapping.VersionStopMapping where
-  toTType' (Domain.Types.VersionStopMapping.VersionStopMapping {..}) = do
-    Beam.VersionStopMappingT
+instance ToTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.VersionStageMapping where
+  toTType' (Domain.Types.VersionStageMapping.VersionStageMapping {..}) = do
+    Beam.VersionStageMappingT
       { Beam.failureReason = failureReason,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.stageData = stageData,

@@ -680,7 +680,7 @@ library
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.Version
-      Domain.Types.VersionStopMapping
+      Domain.Types.VersionStageMapping
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -792,7 +792,7 @@ library
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
       Storage.Beam.Version
-      Storage.Beam.VersionStopMapping
+      Storage.Beam.VersionStageMapping
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -951,7 +951,7 @@ library
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
       Storage.Queries.Version
-      Storage.Queries.VersionStopMapping
+      Storage.Queries.VersionStageMapping
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:

@@ -27,8 +27,10 @@ types:
     - fileFormat: FileFormat
     - file: FilePath
     - inputDataType: RawDataType
-  FRFSDataStatus:
+  FRFSDataStatusReq:
     - versionId: Text
+    - operatingCityId: Text
+    - vehicleType: VehicleCategory
   ReadyVersionReq:
     - cityId: Text
     - vehicleType: VehicleCategory
@@ -52,7 +54,7 @@ apis:
       endpoint: multimodal/frfs/data/status
       auth: ApiAuthV2
       request:
-        type: FRFSDataStatus
+        type: FRFSDataStatusReq
       response:
           type: FRFSDataStatusResp
 

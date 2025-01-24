@@ -25,12 +25,24 @@ createMany = traverse_ create
 
 findByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m (Maybe Domain.Types.Stage.Stage))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Stage.Stage])
 findByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
-  findOneWithKV
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+
+findByMerchantOperatingCityAndVehicleTypeAndStageName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> Domain.Types.Stage.StageName -> m (Maybe Domain.Types.Stage.Stage))
+findByMerchantOperatingCityAndVehicleTypeAndStageName merchantOperatingCityId vehicleType name = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.name $ Se.Eq name
         ]
     ]
 

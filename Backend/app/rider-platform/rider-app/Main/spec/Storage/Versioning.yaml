@@ -3,7 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   RawDataType: Domain.Types.Extra.Rollout
-  StageData: Domain.Types.Extra.Rollout
+  # StageData: Domain.Types.Extra.Rollout
 
 Rollout:
   tableName: rollout
@@ -43,9 +43,13 @@ Stage:
 
   queries:
     findByMerchantOperatingCityAndVehicleType:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
+    findByMerchantOperatingCityAndVehicleTypeAndStageName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType, name]
 
 Version:
   tableName: version
@@ -65,15 +69,25 @@ Version:
       where:
         and: [merchantOperatingCityId, vehicleType, inputDataType]
 
-VersionStopMapping:
-  tableName: version_stop_mapping
+VersionStageMapping:
+  tableName: version_stage_mapping
 
   types:
     Status:
       enum: "Inprogress,Completed,Failed"
+    StageData:
+      enum: "GTFSData GtfsDataType,FAREData FareDataType"
+    GtfsDataType:
+      - gtfsFilePath: Maybe Text
+      - customFilePath: Maybe Text
+      - derive: "Read, Eq, Ord"
+    FareDataType:
+      - id: Text
+      - derive: "Read, Eq, Ord"
+
 
   fields:
-    id: Id VersionStopMapping
+    id: Id VersionStageMapping
     versionId: Text
     stageId: Text
     status: Status
