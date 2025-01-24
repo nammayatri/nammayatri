@@ -157,9 +157,9 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId m
   whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
   case isFleetDriver of
-    Nothing -> throwError (InvalidRequest "Driver is not part of this fleet, add this driver to the fleet before adding a vehicle with them")
+    Nothing -> throwError (DriverNotInFleet driver.id.getId fleetOwnerId)
     Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
+      unless fleetDriver.isActive $ throwError (DriverNotActiveInFleet driver.id.getId fleetDriver.id.getId)
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
   void $ DCommon.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
@@ -172,7 +172,7 @@ checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
-    when (isNothing isFleetDriver) $ throwError (InvalidRequest "Vehicle is associated with a driver who is not part of this fleet, First Unlink the vehicle from that driver and then try again")
+    when (isNothing isFleetDriver) $ throwError (VehicleLinkedToInvalidDriver)
 
 ---------------------------------------------------------------------
 getDriverFleetGetDriverRequests ::
@@ -234,18 +234,18 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (InvalidRequest "DriverRequest not found")
+    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
       DTR.AWAITING_APPROVAL -> QDR.updateStatusWithReason (castReqStatus req.status) (Just req.reason) (Id req.approvalRequestId)
-      _ -> throwError $ InvalidRequest "Request already processed"
+      _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
       Common.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
       Common.ACCEPTED -> do
         case driverRequest.requestData of
           DTR.EndRide DTR.EndRideData {..} -> do
-            fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InternalError "Fleet Config not found")
-            tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (InternalError "no trip transaction found")
+            fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
+            tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
             void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon)
           _ -> pure ()
       _ -> pure ()
@@ -404,7 +404,7 @@ postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
-    when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to fleet driver , first unlink then try")
+    when (isJust isFleetDriver) $ throwError (VehicleLinkedToAnotherDriver vehicleNo)
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
   associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
@@ -427,10 +427,10 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
-    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   rcReq <- readCsv req.file merchantOpCity
-  when (length rcReq > 100) $ throwError $ InvalidRequest "Maximum 100 vehicles can be added in one go" -- TODO: Configure the limit
+  when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   unprocessed <-
     foldlM
       ( \unprocessedEntities (registerRcReq, routes) -> do
@@ -472,7 +472,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
       routes <-
         case mbRouteCodes of
-          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route Not Found.")) routeCodes
+          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
       pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Just Common.DriverVehicleDetails {vehicleManufacturer = "", vehicleColour = "", vehicleModel = "", vehicleDoors = Nothing, vehicleSeatBelts = Nothing, ..}, ..}, routes)
 
@@ -648,7 +648,7 @@ getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode m
       let countryCode = fromMaybe "+91" mbMobileCountryCode
       driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
-      when (isNothing fleetDriverAssociation) $ throwError (InvalidRequest "Driver is not linked to the fleet")
+      when (isNothing fleetDriverAssociation) $ throwError (DriverNotLinkedToFleet driver.id.getId)
       pure $ Just driver.id
     Nothing -> pure Nothing
   driverStatsList <- CQRide.fleetStatsByDriver rideIds driverId from to mbLimit mbOffset mbSortDesc mbSortOn
@@ -965,10 +965,10 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
     person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" req.mobileCountryCode) mobileNumberHash merchant.id DP.FLEET_OWNER
-    when (isJust person) $ throwError (InvalidRequest "Mobile number is already linked with another fleet owner")
-  when (isJust req.email) $ do
-    person <- QPerson.findByEmailAndMerchantIdAndRole req.email merchant.id DP.FLEET_OWNER
-    when (isJust person) $ throwError (InvalidRequest "Email is already linked with another fleet owner")
+    when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
+  whenJust req.email $ \reqEmail -> do
+    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id DP.FLEET_OWNER
+    when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   encNewPhoneNumber <- forM req.mobileNo encrypt
@@ -1051,8 +1051,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-      fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
-      deviceToken <- fromMaybeM (InvalidRequest "Device Token not found") $ req.deviceToken
+      fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
+      deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
@@ -1066,8 +1066,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req
           >>= Sms.checkSmsResult
     Nothing -> do
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
-      otp <- Redis.get key >>= fromMaybeM (InvalidRequest "OTP not found")
-      when (otp /= req.otp) $ throwError (InvalidRequest "Invalid OTP")
+      otp <- Redis.get key >>= fromMaybeM OtpNotFound
+      when (otp /= req.otp) $ throwError InvalidOtp
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
@@ -1094,7 +1094,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
-  unless (rc.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Cannot link to driver because Rc is not valid")
+  unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
   case isFleetDriver of
     Nothing -> throwError DriverNotPartOfFleet
@@ -1224,7 +1224,7 @@ getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId startStopCode =
   listItem <-
     mapM
       ( \rtsmData -> do
-          route <- QRoute.findByRouteCode rtsmData.routeCode >>= fromMaybeM (InternalError "Route Code Not Found")
+          route <- QRoute.findByRouteCode rtsmData.routeCode >>= fromMaybeM (RouteNotFound rtsmData.routeCode)
           pure $ createRouteRespItem route Nothing
       )
       possibleRoutes
@@ -1257,19 +1257,19 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       trips
   QTT.createMany allTransactions
   whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
-    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> tripTransaction.routeCode))
+    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
     (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
     WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
-      route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> trip.routeCode))
+      route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
-        (Just _, Nothing) -> throwError (InvalidRequest $ "Round trip not allowed for this route: " <> route.code)
+        (Just _, Nothing) -> throwError (RoundTripNotAllowedForRoute route.code)
         (Just roundTrip, Just roundRouteCode) -> do
-          when (roundTrip.frequency == 0) $ throwError (InvalidRequest "Round Trip Frequency should be greater than 0")
-          roundRoute <- QRoute.findByRouteCode roundRouteCode >>= fromMaybeM (InvalidRequest ("Route not found: " <> trip.routeCode))
+          when (roundTrip.frequency == 0) $ throwError RoundTripFrequencyShouldBeGreaterThanZero
+          roundRoute <- QRoute.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound trip.routeCode)
           (_, roundRouteDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo roundRoute roundRouteCode
           foldM
             ( \accTransactions freqIdx -> do
@@ -1382,10 +1382,11 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
-    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   driverBusRouteDetails <- readCsv req.file
-  when (length driverBusRouteDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go"
+
+  when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
   let groupedDetails = groupBy (\a b -> a.driverPhoneNo == b.driverPhoneNo) $ sortOn (.driverPhoneNo) driverBusRouteDetails
 
   forM_ groupedDetails $ \case
@@ -1468,10 +1469,10 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
-    Nothing -> throwError (InvalidRequest "Fleet Owner Id is required")
+    Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   driverDetails <- readCsv req.file
-  when (length driverDetails > 100) $ throwError $ InvalidRequest "Maximum 100 drivers can be added in one go" -- TODO: Configure the limit
+  when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   mapM_ (processDriver merchantOpCity fleetOwnerId) driverDetails
   pure Success
   where
@@ -1498,7 +1499,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
-            fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
+            fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
             FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
@@ -1543,7 +1544,7 @@ postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
   void $
     mapM
       ( \driverId ->
-          WMB.checkFleetDriverAssociation (cast driverId) (Id fleetOwnerId) >>= \isAssociated -> unless isAssociated (throwError $ InternalError "Fleet-driver association not found")
+          WMB.checkFleetDriverAssociation (cast driverId) (Id fleetOwnerId) >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet driverId.getId)
       )
       req.driverIds
   driverLocations <- LF.driversLocation (map (cast @Common.Driver @DP.Person) req.driverIds)

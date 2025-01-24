@@ -73,7 +73,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
                     }
 
             routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
-            reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (InvalidRequest "Route not found")
+            reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (RouteNotFound routeCode)
             let wayPoints = reqRouteInfo.points
             pure (stopPair, wayPoints)
         Redis.set (stopPairRoutePointsKey routeCode) res'

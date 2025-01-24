@@ -73,7 +73,7 @@ getSourceAndDestinationStopInfo route routeCode = do
   stops <- QRTS.findAllByRouteCodeForStops routeCode 1 (utctTimeToDayOfWeek now)
   nonEmptySortedStops <-
     case stops of
-      [] -> throwError $ InvalidRequest "RTS not found"
+      [] -> throwError $ RouteTripStopMappingNotFound routeCode
       (a : as) -> return $ NE.sortBy (EHS.comparing (.stopSequenceNum)) (a :| as)
   let sourceRouteTripMapping = NE.head nonEmptySortedStops
       destinationRouteTripMapping = NE.last nonEmptySortedStops
@@ -112,7 +112,7 @@ assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperat
 assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo currentLocation = do
   tripTransactionId <- generateGUID
   now <- getCurrentTime
-  closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (InternalError "No closest stop found")
+  closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
   vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber
   let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate
   QTT.create tripTransaction
@@ -158,17 +158,17 @@ endTripTransaction fleetConfig tripTransaction currentLocation = do
   TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
   findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
     Just advancedTripTransaction -> do
-      route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (InvalidRequest "Route not found")
+      route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
       (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
       assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point
     Nothing -> do
       if fleetConfig.allowAutomaticRoundTripAssignment
         then do
           whenJust tripTransaction.roundRouteCode $ \roundRouteCode -> do
-            route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (InvalidRequest "Route not found")
+            route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound roundRouteCode)
             (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
             vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
-            vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (InvalidRequest "Vehicle Route mapping not found")
+            vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
             when (not vehicleRouteMapping.blocked) $ do
               void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
         else unlinkVehicleToDriver fleetConfig tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
@@ -192,9 +192,9 @@ linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> T
 linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
-  unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Cannot link to driver because Rc is not valid")
+  unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
   QV.findByRegistrationNo vehicleNumber >>= \case
-    Just vehicle -> when (vehicle.driverId /= driverId) $ throwError (InvalidRequest "Vehicle is linked to some other driver, first unlink then try")
+    Just vehicle -> when (vehicle.driverId /= driverId) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
     Nothing -> pure ()
   tryLinkinRC vehicleRC
   return vehicleRC
@@ -228,7 +228,7 @@ unlinkVehicleToDriver _fleetConfig driverId merchantId merchantOperatingCityId v
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do
-  route <- QR.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Route not found")
+  route <- QR.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
   let waypoints = case route.polyline of
         Just polyline -> Just (KEPP.decode polyline)
         Nothing -> Nothing
