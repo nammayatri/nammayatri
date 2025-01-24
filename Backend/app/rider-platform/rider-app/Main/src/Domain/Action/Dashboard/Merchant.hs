@@ -85,6 +85,7 @@ import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -96,7 +97,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
@@ -489,10 +490,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- rider_config
-  mbRiderConfig <-
-    CQRC.findByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+  mbRiderConfig <- do
+    let baseVersion = LYT.ConfigVersionMap {version = 1, config = LYT.RiderConfig}
+    QRC.findByMerchantOperatingCityId newMerchantOperatingCityId (Just [baseVersion]) >>= \case
       Nothing -> do
-        riderConfig <- CQRC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        riderConfig <- QRC.findByMerchantOperatingCityId baseOperatingCityId (Just [baseVersion]) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -554,7 +556,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbMerchantServiceUsageConfig $ \mSUC -> CQMSUC.create mSUC
         whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
         whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
-        whenJust mbRiderConfig $ \riderConfig -> CQRC.create riderConfig
+        whenJust mbRiderConfig $ \riderConfig -> QRC.create riderConfig
 
         whenJust mbExophone $ \exophones -> do
           whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
@@ -579,7 +581,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQMM.clearCacheById newMerchantOperatingCityId
         CQMPM.clearCache newMerchantOperatingCityId
         CQMSUC.clearCache newMerchantOperatingCityId
-        CQRC.clearCache newMerchantOperatingCityId
+        QRC.clearCache newMerchantOperatingCityId Nothing
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
         exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
         CQExophone.clearCache newMerchantOperatingCityId exoPhone

@@ -27,6 +27,8 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   DriverIdentifierType: Domain.Types.RefereeLink
   DriverIdentifier: Domain.Types.RefereeLink
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
 
 SearchRequest:
   tableName: search_request
@@ -77,6 +79,7 @@ SearchRequest:
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
     hasMultimodalSearch: Maybe Bool
+    configInExperimentVersions: "[ConfigVersionMap]"
 
   default:
     hasMultimodalSearch: "false"
@@ -98,6 +101,7 @@ SearchRequest:
     riderPreferredOption: Maybe RiderPreferredOption
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    configInExperimentVersions: Maybe Value
 
   sqlType:
     toLocationId : character varying(36)
@@ -107,6 +111,7 @@ SearchRequest:
     disabilityTag: character(255)
     currency: character varying(255)
     fromLocationId: character varying(36)
+    configInExperimentVersions: "json"
 
   beamFields:
     distance:
@@ -175,6 +180,7 @@ SearchRequest:
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -193,7 +199,7 @@ SearchRequest:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
     driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
-
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
   excludedFields: [updatedAt]
 
   excludedDefaultQueries:

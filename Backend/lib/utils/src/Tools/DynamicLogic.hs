@@ -1,6 +1,7 @@
 module Tools.DynamicLogic where
 
 import Data.Aeson as A
+import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Types.Id
@@ -13,6 +14,40 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
+
+getConfigVersion ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  Maybe [LYT.ConfigVersionMap] ->
+  LYT.ConfigType ->
+  m Int
+getConfigVersion merchantOpCityId mbConfigInExperimentVersions configType = do
+  case mbConfigInExperimentVersions of
+    Nothing -> do
+      mbVersion <- selectVersionForUnboundedConfigs merchantOpCityId (LYT.CONFIG configType)
+      return $ fromMaybe 1 mbVersion
+    Just configInExperimentVersions -> do
+      let configVersionMap = find (\a -> a.config == configType) configInExperimentVersions
+      case configVersionMap of
+        Nothing -> return 1
+        Just versionMap -> return versionMap.version
+
+getConfigLogic ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  Int ->
+  LYT.ConfigType ->
+  m [A.Value]
+getConfigLogic merchantOpCityId version configType = do
+  baseLogics <- DALE.findByDomainAndVersion (LYT.CONFIG configType) 1
+  when (null baseLogics) $ logError $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configType: " <> show configType <> " and version: 1"
+  case version of
+    1 -> return $ baseLogics <&> (.logic)
+    _ -> do
+      experimentLogic <- DALE.findByDomainAndVersion (LYT.CONFIG configType) version
+      when (null experimentLogic) $ logError $ "Experiment logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configType: " <> show configType <> " and version: " <> show version
+      let logics = baseLogics <> experimentLogic
+      return $ logics <&> (.logic)
 
 getAppDynamicLogic ::
   BeamFlow m r =>
@@ -31,6 +66,18 @@ getAppDynamicLogic merchantOpCityId domain localTime mbVersion = do
     Nothing -> do
       logWarning $ "No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
       return ([], Nothing)
+
+selectVersionForUnboundedConfigs ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  LYT.LogicDomain ->
+  m (Maybe Int)
+selectVersionForUnboundedConfigs merchantOpCityId domain = do
+  mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+  let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") configs
+  mbSelectedConfig <- chooseLogic applicapleConfigs
+  return $ mbSelectedConfig <&> (.version)
 
 selectAppDynamicLogicVersion ::
   BeamFlow m r =>
@@ -73,3 +120,21 @@ findLogic _ [] = Nothing
 findLogic randVal ((logic, cumPercent) : xs)
   | randVal <= cumPercent = Just logic
   | otherwise = findLogic randVal xs
+
+getConfigVersionMapForStickiness ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  m [ConfigVersionMap]
+getConfigVersionMapForStickiness merchantOpCityId = do
+  allConfigsRollouts <- DALR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+  let configsInExperiment :: [LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.percentageRollout /= 0 && rollout.version == 1) allConfigsRollouts
+  now <- getCurrentTime
+  mbConfigVersionMap <- mapM (getVersion now) configsInExperiment
+  let configVersionMap :: [ConfigVersionMap] = catMaybes mbConfigVersionMap
+  return configVersionMap
+  where
+    getVersion now domain = do
+      mbVersion <- selectAppDynamicLogicVersion merchantOpCityId domain now
+      case (mbVersion, domain) of
+        (Just version, CONFIG cfgType) -> return $ Just $ ConfigVersionMap cfgType version
+        _ -> return Nothing

@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Lib.JourneyLeg.Types
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data SearchRequest = SearchRequest
@@ -34,6 +35,7 @@ data SearchRequest = SearchRequest
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientReactNativeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -55,7 +55,7 @@ sendCallPoliceApi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   booking <- B.runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantId = booking.merchantId
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   rideCallPoliceAPIKeyExists <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
   case rideCallPoliceAPIKeyExists of
     Nothing -> do

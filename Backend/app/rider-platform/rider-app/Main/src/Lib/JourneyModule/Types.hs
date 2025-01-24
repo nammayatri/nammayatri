@@ -36,10 +36,10 @@ import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Search
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Metrics.BAPMetrics.Types
@@ -475,7 +475,7 @@ mkLegInfoFromFrfsBooking booking = do
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   let bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
   now <- getCurrentTime
   mbEstimatedFare <-

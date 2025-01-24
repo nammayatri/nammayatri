@@ -3,6 +3,7 @@
 
 module Storage.Beam.SearchRequest where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.RefereeLink
@@ -33,6 +34,7 @@ data SearchRequestT f = SearchRequestT
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Money),
