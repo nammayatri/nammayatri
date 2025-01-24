@@ -2369,14 +2369,14 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   case isBusVariant, isActiveRide of
     true, _ ->
       case mbActiveBusTrip, busActiveRide of
-        Just tripDetails, _ -> activeBusRidePatch tripDetails
+        Just tripDetails, _ -> activeBusRidePatch allState tripDetails
         _, Just false -> noActiveBusRidePatch
         _, _ -> do
           response <- lift $ lift $ Remote.getActiveTrip
           case response of
             (Right (API.ActiveTripTransaction activeTrip)) -> 
               case activeTrip.tripTransactionDetails of
-                Just tripDetails -> activeBusRidePatch tripDetails
+                Just tripDetails -> activeBusRidePatch allState tripDetails
                 _ -> noActiveBusRidePatch
             _ -> noActiveBusRidePatch
     _, Just false -> do
@@ -2469,10 +2469,11 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
           pure unit
       else pure unit
     
-    activeBusRidePatch (API.TripTransactionDetails tripDetails) = do
+    activeBusRidePatch allState (API.TripTransactionDetails tripDetails) = do
         void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
-        void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
-        changeDriverStatus Online
+        setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
+        setValueToLocalStore VEHICLE_CATEGORY "BusCategory"
+        when (not allState.homeScreen.props.statusOnline) $ changeDriverStatus Online
         if tripDetails.status == API.TRIP_ASSIGNED then do
           updateStage $ HomeScreenStage TripAssigned
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
@@ -3986,7 +3987,9 @@ updateDriverDataToStates = do
     , checkUpcomingRide = true
     }})
   setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
-  setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+  if (linkedVehicle.variant /= "") then do
+    setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+  else pure unit
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)
