@@ -93,6 +93,7 @@ VersionStageMapping:
     status: Status
     stageData: Maybe StageData # (GTFS GtfsDataType | FARE FareDataType)
     failureReason: Maybe Text
+    stageName: Text
 
 
 
@@ -101,3 +102,6 @@ VersionStageMapping:
       kvFunction: findOneWithKV
       where:
         and: [versionId, stageId]
+    findAllByVersionId:
+      kvFunction: findAllWithKV
+      where: versionId

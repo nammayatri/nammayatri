@@ -21,6 +21,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VersionStageMapping.VersionStageMapping] -> m ())
 createMany = traverse_ create
 
+findAllByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VersionStageMapping.VersionStageMapping])
+findAllByVersionId versionId = do findAllWithKV [Se.Is Beam.versionId $ Se.Eq versionId]
+
 findByVersionIdAndStageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VersionStageMapping.VersionStageMapping))
 findByVersionIdAndStageId versionId stageId = do findOneWithKV [Se.And [Se.Is Beam.versionId $ Se.Eq versionId, Se.Is Beam.stageId $ Se.Eq stageId]]
 
@@ -36,6 +39,7 @@ updateByPrimaryKey (Domain.Types.VersionStageMapping.VersionStageMapping {..}) =
     [ Se.Set Beam.failureReason failureReason,
       Se.Set Beam.stageData stageData,
       Se.Set Beam.stageId stageId,
+      Se.Set Beam.stageName stageName,
       Se.Set Beam.status status,
       Se.Set Beam.versionId versionId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -54,6 +58,7 @@ instance FromTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.Ve
             id = Kernel.Types.Id.Id id,
             stageData = stageData,
             stageId = stageId,
+            stageName = stageName,
             status = status,
             versionId = versionId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -69,6 +74,7 @@ instance ToTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.Vers
         Beam.id = Kernel.Types.Id.getId id,
         Beam.stageData = stageData,
         Beam.stageId = stageId,
+        Beam.stageName = stageName,
         Beam.status = status,
         Beam.versionId = versionId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

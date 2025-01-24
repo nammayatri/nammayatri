@@ -6,6 +6,7 @@ import qualified API.Types.RiderPlatform.Management.MultiModal
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Stage as DTS
+import Domain.Types.VersionStageMapping
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.APISuccess
@@ -14,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified Storage.Queries.Stage as QS
+import qualified Storage.Queries.VersionStageMapping as QVSM
 import Tools.Auth
 import Tools.Error
 
@@ -30,9 +32,18 @@ postMultiModalMultimodalFrfsDataPreprocess _merchantShortId _opCity _req = do er
 --               -> Success: Done.
 
 postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
-postMultiModalMultimodalFrfsDataStatus _merchantShortId _opCity _req = do
-  -- stage <- QS.findByMerchantOperatingCityAndVehicleTypeAndStageName req.operatingCityId req.vehicleType DTS.UPLOAD >>= fromMaybeM (InternalError $ "Upload Stage for " <> show req.operatingCityId <> " and " <> show req.vehicleType <> " not found")
-  error "Logic yet to be decided"
+postMultiModalMultimodalFrfsDataStatus _ _ req = do
+  versionStageMappings <- QVSM.findAllByVersionId req.versionId
+  stageData <- traverse mkFRFSDataStatus versionStageMappings
+  return $ API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp req.versionId stageData
+
+mkFRFSDataStatus :: (MonadFlow m) => VersionStageMapping -> m API.Types.RiderPlatform.Management.MultiModal.StageInfo
+mkFRFSDataStatus mapping = return $ API.Types.RiderPlatform.Management.MultiModal.StageInfo mapping.stageName (mapStatus mapping.status)
+
+mapStatus :: Status -> API.Types.RiderPlatform.Management.MultiModal.StageStatus
+mapStatus Inprogress = API.Types.RiderPlatform.Management.MultiModal.INPROGRESS
+mapStatus Completed = API.Types.RiderPlatform.Management.MultiModal.COMPLETED
+mapStatus Failed = API.Types.RiderPlatform.Management.MultiModal.FAILED
 
 postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.ReadyVersionReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
 postMultiModalMultimodalFrfsDataVersionIsReady _merchantShortId _opCity _req = do error "Logic yet to be decided"

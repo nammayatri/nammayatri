@@ -4,6 +4,7 @@ ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN failure_reason text ;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN stage_data text ;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN stage_id text NOT NULL;
+ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN stage_name text NOT NULL;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN version_id text NOT NULL;
 ALTER TABLE atlas_app.version_stage_mapping ADD COLUMN merchant_id character varying(36) ;

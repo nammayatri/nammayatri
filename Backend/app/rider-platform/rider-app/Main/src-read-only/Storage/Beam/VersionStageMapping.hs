@@ -16,6 +16,7 @@ data VersionStageMappingT f = VersionStageMappingT
     id :: B.C f Kernel.Prelude.Text,
     stageData :: B.C f (Kernel.Prelude.Maybe Domain.Types.VersionStageMapping.StageData),
     stageId :: B.C f Kernel.Prelude.Text,
+    stageName :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.VersionStageMapping.Status,
     versionId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

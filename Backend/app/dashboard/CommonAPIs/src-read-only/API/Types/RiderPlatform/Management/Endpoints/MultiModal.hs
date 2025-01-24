@@ -12,6 +12,7 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
@@ -25,11 +26,17 @@ data ApplyVersionReq = ApplyVersionReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+instance Kernel.Types.HideSecrets.HideSecrets ApplyVersionReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data FRFSDataStatusReq = FRFSDataStatusReq {versionId :: Kernel.Prelude.Text, operatingCityId :: Kernel.Prelude.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSDataStatusResp = FRFSDataStatusResp {versionId :: Kernel.Prelude.Text, status :: StageInfo}
+instance Kernel.Types.HideSecrets.HideSecrets FRFSDataStatusReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data FRFSDataStatusResp = FRFSDataStatusResp {versionId :: Kernel.Prelude.Text, status :: [StageInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -44,6 +51,9 @@ data PreprocessFRFSDataReq = PreprocessFRFSDataReq {vehicleType :: BecknV2.FRFS.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+instance Kernel.Types.HideSecrets.HideSecrets PreprocessFRFSDataReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data PreprocessFRFSDataResp = PreprocessFRFSDataResp {versionId :: Kernel.Prelude.Text, versionTag :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -57,6 +67,9 @@ data RawDataType
 data ReadyVersionReq = ReadyVersionReq {cityId :: Kernel.Prelude.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets ReadyVersionReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data ReadyVersionsResp = ReadyVersionsResp {readyVersions :: [PreprocessFRFSDataResp]}
   deriving stock (Generic)

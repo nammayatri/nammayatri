@@ -17,7 +17,7 @@ types:
     - versionTag: Int
   FRFSDataStatusResp:
     - versionId: Text
-    - status: StageInfo
+    - status: [StageInfo]
   ReadyVersionsResp:
     - readyVersions: [PreprocessFRFSDataResp]
   StageStatus:
@@ -27,19 +27,23 @@ types:
     - fileFormat: FileFormat
     - file: FilePath
     - inputDataType: RawDataType
+    - derive: "'HideSecrets"
   FRFSDataStatusReq:
     - versionId: Text
     - operatingCityId: Text
     - vehicleType: VehicleCategory
+    - derive: "'HideSecrets"
   ReadyVersionReq:
     - cityId: Text
     - vehicleType: VehicleCategory
+    - derive: "'HideSecrets"
   ApplyVersionReq:
     - cityId: Text
     - vehicleType: VehicleCategory
     - versionId: Text
     - versionTag: Text
     - rolloutPercent: Int
+    - derive: "'HideSecrets"
 
 apis:
   - POST: # PreprocessFRFSDataAPI

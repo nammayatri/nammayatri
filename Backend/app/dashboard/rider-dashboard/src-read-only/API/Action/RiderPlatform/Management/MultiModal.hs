@@ -28,33 +28,33 @@ handler merchantId city = postMultiModalMultimodalFrfsDataPreprocess merchantId 
 
 type PostMultiModalMultimodalFrfsDataPreprocess =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_PREPROCESS)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_PREPROCESS))
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataPreprocess
   )
 
 type PostMultiModalMultimodalFrfsDataStatus =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_STATUS)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_STATUS))
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataStatus
   )
 
 type PostMultiModalMultimodalFrfsDataVersionIsReady =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_IS_READY)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_IS_READY))
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataVersionIsReady
   )
 
 type PostMultiModalMultimodalFrfsDataVersionApply =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MULTI_MODAL / 'API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_APPLY)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MULTI_MODAL) / ('API.Types.RiderPlatform.Management.MultiModal.POST_MULTI_MODAL_MULTIMODAL_FRFS_DATA_VERSION_APPLY))
       :> API.Types.RiderPlatform.Management.MultiModal.PostMultiModalMultimodalFrfsDataVersionApply
   )
 
