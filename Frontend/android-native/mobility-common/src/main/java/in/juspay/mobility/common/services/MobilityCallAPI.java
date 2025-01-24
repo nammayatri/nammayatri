@@ -125,12 +125,12 @@ public class MobilityCallAPI {
 
             try (Response okHttpResponse = client.newCall(requestBuilder.build()).execute()) {
                 response.setStatusCode(okHttpResponse.code());
-                response.setResponseBody(okHttpResponse.body() != null ? okHttpResponse.body().string() : "");
+                response.setResponseBody(okHttpResponse.body() != null ? okHttpResponse.body().string() : "{}");
             }
         } catch (Exception e) {
             Log.e(LOG_TAG, e.getMessage() != null ? e.getMessage() : "Unknown error occurred");
             response.setStatusCode(-1);
-            response.setResponseBody(e.getMessage());
+            response.setResponseBody(e.getMessage() != null ? e.getMessage() : "{}");
         }
         return response;
     }
