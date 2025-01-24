@@ -45,7 +45,6 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Servant hiding (throwError)
 import SharedLogic.External.BbpsService.Flow
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.BBPS as QBBPS
 import qualified Storage.Queries.BBPSConfig as QBBPSC
 import qualified Storage.Queries.Person as QP

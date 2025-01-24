@@ -38,6 +38,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
@@ -124,13 +125,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails
+        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails
+        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
@@ -166,8 +167,9 @@ handler merchantId req validatedReq = do
       Maybe Text ->
       Maybe Meters ->
       Maybe InitReqDetails ->
+      [LYT.ConfigVersionMap] ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails = do
+    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation

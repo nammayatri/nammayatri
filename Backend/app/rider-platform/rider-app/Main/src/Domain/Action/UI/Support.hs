@@ -100,7 +100,7 @@ sendIssue (personId, merchantId) request = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue
   ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
@@ -117,7 +117,7 @@ safetyCheckSupport (personId, merchantId) req = do
   let moCityId = person.merchantOperatingCityId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- QRC.findByMerchantOperatingCityId moCityId >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId moCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
   ticketRequest <- ticketReq ride person phoneNumber req.description merchant.kaptureDisposition riderConfig.kaptureQueue
   if not req.isSafe && riderConfig.enableSupportForSafety

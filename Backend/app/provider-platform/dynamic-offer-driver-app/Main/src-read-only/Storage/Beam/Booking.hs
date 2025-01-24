@@ -3,6 +3,7 @@
 
 module Storage.Beam.Booking where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
@@ -23,6 +24,7 @@ data BookingT f = BookingT
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
     bapUri :: B.C f Kernel.Prelude.Text,
+    configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

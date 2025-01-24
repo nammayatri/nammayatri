@@ -58,8 +58,8 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
@@ -98,7 +98,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   fork "Multimodal Search" $ do
     let merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId
-    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $
       case req of
         OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance

@@ -378,7 +378,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
   let rolloutObjects = concat rolloutObjectsArr
   CADLR.delete (cast merchantOpCityId) domain
   CADLR.createMany rolloutObjects
-  CADLR.clearCache (cast merchantOpCityId) domain
+  CADLR.clearDomainCache (cast merchantOpCityId) domain
   return Kernel.Types.APISuccess.Success
   where
     getDomain :: Maybe Lib.Yudhishthira.Types.LogicDomain

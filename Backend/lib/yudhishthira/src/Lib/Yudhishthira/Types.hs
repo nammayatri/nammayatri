@@ -47,6 +47,7 @@ module Lib.Yudhishthira.Types
     ChakraQueryResp,
     UpdateTagReq (..),
     TagNameValue (..),
+    ConfigVersionMap (..),
   )
 where
 
@@ -75,7 +76,14 @@ class Enumerable a where
 data ConfigType
   = DriverPoolConfig
   | TransporterConfig
+  | RiderConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+data ConfigVersionMap = ConfigVersionMap
+  { config :: ConfigType,
+    version :: Int
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Source
   = Application ApplicationEvent

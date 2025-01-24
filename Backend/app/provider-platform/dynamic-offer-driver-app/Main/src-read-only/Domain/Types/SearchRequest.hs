@@ -15,6 +15,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 import qualified Tools.Maps
 
@@ -25,6 +26,7 @@ data SearchRequest = SearchRequest
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Types.Common.BaseUrl,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

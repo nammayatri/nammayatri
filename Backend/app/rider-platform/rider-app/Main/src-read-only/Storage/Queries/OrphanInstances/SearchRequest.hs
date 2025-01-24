@@ -15,6 +15,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.SearchRequest as Beam
 import qualified Storage.Queries.Transformers.SearchRequest
@@ -43,6 +44,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientReactNativeVersion = clientReactNativeVersion,
             clientSdkVersion = clientSdkVersion',
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
             customerExtraFee = Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee,
             device = device,
@@ -94,6 +96,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientReactNativeVersion = clientReactNativeVersion,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
+        Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
         Beam.currency = customerExtraFee <&> (.currency),
         Beam.customerExtraFee = customerExtraFee <&> (.amountInt),

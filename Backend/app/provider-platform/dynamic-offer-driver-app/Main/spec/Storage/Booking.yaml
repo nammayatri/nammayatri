@@ -16,6 +16,8 @@ imports:
   Estimate: Domain.Types.Estimate
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   TripParty: Domain.Types.Trip
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -83,6 +85,7 @@ Booking:
     receiverDetails: Maybe DeliveryPersonDetails
     initiatedAs: Maybe TripParty
     isReferredRide: Maybe Bool
+    configInExperimentVersions: "[ConfigVersionMap]"
 
   excludedFields:
     - merchantId
@@ -100,6 +103,7 @@ Booking:
     merchantOperatingCityId: Maybe Text
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
+    configInExperimentVersions: Maybe Value
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -143,6 +147,7 @@ Booking:
     receiverId: (Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)))|E
     receiverName: (receiverDetails <&> (.name))|E
     receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
 
   intermediateTransformers:
     fromTType:
@@ -167,6 +172,7 @@ Booking:
     isDashboardRequest: fromMaybe False isDashboardRequest|E
     senderDetails: fst <$> senderAndReceiverDetails|E
     receiverDetails: snd <$> senderAndReceiverDetails|E
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
 
   sqlType:
     status: character varying(255)
@@ -189,6 +195,7 @@ Booking:
     currency: character varying(255)
     tollNames: "text[]"
     estimateId: character varying(255)
+    configInExperimentVersions: "json"
 
   default:
       bookingType: "'NormalBooking'"

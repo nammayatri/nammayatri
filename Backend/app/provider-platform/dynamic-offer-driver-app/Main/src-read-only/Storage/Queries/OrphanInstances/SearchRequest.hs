@@ -14,6 +14,7 @@ import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.SearchRequest as Beam
 import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
@@ -43,6 +44,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             bapCountry = bapCountry,
             bapId = bapId,
             bapUri = bapUri',
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = customerCancellationDues,
@@ -97,6 +99,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,
         Beam.bapUri = Kernel.Prelude.showBaseUrl bapUri,
+        Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
         Beam.currency = Just currency,
         Beam.customerCancellationDues = customerCancellationDues,

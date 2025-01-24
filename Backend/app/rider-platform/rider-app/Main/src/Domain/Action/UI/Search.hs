@@ -64,20 +64,23 @@ import Kernel.Utils.Version
 import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
 import SharedLogic.Search
 import qualified SharedLogic.Serviceability as Serviceability
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -183,7 +186,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
   let merchantOperatingCityId = merchantOperatingCity.id
-  riderCfg <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
+  riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
@@ -218,6 +222,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       (safeInit stopLocations)
       journeySearchData
       (liftA2 (,) driverIdentifier_ riderCfg.driverReferredSearchReqExpiry)
+      configVersionMap
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -441,8 +446,9 @@ buildSearchRequest ::
   [Location.Location] ->
   Maybe JPT.JourneySearchData ->
   Maybe (DRL.DriverIdentifier, Seconds) ->
+  [LYT.ConfigVersionMap] ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -490,6 +496,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         journeyLegInfo = journeySearchData,
         driverIdentifier = fst <$> mbDriverReferredInfo,
         hasMultimodalSearch = Just False,
+        configInExperimentVersions = configVersionMap,
         ..
       }
   where
