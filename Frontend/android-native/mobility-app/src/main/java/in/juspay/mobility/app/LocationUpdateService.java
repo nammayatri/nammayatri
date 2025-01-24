@@ -824,7 +824,7 @@ public class LocationUpdateService extends Service {
                                         updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), errorCode);
                                     }
                                 }
-                            } catch (JSONException e) {
+                            } catch (Exception e) {
                                 Log.d(LOG_TAG, "exception in decoding errorPayload " + e.getMessage());
                             }
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
