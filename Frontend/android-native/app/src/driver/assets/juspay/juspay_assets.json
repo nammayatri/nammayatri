@@ -718,6 +718,8 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_bus_marker" : true,
+      "ny_ic_bus_marker_with_arrow" : true
    }
 }

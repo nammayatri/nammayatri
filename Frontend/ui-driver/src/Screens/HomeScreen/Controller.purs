@@ -1407,8 +1407,8 @@ eval (TimeUpdate time lat lng errorCode) state = do
             checkPermissionAndUpdateDriverMarker false 
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
-            if (HU.specialVariantsForTracking Common.FunctionCall) then  
-              void $ showMarkerOnMap "ny_ic_bus_nav_on_map" (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lng)
+            if (HU.specialVariantsForTracking Common.FunctionCall) then
+              void $ showMarkerOnMap "ny_ic_bus_marker" (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lng)
               else pure unit
             checkPermissionAndUpdateDriverMarker true
       else pure unit
@@ -2291,19 +2291,9 @@ updateRoute state = do
       Left err -> pure unit
   pure unit
 
-mkUpsertMarkerLabel lat lng = 
-  unsafePerformEffect $ runEffectFn1 
-    upsertMarkerLabel 
-      { id: "bus_marker_" <> "label"
-      , title: "BUS"
-      , actionImage: "ny_ic_navigate"
-      , actionCallBack: ""
-      , position: {lat : fromMaybe 0.0 (Number.fromString lat) , lng : fromMaybe 0.0 (Number.fromString lng)}
-      , markerImage : "ny_ic_navigate"
-      }
-
 
 showMarkerOnMap :: String -> Number -> Number -> Effect Unit
 showMarkerOnMap markerName lat lng = do
   let markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+  void $ pure $ JB.removeMarker markerName
   void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "DriverTrackingHomeScreenMap")
