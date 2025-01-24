@@ -120,3 +120,6 @@ showTimeIst time =
   T.pack $
     formatTime defaultTimeLocale "%d %b %Y, %I:%M %p" $
       addUTCTime (60 * 330) time
+
+utcTimeToText :: UTCTime -> Text
+utcTimeToText = T.pack . formatTime defaultTimeLocale "%FT%TZ"
