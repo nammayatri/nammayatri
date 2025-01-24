@@ -26,11 +26,24 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityAndVehicleTypeAndDataType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> Domain.Types.Extra.Rollout.RawDataType -> m ([Domain.Types.Version.Version]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> Domain.Types.Extra.Rollout.RawDataType -> m [Domain.Types.Version.Version])
 findAllByMerchantOperatingCityAndVehicleTypeAndDataType merchantOperatingCityId vehicleType inputDataType = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.inputDataType $ Se.Eq inputDataType
+        ]
+    ]
+
+findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> Domain.Types.Extra.Rollout.RawDataType -> m [Domain.Types.Version.Version])
+findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType isReadyToApply merchantOperatingCityId vehicleType inputDataType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.isReadyToApply $ Se.Eq isReadyToApply,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType,
           Se.Is Beam.inputDataType $ Se.Eq inputDataType
         ]

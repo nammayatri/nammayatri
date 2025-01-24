@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Stage.Stage])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m ([Domain.Types.Stage.Stage]))
 findByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And

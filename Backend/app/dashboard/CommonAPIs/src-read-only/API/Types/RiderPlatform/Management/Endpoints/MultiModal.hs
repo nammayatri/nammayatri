@@ -64,7 +64,7 @@ data RawDataType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ReadyVersionReq = ReadyVersionReq {cityId :: Kernel.Prelude.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
+data ReadyVersionReq = ReadyVersionReq {cityId :: Kernel.Prelude.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory, inputDataType :: RawDataType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

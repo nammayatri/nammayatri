@@ -36,6 +36,7 @@ types:
   ReadyVersionReq:
     - cityId: Text
     - vehicleType: VehicleCategory
+    - inputDataType: RawDataType
     - derive: "'HideSecrets"
   ApplyVersionReq:
     - cityId: Text

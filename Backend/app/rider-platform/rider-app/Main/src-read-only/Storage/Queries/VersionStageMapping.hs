@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VersionStageMapping.VersionStageMapping] -> m ())
 createMany = traverse_ create
 
-findAllByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VersionStageMapping.VersionStageMapping])
+findAllByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VersionStageMapping.VersionStageMapping]))
 findAllByVersionId versionId = do findAllWithKV [Se.Is Beam.versionId $ Se.Eq versionId]
 
 findByVersionIdAndStageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VersionStageMapping.VersionStageMapping))

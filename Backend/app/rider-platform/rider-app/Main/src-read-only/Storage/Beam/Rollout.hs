@@ -13,15 +13,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RolloutT f = RolloutT
-  { id :: B.C f Kernel.Prelude.Text,
-    inputDataType :: B.C f Domain.Types.Extra.Rollout.RawDataType,
-    percentage :: B.C f Kernel.Prelude.Int,
-    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
-    versionTag :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { id :: (B.C f Kernel.Prelude.Text),
+    inputDataType :: (B.C f Domain.Types.Extra.Rollout.RawDataType),
+    percentage :: (B.C f Kernel.Prelude.Int),
+    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
+    versionTag :: (B.C f Kernel.Prelude.Int),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table RolloutT where
 
 type Rollout = RolloutT Identity
 
-$(enableKVPG ''RolloutT ['id] [])
+$(enableKVPG (''RolloutT) [('id)] [])
 
-$(mkTableInstances ''RolloutT "rollout")
+$(mkTableInstances (''RolloutT) "rollout")

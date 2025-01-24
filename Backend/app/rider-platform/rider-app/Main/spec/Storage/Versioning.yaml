@@ -68,6 +68,10 @@ Version:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType, inputDataType]
+    findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType:
+      kvFunction: findAllWithKV
+      where:
+        and: [isReadyToApply, merchantOperatingCityId, vehicleType, inputDataType]
 
 VersionStageMapping:
   tableName: version_stage_mapping
