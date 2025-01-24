@@ -2471,6 +2471,7 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
     
     activeBusRidePatch allState (API.TripTransactionDetails tripDetails) = do
         void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
+        void $ liftFlowBT $ startLocationPollingAPI
         setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
         setValueToLocalStore VEHICLE_CATEGORY "BusCategory"
         when (not allState.homeScreen.props.statusOnline) $ changeDriverStatus Online

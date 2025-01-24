@@ -68,7 +68,8 @@ import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
-import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime, liftFlow)
+import Engineering.Helpers.RippleCircles (upsertMarkerLabel)
 import Engineering.Helpers.Commons as EHC
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
@@ -1406,6 +1407,9 @@ eval (TimeUpdate time lat lng errorCode) state = do
             checkPermissionAndUpdateDriverMarker false 
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
+            if (HU.specialVariantsForTracking Common.FunctionCall) then  
+              void $ showMarkerOnMap "ny_ic_bus_nav_on_map" (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lng)
+              else pure unit
             checkPermissionAndUpdateDriverMarker true
       else pure unit
       case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
@@ -2286,3 +2290,20 @@ updateRoute state = do
           Nothing -> pure unit   
       Left err -> pure unit
   pure unit
+
+mkUpsertMarkerLabel lat lng = 
+  unsafePerformEffect $ runEffectFn1 
+    upsertMarkerLabel 
+      { id: "bus_marker_" <> "label"
+      , title: "BUS"
+      , actionImage: "ny_ic_navigate"
+      , actionCallBack: ""
+      , position: {lat : fromMaybe 0.0 (Number.fromString lat) , lng : fromMaybe 0.0 (Number.fromString lng)}
+      , markerImage : "ny_ic_navigate"
+      }
+
+
+showMarkerOnMap :: String -> Number -> Number -> Effect Unit
+showMarkerOnMap markerName lat lng = do
+  let markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+  void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "DriverTrackingHomeScreenMap")

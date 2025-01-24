@@ -1312,7 +1312,6 @@ isGovtBusDriver = false
 getCategorySpecificSrcMarkerIcon :: LazyCheck -> String
 getCategorySpecificSrcMarkerIcon _ = do
   case (getValueToLocalStore VEHICLE_CATEGORY) of
-    "BusCategory" -> "ny_ic_bus_nav_on_map"
     _ -> "ny_ic_src_marker"
 
 tripDetailsToRecentTrip :: API.TripTransactionDetails -> RecentBusTrip
