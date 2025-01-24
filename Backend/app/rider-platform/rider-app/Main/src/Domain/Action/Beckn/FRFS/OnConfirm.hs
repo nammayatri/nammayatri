@@ -262,8 +262,8 @@ mkTransitObjects booking pOrgId ticket person serviceAccount = do
   let textModuleValidUntil = TC.TextModule {TC._header = "Valid until", TC.body = istTimeText, TC.id = "myfield2"}
   let textModules = [textModuleTicketNumber, textModuleValidUntil]
   now <- getCurrentTime
-  let nowText = utcTimeToText now
-  let validTillText = utcTimeToText ticket.validTill
+  let nowText = GWSA.utcTimeToText now
+  let validTillText = GWSA.utcTimeToText ticket.validTill
   let timeInterval = TC.TimeInterval {TC.start = TC.DateTime {TC.date = nowText}, TC.end = TC.DateTime {TC.date = validTillText}}
   return
     TC.TransitObject
