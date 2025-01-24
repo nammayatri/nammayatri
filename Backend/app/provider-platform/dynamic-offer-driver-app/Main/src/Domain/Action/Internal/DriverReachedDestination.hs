@@ -30,8 +30,8 @@ driverReachedDestination req = do
   case vehicleCategory of
     BUS -> do
       let tripTransactionId = cast @DRide.Ride @TripTransaction req.rideId
-      tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (InternalError "no trip transaction found")
-      fleetConfig <- QFC.findByPrimaryKey tripTransaction.fleetOwnerId >>= fromMaybeM (InternalError "Fleet Config not found")
+      tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+      fleetConfig <- QFC.findByPrimaryKey tripTransaction.fleetOwnerId >>= fromMaybeM (FleetConfigNotFound tripTransaction.fleetOwnerId.getId)
       WMB.endTripTransaction fleetConfig tripTransaction req.location
     category -> throwError $ InvalidRequest ("Unsupported vehicle category, " <> show category)
   pure Success
