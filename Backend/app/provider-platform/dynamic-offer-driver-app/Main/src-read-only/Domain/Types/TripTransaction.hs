@@ -36,6 +36,7 @@ data TripTransaction = TripTransaction
     startedNearStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripEndSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -44,8 +45,14 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+
+data TripStatus = TRIP_ASSIGNED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ActionSource))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ActionSource))

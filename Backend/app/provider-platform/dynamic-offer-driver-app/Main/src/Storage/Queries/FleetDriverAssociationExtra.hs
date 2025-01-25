@@ -53,8 +53,8 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> Maybe DbHash -> m [FleetDriverAssociation]
-findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash = do
+findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> m [FleetDriverAssociation]
+findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
   res <-
@@ -70,6 +70,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                         B.&&?. fleetDriverAssociation.isActive B.==?. B.val_ True
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
                   )
                   do
                     fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)

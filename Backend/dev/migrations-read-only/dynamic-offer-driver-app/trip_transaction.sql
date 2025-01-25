@@ -31,3 +31,9 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_ride_approval_request_id character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_end_source text ;

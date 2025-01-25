@@ -32,6 +32,6 @@ driverReachedDestination req = do
       let tripTransactionId = cast @DRide.Ride @TripTransaction req.rideId
       tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
       fleetConfig <- QFC.findByPrimaryKey tripTransaction.fleetOwnerId >>= fromMaybeM (FleetConfigNotFound tripTransaction.fleetOwnerId.getId)
-      WMB.endTripTransaction fleetConfig tripTransaction req.location
+      WMB.endTripTransaction fleetConfig tripTransaction req.location AutoDetect
     category -> throwError $ InvalidRequest ("Unsupported vehicle category, " <> show category)
   pure Success

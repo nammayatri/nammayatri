@@ -24,6 +24,7 @@ import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as KU
@@ -110,18 +111,26 @@ buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCo
 
 assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> LatLong -> Flow TripTransaction
 assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo currentLocation = do
-  tripTransactionId <- generateGUID
-  now <- getCurrentTime
-  closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
-  vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber
-  let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate
-  QTT.create tripTransaction
-  QDI.updateOnRide True driverId
-  let busTripInfo = buildBusTripInfo vehicleNumber route.code destinationStopInfo.point
-  void $ LF.rideDetails (cast tripTransactionId) DRide.NEW merchantId driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
-  void $ LF.rideStart (cast tripTransactionId) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
-  TN.notifyWmbOnRide driverId merchantOperatingCityId IN_PROGRESS "Ride Started" "You ride has started" EmptyDynamicParam
-  return tripTransaction
+  Hedis.whenWithLockRedisAndReturnValue
+    (tripTransactionKey driverId IN_PROGRESS)
+    60
+    ( do
+        tripTransactionId <- generateGUID
+        now <- getCurrentTime
+        closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
+        vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber
+        let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate
+        QTT.create tripTransaction
+        QDI.updateOnRide True driverId
+        let busTripInfo = buildBusTripInfo vehicleNumber route.code destinationStopInfo.point
+        void $ LF.rideDetails (cast tripTransactionId) DRide.NEW merchantId driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
+        void $ LF.rideStart (cast tripTransactionId) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
+        TN.notifyWmbOnRide driverId merchantOperatingCityId IN_PROGRESS "Ride Started" "You ride has started" EmptyDynamicParam
+        return tripTransaction
+    )
+    >>= \case
+      Right tripTransaction -> return tripTransaction
+      Left _ -> throwError (InternalError "Race Condition while Trip Assignment")
   where
     buildTripTransaction tripTransactionId endStopCode now closestStop vehicleRegistrationCertificate =
       TripTransaction
@@ -146,32 +155,34 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           endRideApprovalRequestId = Nothing,
           tripStartTime = Just now,
           tripEndTime = Nothing,
+          tripEndSource = Nothing,
           ..
         }
 
-endTripTransaction :: FleetConfig -> TripTransaction -> LatLong -> Flow ()
-endTripTransaction fleetConfig tripTransaction currentLocation = do
-  now <- getCurrentTime
-  void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing
-  QDI.updateOnRide False tripTransaction.driverId
-  QTT.updateOnEnd COMPLETED (Just currentLocation) (Just now) tripTransaction.id
-  TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
-  findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
-    Just advancedTripTransaction -> do
-      route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
-      (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
-      assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point
-    Nothing -> do
-      if fleetConfig.allowAutomaticRoundTripAssignment
-        then do
-          whenJust tripTransaction.roundRouteCode $ \roundRouteCode -> do
-            route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound roundRouteCode)
-            (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
-            vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
-            vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
-            when (not vehicleRouteMapping.blocked) $ do
-              void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
-        else unlinkVehicleToDriver fleetConfig tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
+endTripTransaction :: FleetConfig -> TripTransaction -> LatLong -> ActionSource -> Flow ()
+endTripTransaction fleetConfig tripTransaction currentLocation tripEndSource = do
+  Hedis.whenWithLockRedis (tripTransactionKey tripTransaction.driverId COMPLETED) 60 $ do
+    now <- getCurrentTime
+    void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing
+    QDI.updateOnRide False tripTransaction.driverId
+    QTT.updateOnEnd COMPLETED (Just currentLocation) (Just now) (Just tripEndSource) tripTransaction.id
+    TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
+    findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
+      Just advancedTripTransaction -> do
+        route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
+        (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
+        assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point
+      Nothing -> do
+        if fleetConfig.allowAutomaticRoundTripAssignment
+          then do
+            whenJust tripTransaction.roundRouteCode $ \roundRouteCode -> do
+              route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound roundRouteCode)
+              (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
+              vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
+              vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
+              when (not vehicleRouteMapping.blocked) $ do
+                void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
+          else unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
 
 buildBusTripInfo :: Text -> Text -> LatLong -> LT.RideInfo
 buildBusTripInfo vehicleNumber routeCode destinationLocation =
@@ -183,10 +194,11 @@ buildBusTripInfo vehicleNumber routeCode destinationLocation =
 
 assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> Flow ()
 assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation destination = do
-  let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination
-  void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
-  let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode route.shortName route.roundRouteCode isFirstBatchTrip
-  TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" tripAssignedEntityData
+  Hedis.whenWithLockRedis (tripTransactionKey tripTransaction.driverId TRIP_ASSIGNED) 60 $ do
+    let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination
+    void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
+    let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode route.shortName route.roundRouteCode isFirstBatchTrip
+    TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" tripAssignedEntityData
 
 linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow VehicleRegistrationCertificate
 linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
@@ -217,8 +229,8 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId veh
       driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
-unlinkVehicleToDriver :: FleetConfig -> Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
-unlinkVehicleToDriver _fleetConfig driverId merchantId merchantOperatingCityId vehicleNumber = do
+unlinkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
+unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber = do
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = vehicleNumber,
@@ -248,3 +260,16 @@ getRouteDetails routeCode = do
       }
   where
     castStops stop = Common.StopInfo stop.name stop.code stop.point
+
+findNextActiveTripTransaction :: Id Person -> Flow (Maybe TripTransaction)
+findNextActiveTripTransaction driverId = do
+  findNextEligibleTripTransactionByDriverIdStatus driverId IN_PROGRESS
+    |<|>| findNextEligibleTripTransactionByDriverIdStatus driverId TRIP_ASSIGNED
+
+-- Redis Transaction Lock Keys --
+tripTransactionKey :: Id Person -> TripStatus -> Text
+tripTransactionKey driverId = \case
+  COMPLETED -> "WMB:TE:" <> driverId.getId
+  TRIP_ASSIGNED -> "WMB:TS:" <> driverId.getId
+  IN_PROGRESS -> "WMB:TS:" <> driverId.getId
+  PAUSED -> "WMB:TP:" <> driverId.getId
