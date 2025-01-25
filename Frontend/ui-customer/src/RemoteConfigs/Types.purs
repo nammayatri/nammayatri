@@ -88,6 +88,10 @@ type Service = {
 }
 
 data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER
+type MapLottieConfig = {
+  lottieUrl :: String,
+  visibility :: Boolean
+}
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq

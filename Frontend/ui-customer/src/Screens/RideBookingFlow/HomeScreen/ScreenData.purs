@@ -213,6 +213,7 @@ initData = let
     , isHomescreenExpanded : false
     , canScheduleRide : false
     , isSearchLocation : NoView
+    , mapLottieViewVisibility : true
     , bookingUpdateRequestId : Nothing
     , showConfirmEditDestPopUp : false
     , currentStage : HomeScreen

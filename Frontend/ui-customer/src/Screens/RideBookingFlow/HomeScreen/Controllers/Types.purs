@@ -256,6 +256,7 @@ data Action = NoAction
   | ScrollStateChanged String
   | RemoveNotification
   | MessageDriver
+  | ToggleMapLottieView Int String String
   | SendQuickMessage String
   | MessageExpiryTimer Int String String
   | NotificationAnimationEnd

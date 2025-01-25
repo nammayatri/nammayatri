@@ -4019,7 +4019,8 @@ mapView' push state idTag =
       -- banners = getBannerConfigs state BannerCarousel
       enableActions = isHomeScreenView state && state.props.isSrcServiceable
       buttonPadding = if os == "IOS" then Padding 16 16 16 12 else Padding 16 16 16 16
-    
+      initialLottieView = getValueToLocalStore MapViewLottie == "true"
+      mapViewLottieConfig = mapLottieConfig FunctionCall
   in
   PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
   Keyed.relativeLayout
@@ -4041,6 +4042,12 @@ mapView' push state idTag =
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
                 else pure unit
+                if state.props.mapLottieViewVisibility && isHomeScreenView state && initialLottieView && mapViewLottieConfig.visibility
+                  then do
+                    void $ startTimer 18 "MapLottieViewTimer" "1" push ToggleMapLottieView
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = mapViewLottieConfig.lottieUrl, lottieId = getNewIDWithTag "HomeScreenLottieViewOverMap"}
+                  else 
+                    pure unit
                 _ <- showMap (getNewIDWithTag idTag) (isHomeScreenView state) "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of  
@@ -4057,7 +4064,13 @@ mapView' push state idTag =
             )
             (const MapReadyAction)
           ])[]
-     , Tuple "BottomGradient" $ relativeLayout 
+     , Tuple "LottieViewOverMap" $ lottieAnimationView
+        [ id (getNewIDWithTag "HomeScreenLottieViewOverMap")
+        , visibility $ boolToVisibility $ state.props.mapLottieViewVisibility && isHomeScreenView state && initialLottieView && mapViewLottieConfig.visibility
+        , width MATCH_PARENT
+        , padding $ PaddingBottom 40
+        ]
+     , Tuple "BottomGradient" $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
@@ -4220,12 +4233,13 @@ followRideBar push followers customWidth addSafePadding useCornerRadius =
       followers
 
 getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
-getMapDimensions state = 
-  let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
+getMapDimensions state =
+  let mapViewLottieConfig = mapLottieConfig FunctionCall
+      mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 35)
-                  else if (state.data.fareProductType == FPT.RENTAL) then 
+                    if state.props.mapLottieViewVisibility && getValueToLocalStore MapViewLottie == "true" && mapViewLottieConfig.visibility then V (getHeightFromPercent 40) else V (getHeightFromPercent 35)
+                  else if (state.data.fareProductType == FPT.RENTAL) then
                     V (screenHeight unit - 100)
                   else MATCH_PARENT 
       mapWidth = MATCH_PARENT

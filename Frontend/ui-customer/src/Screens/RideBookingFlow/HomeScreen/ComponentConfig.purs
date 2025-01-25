@@ -2436,6 +2436,9 @@ nammaServices dummy =
                             Nothing -> acc
               ) [] enabledServices
 
+mapLottieConfig :: LazyCheck -> RemoteConfig.MapLottieConfig
+mapLottieConfig dummy = RemoteConfig.getMapViewLottieConfig FunctionCall
+
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
   [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [], secondaryPillColor : "#f2f9f3", hasSecondaryPill: false}
