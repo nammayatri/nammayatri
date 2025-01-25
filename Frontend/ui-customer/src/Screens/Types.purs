@@ -979,6 +979,7 @@ type DisabilityData = {
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , mapLottieViewVisibility :: Boolean
   , showCallPopUp :: Boolean
   , homeScreenPrimaryButtonLottie :: Boolean
   , rideRequestFlow :: Boolean
