@@ -195,13 +195,12 @@ getWmbTripActive ::
   )
 getWmbTripActive (mbDriverId, _, _) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
-  WMB.findNextEligibleTripTransactionByDriverIdStatus driverId IN_PROGRESS
-    |<|>| WMB.findNextEligibleTripTransactionByDriverIdStatus driverId TRIP_ASSIGNED
-      >>= \case
-        Nothing -> pure $ API.Types.UI.WMB.ActiveTripTransaction Nothing
-        Just tripTransaction -> do
-          tripTransactionDetails <- getTripTransactionDetails tripTransaction
-          pure $ API.Types.UI.WMB.ActiveTripTransaction (Just tripTransactionDetails)
+  WMB.findNextActiveTripTransaction driverId
+    >>= \case
+      Nothing -> pure $ API.Types.UI.WMB.ActiveTripTransaction Nothing
+      Just tripTransaction -> do
+        tripTransactionDetails <- getTripTransactionDetails tripTransaction
+        pure $ API.Types.UI.WMB.ActiveTripTransaction (Just tripTransactionDetails)
 
 postWmbTripStart ::
   ( ( Maybe (Id Person),
@@ -245,7 +244,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
       rideEndEligibility = fleetConfig.allowEndingMidRoute || distanceLeft <= fleetConfig.endRideDistanceThreshold
   unless rideEndEligibility $
     throwError $ RideNotEligibleForEnding
-  if fleetConfig.rideEndApproval
+  if fleetConfig.rideEndApproval && not (distanceLeft <= fleetConfig.endRideDistanceThreshold)
     then do
       whenJust tripTransaction.endRideApprovalRequestId $ \endRideApprovalRequestId -> do
         approvalRequest <- QDR.findByPrimaryKey endRideApprovalRequestId
@@ -268,7 +267,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
       driverReq <- createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
       pure $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
     else do
-      void $ endTripTransaction fleetConfig tripTransaction req.location
+      void $ endTripTransaction fleetConfig tripTransaction req.location DriverDirect
       pure $ TripEndResp {requestId = Nothing, result = SUCCESS}
 
 getWmbTripList ::
