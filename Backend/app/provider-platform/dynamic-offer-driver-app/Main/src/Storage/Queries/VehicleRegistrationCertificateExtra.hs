@@ -79,6 +79,13 @@ findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds
 findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [VehicleRegistrationCertificate]
 findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (.getId) imageIds]
 
+findByImageIdAndCertificateHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> Maybe DbHash -> m (Maybe VehicleRegistrationCertificate)
+findByImageIdAndCertificateHash imageId mbCertHash =
+  findOneWithKV
+    [ Se.And
+        ([Se.Is BeamVRC.documentImageId $ Se.Eq $ getId imageId] <> [Se.Is BeamVRC.certificateNumberHash fromJust mbCertHash | isJust mbCertHash])
+    ]
+
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
