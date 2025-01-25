@@ -120,6 +120,7 @@ data KeyStore
   | INTERCITY_BUS_PHONE_NUMBER_PERMISSION
   | LOCAL_ESTIMATES
   | BOOSTED_SEARCH
+  | MapViewLottie
 
 derive instance genericKeyStore :: Generic KeyStore _
 
