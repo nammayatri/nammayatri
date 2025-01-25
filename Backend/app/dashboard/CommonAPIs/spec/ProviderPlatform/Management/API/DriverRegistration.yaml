@@ -5,6 +5,7 @@ imports:
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   Document: Dashboard.Common
+  VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
 
 module: DriverRegistration
@@ -201,6 +202,7 @@ types:
     - multipleRC: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
     - vehicleDetails: Maybe DriverVehicleDetails
     - derive: "'HideSecrets"
   GenerateAadhaarOtpReq:

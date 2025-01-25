@@ -1542,6 +1542,7 @@ data WMBErrors
   | StopNotFound
   | RouteTripStopMappingNotFound Text
   | VehicleRouteMappingBlocked
+  | AlreadyOnActiveTripWithAnotherVehicle Text
   deriving (Eq, Show)
 
 instance IsBecknAPIError WMBErrors
@@ -1551,6 +1552,7 @@ instance Exception WMBErrors where
 
 instance IsBaseError WMBErrors where
   toMessage = \case
+    AlreadyOnActiveTripWithAnotherVehicle vehicleNumber -> Just $ "Driver is already on an Active Trip with Another Vehicle : " <> vehicleNumber
     DriverNotInFleet driverId fleetId -> Just $ "Driver :" <> driverId <> "is not part of the fleet " <> fleetId
     DriverNotActiveInFleet id fleetId -> Just $ "Driver : " <> id <> " is not active with the fleet: " <> fleetId
     VehicleLinkedToInvalidDriver -> Just "Vehicle is associated with a driver who is not part of the fleet: "
@@ -1585,6 +1587,7 @@ instance IsBaseError WMBErrors where
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
+    AlreadyOnActiveTripWithAnotherVehicle _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_VEHICLE"
     DriverNotInFleet _ _ -> "DRIVER_NOT_IN_FLEET"
     DriverNotActiveInFleet _ _ -> "DRIVER_NOT_ACTIVE_IN_FLEET"
     VehicleLinkedToInvalidDriver -> "VEHICLE_LINKED_TO_INVALID_DRIVER"
@@ -1618,6 +1621,7 @@ instance IsHTTPError WMBErrors where
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
 
   toHttpCode = \case
+    AlreadyOnActiveTripWithAnotherVehicle _ -> E400
     DriverNotInFleet _ _ -> E400
     DriverNotActiveInFleet _ _ -> E400
     VehicleLinkedToInvalidDriver -> E400

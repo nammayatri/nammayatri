@@ -25,7 +25,7 @@ apis:
       multipart:
         type: CreateVehiclesReq
       response:
-        type: AddVehiclesResp
+        type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
 
@@ -157,6 +157,7 @@ apis:
         - mblimit: Int
         - mboffset: Int
         - mbMobileNumberString: Text
+        - mbNameString: Text
       response:
         type: FleetListDriverRes
       migrate:
@@ -171,6 +172,7 @@ apis:
               - limit: Int
               - offset: Int
               - mobileNumberString: Text
+              - nameString: Text
             response:
               type: FleetListDriverRes
 
@@ -620,7 +622,7 @@ apis:
       multipart:
         type: CreateDriversReq
       response:
-        type: APISuccess
+        type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
 
@@ -630,7 +632,7 @@ apis:
       multipart:
         type: CreateDriverBusRouteMappingReq
       response:
-        type: APISuccess
+        type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
 
@@ -654,16 +656,16 @@ apis:
             response:
               type: APISuccess
 
-  - PUT:
-      endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/delete
+  - POST:
+      endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/end
       auth: ApiAuthV2
       params:
         tripTransactionId: Id TripTransaction
       response:
         type: APISuccess
       helperApi:
-        - PUT:
-            endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/{fleetOwnerId}/delete
+        - POST:
+            endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/{fleetOwnerId}/end
             auth: ApiAuthV2
             params:
               tripTransactionId: Id TripTransaction
@@ -717,7 +719,7 @@ types:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
   TripStatus:
-    - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+    - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
@@ -923,6 +925,9 @@ types:
     - file: FilePath
     - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
+  APISuccessWithUnprocessedEntities:
+    - recordType: NewType
+    - unprocessedEntities: [Text]
   StopInfo:
     name: Text
     code: Text
@@ -938,9 +943,6 @@ types:
     - waypoints: Maybe [LatLong]
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
-  AddVehiclesResp:
-    - recordType: NewType
-    - unprocessedEntities: [Text]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
