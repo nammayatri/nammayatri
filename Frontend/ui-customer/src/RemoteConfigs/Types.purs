@@ -87,6 +87,11 @@ type Service = {
   secondaryPillColor :: String
 }
 
+type MapLottieConfig = {
+  lottieUrl :: String,
+  visibility :: Boolean
+}
+
 data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS
 
 derive instance genericServiceType :: Generic ServiceType _

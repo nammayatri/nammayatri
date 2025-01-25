@@ -51,6 +51,7 @@ baseAppStorage = do
     setValueToLocalStore CONFIG_VERSION config
     setValueToLocalNativeStore BUNDLE_VERSION bundle
     setValueToLocalStore TRACKING_ENABLED "True"
+    setValueToLocalStore MapViewLottie "true"
     setValueToLocalStore RELOAD_SAVED_LOCATION "true"
     setValueToLocalStore UPDATE_REPEAT_TRIPS (show appConfig.feature.enableRepeatTripBackfilling)
     setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"

@@ -124,6 +124,7 @@ data KeyStore
   | BOOSTED_SEARCH
   | RECENT_BUS_STOPS
   | RECENT_BUS_ROUTES
+  | MapViewLottie
 
 derive instance genericKeyStore :: Generic KeyStore _
 

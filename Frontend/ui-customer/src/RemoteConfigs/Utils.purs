@@ -287,3 +287,15 @@ customerAppInfoConfig appName = do
   let config = fetchRemoteConfigString "app_configs_customer"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig {website : ""}
   getAppBasedConfig value appName
+
+getMapViewLottieConfig :: LazyCheck -> MapLottieConfig
+getMapViewLottieConfig _ = 
+    let config = fetchRemoteConfigString "map_view_lottie"
+        value = decodeForeignObject (parseJSON config) defaultMapLottieConfig 
+    in value
+
+defaultMapLottieConfig :: MapLottieConfig
+defaultMapLottieConfig = {
+    lottieUrl : "",
+    visibility : false
+}
