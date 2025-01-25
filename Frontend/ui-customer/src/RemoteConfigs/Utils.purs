@@ -281,3 +281,15 @@ defEventsConfig = {
   pushEventChunkSize : 10,
   loggingIntervalInMs : 10000.0
 }
+
+getMapViewLottieConfig :: LazyCheck -> MapLottieConfig
+getMapViewLottieConfig _ = 
+    let config = fetchRemoteConfigString "map_view_lottie"
+        value = decodeForeignObject (parseJSON config) defaultMapLottieConfig 
+    in value
+
+defaultMapLottieConfig :: MapLottieConfig
+defaultMapLottieConfig = {
+    lottieUrl : "",
+    visibility : false
+}

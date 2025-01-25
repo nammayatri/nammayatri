@@ -2449,15 +2449,16 @@ getMarkerActionImageConifg state driverWithinPickupThreshold = do
 nammaServices :: LazyCheck -> Array RemoteConfig.Service
 nammaServices dummy = 
   let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-      _ = spy "enabledServices" enabledServices
       allServices = getAllServices FunctionCall
-      _ = spy "allServices" allServices
   in DA.foldl (\acc x -> do 
                           let mbService = DA.find(\service -> (show service.type == x)) allServices
                           case mbService of 
                             Just value -> acc <> [value]
                             Nothing -> acc
               ) [] enabledServices
+
+mapLottieConfig :: LazyCheck -> RemoteConfig.MapLottieConfig
+mapLottieConfig dummy = RemoteConfig.getMapViewLottieConfig FunctionCall
 
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 

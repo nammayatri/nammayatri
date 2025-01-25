@@ -426,6 +426,13 @@ eval (NotifyDriverStatusCountDown seconds status timerID) state = do
     else continue state
   else continue state
 
+eval (ToggleMapLottieView seconds status timerId) state = do
+  if state.props.currentStage /= HomeScreen || status == "EXPIRED" then do
+    void $ pure $ clearTimerWithId timerId
+    void $ pure $ setValueToLocalStore MapViewLottie "false"
+    continue state{props{mapLottieViewVisibility = false}}
+  else continue state
+
 eval (RepeatRideCountDown seconds status timerID) state = do
   if state.props.currentStage /= SettingPrice then do
     void $ pure $ clearTimerWithId timerID
