@@ -213,10 +213,12 @@ JourneyLeg:
       fromStopCode: Maybe Text
       fromStopName: Maybe Text
       fromStopGtfsId: Maybe Text
+      fromStopPlatformCode : Maybe Text
     toStopDetails:
       toStopCode: Maybe Text
       toStopName: Maybe Text
       toStopGtfsId: Maybe Text
+      toStopPlatformCode : Maybe Text
     routeDetails:
       routeGtfsId: Maybe Text
       routeLongName: Maybe Text
@@ -247,8 +249,8 @@ JourneyLeg:
 
   fromTType:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
-    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId)|E
-    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId)|E
+    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId fromStopPlatformCode)|E
+    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId toStopPlatformCode)|E
     routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
@@ -260,9 +262,11 @@ JourneyLeg:
     distanceUnit: ((.unit))|I
     fromStopCode:  (fromStopDetails >>= (.stopCode))|E
     fromStopName:  (fromStopDetails >>= (.name))|E
+    fromStopPlatformCode: (fromStopDetails >>= (.platformCode))|E
     fromStopGtfsId: (fromStopDetails >>= (.gtfsId))|E
     toStopCode:  (toStopDetails >>= (.stopCode))|E
     toStopName:  (toStopDetails >>= (.name))|E
+    toStopPlatformCode:  (toStopDetails >>= (.platformCode))|E
     toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
     routeGtfsId: (routeDetails >>= (.gtfsId))|E
     routeLongName: (routeDetails >>= (.longName))|E
