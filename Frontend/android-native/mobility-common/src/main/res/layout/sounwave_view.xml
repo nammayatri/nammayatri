@@ -19,7 +19,7 @@
             android:clickable="false"
             android:visibility="gone"
             android:background="@android:color/transparent"
-            android:src="@drawable/ic_play" />
+            android:src="@drawable/ny_ic_play" />
 
         <ProgressBar
             android:layout_width="32dp"

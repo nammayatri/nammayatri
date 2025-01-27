@@ -133,7 +133,7 @@ bodyView push state =
                 , height MATCH_PARENT
                 , afterRender
                     ( \action -> do
-                        void $ runEffectFn7 addMediaFile (getNewIDWithTag "addAudioFileView") (fromMaybe "" state.audioFile) "-1" "ic_play" "ic_pause" "-1" false
+                        void $ runEffectFn7 addMediaFile (getNewIDWithTag "addAudioFileView") (fromMaybe "" state.audioFile) "-1" "ny_ic_play" "ny_ic_pause" "-1" false
                         pure unit
                     )
                     (const NoAction)

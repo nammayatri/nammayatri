@@ -58,8 +58,8 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
     private Activity activity;
     private int frameID = -1;
     private int timerID = -1;
-    private String playIcon = "ic_play";
-    private String pauseIcon = "ic_pause";
+    private String playIcon = "ny_ic_play";
+    private String pauseIcon = "ny_ic_pause";
     private boolean autoPlay = false;
 
     public MediaPlayerView(Context context, Activity activity, boolean autoPlay) {
