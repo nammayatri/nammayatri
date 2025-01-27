@@ -20,6 +20,7 @@ module Domain.Types (module Domain.Types, module Reexport) where
 
 import Data.Aeson.Types
 import Domain.Types.FareProductType as Reexport
+import Domain.Types.SearchSource as Reexport
 import Domain.Types.ServiceTierType as Reexport
 import Domain.Types.Trip as Reexport
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)

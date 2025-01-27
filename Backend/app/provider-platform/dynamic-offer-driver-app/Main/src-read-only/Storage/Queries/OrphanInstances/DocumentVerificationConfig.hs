@@ -4,9 +4,11 @@
 module Storage.Queries.OrphanInstances.DocumentVerificationConfig where
 
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.SearchSource
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -37,6 +39,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
             rcNumberPrefixList = rcNumberPrefixList,
+            searchSource = Kernel.Prelude.fromMaybe Domain.Types.SearchSource.ALL searchSource,
             supportedVehicleClasses = supportedVehicleClasses',
             title = title,
             vehicleCategory = vehicleCategory,
@@ -66,6 +69,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.order = order,
         Beam.rcNumberPrefixList = rcNumberPrefixList,
+        Beam.searchSource = Kernel.Prelude.Just searchSource,
         Beam.supportedVehicleClassesJSON = getConfigJSON supportedVehicleClasses,
         Beam.title = title,
         Beam.vehicleCategory = vehicleCategory,

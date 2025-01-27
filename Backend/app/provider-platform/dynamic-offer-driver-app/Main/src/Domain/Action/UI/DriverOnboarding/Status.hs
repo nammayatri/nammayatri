@@ -270,7 +270,7 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
   vehicleDocuments <-
     case mDL >>= (.vehicleCategory) of
       Just vehicleCategory -> do
-        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory False
         let vehicleDocumentVerificationConfigs = vehicleDocumentTypes `intersect` ((.documentType) <$> documentVerificationConfigs)
         if null vehicleDocumentVerificationConfigs
           then do
@@ -372,7 +372,7 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
 
 checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVC.VehicleCategory -> ResponseStatus -> Maybe Bool -> Flow Bool
 checkIfDocumentValid merchantOperatingCityId docType category status makeSelfieAadhaarPanMandatory = do
-  mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
+  mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category False
   case mbVerificationConfig of
     Just verificationConfig -> do
       if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)

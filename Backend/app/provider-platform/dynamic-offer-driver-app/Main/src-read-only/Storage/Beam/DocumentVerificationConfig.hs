@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.SearchSource
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -32,6 +33,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     order :: B.C f Kernel.Prelude.Int,
     rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
+    searchSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchSource.SearchSource),
     supportedVehicleClassesJSON :: B.C f Data.Aeson.Value,
     title :: B.C f Kernel.Prelude.Text,
     vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
@@ -43,12 +45,16 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
 
 instance B.Table DocumentVerificationConfigT where
   data PrimaryKey DocumentVerificationConfigT f
-    = DocumentVerificationConfigId (B.C f Domain.Types.DocumentVerificationConfig.DocumentType) (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.VehicleCategory.VehicleCategory)
+    = DocumentVerificationConfigId
+        (B.C f Domain.Types.DocumentVerificationConfig.DocumentType)
+        (B.C f Kernel.Prelude.Text)
+        (B.C f (Kernel.Prelude.Maybe Domain.Types.SearchSource.SearchSource))
+        (B.C f Domain.Types.VehicleCategory.VehicleCategory)
     deriving (Generic, B.Beamable)
-  primaryKey = DocumentVerificationConfigId <$> documentType <*> merchantOperatingCityId <*> vehicleCategory
+  primaryKey = DocumentVerificationConfigId <$> documentType <*> merchantOperatingCityId <*> searchSource <*> vehicleCategory
 
 type DocumentVerificationConfig = DocumentVerificationConfigT Identity
 
-$(enableKVPG ''DocumentVerificationConfigT ['documentType, 'merchantOperatingCityId, 'vehicleCategory] [])
+$(enableKVPG ''DocumentVerificationConfigT ['documentType, 'merchantOperatingCityId, 'searchSource, 'vehicleCategory] [])
 
 $(mkTableInstances ''DocumentVerificationConfigT "document_verification_config")

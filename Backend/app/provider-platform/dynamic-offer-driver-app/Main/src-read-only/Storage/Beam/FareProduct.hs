@@ -6,7 +6,6 @@ module Storage.Beam.FareProduct where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
-import qualified Domain.Types.FareProduct
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -22,7 +21,7 @@ data FareProductT f = FareProductT
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    searchSource :: B.C f Domain.Types.FareProduct.SearchSource,
+    searchSource :: B.C f Domain.Types.Common.SearchSource,
     timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,
     tripCategory :: B.C f Domain.Types.Common.TripCategory,
     vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType

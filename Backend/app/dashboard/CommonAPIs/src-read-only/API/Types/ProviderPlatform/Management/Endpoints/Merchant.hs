@@ -569,10 +569,12 @@ type PostMerchantConfigDriverIntelligentPoolUpdate =
   )
 
 type GetMerchantConfigOnboardingDocument =
-  ( "config" :> "onboardingDocument" :> QueryParam "documentType" DocumentType :> QueryParam "vehicleCategory" Dashboard.Common.VehicleCategory
-      :> Get
-           '[JSON]
-           DocumentVerificationConfigRes
+  ( "config" :> "onboardingDocument" :> QueryParam "documentType" DocumentType
+      :> QueryParam
+           "vehicleCategory"
+           Dashboard.Common.VehicleCategory
+      :> QueryParam "isDashboard" Kernel.Prelude.Bool
+      :> Get '[JSON] DocumentVerificationConfigRes
   )
 
 type PostMerchantConfigOnboardingDocumentUpdate =
@@ -580,7 +582,10 @@ type PostMerchantConfigOnboardingDocumentUpdate =
       :> MandatoryQueryParam
            "category"
            Dashboard.Common.VehicleCategory
-      :> ReqBody '[JSON] DocumentVerificationConfigUpdateReq
+      :> MandatoryQueryParam "isDashboard" Kernel.Prelude.Bool
+      :> ReqBody
+           '[JSON]
+           DocumentVerificationConfigUpdateReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -591,7 +596,10 @@ type PostMerchantConfigOnboardingDocumentCreate =
       :> MandatoryQueryParam
            "category"
            Dashboard.Common.VehicleCategory
-      :> ReqBody '[JSON] DocumentVerificationConfigCreateReq
+      :> MandatoryQueryParam "isDashboard" Kernel.Prelude.Bool
+      :> ReqBody
+           '[JSON]
+           DocumentVerificationConfigCreateReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -815,9 +823,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigDriverPoolCreate :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Lib.Types.SpecialLocation.Area -> DriverPoolConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getMerchantConfigDriverIntelligentPool :: EulerHS.Types.EulerClient DriverIntelligentPoolConfigRes,
     postMerchantConfigDriverIntelligentPoolUpdate :: DriverIntelligentPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getMerchantConfigOnboardingDocument :: Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory -> EulerHS.Types.EulerClient DocumentVerificationConfigRes,
-    postMerchantConfigOnboardingDocumentUpdate :: DocumentType -> Dashboard.Common.VehicleCategory -> DocumentVerificationConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMerchantConfigOnboardingDocumentCreate :: DocumentType -> Dashboard.Common.VehicleCategory -> DocumentVerificationConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigOnboardingDocument :: Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient DocumentVerificationConfigRes,
+    postMerchantConfigOnboardingDocumentUpdate :: DocumentType -> Dashboard.Common.VehicleCategory -> Kernel.Prelude.Bool -> DocumentVerificationConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigOnboardingDocumentCreate :: DocumentType -> Dashboard.Common.VehicleCategory -> Kernel.Prelude.Bool -> DocumentVerificationConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getMerchantServiceUsageConfig :: EulerHS.Types.EulerClient Dashboard.Common.Merchant.ServiceUsageConfigRes,
     postMerchantServiceConfigMapsUpdate :: Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantServiceUsageConfigMapsUpdate :: Dashboard.Common.Merchant.MapsServiceUsageConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

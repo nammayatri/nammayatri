@@ -11,6 +11,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Data.Time.Calendar
 import Domain.Types
+import qualified Domain.Types.SearchSource as DTS
 import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
 import Kernel.Prelude
@@ -22,6 +23,7 @@ $(mkBeamInstancesForEnumAndList ''ServiceTierType)
 $(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)
 $(mkBeamInstancesForEnumAndList ''DTVC.VehicleCategory)
 $(mkBeamInstancesForEnumAndList ''Enums.VehicleCategory)
+$(mkBeamInstancesForEnumAndList ''DTS.SearchSource)
 $(mkBeamInstancesForEnum ''TripCategory)
 $(mkBeamInstancesForEnum ''TripParty)
 

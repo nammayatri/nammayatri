@@ -78,7 +78,7 @@ castVehicleVariantDashboard = \case
   _ -> Nothing
 
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
-runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
+runVerifyRCFlow personId merchant merchantOpCityId operatingCity req checkImageExtraction = do
   let imageId = maybe "" cast req.imageId
   let rcReq =
         DomainRC.DriverRCReq
@@ -93,7 +93,7 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = d
             vehicleDetails = Nothing,
             vehicleCategory = req.vehicleCategory
           }
-  void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
+  void $ DomainRC.verifyRC True checkImageExtraction (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do

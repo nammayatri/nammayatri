@@ -6,6 +6,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   VehicleVariant: Domain.Types.VehicleVariant
+  SearchSource: Domain.Types.SearchSource
   VehicleCategory: Domain.Types.VehicleCategory
   Value: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
@@ -39,6 +40,7 @@ IdfyVerification:
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     nameOnCard: Maybe Text
+    isDashboard: Maybe Bool
   beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
   types:
     ImageExtractionValidation:
@@ -128,8 +130,8 @@ DriverLicense:
     driverName: Maybe Text
     licenseNumber: EncryptedHashedField e Text
     licenseExpiry: UTCTime
-    classOfVehicles: '[Text]'
-    failedRules: '[Text]'
+    classOfVehicles: "[Text]"
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     vehicleCategory: Maybe VehicleCategory
     consent: Bool
@@ -176,7 +178,7 @@ VehicleRegistrationCertificate:
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
     vehicleVariant: Maybe VehicleVariant|NoRelation
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
     vehicleModel: Maybe Text
@@ -372,38 +374,45 @@ DocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     checkExtraction: Bool
     checkExpiry: Bool
     supportedVehicleClasses: SupportedVehicleClasses
     vehicleClassCheckType: VehicleClassCheckType
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
+    searchSource: SearchSource
   default:
     order: "0"
     doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
     isImageValidationRequired: "true"
     filterForOldApks: false
+    searchSource: "'ALL'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
     documentType: PrimaryKey
+    searchSource: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
     supportedVehicleClassesJSON: json
   beamFields:
     supportedVehicleClasses:
-     supportedVehicleClassesJSON: Value
+      supportedVehicleClassesJSON: Value
+    searchSource:
+      searchSource: Maybe SearchSource
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
+    searchSource: Kernel.Prelude.Just|I
   fromTType:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
+    searchSource: Kernel.Prelude.fromMaybe Domain.Types.SearchSource.ALL|I
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV
@@ -566,7 +575,6 @@ FleetRCAssociation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-
 DriverSSN:
   tableName: driver_ssn
   fields:
@@ -600,7 +608,7 @@ DriverPanCard:
     driverDob: Maybe UTCTime
     driverName: Maybe Text
     panCardNumber: EncryptedHashedField e Text
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
@@ -671,7 +679,7 @@ FleetOwnerDocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
     checkExtraction: Bool
@@ -693,7 +701,6 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
-
 
 AadhaarCard:
   tableName: aadhaar_card
@@ -732,7 +739,14 @@ AadhaarCard:
       where: aadhaarNumberHash
     findByPhoneNumberAndUpdate:
       kvFunction: updateWithKV
-      params: [nameOnCard, driverGender, dateOfBirth, aadhaarNumberHash, verificationStatus]
+      params:
+        [
+          nameOnCard,
+          driverGender,
+          dateOfBirth,
+          aadhaarNumberHash,
+          verificationStatus,
+        ]
       where: driverId
     updateDriverImagePath:
       kvFunction: updateOneWithKV

@@ -31,6 +31,7 @@ import Domain.Types.DocumentVerificationConfig as DTO
     SupportedVehicleClasses,
   )
 import Domain.Types.MerchantOperatingCity
+import Domain.Types.SearchSource
 import Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -47,14 +48,20 @@ findAllByMerchantOpCityId id =
     Just a -> return a
     Nothing -> cacheDocumentVerificationConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
 
-findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> VehicleCategory -> m (Maybe DTO.DocumentVerificationConfig)
-findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category = find (\config -> config.vehicleCategory == category && config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> VehicleCategory -> Bool -> m (Maybe DTO.DocumentVerificationConfig)
+findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category isDashboard = do
+  let searchSources = getSearchSources isDashboard
+  find (\config -> config.vehicleCategory == category && config.documentType == documentType && any (== config.searchSource) searchSources) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m [DTO.DocumentVerificationConfig]
-findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = filter (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> Bool -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType isDashboard = do
+  let searchSources = getSearchSources isDashboard
+  filter (\config -> config.documentType == documentType && any (== config.searchSource) searchSources) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m [DTO.DocumentVerificationConfig]
-findByMerchantOpCityIdAndCategory merchantOpCityId category = filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> Bool -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndCategory merchantOpCityId category isDashboard = do
+  let searchSources = getSearchSources isDashboard
+  filter (\config -> config.vehicleCategory == category && any (== config.searchSource) searchSources) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDocumentVerificationConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.DocumentVerificationConfig] -> m ()
 cacheDocumentVerificationConfigs merchantOpCityId configs = do

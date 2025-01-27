@@ -149,7 +149,8 @@ scheduleRetryVerificationJob verificationReq = do
   let scheduleTime = calculateScheduleTime (fromMaybe 0 verificationReq.retryCount)
   createJobIn @_ @'RetryDocumentVerification verificationReq.merchantId verificationReq.merchantOperatingCityId scheduleTime $
     RetryDocumentVerificationJobData
-      { requestId = verificationReq.requestId
+      { requestId = verificationReq.requestId,
+        isDashboard = verificationReq.isDashboard
       }
   where
     calculateScheduleTime retryCount = do

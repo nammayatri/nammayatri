@@ -33,7 +33,7 @@ findAllBoundedByMerchantOpCityIdVariantArea' ::
   DTC.TripCategory ->
   Domain.TimeBound ->
   Bool ->
-  [Domain.SearchSource] ->
+  [DTC.SearchSource] ->
   m [Domain.FareProduct]
 findAllBoundedByMerchantOpCityIdVariantArea' (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
   findAllWithKV
@@ -56,7 +56,7 @@ findAllBoundedByMerchantOpCityIdVariantArea ::
   DTC.TripCategory ->
   Domain.TimeBound ->
   Bool ->
-  [Domain.SearchSource] ->
+  [DTC.SearchSource] ->
   m [Domain.FareProduct]
 findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOperatingCityId) area vehicleServiceTier tripCategory timeBounds enabled searchSources = do
   if isInterCityWithCity tripCategory
@@ -74,7 +74,7 @@ findAllUnboundedFareProductForVariants' ::
   DTC.TripCategory ->
   Domain.TimeBound ->
   Kernel.Prelude.Bool ->
-  [Domain.SearchSource] ->
+  [DTC.SearchSource] ->
   m [Domain.FareProduct]
 findAllUnboundedFareProductForVariants' merchantOperatingCityId area tripCategory timeBounds enabled searchSource = do
   findAllWithKV
@@ -95,7 +95,7 @@ findAllUnboundedFareProductForVariants ::
   DTC.TripCategory ->
   Domain.TimeBound ->
   Kernel.Prelude.Bool ->
-  [Domain.SearchSource] ->
+  [DTC.SearchSource] ->
   m [Domain.FareProduct]
 findAllUnboundedFareProductForVariants (Id merchantOperatingCityId) area tripCategory timeBounds enabled searchSources = do
   if isInterCityWithCity tripCategory

@@ -215,6 +215,7 @@ library
       Domain.Types.EmptyDynamicParam
       Domain.Types.FareProductType
       Domain.Types.RefereeLink
+      Domain.Types.SearchSource
       Domain.Types.ServiceTierType
       Domain.Types.StationType
       Domain.Types.Trip

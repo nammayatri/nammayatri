@@ -26,6 +26,7 @@ data IdfyVerificationT f = IdfyVerificationT
     id :: B.C f Kernel.Prelude.Text,
     idfyResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     imageExtractionValidation :: B.C f Domain.Types.IdfyVerification.ImageExtractionValidation,
+    isDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueDateOnDoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     multipleRC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     nameOnCard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

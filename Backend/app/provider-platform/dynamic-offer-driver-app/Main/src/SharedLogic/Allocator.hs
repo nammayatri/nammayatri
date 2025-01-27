@@ -245,7 +245,8 @@ instance JobInfoProcessor 'CalculateDriverFees
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
 
 data RetryDocumentVerificationJobData = RetryDocumentVerificationJobData
-  { requestId :: Text
+  { requestId :: Text,
+    isDashboard :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

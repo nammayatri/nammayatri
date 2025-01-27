@@ -63,6 +63,7 @@ import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDri
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
+import qualified Domain.Types.Common as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -576,15 +577,16 @@ postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity req = do
   pure Success
 
 ---------------------------------------------------------------------
-getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Maybe Common.VehicleCategory -> Flow Common.DocumentVerificationConfigRes
-getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory = do
+getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Maybe Common.VehicleCategory -> Maybe Bool -> Flow Common.DocumentVerificationConfigRes
+getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory mbIsDashboard = do
+  let isDashboard = fromMaybe False mbIsDashboard
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case (mbReqDocumentType, mbCategory) of
     (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId
-    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType)
-    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category
+    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) isDashboard
+    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category isDashboard
+    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category isDashboard
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -629,14 +631,15 @@ postMerchantConfigOnboardingDocumentUpdate ::
   Context.City ->
   Common.DocumentType ->
   Common.VehicleCategory ->
+  Bool ->
   Common.DocumentVerificationConfigUpdateReq ->
   Flow APISuccess
-postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentType reqCategory req = do
+postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentType reqCategory reqIsDashboard req = do
   -- runRequestValidation Common.validateDocumentVerificationConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory reqIsDashboard >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -680,14 +683,15 @@ postMerchantConfigOnboardingDocumentCreate ::
   Context.City ->
   Common.DocumentType ->
   Common.VehicleCategory ->
+  Bool ->
   Common.DocumentVerificationConfigCreateReq ->
   Flow APISuccess
-postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentType reqCategory req = do
+postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentType reqCategory reqIsDashboard req = do
   -- runRequestValidation Common.validateDocumentVerificationConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory
+  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory reqIsDashboard
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -724,6 +728,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         isImageValidationRequired = fromMaybe True isImageValidationRequired,
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
+        searchSource = DTCC.ALL,
         updatedAt = now,
         createdAt = now,
         ..
@@ -1179,12 +1184,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
     cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
-    groupFarePolices :: [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> [[(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)]]
+    groupFarePolices :: [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DTCC.SearchSource, Bool, FarePolicy.FarePolicy)] -> [[(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DTCC.SearchSource, Bool, FarePolicy.FarePolicy)]]
     groupFarePolices = DL.groupBy (\a b -> fst7 a == fst7 b) . DL.sortBy (compare `on` fst7)
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DTCC.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
     processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
     processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap) (x : xs) = do
       let (disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
@@ -1309,7 +1314,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
-    makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
+    makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DTCC.SearchSource, Bool, FarePolicy.FarePolicy)
     makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
@@ -1339,7 +1344,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       idText <- cleanCSVField idx row.farePolicyKey "Fare Policy Key"
       tripCategory :: TripCategory <- readCSVField idx row.tripCategory "Trip Category"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
-      let searchSource :: DFareProduct.SearchSource = fromMaybe DFareProduct.ALL $ readMaybeCSVField idx row.searchSource "Search Source"
+      let searchSource :: DTCC.SearchSource = fromMaybe DTCC.ALL $ readMaybeCSVField idx row.searchSource "Search Source"
       nightShiftStart :: TimeOfDay <- readCSVField idx row.nightShiftStart "Night Shift Start"
       nightShiftEnd :: TimeOfDay <- readCSVField idx row.nightShiftEnd "Night Shift End"
       let nightShiftBounds = Just $ Common.NightShiftBounds nightShiftStart nightShiftEnd
@@ -1547,11 +1552,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
       return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
 
-    makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
+    makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DTCC.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
       T.intercalate ":" [cityId.getId, show vehicleServiceTier, show area, show tripCategory, show searchSource]
 
-    markBoundedAreadyDeleted :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Map.Map Text Bool -> Map.Map Text Bool
+    markBoundedAreadyDeleted :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DTCC.SearchSource -> Map.Map Text Bool -> Map.Map Text Bool
     markBoundedAreadyDeleted cityId vehicleServiceTier tripCategory area searchSource mapObj = do
       let key = makeKey cityId vehicleServiceTier tripCategory area searchSource
       Map.insert key True mapObj

@@ -174,7 +174,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
       docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
       return $ maybe True (.isImageValidationRequired) docConfigs
     _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory)
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) isDashboard
       return $ maybe True (.isImageValidationRequired) docConfigs
   if isImageValidationRequired && isNothing validationStatus
     then do

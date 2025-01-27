@@ -139,7 +139,7 @@ getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDurati
     getFareProduct' areaName serviceTierName = do
       FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName
         |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTierName areaName
-    searchSources = FareProduct.getSearchSources isDashboard
+    searchSources = DTC.getSearchSources isDashboard
     getFarePolicyWithArea areaName fareProduct = do
       mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and findByServiceTierTypeAndCityId : " <> show mbVehicleServiceTierItem
@@ -160,7 +160,7 @@ getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDurati
 
 getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory = do
-  let searchSources = FareProduct.getSearchSources isDashboard
+  let searchSources = DTC.getSearchSources isDashboard
   allFareProducts <- FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation tripCategory
   (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <-
     return . getFareProduct allFareProducts

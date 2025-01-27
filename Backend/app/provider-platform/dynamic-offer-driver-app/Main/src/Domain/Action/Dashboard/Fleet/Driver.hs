@@ -270,7 +270,16 @@ postDriverFleetAddRCWithoutDriver ::
   Text ->
   Common.RegisterRCReq ->
   Flow APISuccess
-postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetAddRCWithoutDriver = addRCWithoutDriver True
+
+addRCWithoutDriver ::
+  Bool ->
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.RegisterRCReq ->
+  Flow APISuccess
+addRCWithoutDriver checkImageExtraction merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = Id fleetOwnerId :: Id DP.Person
@@ -295,7 +304,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             vehicleCategory = req.vehicleCategory,
             vehicleDetails = Nothing
           }
-  void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
+  void $ DomainRC.verifyRC True checkImageExtraction (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
   pure Success
 
@@ -466,7 +475,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (registerRcReq, _, _) -> do
           try @_ @SomeException
-            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq)
+            (addRCWithoutDriver False merchantShortId opCity fleetOwnerId registerRcReq)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
@@ -1146,7 +1155,7 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
       >>= \case
         Left _ -> throwError $ InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
         Right locations -> listToMaybe locations & fromMaybeM (InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip.")
-  void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
+  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
   pure Success
 
 ---------------------------------------------------------------------
@@ -1296,7 +1305,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
     whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
       route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
       (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point
+      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
@@ -1347,7 +1356,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
-            tripEndSource = Nothing,
+            tripTerminationSource = Nothing,
             endRideApprovalRequestId = Nothing,
             createdAt = now,
             updatedAt = now
@@ -1386,6 +1395,7 @@ getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbV
       IN_PROGRESS -> Common.IN_PROGRESS
       PAUSED -> Common.PAUSED
       COMPLETED -> Common.COMPLETED
+      CANCELLED -> Common.CANCELLED
 
 ---------------------------------------------------------------------
 data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow

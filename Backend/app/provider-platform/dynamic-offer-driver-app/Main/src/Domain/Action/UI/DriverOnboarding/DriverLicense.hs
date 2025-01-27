@@ -91,11 +91,12 @@ validateDriverDLReq now DriverDLReq {..} =
 
 verifyDL ::
   Bool ->
+  Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
+verifyDL isDashboard checkImageExtraction mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -104,9 +105,9 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) isDashboard >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
   nameOnCard <-
-    if (isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard))
+    if (isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (checkImageExtraction || transporterConfig.checkImageExtractionForDashboard))
       then do
         image1 <- getImage imageId1
         image2 <- getImage `mapM` imageId2
@@ -150,13 +151,13 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
       if documentVerificationConfig.doStrictVerifcation
         then do
           when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
-          verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
+          verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory isDashboard
         else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
       if documentVerificationConfig.doStrictVerifcation
-        then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory
+        then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory isDashboard
         else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
   return Success
   where
@@ -186,8 +187,8 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           becknIssueId = Nothing
         }
 
-verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Flow ()
-verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory = do
+verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Bool -> Flow ()
+verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory isDashboard = do
   now <- getCurrentTime
   let imageExtractionValidation =
         if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
@@ -225,6 +226,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             airConditioned = Nothing,
             oxygen = Nothing,
             ventilator = Nothing,
+            isDashboard = Just isDashboard,
             createdAt = now,
             updatedAt = now
           }
@@ -235,12 +237,13 @@ onVerifyDL verificationReq output = do
   let key = dlCacheKey person.id
   extractedDlAndOperatingCity <- Redis.safeGet key
   void $ Redis.del key
+  let isDashboard = fromMaybe False verificationReq.isDashboard
   case (output.status, verificationReq.issueDateOnDoc, extractedDlAndOperatingCity, verificationReq.driverDateOfBirth) of
-    (Just status, Just issueDate, Just (extractedDL, operatingCity), Just dob) | status == "id_not_found" -> dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person
-    _ -> linkDl person
+    (Just status, Just issueDate, Just (extractedDL, operatingCity), Just dob) | status == "id_not_found" -> dlNotFoundFallback isDashboard issueDate (extractedDL, operatingCity) dob verificationReq person
+    _ -> linkDl isDashboard person
   where
-    linkDl :: Person.Person -> Flow AckResponse
-    linkDl person = do
+    linkDl :: Bool -> Person.Person -> Flow AckResponse
+    linkDl isDashboard person = do
       if verificationReq.imageExtractionValidation == Domain.Skipped
         && isJust verificationReq.issueDateOnDoc
         && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
@@ -250,7 +253,7 @@ onVerifyDL verificationReq output = do
           _ <- IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
           pure Ack
         else do
-          documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
+          documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) isDashboard >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
           onVerifyDLHandler person output.id_number (output.t_validity_to <|> output.nt_validity_to) output.cov_details output.name output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
@@ -345,8 +348,8 @@ cacheExtractedDl personId extractedDL operatingCity = do
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   Redis.setExp key (extractedDL, operatingCity) authTokenCacheExpiry
 
-dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> Domain.IdfyVerification -> Person.Person -> Flow AckResponse
-dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
+dlNotFoundFallback :: Bool -> UTCTime -> (Text, Text) -> UTCTime -> Domain.IdfyVerification -> Person.Person -> Flow AckResponse
+dlNotFoundFallback isDashboard issueDate (extractedDL, operatingCity) dob verificationReq person = do
   let dlreq =
         DriverDLReq
           { driverLicenseNumber = extractedDL,
@@ -357,5 +360,5 @@ dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq pe
             vehicleCategory = verificationReq.vehicleCategory,
             dateOfIssue = Just issueDate
           }
-  void $ verifyDL False Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
+  void $ verifyDL isDashboard True Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
   return Ack

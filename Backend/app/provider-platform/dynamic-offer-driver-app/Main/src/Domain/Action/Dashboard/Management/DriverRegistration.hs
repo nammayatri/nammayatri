@@ -191,6 +191,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   verifyDL
     True
+    False
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq
@@ -206,6 +207,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   verifyRC
     True
+    False
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq

@@ -6,14 +6,11 @@ imports:
   FarePolicy: Domain.Types.FarePolicy
   ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
-
+  SearchSource: Domain.Types.Common
 
 FareProduct:
   tableName: fare_product
 
-  types:
-    SearchSource:
-      enum: "ALL,DASHBOARD,MOBILE_APP"
   fields:
     id : Id FareProduct
     merchantId : Id Merchant

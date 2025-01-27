@@ -6,10 +6,12 @@ module Storage.Queries.DocumentVerificationConfig (module Storage.Queries.Docume
 
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.SearchSource
 import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -31,12 +33,13 @@ findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithO
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
-findByPrimaryKey documentType merchantOperatingCityId vehicleCategory = do
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.SearchSource.SearchSource -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
+findByPrimaryKey documentType merchantOperatingCityId searchSource vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.searchSource $ Se.Eq (Kernel.Prelude.Just searchSource),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
@@ -70,6 +73,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.searchSource $ Se.Eq (Kernel.Prelude.Just searchSource),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
