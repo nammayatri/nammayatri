@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="PRIORITY_BALANCED_POWER_ACCURACY">102</integer>
+    <integer name="PRIORITY_HIGH_ACCURACY">100</integer>
+    <integer name="PRIORITY_LOW_POWER">104</integer>
+    <integer name="PRIORITY_PASSIVE">105</integer>
+</resources>

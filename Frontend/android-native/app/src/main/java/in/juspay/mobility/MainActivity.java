@@ -369,11 +369,11 @@ public class MainActivity extends AppCompatActivity {
                 return results;
     }
 
-    protected void getCurrentLocationFlow() {
+    protected void getCurrentLocationFlow(int locationPriority) {
         if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
         FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+        client.getCurrentLocation(locationPriority, cancellationTokenSource.getToken())
                 .addOnSuccessListener(location -> {
                     if (location != null) {
                         try {
@@ -418,7 +418,14 @@ public class MainActivity extends AppCompatActivity {
 
         if(isPerfEnabledCustomer){
             ExecutorService currentLocExecuter = Executors.newSingleThreadExecutor();
-            currentLocExecuter.execute(() -> getCurrentLocationFlow());
+            String appName = getApplicationContext().getResources().getString(R.string.app_type);
+            if(appName.equals("driver")){
+                int resId = getApplicationContext().getResources().getIdentifier(remoteConfigs.getString("driver_location_priority") , "integer", getApplicationContext().getPackageName());
+                int locationPriority = (resId != 0) ? getResources().getInteger(resId) : Priority.PRIORITY_HIGH_ACCURACY;
+                currentLocExecuter.execute(() -> getCurrentLocationFlow(locationPriority));
+            }else{
+                currentLocExecuter.execute(() -> getCurrentLocationFlow(Priority.PRIORITY_HIGH_ACCURACY));
+            }
         }
 
         if(isPerfEnabled) {

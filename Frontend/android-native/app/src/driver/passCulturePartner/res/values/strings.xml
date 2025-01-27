@@ -52,4 +52,5 @@
     <string name="merchant_id" translatable="false">passculture</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
     <string name="third_party_booking">"Third Party Booking"</string>
+    <string name="app_type" translatable="false">driver</string>
 </resources>
