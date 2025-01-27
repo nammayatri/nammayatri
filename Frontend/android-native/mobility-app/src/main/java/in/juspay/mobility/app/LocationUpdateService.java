@@ -86,6 +86,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
@@ -116,6 +117,8 @@ public class LocationUpdateService extends Service {
     private Context context;
     private int delayForG = 500000, delayForT = 20000;
     private int delayForGNew = 500000, delayForTNew = 20000;
+    MobilityRemoteConfigs remoteConfigs;
+    private String driverRideStatus = "IDLE";
     private int maximumLimit = 60;
     private int pointsToRemove = 1;
     private Location prevLocation = null, prevAccLocation = null;
@@ -181,6 +184,7 @@ public class LocationUpdateService extends Service {
             FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
         updateConfigVariables();
         initialiseJSONObjects();
         isLocationUpdating = false;
@@ -296,6 +300,17 @@ public class LocationUpdateService extends Service {
         fusedLocClientForDistanceCal.requestLocationUpdates(locReq, locCallback, Looper.getMainLooper());
     }
 
+    private int getLocationPriority() {
+        int priority = Priority.PRIORITY_HIGH_ACCURACY;
+        String appName = getApplicationContext().getResources().getString(R.string.app_type);
+        if(appName.equals("driver") && !Objects.equals(driverRideStatus, "ON_PICKUP")) {
+            int resId = getApplicationContext().getResources().getIdentifier(remoteConfigs.getString("driver_location_priority") , "integer", getApplicationContext().getPackageName());
+            priority = (resId != 0) ? getResources().getInteger(resId) : Priority.PRIORITY_HIGH_ACCURACY;
+        } 
+        Log.d(LOG_TAG, "Location Priority is " + priority + " for app " + appName + " and ride status " + driverRideStatus);
+        return priority;
+    }
+
     private LocationCallback getDistanceCalCallback() {
         calDistanceCallback = new LocationCallback() {
             @Override
@@ -303,7 +318,7 @@ public class LocationUpdateService extends Service {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                fusedLocClientForDistanceCal.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                fusedLocClientForDistanceCal.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
                         .addOnSuccessListener(location -> {
                             if (location != null) {
                                 isDistanceCalulation = true;
@@ -384,6 +399,7 @@ public class LocationUpdateService extends Service {
 
             String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
             maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "60"));
+            driverRideStatus = sharedPrefs.getString("DRIVER_RIDE_STATUS", "ON_PICKUP");
             String MAX_LIMIT_TO_STORE_LOCATION_PT_NOT = "MAX_LIMIT_TO_STORE_LOCATION_PT_NOT";
             maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "1"));
             // UPDATE FOR GOOGLE CALLBACK FREQUENCY
@@ -878,14 +894,14 @@ public class LocationUpdateService extends Service {
     // HELPER FUNCTIONS
     /* creates location request */
     private LocationRequest createLocationRequest(int intervalForLocationUpdate, float minDispDistance) {
-        return new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
+        return new LocationRequest.Builder(getLocationPriority())
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
                 .build();
     }
 
     private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval) {
-        return new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
+        return new LocationRequest.Builder(getLocationPriority())
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
                 .setMinUpdateIntervalMillis(minInterval)
@@ -1058,7 +1074,7 @@ public class LocationUpdateService extends Service {
                     checkLocation();
                     if (gpsMethodSwitch.equals("CURRENT")) {
                         Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
-                        fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                        fusedLocationProviderClient.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
                                 .addOnSuccessListener(location -> {
                                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
