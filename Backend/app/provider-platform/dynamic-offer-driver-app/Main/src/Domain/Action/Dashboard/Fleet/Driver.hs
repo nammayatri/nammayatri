@@ -485,14 +485,14 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
           mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.routeCodes "Route Codes"
-      vehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
+      vehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
           Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
-      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, ..}, vehicleNumberHash, routes)
+      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, vehicleCategory = Just vehicleCategory, ..}, vehicleNumberHash, routes)
 
     buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
       now <- getCurrentTime
@@ -1277,26 +1277,25 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
-  Redis.whenWithLockRedis (WMB.tripTransactionKey (cast driverId) TRIP_ASSIGNED) 60 $ do
-    WMB.findNextActiveTripTransaction (cast driverId)
-      >>= \case
-        Nothing -> pure ()
-        Just tripTransaction -> do
-          vehicleNumber <- decrypt vehicleRC.certificateNumber
-          unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
-    allTransactions <-
-      foldM
-        ( \accTransactions trip -> do
-            transactions <- makeTripTransactions trip
-            return $ accTransactions <> transactions
-        )
-        []
-        trips
-    QTT.createMany allTransactions
-    whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
-      route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-      (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
+  WMB.findNextActiveTripTransaction (cast driverId)
+    >>= \case
+      Nothing -> pure ()
+      Just tripTransaction -> do
+        vehicleNumber <- decrypt vehicleRC.certificateNumber
+        unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
+  allTransactions <-
+    foldM
+      ( \accTransactions trip -> do
+          transactions <- makeTripTransactions trip
+          return $ accTransactions <> transactions
+      )
+      []
+      trips
+  QTT.createMany allTransactions
+  whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
+    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+    (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+    WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
