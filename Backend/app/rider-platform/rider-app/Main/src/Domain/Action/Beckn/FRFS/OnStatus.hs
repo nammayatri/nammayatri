@@ -63,7 +63,7 @@ onStatus _merchant booking (Booking dOrder) = do
       Spec.CANCELLED | not booking.customerCancelled -> QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
       _ -> pure ()
   traverse_ updateTicket statuses
-  fork "updating status for google wallet " $ traverse_ updateStatesForGoogleWallet googleWalletStates
+  whenJust booking.partnerOrgId $ \_ -> fork ("updating status of tickets in google wallet for bookingId " <> booking.id.getId) $ traverse_ updateStatesForGoogleWallet googleWalletStates
   traverse_ refreshTicket dOrder.tickets
   where
     updateTicket (ticketNumber, status) =
@@ -76,7 +76,13 @@ onStatus _merchant booking (Booking dOrder) = do
       ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
       let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
       let obj = TC.TransitObjectPatch {TC.state = show state'}
-      void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+      resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
+      case resp of
+        Nothing -> return ()
+        Just _ -> do
+          void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+          return ()
+      return ()
     refreshTicket ticket =
       whenJust ticket.qrRefreshAt $ \qrRefreshAt ->
         void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
