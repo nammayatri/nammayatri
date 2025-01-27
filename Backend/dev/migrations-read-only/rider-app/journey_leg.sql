@@ -45,3 +45,9 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN frequency integer ;
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN estimated_min_fare double precision ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN estimated_max_fare double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN to_stop_platform_code text ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN from_stop_platform_code text ;
