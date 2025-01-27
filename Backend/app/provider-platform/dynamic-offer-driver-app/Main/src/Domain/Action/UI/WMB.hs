@@ -217,11 +217,7 @@ postWmbTripStart (_, _, _) tripTransactionId req = do
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (_, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  let busTripInfo = WMB.buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destinationStopInfo.point
-  void $ LF.rideStart (cast tripTransaction.id) req.location.lat req.location.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
-  now <- getCurrentTime
-  QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just req.location) IN_PROGRESS (Just now) tripTransactionId
-  TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+  WMB.startTripTransaction tripTransaction route closestStop (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
   pure Success
 
 postWmbTripEnd ::

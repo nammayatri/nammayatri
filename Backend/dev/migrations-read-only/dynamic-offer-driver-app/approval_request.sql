@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN title text NOT NU
 ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN trip_transaction_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.approval_request ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
