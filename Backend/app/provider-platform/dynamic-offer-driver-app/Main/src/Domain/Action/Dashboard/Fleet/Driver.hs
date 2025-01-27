@@ -1277,12 +1277,6 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
-  WMB.findNextActiveTripTransaction (cast driverId)
-    >>= \case
-      Nothing -> pure ()
-      Just tripTransaction -> do
-        vehicleNumber <- decrypt vehicleRC.certificateNumber
-        unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
