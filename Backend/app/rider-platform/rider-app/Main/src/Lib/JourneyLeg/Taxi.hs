@@ -139,15 +139,29 @@ instance JT.JourneyLeg TaxiLegRequest m where
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
-        let journeyLegStatus = JT.getTexiLegStatusFromBooking booking mbRide
+        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegOrder, statusChanged = False}
+        return $
+          JT.JourneyLegState
+            { status = journeyLegStatus,
+              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+              vehiclePosition,
+              legOrder = journeyLegOrder,
+              statusChanged = False
+            }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        let journeyLegStatus = JT.getTexiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
-        return $ JT.JourneyLegState {status = journeyLegStatus, currentPosition = Nothing, legOrder = journeyLegInfo.journeyLegOrder, statusChanged = False}
+        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
+        return $
+          JT.JourneyLegState
+            { status = journeyLegStatus,
+              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+              vehiclePosition = Nothing,
+              legOrder = journeyLegInfo.journeyLegOrder,
+              statusChanged = False
+            }
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do

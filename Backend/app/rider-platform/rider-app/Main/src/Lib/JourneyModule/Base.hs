@@ -73,11 +73,7 @@ getJourneyLegs journeyId = do
   return $ sortBy (comparing (.sequenceNumber)) legs
 
 getAllLegsInfo ::
-  ( EsqDBFlow m r,
-    Monad m,
-    CacheFlow m r,
-    EncFlow m r
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getAllLegsInfo journeyId = do
@@ -97,11 +93,7 @@ getAllLegsInfo journeyId = do
   return $ allLegsInfo
 
 getAllLegsStatus ::
-  ( EsqDBFlow m r,
-    Monad m,
-    CacheFlow m r,
-    EncFlow m r
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journeyId = do
@@ -111,11 +103,7 @@ getAllLegsStatus journeyId = do
   return allLegsState
   where
     processLeg ::
-      ( EsqDBFlow m r,
-        Monad m,
-        CacheFlow m r,
-        EncFlow m r
-      ) =>
+      JL.GetStateFlow m r c =>
       [APITypes.RiderLocationReq] ->
       (Bool, [JL.JourneyLegState]) ->
       DJourneyLeg.JourneyLeg ->
@@ -135,7 +123,7 @@ getAllLegsStatus journeyId = do
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
 
 startJourney ::
-  JL.ConfirmFlow m r c =>
+  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c) =>
   Id DJourney.Journey ->
   m ()
 startJourney journeyId = do
@@ -304,13 +292,7 @@ addBusLeg parentSearchReq journeyLeg = do
           }
 
 getCurrentLeg ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m,
-    MonadTime m
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   m (Maybe JL.LegInfo)
 getCurrentLeg journeyId = do
@@ -319,12 +301,7 @@ getCurrentLeg journeyId = do
   return currentLeg
 
 getRemainingLegs ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   m [JL.LegInfo]
 getRemainingLegs journeyId = do
@@ -396,12 +373,7 @@ cancelLeg journeyLeg = do
   return ()
 
 cancelRemainingLegs ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   m ()
 cancelRemainingLegs journeyId = do
@@ -413,12 +385,7 @@ cancelRemainingLegs journeyId = do
   return ()
 
 skipLeg ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m
-  ) =>
+  JL.GetStateFlow m r c =>
   Id DJourney.Journey ->
   Id DJourneyLeg.JourneyLeg ->
   m ()

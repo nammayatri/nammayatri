@@ -232,5 +232,7 @@ getMultimodalJourneyStatus (_, _) journeyId = do
     transformLeg legState =
       ApiTypes.LegStatus
         { legOrder = legState.legOrder,
-          status = legState.status
+          status = legState.status,
+          userPosition = legState.userPosition,
+          vehiclePosition = legState.vehiclePosition
         }

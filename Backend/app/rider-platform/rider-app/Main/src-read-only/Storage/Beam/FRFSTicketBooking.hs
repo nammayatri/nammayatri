@@ -50,6 +50,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    platformNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

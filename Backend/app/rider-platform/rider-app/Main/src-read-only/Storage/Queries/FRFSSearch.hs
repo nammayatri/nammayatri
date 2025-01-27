@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
+      Se.Set Beam.platformNumber platformNumber,
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),

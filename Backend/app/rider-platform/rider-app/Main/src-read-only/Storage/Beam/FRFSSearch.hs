@@ -29,6 +29,7 @@ data FRFSSearchT f = FRFSSearchT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    platformNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     quantity :: B.C f Kernel.Prelude.Int,
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

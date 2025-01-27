@@ -45,7 +45,12 @@ newtype JourneyStatus = JourneyStatus {legs :: [LegStatus]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegStatus = LegStatus {legOrder :: Kernel.Prelude.Int, status :: Lib.JourneyLeg.Types.JourneyLegStatus}
+data LegStatus = LegStatus
+  { legOrder :: Kernel.Prelude.Int,
+    status :: Lib.JourneyLeg.Types.JourneyLegStatus,
+    userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    vehiclePosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

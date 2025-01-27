@@ -28,6 +28,8 @@ types:
   LegStatus:
     legOrder: Int
     status: JourneyLegStatus
+    vehiclePosition: Maybe LatLong
+    userPosition: Maybe LatLong
 
   JourneyStatus:
     recordType: NewType

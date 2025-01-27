@@ -51,6 +51,7 @@ FRFSSearch:
     journeyLegStatus: Maybe JourneyLegStatus
     lineColor: Maybe Text
     lineColorCode: Maybe Text
+    platformNumber: Maybe Text
     frequency: Maybe Int
 
   beamFields:
@@ -259,6 +260,7 @@ FRFSTicketBooking:
     bppDelayedInterest : Maybe Int
     lineColor : Maybe Text
     lineColorCode : Maybe Text
+    platformNumber: Maybe Text
     googleWalletJWTUrl : Maybe Text
     frequency : Maybe Int
     journeyLegOrder : Maybe Int

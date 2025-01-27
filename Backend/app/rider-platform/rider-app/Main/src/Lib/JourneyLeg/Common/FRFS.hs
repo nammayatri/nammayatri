@@ -39,7 +39,8 @@ getState searchId riderLastPoints isLastJustCompleted = do
       return $
         JT.JourneyLegState
           { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
-            currentPosition = (.latLong) <$> listToMaybe riderLastPoints,
+            userPosition = (.latLong) <$> listToMaybe riderLastPoints,
+            vehiclePosition = Nothing,
             legOrder = journeyLegOrder,
             statusChanged
           }
@@ -51,7 +52,8 @@ getState searchId riderLastPoints isLastJustCompleted = do
       return $
         JT.JourneyLegState
           { status = newStatus,
-            currentPosition = (.latLong) <$> listToMaybe riderLastPoints,
+            userPosition = (.latLong) <$> listToMaybe riderLastPoints,
+            vehiclePosition = Nothing,
             legOrder = journeyLegInfo.journeyLegOrder,
             statusChanged
           }
@@ -87,8 +89,9 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   let colorName = journeyLeg.routeDetails >>= (.shortName)
   let routeColorCode = journeyLeg.routeDetails >>= (.color)
+  let platformNumber = journeyLeg.fromStopDetails >>= (.platformCode)
   let frequency = Just 300
-  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq Nothing Nothing colorName routeColorCode frequency
+  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq Nothing Nothing colorName routeColorCode frequency platformNumber
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData = do

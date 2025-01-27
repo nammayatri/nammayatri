@@ -3,6 +3,7 @@ module Lib.JourneyModule.Types where
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.Ride as DARide
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -23,6 +24,7 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -92,6 +94,19 @@ type GetFareFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
+type GetStateFlow m r c =
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasLongDurationRetryCfg r c
+  )
+
 type SearchJourneyLeg leg m = leg -> m SearchResponse
 
 type GetFareJourneyLeg leg m = leg -> m (Maybe GetFareResponse)
@@ -114,8 +129,8 @@ class JourneyLeg leg m where
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m
   isCancellable :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => IsCancellableJourneyLeg leg m
-  getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLegState leg m
-  getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => GetJourneyLeg leg m
+  getState :: GetStateFlow m r c => GetJourneyLegState leg m
+  getInfo :: GetStateFlow m r c => GetJourneyLeg leg m
   getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
 
 newtype SearchResponse = SearchResponse
@@ -127,7 +142,8 @@ newtype SearchResponse = SearchResponse
 data JourneyLegState = JourneyLegState
   { status :: JourneyLegStatus,
     statusChanged :: Bool,
-    currentPosition :: Maybe LatLong,
+    userPosition :: Maybe LatLong,
+    vehiclePosition :: Maybe LatLong,
     legOrder :: Int
   }
   deriving stock (Show, Generic)
@@ -196,6 +212,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
 data MetroLegExtraInfo = MetroLegExtraInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
+    platformNumber :: Maybe Text,
     lineColor :: Maybe Text,
     lineColorCode :: Maybe Text,
     tickets :: Maybe [Text],
@@ -275,14 +292,29 @@ mapTaxiBookingStatusToJourneyLegStatus status = case status of
   DBooking.CANCELLED -> Cancelled
   DBooking.TRIP_ASSIGNED -> Booked
 
-getTexiLegStatusFromBooking :: DBooking.Booking -> Maybe DRide.Ride -> JourneyLegStatus
-getTexiLegStatusFromBooking booking mRide = do
+getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m (JourneyLegStatus, Maybe LatLong)
+getTaxiLegStatusFromBooking booking mRide = do
   case mRide of
-    Just ride -> mapTaxiRideStatusToJourneyLegStatus ride.status
-    Nothing -> mapTaxiBookingStatusToJourneyLegStatus booking.status
+    Just ride -> do
+      driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
+      case driverLocationResp of
+        Left err -> do
+          logError $ "location fetch failed: " <> show err
+          return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
+        Right driverLocation -> do
+          let journeyStatus =
+                case (ride.status, driverLocation.pickupStage) of
+                  (DRide.NEW, Just stage) -> do
+                    case stage of
+                      DARide.OnTheWay -> OnTheWay
+                      DARide.Reached -> Arrived
+                      DARide.Reaching -> Arriving
+                  _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
+          return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
+    Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
 
-getTexiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
-getTexiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
+getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
+getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
   if journeyLegInfo.skipBooking
     then Skipped
     else case mbEstimateStatus of
@@ -292,9 +324,10 @@ getTexiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
       Just DEstimate.CANCELLED -> Cancelled
       _ -> Assigning
 
-mkLegInfoFromBookingAndRide :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
+mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
 mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
+  (status, _) <- getTaxiLegStatusFromBooking booking mRide
   return $
     LegInfo
       { skipBooking = False,
@@ -311,7 +344,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
-        status = getTexiLegStatusFromBooking booking mRide,
+        status,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -349,7 +382,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
-        status = getTexiLegStatusFromSearch journeyLegInfo' mbEstimateStatus,
+        status = getTaxiLegStatusFromSearch journeyLegInfo' mbEstimateStatus,
         legExtraInfo =
           Taxi $
             TaxiLegExtraInfo
@@ -460,6 +493,7 @@ mkLegInfoFromFrfsBooking booking = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = booking.lineColor,
+                platformNumber = booking.platformNumber,
                 lineColorCode = booking.lineColorCode,
                 tickets = Just qrDataList,
                 providerName = Just booking.providerName,
@@ -479,7 +513,7 @@ mkLegInfoFromFrfsBooking booking = do
             SubwayLegExtraInfo
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
-                platformNumber = Nothing,
+                platformNumber = booking.platformNumber,
                 trainNumber = Nothing,
                 tickets = Just qrDataList,
                 providerName = Just booking.providerName,
@@ -545,6 +579,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 lineColor = lineColor,
+                platformNumber,
                 lineColorCode = lineColorCode,
                 tickets = Nothing,
                 providerName = Nothing,
@@ -564,7 +599,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
             SubwayLegExtraInfo
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
-                platformNumber = Nothing,
+                platformNumber,
                 trainNumber = Nothing,
                 tickets = Nothing,
                 providerName = Nothing,

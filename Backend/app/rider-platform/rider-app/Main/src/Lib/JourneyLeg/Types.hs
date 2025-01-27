@@ -16,6 +16,8 @@ data JourneyLegStatus
   | Missed
   | Delayed
   | Arriving
+  | Arrived
+  | OnTheWay
   | Skipped -- we might need this
   | Ongoing
   | Finishing
