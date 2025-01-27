@@ -251,7 +251,7 @@ JourneyLeg:
       routeShortName: Maybe Text
       routeColorName : Maybe Text
       routeColorCode : Maybe Text
-      frequency : Maybe Int
+      frequency : Maybe Seconds
     agency:
       agencyGtfsId: Maybe Text
       agencyName: Maybe Text

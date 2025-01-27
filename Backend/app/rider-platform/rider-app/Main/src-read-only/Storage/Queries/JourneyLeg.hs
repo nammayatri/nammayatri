@@ -142,7 +142,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
             mode = mode,
-            routeDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode,
+            routeDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode frequency,
             sequenceNumber = sequenceNumber,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
             toArrivalTime = toArrivalTime,
