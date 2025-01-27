@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Types.Bus where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -33,8 +34,13 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
 data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    cancellationType :: Spec.CancellationType
+  }
 
 data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,

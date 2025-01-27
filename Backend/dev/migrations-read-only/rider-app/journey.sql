@@ -42,3 +42,18 @@ ALTER TABLE atlas_app.journey ALTER COLUMN legs_done DROP NOT NULL;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

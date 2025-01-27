@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Common.FRFS where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import Control.Applicative
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
@@ -12,6 +13,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.Station
+import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -23,9 +25,13 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Station as QStation
 
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
@@ -84,7 +90,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
             agency = journeyLeg.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
-            pricingId = Nothing
+            pricingId = Nothing,
+            isDeleted = Just False
           }
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   let colorName = journeyLeg.routeDetails >>= (.shortName)
@@ -137,3 +144,27 @@ confirm personId merchantId mbQuoteId skipBooking bookingAllowed = do
   when (not skipBooking && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     void $ FRFSTicketService.postFrfsQuoteConfirm (Just personId, merchantId) quoteId
+
+cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
+cancel searchId cancellationType = do
+  mbMetroBooking <- QTBooking.findBySearchId searchId
+  case mbMetroBooking of
+    Just metroBooking -> do
+      merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
+      merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
+      bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+      CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
+      QTBooking.updateIsCancelled metroBooking.id (Just True)
+    Nothing -> do
+      QFRFSSearch.updateIsCancelled searchId (Just True)
+  QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
+
+isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> m JT.IsCancellableResponse
+isCancellable searchId = do
+  mbMetroBooking <- QTBooking.findBySearchId searchId
+  case mbMetroBooking of
+    Just metroBooking -> do
+      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId metroBooking.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
+      return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
+    Nothing -> do
+      return $ JT.IsCancellableResponse {canCancel = True}

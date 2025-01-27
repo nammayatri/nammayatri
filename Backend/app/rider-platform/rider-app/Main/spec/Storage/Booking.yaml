@@ -225,6 +225,7 @@ Booking:
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
     journeyLegOrder: Maybe Int
+    isDeleted: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
 
   beamFields:

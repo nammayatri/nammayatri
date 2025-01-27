@@ -7,6 +7,7 @@ import qualified Domain.Action.UI.Ride as DARide
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
+import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJ
@@ -19,6 +20,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
+import Environment
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
@@ -31,6 +33,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
+import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
@@ -85,6 +88,23 @@ type ConfirmFlow m r c =
     HasField "isMetroTestTransaction" r Bool
   )
 
+type CancelFlow m r c =
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r,
+    HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  )
+
 type GetFareFlow m r =
   ( CacheFlow m r,
     EncFlow m r,
@@ -127,8 +147,8 @@ class JourneyLeg leg m where
   search :: SearchRequestFlow m r c => SearchJourneyLeg leg m
   confirm :: ConfirmFlow m r c => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
-  cancel :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => CancelJourneyLeg leg m
-  isCancellable :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => IsCancellableJourneyLeg leg m
+  cancel :: CancelFlow m r c => CancelJourneyLeg leg m
+  isCancellable :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, m ~ Kernel.Types.Flow.FlowR AppEnv) => IsCancellableJourneyLeg leg m
   getState :: GetStateFlow m r c => GetJourneyLegState leg m
   getInfo :: GetStateFlow m r c => GetJourneyLeg leg m
   getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
@@ -673,7 +693,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         merchantOperatingCityId = Just merchantOpCityId,
         createdAt = now,
         updatedAt = now,
-        legSearchId = Nothing
+        legSearchId = Nothing,
+        isDeleted = Just False
       }
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney

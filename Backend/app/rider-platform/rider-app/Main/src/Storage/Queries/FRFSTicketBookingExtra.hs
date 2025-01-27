@@ -50,3 +50,9 @@ findAllByRiderId limit offset riderId mbVehicleCategory = do
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set Beam.isDeleted isDeleted]
+    [Se.Is Beam.id (Se.Eq reqId)]

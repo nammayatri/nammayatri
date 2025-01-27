@@ -41,3 +41,9 @@ findAllByJourneyId journeyId =
   findAllWithKVAndConditionalDB
     [Se.Is Beam.journeyId $ Se.Eq (Just journeyId.getId)]
     Nothing
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id WalkLegMultimodal -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set Beam.isDeleted isDeleted]
+    [Se.Is Beam.id (Se.Eq reqId)]

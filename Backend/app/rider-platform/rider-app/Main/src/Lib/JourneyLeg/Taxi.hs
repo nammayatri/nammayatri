@@ -3,11 +3,14 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
+import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
+import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
+import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.ServiceTierType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -22,6 +25,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 
@@ -79,7 +83,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             agency = journeyLegData.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
-            pricingId = Nothing
+            pricingId = Nothing,
+            isDeleted = Just False
           }
   search _ = throwError (InternalError "Not Supported")
 
@@ -128,10 +133,41 @@ instance JT.JourneyLeg TaxiLegRequest m where
   --     newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   --     QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
-  cancel (TaxiLegRequestCancel _legData) = return ()
+  cancel (TaxiLegRequestCancel legData) = do
+    mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
+    case mbBooking of
+      Just booking -> do
+        mbRide <- QRide.findByRBId booking.id
+        let cancelReq =
+              DCancel.CancelReq
+                { reasonCode = legData.reasonCode,
+                  reasonStage = SCR.OnAssign,
+                  additionalInfo = legData.additionalInfo,
+                  reallocate = legData.reallocate,
+                  blockOnCancellationRate = legData.blockOnCancellationRate
+                }
+        dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
+        void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+        QBooking.updateIsCancelled booking.id (Just True)
+      Nothing -> do
+        searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
+        journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
+        pricingId <- journeySearchData.pricingId & fromMaybeM (InvalidRequest $ "EstimateId not found for search id: " <> searchReq.id.getId)
+        cancelReq <- mkDomainCancelSearch searchReq.riderId (Id pricingId)
+        DCancel.cancelSearch searchReq.riderId cancelReq
+        QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
+    QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")
 
-  isCancellable ((TaxiLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
+  isCancellable ((TaxiLegRequestIsCancellable legData)) = do
+    mbBooking <- QBooking.findByTransactionId legData.searchId.getId
+    case mbBooking of
+      Just booking -> do
+        mbRide <- QRide.findByRBId booking.id
+        canCancel <- DCancel.isBookingCancellable booking mbRide
+        return $ JT.IsCancellableResponse {canCancel}
+      Nothing -> do
+        return $ JT.IsCancellableResponse {canCancel = True}
   isCancellable _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
