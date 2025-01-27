@@ -215,7 +215,8 @@ screen initialState (GlobalState globalState) =
             "RideAccepted"   -> do
                                 void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push
                                 void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
-                                void $ pure $ setValueToLocalStore RIDE_START_ODOMETER "" 
+                                void $ pure $ setValueToLocalStore RIDE_START_ODOMETER ""
+                                void $ pure $ setValueToLocalStore DRIVER_RIDE_STATUS "ON_PICKUP"
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
@@ -266,6 +267,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
+                                _ <- pure $ setValueToLocalStore DRIVER_RIDE_STATUS "RIDE_STARTED"
 
                                 let advancedRideId = case initialState.data.advancedRideData of
                                                         Just advancedRideData -> Just advancedRideData.id
@@ -315,6 +317,7 @@ screen initialState (GlobalState globalState) =
                                     _ -> pure unit 
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+                                _ <- pure $ setValueToLocalStore DRIVER_RIDE_STATUS "IDLE"
                                 _ <- pure $ JB.removeAllPolylines ""
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
