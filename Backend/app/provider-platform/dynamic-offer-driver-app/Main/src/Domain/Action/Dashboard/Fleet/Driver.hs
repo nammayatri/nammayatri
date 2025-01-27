@@ -485,14 +485,14 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
           mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.routeCodes "Route Codes"
-      vehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
+      vehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
           Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
-      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, ..}, vehicleNumberHash, routes)
+      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, vehicleCategory = Just vehicleCategory, ..}, vehicleNumberHash, routes)
 
     buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
       now <- getCurrentTime
@@ -1146,7 +1146,7 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
       >>= \case
         Left _ -> throwError $ InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
         Right locations -> listToMaybe locations & fromMaybeM (InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip.")
-  void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
+  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
   pure Success
 
 ---------------------------------------------------------------------
@@ -1296,7 +1296,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
     whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
       route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
       (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point
+      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
@@ -1347,7 +1347,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             merchantOperatingCityId = merchantOpCityId,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
-            tripEndSource = Nothing,
+            tripTerminationSource = Nothing,
             endRideApprovalRequestId = Nothing,
             createdAt = now,
             updatedAt = now
@@ -1386,6 +1386,7 @@ getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbV
       IN_PROGRESS -> Common.IN_PROGRESS
       PAUSED -> Common.PAUSED
       COMPLETED -> Common.COMPLETED
+      CANCELLED -> Common.CANCELLED
 
 ---------------------------------------------------------------------
 data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow

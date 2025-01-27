@@ -34,8 +34,10 @@ TripTransaction:
   tableName: trip_transaction
 
   types:
+    # Assignment Trip Status Flow : TRIP_ASSIGNED -> CANCELLED | INPROGRESS
+    # Inprogress Trip Status Flow : IN_PROGRESS -> PAUSED | COMPLETED
     TripStatus:
-      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
+      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     ActionSource:
@@ -64,7 +66,7 @@ TripTransaction:
     endRideApprovalRequestId: Maybe (Id ApprovalRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    tripEndSource: Maybe ActionSource
+    tripTerminationSource: Maybe ActionSource
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -108,7 +110,7 @@ TripTransaction:
       where: driverId
     updateOnEnd:
       kvFunction: updateOneWithKV
-      params: [status, endLocation, tripEndTime, tripEndSource]
+      params: [status, endLocation, tripEndTime, tripTerminationSource]
       where: id
     updateStatus:
       kvFunction: updateOneWithKV
