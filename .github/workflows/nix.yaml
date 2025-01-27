@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["main", "prodHotPush-Common","main-24jan"]
+    branches: ["main", "prodHotPush-Common", "wmb-fixes-hotpush"]
   pull_request:
-    branches: ["main", "prodHotPush-Common","main-24jan"]
+    branches: ["main", "prodHotPush-Common", "wmb-fixes-hotpush"]
   workflow_dispatch:
 
 jobs:
@@ -30,13 +30,13 @@ jobs:
 
       - name: Docker tasks
         id: docker
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common' || (github.ref == 'refs/heads/main-24jan'))
+        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common' || (github.ref == 'refs/heads/wmb-fixes-hotpush'))
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
 
       - name: Upload Docker image tarball
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common' || (github.ref == 'refs/heads/main-24jan'))
+        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common' || (github.ref == 'refs/heads/wmb-fixes-hotpush'))
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -45,7 +45,7 @@ jobs:
   push-docker:
     needs: build
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common') || (github.ref == 'refs/heads/main-24jan')
+    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common') || (github.ref == 'refs/heads/wmb-fixes-hotpush')
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4
