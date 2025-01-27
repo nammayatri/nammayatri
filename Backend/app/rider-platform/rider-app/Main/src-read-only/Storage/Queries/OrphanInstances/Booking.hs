@@ -33,6 +33,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     merchantOperatingCityId' <- Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- parseBaseUrl providerUrl
     tripTerms' <- if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.Booking.Booking
@@ -47,6 +48,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
+            disabilityTag = disabilityTag,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance,
@@ -65,6 +67,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             isDashboardRequest = isDashboardRequest,
             isReferredRide = isReferredRide,
             isScheduled = fromMaybe False isScheduled,
+            journeyLegOrder = journeyLegOrder,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             paymentMethodId = paymentMethodId,
@@ -87,6 +90,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             tripCategory = tripCategory,
             tripTerms = tripTerms',
             updatedAt = updatedAt,
+            vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
@@ -115,6 +119,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.createdAt = createdAt,
+        Beam.disabilityTag = disabilityTag,
         Beam.discount = discount <&> (.amount),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
@@ -135,6 +140,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.isDashboardRequest = isDashboardRequest,
         Beam.isReferredRide = isReferredRide,
         Beam.isScheduled = Just isScheduled,
+        Beam.journeyLegOrder = journeyLegOrder,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.paymentMethodId = paymentMethodId,
@@ -157,6 +163,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.tripCategory = tripCategory,
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = updatedAt,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType

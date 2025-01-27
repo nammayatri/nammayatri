@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
@@ -749,6 +747,7 @@ processIssueReportTypeActions (personId, merchantId) mbIssueOption mbRide mbMerc
     Just AC_RELATED_ISSUE -> processExternalIssueReporting AC_RELATED_ISSUE issueHandle
     Just DRIVER_TOLL_RELATED_ISSUE -> processExternalIssueReporting DRIVER_TOLL_RELATED_ISSUE issueHandle
     Just SYNC_BOOKING -> processBookingSyncReq issueHandle
+    Just EXTRA_FARE_MITIGATION -> processExternalIssueReporting EXTRA_FARE_MITIGATION issueHandle
     Nothing -> return ()
   where
     processBookingSyncReq :: BeamFlow m r => ServiceHandle m -> m ()

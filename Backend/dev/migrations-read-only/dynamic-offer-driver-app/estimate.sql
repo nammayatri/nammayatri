@@ -74,3 +74,14 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_suggestion doub
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN tip_options integer[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_operating_city_id character varying(36) ;

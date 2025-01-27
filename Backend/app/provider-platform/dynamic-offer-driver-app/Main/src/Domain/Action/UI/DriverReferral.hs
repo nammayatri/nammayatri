@@ -46,7 +46,7 @@ createDriverReferral ::
   Bool ->
   ReferralLinkReq ->
   m APISuccess
-createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq {..} = do
+createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -71,7 +71,9 @@ createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq
             driverId = cast driverId,
             linkedAt = now,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId
           }
 
 generateReferralCode ::
@@ -85,7 +87,7 @@ generateReferralCode ::
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m GenerateReferralCodeRes
-generateReferralCode (driverId, _, _) = do
+generateReferralCode (driverId, merchantId, merchantOpCityId) = do
   mbReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
 
   case mbReferralCodeWithDriver of
@@ -106,7 +108,9 @@ generateReferralCode (driverId, _, _) = do
             driverId = cast driverId,
             linkedAt = now,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId
           }
     formatReferralCode rc =
       let len = length rc

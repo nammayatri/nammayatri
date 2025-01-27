@@ -20,6 +20,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -36,6 +37,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Domain.Utils
 import Environment
 import Kernel.External.Maps (LatLong (..))
+import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -88,7 +90,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             pure otpCode
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  previousRideInprogress <- bool (QRide.getInProgressByDriverId driver.id) (pure Nothing) (booking.isScheduled)
+  previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
+  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
@@ -98,18 +101,21 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRide.createRide ride
   QRideD.create rideDetails
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
-    when (not booking.isScheduled) $ QDI.updateOnRide True (cast driver.id)
+    when (not booking.isScheduled) $ do
+      whenJust (booking.toLocation) $ \toLoc -> do
+        QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+      QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
   if booking.isScheduled
     then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
-    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
+    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken EmptyDynamicParam
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -164,7 +170,9 @@ buildRideDetails ride driver vehicle = do
         vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
         defaultServiceTierName = defaultServiceTierName,
-        createdAt = Just now
+        createdAt = Just now,
+        merchantId = ride.merchantId,
+        merchantOperatingCityId = Just ride.merchantOperatingCityId
       }
 
 buildRide ::
@@ -174,18 +182,18 @@ buildRide ::
   Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
-  Maybe DRide.Ride ->
+  Maybe DDI.DriverInformation ->
   UTCTime ->
   DVeh.Vehicle ->
   Bool ->
   Maybe Bool ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment enableOtpLessRide = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
   trackingUrl <- buildTrackingUrl guid
-  let previousRideToLocation = previousRide >>= (.toLocation)
+  let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
   return
     DRide.Ride
@@ -212,6 +220,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tripStartPos = Nothing,
         tripEndPos = Nothing,
         rideEndedBy = Nothing,
+        isDriverSpecialLocWarrior = fromMaybe False (dinfo <&> (.isSpecialLocWarrior)),
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
@@ -263,7 +272,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         estimatedEndTimeRange = Nothing,
         rideTags = Nothing,
         hasStops = booking.hasStops,
-        isPickupOrDestinationEdited = Nothing
+        isPickupOrDestinationEdited = Just False
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -334,7 +343,7 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
     then do
       Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-        unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
+        unless hasAdvancedRide $ QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
         QDI.updateHasAdvancedRide (cast personId) False
         void $ Redis.del $ editDestinationUpdatedLocGeohashKey personId
     else throwError $ DriverTransactionTryAgain (Just personId.getId)
@@ -376,4 +385,8 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.AMBULANCE_AC_OXY -> buffer.ambulance
     DST.AMBULANCE_VENTILATOR -> buffer.ambulance
     DST.SUV_PLUS -> buffer.suvplus
+    DST.HERITAGE_CAB -> buffer.heritagecab
+    DST.EV_AUTO_RICKSHAW -> buffer.evautorickshaw
     DST.DELIVERY_LIGHT_GOODS_VEHICLE -> buffer.deliveryLightGoodsVehicle
+    DST.BUS_NON_AC -> buffer.busNonAc
+    DST.BUS_AC -> buffer.busAc

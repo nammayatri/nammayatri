@@ -15,6 +15,7 @@
 module SharedLogic.PersonDefaultEmergencyNumber where
 
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions

@@ -1,12 +1,8 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module IssueManagement.Storage.Queries.Issue.IGMIssue where
 
 import qualified Data.Text
-import qualified Data.Time as T
-import qualified IGM.Enums as Spec
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IGMIssue as DIGMIssue
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as Beam

@@ -1,10 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.TriggerFCM (postTriggerFCMMessage) where
 
 import qualified API.Types.UI.TriggerFCM
-import Data.OpenApi (ToSchema)
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -17,9 +14,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth
 import Tools.Error (CustomerError (..))
 import Tools.Notifications
 

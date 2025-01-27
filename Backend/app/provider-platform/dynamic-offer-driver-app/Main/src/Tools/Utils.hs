@@ -2,6 +2,7 @@ module Tools.Utils where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import qualified Domain.Types.Booking as DB
@@ -31,6 +32,10 @@ convertTags input = A.object $ map toObject pairs
     toObject xs = do
       let reconstructed = T.intercalate "#" xs
       (A.fromText $ T.strip reconstructed :: A.Key) A..= A.Null
+
+accessKey :: T.Text -> A.Value -> Maybe A.Value
+accessKey keyValue (A.Object obj) = KM.lookup (A.fromText keyValue) obj
+accessKey _ _ = Nothing
 
 isDropInsideThreshold :: DB.Booking -> DTConf.TransporterConfig -> LatLong -> Bool
 isDropInsideThreshold booking thresholdConfig currLoation = do

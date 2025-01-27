@@ -11,12 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module SharedLogic.DynamicPricing where
 
 import Data.Aeson
 import Data.Default.Class
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
@@ -28,7 +28,8 @@ data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
-    version :: Maybe Text
+    version :: Maybe Text,
+    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

@@ -11,10 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Tabular.GateInfo where
@@ -39,6 +37,8 @@ mkPersist
       specialLocationId SpecialLocationTId
       defaultDriverExtra Int Maybe
       name Text
+      merchantId Text Maybe
+      merchantOperatingCityId Text Maybe
       address Text Maybe
       canQueueUpOnGate Bool
       createdAt UTCTime
@@ -60,5 +60,7 @@ instance FromTType GateInfoT Domain.GateInfo where
         { id = Id id,
           specialLocationId = fromKey specialLocationId,
           geom = Nothing,
+          merchantId = Id <$> merchantId,
+          merchantOperatingCityId = Id <$> merchantOperatingCityId,
           ..
         }

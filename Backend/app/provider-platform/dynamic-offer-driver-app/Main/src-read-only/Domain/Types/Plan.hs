@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -20,7 +19,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Plan = Plan
-  { basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
+  { allowStrikeOff :: Kernel.Prelude.Bool,
+    basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
     cgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     description :: Kernel.Prelude.Text,
     eligibleForCoinDiscount :: Kernel.Prelude.Bool,
@@ -29,6 +29,7 @@ data Plan = Plan
     id :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     isDeprecated :: Kernel.Prelude.Bool,
     isOfferApplicable :: Kernel.Prelude.Bool,
+    listingPriority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,

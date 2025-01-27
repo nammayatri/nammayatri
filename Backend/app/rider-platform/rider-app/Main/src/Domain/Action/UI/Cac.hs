@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.Cac where
 
 import qualified Data.Aeson
 import qualified Data.Aeson.KeyMap
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -17,10 +13,8 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
-import Servant
 import SharedLogic.Cac
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth
 import Tools.Error
 
 postGetUiConfigs ::

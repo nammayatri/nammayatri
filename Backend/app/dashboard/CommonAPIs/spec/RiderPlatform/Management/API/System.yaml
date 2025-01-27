@@ -6,11 +6,13 @@ module: System
 apis:
   - POST:
       endpoint: /runQuery
-      auth: ApiAuth APP_BACKEND_MANAGEMENT MIGRATION RUN_QUERY
+      auth: ApiAuthV2
       request:
         type: QueryData
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MIGRATION RUN_QUERY
 
 types:
   QueryData:

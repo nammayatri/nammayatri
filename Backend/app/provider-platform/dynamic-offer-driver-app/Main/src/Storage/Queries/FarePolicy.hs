@@ -20,7 +20,7 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as DPM
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
@@ -116,6 +116,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.parkingCharge = parkingCharge,
         BeamFP.perStopCharge = perStopCharge,
         BeamFP.tollCharges = tollCharges,
+        BeamFP.tipOptions = tipOptions,
         BeamFP.currency = Just currency,
         BeamFP.distanceUnit = Just distanceUnit,
         BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
@@ -134,6 +135,8 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.createdAt = createdAt,
         BeamFP.updatedAt = updatedAt,
+        BeamFP.merchantId = getId <$> merchantId,
+        BeamFP.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
 
@@ -210,6 +213,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               parkingCharge = parkingCharge,
               perStopCharge = perStopCharge,
               tollCharges = tollCharges,
+              tipOptions = tipOptions,
               currency = fromMaybe INR currency,
               distanceUnit = fromMaybe Meter distanceUnit,
               nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
@@ -238,6 +242,8 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
               createdAt = createdAt,
               updatedAt = updatedAt,
+              merchantId = Id <$> merchantId,
+              merchantOperatingCityId = Id <$> merchantOperatingCityId,
               ..
             }
     Nothing -> return Nothing

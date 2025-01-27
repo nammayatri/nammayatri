@@ -25,6 +25,7 @@ import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..), runBackT)
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe, head)
 import Data.Either (Either(..), either)
+import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
@@ -37,7 +38,7 @@ import Engineering.Helpers.Commons as EHC
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime, decodeErrorCode)
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, drawRoute, toggleBtnLoader)
 import JBridge as JB
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
@@ -190,8 +191,8 @@ triggerOTPBT payload = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ EHU.showToast $ (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         void $ lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
@@ -229,8 +230,8 @@ resendOTPBT token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
-            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ EHU.showToast  (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 
@@ -245,14 +246,14 @@ verifyTokenBT payload token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
-            pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
+            void $ lift $ lift $ EHU.showToast  (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}})
                 void $ lift $ lift $ EHU.toggleLoader false
-                pure $ toast "INVALID_AUTH_DATA"
+                void $ lift $ lift $ EHU.showToast  "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-                pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                void $ lift $ lift $ EHU.showToast  (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 -- verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
@@ -336,7 +337,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     withAPIResultBT (EP.placeDetails id) identity errorHandler (lift $ lift $ callAPI headers (PlaceDetailsReq id))
     where
     errorHandler errorPayload  = do
-        pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+        void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
@@ -367,7 +368,7 @@ rideSearchBT payload = do
                             400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING
                             400, _, _ -> codeMessage
                             _,_,_ -> getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            pure $ toast message
+            void $ lift $ lift $ EHU.showToast  message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             void $ lift $ lift $ EHU.toggleLoader false
@@ -488,10 +489,10 @@ selectEstimateBT payload estimateId = do
                 codeMessage = decodeError errResp.errorMessage "errorCode"
                 userMessage = decodeError errResp.errorMessage "errorMessage"
             case errorPayload.code, codeMessage, userMessage of
-                400, "SEARCH_REQUEST_EXPIRED", _ -> pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
-                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> pure $ toast (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
-                400, _, _ -> pure $ toast codeMessage
-                _, _, _ -> pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                400, "SEARCH_REQUEST_EXPIRED", _ -> void $ lift $ lift $ EHU.showToast  (getString ESTIMATES_EXPIRY_ERROR)
+                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> void $ lift $ lift $ EHU.showToast  (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
+                400, _, _ -> void $ lift $ lift $ EHU.showToast  codeMessage
+                _, _, _ -> void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
@@ -769,8 +770,8 @@ getRouteBT routeState body = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
-makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
-makeGetRouteReq slat slng dlat dlng = GetRouteReq {
+makeGetRouteReq :: Number -> Number -> Number -> Number -> Maybe String -> GetRouteReq
+makeGetRouteReq slat slng dlat dlng mbRideId = GetRouteReq {
     "waypoints": [
       LatLong {
           "lon": slng,
@@ -781,7 +782,8 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
           "lat": dlat
       }],
     "mode": Just "CAR",
-    "calcPoints": true
+    "calcPoints": true,
+    "rideId": mbRideId
 }
 
 walkCoordinate :: Number -> Number -> Number -> Number -> Locations
@@ -903,11 +905,11 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
             let (Snapped points) = route.points
             case points of
                 [] -> do
-                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng Nothing)
                     callDrawRoute ((routeResponse) !! 0)
                 _  -> callDrawRoute existingRoute
         Nothing -> do
-            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng Nothing)
             _ <- pure $ printLog "drawRouteResponse" routeResponse
             let ios = (os == "IOS")
             let route = ((routeResponse) !! 0)
@@ -1308,13 +1310,20 @@ getMetroBookingStatus shortOrderID = do
   where
     unwrapResponse x = x
 
-getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
-getMetroBookingStatusListBT = do
+getMetroBookingStatusListBT :: String -> Maybe String -> Maybe String -> FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT vehicleType limit offset = do
       headers <- getHeaders' "" false
-      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      withAPIResultBT (EP.getMetroBookingList vehicleType limit offset) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq vehicleType limit offset))
       where
         errorHandler _ = do
             BackT $ pure GoBack
+
+getMetroBookingStatusList :: String -> Maybe String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetMetroBookingListResp)
+getMetroBookingStatusList vehicleType limit offset = do 
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingList vehicleType limit offset) unwrapResponse $ callAPI headers (GetMetroBookingListReq vehicleType limit offset)
+  where
+    unwrapResponse x = x
 
 
 retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
@@ -1332,45 +1341,68 @@ retryMetroTicketPayment quoteId = do
   where
     unwrapResponse x = x
 
-getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
-getMetroStationBT city = do
+getMetroStationBT :: String -> String -> String -> String-> String -> FlowBT String GetMetroStationResponse
+getMetroStationBT vehicleType city routeCode endStationCode location = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq city)
+    withAPIResultBT (EP.getMetroStations vehicleType city routeCode endStationCode location) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode endStationCode location)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
-searchMetroBT  requestBody = do
+getBusRoutesBT :: String -> String -> String -> FlowBT String GetBusRoutesResponse
+getBusRoutesBT city startStationCode endStationCode= do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    withAPIResultBT (EP.getBusRoutes city startStationCode endStationCode ) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetBusRoutesReq city startStationCode endStationCode)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+frfsSearchBT :: String -> FRFSSearchAPIReq -> FlowBT String FrfsSearchResp
+frfsSearchBT vehicleType requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.frfsSearch vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (FrfsSearchRequest requestBody vehicleType))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+frfsSearch :: String -> FRFSSearchAPIReq -> Flow GlobalState (Either ErrorResponse FrfsSearchResp)
+frfsSearch vehicleType requestBody = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.frfsSearch vehicleType) identity $ callAPI headers (FrfsSearchRequest requestBody vehicleType)
+
+busAutoCompleteBT :: String -> String -> String -> Maybe String -> String -> Maybe String -> FlowBT String AutoCompleteResp
+busAutoCompleteBT vehicleType city location input limit offset = do 
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.busAutoComplete vehicleType city location input limit offset) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input limit offset)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
-makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FRFSSearchAPIReq
+makeSearchMetroReq srcCode destCode count routeCode = FRFSSearchAPIReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
-    "quantity" : count
+    "quantity" : count,
+    "routeCode" : routeCode
     }
 
-getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
-getMetroQuotesBT searchId = do
+frfsQuotesBT :: String -> FlowBT String FrfsQuotesRes
+frfsQuotesBT searchId = do
         headers <- getHeaders' "" false
-        withAPIResultBT (EP.getMetroQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroQuotesReq searchId))
+        withAPIResultBT (EP.frfsQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (FrfsQuotesReq searchId))
         where
           errorHandler _ = do
                 BackT $ pure GoBack
 
-getMetroQuotes :: String -> Flow GlobalState (Either ErrorResponse GetMetroQuotesRes)
-getMetroQuotes searchId = do
+frfsQuotes :: String -> Flow GlobalState (Either ErrorResponse FrfsQuotesRes)
+frfsQuotes searchId = do
   headers <- getHeaders "" false
-  withAPIResult (EP.getMetroQuotes searchId) unwrapResponse $ callAPI headers (GetMetroQuotesReq searchId)
+  withAPIResult (EP.frfsQuotes searchId) unwrapResponse $ callAPI headers (FrfsQuotesReq searchId)
   where
   unwrapResponse x = x
  
-confirmMetroQuoteBT :: String -> FlowBT String MetroTicketBookingStatus
+confirmMetroQuoteBT :: String -> FlowBT String FRFSTicketBookingStatusAPIRes
 confirmMetroQuoteBT quoteId = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.confirmMetroQuote quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (ConfirmMetroQuoteReq quoteId))
@@ -1378,7 +1410,7 @@ confirmMetroQuoteBT quoteId = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
-confirmMetroQuote :: String -> Flow GlobalState (Either ErrorResponse MetroTicketBookingStatus)
+confirmMetroQuote :: String -> Flow GlobalState (Either ErrorResponse FRFSTicketBookingStatusAPIRes)
 confirmMetroQuote quoteId = do
   headers <- getHeaders "" false
   withAPIResult (EP.confirmMetroQuote quoteId) unwrapResponse $ callAPI headers (ConfirmMetroQuoteReq quoteId)
@@ -1392,6 +1424,13 @@ getMetroStatusBT bookingId = do
         where
           errorHandler _ = do
                 BackT $ pure GoBack
+
+getMetroStatus :: String -> Flow GlobalState (Either ErrorResponse GetMetroBookingStatusResp)
+getMetroStatus bookingId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingStatus bookingId) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq bookingId)
+  where
+  unwrapResponse x = x
 
 metroBookingSoftCancelBT :: String -> FlowBT String APISuccessResp
 metroBookingSoftCancelBT bookingId = do
@@ -1439,10 +1478,10 @@ metroBookingHardCancelStatus bookingId = do
     where
     unwrapResponse x = x
 
-getMetroBookingConfigBT :: String -> FlowBT String MetroBookingConfigRes
-getMetroBookingConfigBT city = do
+getFRFSBookingConfigBT :: String -> FlowBT String FRFSConfigAPIRes
+getFRFSBookingConfigBT city = do
     headers <- getHeaders' "" true
-    withAPIResultBT (EP.getMetroBookingConfig city) identity errorHandler (lift $ lift $ callAPI headers (MetroBookingConfigReq city))
+    withAPIResultBT (EP.getFRFSBookingConfig city) identity errorHandler (lift $ lift $ callAPI headers (MetroBookingConfigReq city))
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack
@@ -1582,3 +1621,37 @@ getDeliveryImageBT rideId = do
     where
     errorHandler errorPayload = do
         BackT $ pure GoBack
+
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ INT.fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x
+
+---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
+confirmMetroQuoteV2 :: String -> FRFSQuoteConfirmReq -> Flow GlobalState (Either ErrorResponse FRFSTicketBookingStatusAPIRes)
+confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
+  where
+    unwrapResponse x = x

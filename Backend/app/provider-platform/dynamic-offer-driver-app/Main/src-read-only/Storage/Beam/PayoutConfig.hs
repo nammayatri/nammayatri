@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.PayoutConfig where
@@ -19,6 +17,7 @@ data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
     expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
+    maxPayoutReferralForADay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

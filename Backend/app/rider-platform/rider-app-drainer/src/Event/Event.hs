@@ -23,6 +23,7 @@ mkDBSyncMetric = do
       KafkaUpdateMissing -> inc (metrics </> #rider_kafka_update_missing)
       KafkaPushFailure action model -> inc (metrics </> #rider_kafka_push_failure) action model
       ProcessLatency processName latency -> observe (metrics </> #rider_process_latency) latency processName
+      KvConfigDecodeFailure -> inc (metrics </> #eider_kv_config_decode_failure)
   where
     collectionDBSyncMetric =
       peek_db_command_error
@@ -36,4 +37,5 @@ mkDBSyncMetric = do
         .> rider_kafka_update_missing
         .> rider_kafka_push_failure
         .> rider_process_latency
+        .> eider_kv_config_decode_failure
         .> MNil

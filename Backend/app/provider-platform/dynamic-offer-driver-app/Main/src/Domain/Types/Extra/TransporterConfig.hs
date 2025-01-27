@@ -1,7 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.TransporterConfig where
 
@@ -19,7 +16,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import GHC.Generics (Generic)
 import Prelude
 
-data AppletKey = SosAppletID | RentalAppletID deriving (Show, Read, Eq, Ord, Generic)
+data AppletKey = SosAppletID | RentalAppletID | FleetAppletID deriving (Show, Read, Eq, Ord, Generic)
 
 instance Hashable AppletKey
 
@@ -28,11 +25,13 @@ appletKeyToString :: AppletKey -> Text
 appletKeyToString = \case
   SosAppletID -> "SosAppletID"
   RentalAppletID -> "RentalAppletID"
+  FleetAppletID -> "FleetAppletID"
 
 stringToAppletKey :: Text -> Maybe AppletKey
 stringToAppletKey = \case
   "SosAppletID" -> Just SosAppletID
   "RentalAppletID" -> Just RentalAppletID
+  "FleetAppletID" -> Just FleetAppletID
   _ -> Nothing
 
 instance ToJSON AppletKey where

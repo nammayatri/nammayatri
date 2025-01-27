@@ -232,7 +232,8 @@ foreign import getBtnLoader :: String -> Boolean
 foreign import launchInAppRatingPopup :: Unit -> Effect Unit
 foreign import getExtendedPath :: Locations -> Locations
 foreign import generateSessionId :: Unit -> String
-
+foreign import cleanOnResumeCallback :: Effect Unit
+foreign import cleanOnPauseCallback :: Effect Unit
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
@@ -261,14 +262,15 @@ foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
-foreign import getLocationPermissionStatus :: Fn1 Unit String 
-foreign import pauseYoutubeVideo :: Unit -> Unit 
-foreign import releaseYoutubeView :: Unit -> Unit 
+foreign import getLocationPermissionStatus :: Fn1 Unit String
+foreign import pauseYoutubeVideo :: Unit -> Unit
+foreign import releaseYoutubeView :: Unit -> Unit
 foreign import storeCallBackLocateOnMap :: EffectFn2 (String -> String -> String -> Effect Unit) ((String -> String -> String -> Effect Unit) -> String -> String -> String -> Effect Unit) Unit
+foreign import storeCallbackHotspotMap :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> String -> action) Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
 foreign import downloadMLTranslationModel :: EffectFn1 String Unit
-foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
+foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
 foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
 foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
@@ -280,6 +282,7 @@ foreign import askRequestedPermissionsWithCallback :: forall action. Array Strin
 foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
 foreign import stopRecord :: Unit -> Effect Unit
+foreign import drawCircleOnMap :: EffectFn1 CircleConfig Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
@@ -291,14 +294,15 @@ foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 foreign import triggerCallBackQueue :: EffectFn1 String  Unit
 foreign import updateQueue :: EffectFn4 String String String (String -> String -> String -> Effect Unit) Unit
-foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
+foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit
 foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+foreign import getCircleCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> String -> String -> action) Unit
 
 foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 foreign import getAndroidId :: Unit -> String
-foreign import getAppName :: String
+foreign import getAppName :: Unit -> String
 foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) ShakeListenerConfig Unit
 foreign import unregisterShakeListener :: Unit -> Unit
 foreign import registerShakeListener :: Unit -> Unit
@@ -313,7 +317,7 @@ foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
 foreign import executeJS :: Fn2 (Array String) String String
 
-type SliderConfig = { 
+type SliderConfig = {
   id :: String,
   sliderConversionRate :: Number,
   sliderMinValue :: Int,
@@ -490,13 +494,13 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 --             liftFlow (toggleLoaderImpl flag)
 --         Nothing -> liftFlow (toggleLoaderImpl flag)
 
-removeAllPolylines :: String -> Unit 
+removeAllPolylines :: String -> Unit
 removeAllPolylines str = removeAllPolylinesImpl markersToRemove
-  where 
+  where
     removeAllPolylinesImpl :: Array String -> Unit
     removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
-    
-    markersToRemove :: Array String   
+
+    markersToRemove :: Array String
     markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", "ny_ic_bike_nav_on_map","ny_ic_bike_pickup_nav_on_map", "", "ny_ic_suv_plus_nav_on_map", "ny_ic_bike_delivery_nav_on_map"]
 
 
@@ -618,7 +622,7 @@ type SpecialZoneMarkerConfig = {
 }
 
 type MarkerImageConfig = {
-  image :: String, 
+  image :: String,
   height :: Int,
   width :: Int
 }
@@ -739,7 +743,12 @@ type CircleConfig = {
   fillColor :: String,
   strokeWidth :: Int,
   secondaryStrokeColor :: String,
-  circleId :: String
+  circleId :: String,
+  centerLat :: Number,
+  centerLon :: Number,
+  showPrimaryStrokeColor :: Boolean,
+  strokePattern :: String,
+  isCircleClickable :: Boolean
 }
 
 defaultCircleConfig :: CircleConfig
@@ -749,15 +758,24 @@ defaultCircleConfig = {
   fillColor : "#00FFFFFF",
   strokeWidth : 0,
   secondaryStrokeColor : "#00FFFFFF",
-  circleId : ""
+  circleId : "",
+  centerLat : 0.0,
+  centerLon : 0.0,
+  showPrimaryStrokeColor : true,
+  strokePattern : "NORMAL",
+  isCircleClickable : false
 }
+
+data StrokePattern = NORMAL | DASHED | DOTTED
+derive instance genericStrokePattern :: Generic StrokePattern _
+instance showStrokePattern :: Show StrokePattern where show = genericShow
 
 type AnimationConfig = {
   animationType :: String,
   animationDuration :: String
 }
 
-defaultAnimationConfig :: AnimationConfig 
+defaultAnimationConfig :: AnimationConfig
 defaultAnimationConfig = {
     animationType : "NONE"
   , animationDuration : "0"
@@ -874,17 +892,17 @@ updateRouteConfig = {
 
 mapRouteConfig :: MapRouteConfig
 mapRouteConfig = {
-      sourceSpecialTagIcon: "", 
-      destSpecialTagIcon: "", 
-      vehicleSizeTagIcon: 0, 
-      isAnimation: false, 
+      sourceSpecialTagIcon: "",
+      destSpecialTagIcon: "",
+      vehicleSizeTagIcon: 0,
+      isAnimation: false,
       autoZoom : true,
       dashUnit : 1,
       gapUnit : 0,
       polylineAnimationConfig: {
-        color: "", 
-        draw: 0, 
-        fade: 0, 
+        color: "",
+        draw: 0,
+        fade: 0,
         delay: 0
       }
   }
@@ -932,7 +950,7 @@ displayBase64ImageConfig = {
   , id : ""
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
-  , adjustViewBounds : true 
+  , adjustViewBounds : true
 }
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 
@@ -956,7 +974,7 @@ type RouteConfig = {
 }
 
 mkRouteConfig :: Locations -> MarkerConfig -> MarkerConfig -> Maybe (Array MarkerConfig) -> String -> String -> Boolean -> RouteKeysType -> MapRouteConfig -> RouteConfig
-mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs routeType style isActual key mapRouteConfig = 
+mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs routeType style isActual key mapRouteConfig =
   routeConfig{
     locations = normalRoute,
     routeType = routeType,
@@ -965,18 +983,18 @@ mkRouteConfig normalRoute startMarkerConfig endMarkerConfig mbStopMarkerConfigs 
     mapRouteConfig = mapRouteConfig,
     startMarkerConfig = startMarkerConfig,
     endMarkerConfig = endMarkerConfig,
-    stopMarkerConfigs = fromMaybe [] mbStopMarkerConfigs, 
+    stopMarkerConfigs = fromMaybe [] mbStopMarkerConfigs,
     routeKey = show key
   }
 
 mkDrawRouteConfig :: Array RouteConfig -> String -> DrawRouteConfig
-mkDrawRouteConfig routeConfigs pureScriptID = 
+mkDrawRouteConfig routeConfigs pureScriptID =
   { routeConfigs : routeConfigs,
     pureScriptID : pureScriptID
   }
 
 
-routeConfig :: RouteConfig 
+routeConfig :: RouteConfig
 routeConfig = {
   locations : {points: []},
   style : "LineString",
@@ -1013,7 +1031,7 @@ instance showCloseAction :: Show CloseAction where show = genericShow
 
 showDateTimePicker ∷ forall action. (action → Effect Unit) -> (String → Int → Int → Int → String → Int → Int → action) -> Maybe String -> Maybe String -> Boolean -> Boolean -> Aff Unit
 showDateTimePicker push action maybePrevDate maybeMaxDate openDatePicker openTimePicker = do
-  let 
+  let
     prevDate =  case maybePrevDate of
                   Nothing -> -1.0
                   Just date -> getEpochTime date
@@ -1085,6 +1103,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     when isActive $ do push key lat lon
     pure isActive
 
-
 foreign import triggerReloadApp :: String ->Effect Unit
+
 foreign import rsEncryption :: String -> String

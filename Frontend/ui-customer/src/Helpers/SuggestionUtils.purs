@@ -181,9 +181,12 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
                   }
           updatedTrips = DA.mapMaybe (\item -> transformTrip locationsToExclude $ updateExisting item) trips
+          validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) updatedTrips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
-          sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
+          sortedTrips = sortTripsByScore $ updateVariantInfo validTrips
         in
           if tripExists
           then sortedTrips
@@ -392,21 +395,23 @@ correctServiceTierName serviceTierName =
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
 removeDuplicateTrips trips precision = 
-  let 
-    grouped = DA.groupBy 
-      (\trip1 trip2 -> 
-        (getGeoHash trip1.destLat trip1.destLong precision) 
-        == 
-        (getGeoHash trip2.destLat trip2.destLong precision)
-        && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
-      ) 
-      trips
+  let validTrips = filter (\trip -> 
+          (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong) && (getDistanceBwCordinates trip.sourceLat trip.sourceLong trip.destLat trip.destLong /= 0.0)
+        ) trips
+      grouped = DA.groupBy 
+        (\trip1 trip2 -> 
+          (getGeoHash trip1.destLat trip1.destLong precision) 
+          == 
+          (getGeoHash trip2.destLat trip2.destLong precision)
+          && trip1.serviceTierNameV2 == trip2.serviceTierNameV2
+        ) 
+        validTrips
 
-    maxScoreTrips = map 
-      (maximumBy (comparing (\trip -> trip.locationScore))) 
-      grouped
-  in 
-    catMaybes maxScoreTrips
+      maxScoreTrips = map 
+        (maximumBy (comparing (\trip -> trip.locationScore))) 
+        grouped
+    in 
+      catMaybes maxScoreTrips
 
 isPointWithinXDist :: Trip -> Number -> Number -> Number -> Boolean
 isPointWithinXDist item lat lon thresholdDist =
@@ -480,8 +485,10 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
                 (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ DA.reverse 
                 (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
-      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) sortedTripList
+      validTrips = filter (\trip -> 
+              (trip.sourceLat /= trip.destLat || trip.sourceLong /= trip.destLong)
+            ) sortedTripList 
+      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) validTrips
       filteredDestinations = DA.mapMaybe (\item -> transformSuggestion locationsToExclude item) suggestedDestinations
   in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations : filteredDestinations}
 

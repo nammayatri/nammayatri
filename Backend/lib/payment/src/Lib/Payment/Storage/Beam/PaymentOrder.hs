@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Payment.Storage.Beam.PaymentOrder where
 
@@ -59,8 +57,10 @@ data PaymentOrderT f = PaymentOrderT
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
     serviceProvider :: B.C f (Maybe Payment.PaymentService),
+    sdkPayloadDump :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

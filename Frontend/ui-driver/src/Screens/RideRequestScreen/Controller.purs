@@ -72,8 +72,9 @@ data Action
   | ScrollStateChanged ScrollState
   | Loader
   | OnFadeComplete String
-  | Notification String
+  | Notification String ST.NotificationBody
   | UpdateCurrentLocation String String
+  | UpdateNoLocationFlag
 
 
 eval :: Action -> RideRequestScreenState -> Eval Action ScreenOutput RideRequestScreenState
@@ -83,7 +84,7 @@ eval (SelectDay index) state = do
   let
     now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")
     date  = if index == 0 then now else  (getFutureDate now 1)
-    newState = state { data { activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date } ,props{shouldCall = true}}
+    newState = state { data { activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date } ,props{shouldCall = true , noLocationFlag = false}}
 
   exit $ GoBackToRideRequest newState
 
@@ -91,10 +92,10 @@ eval (SelectDay index) state = do
 eval NoAction state = continue state
 
 eval Refresh state = 
-  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}} 
+  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}, props{noLocationFlag = false}} 
   in updateAndExit newState $ RefreshScreen newState
 
-eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}} $ LoaderOutput state
+eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}, props{noLocationFlag = false}} $ LoaderOutput state
 
 
 eval AfterRender state = continue state
@@ -108,27 +109,21 @@ eval (PastRideApiAC (ScheduledBookingListResponse resp) _) state = do
                                 in
                                 response1.id == response2.id) $ DA.union oldBookingsResp.bookings resp.bookings
       updatedBookingResp = ScheduledBookingListResponse { bookings : updatedBookings}
-  continueWithCmd state { data { resp = updatedBookingResp, loadMoreDisabled =  false , refreshLoader  = false ,shimmerLoader = AnimatedIn }, props {receivedResponse = true } } [ pure $ FilterSelected ]
+  continueWithCmd state { data { resp = updatedBookingResp, loadMoreDisabled =  false , refreshLoader  = false ,shimmerLoader = AnimatedIn }, props {receivedResponse = true} } [ pure $ FilterSelected ]
 
 
-eval (RideTypeSelected rideType idx  )state = continueWithCmd state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} } [pure $ FilterSelected]
+eval (RideTypeSelected rideType idx  )state = do
+  let
+    newState =  state {data { activeRideIndex = idx , shimmerLoader = ST.AnimatedIn} , props{noLocationFlag = false} } 
+  exit $ GoBackToRideRequest newState
+  
+
 
 eval FilterSelected state = do
   let
     (ScheduledBookingListResponse resp) = state.data.resp
-    rideType = maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex)
-
-    filteredList =
-      filter
-        ( \(ScheduleBooking trip) ->
-            let
-              (BookingAPIEntity booking) = trip.bookingDetails
-              (CTA.TripCategory tripCategory) = booking.tripCategory
-            in
-              rideType == Nothing || Just tripCategory.tag == rideType
-        )
-        resp.bookings
-
+    rideType =  maybe Nothing (\item -> item.rideType) (state.data.pillViewArray !! state.data.activeRideIndex) 
+    filteredList =resp.bookings    
     shimmerLoader =  ST.AnimatedOut
   continue state { data { filteredArr = filteredList, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
 
@@ -177,7 +172,7 @@ eval (OnFadeComplete _ ) state = do
               }
   }
 
-eval (Notification notificationType) state = do
+eval (Notification notificationType _) state = do
     if (HU.checkNotificationType notificationType ST.DRIVER_ASSIGNMENT ) then do
       exit $ FcmNotifications notificationType state
     else continue state
@@ -194,6 +189,7 @@ eval (UpdateCurrentLocation lat lon) state = do
           state { data { driverLat = curr_lat, driverLong = curr_lon } }
   continue updatedState
 
+eval (UpdateNoLocationFlag) state = continue state{data{shimmerLoader = AnimatedOut },props{noLocationFlag = true}} 
 
 eval _ state = update state
 
@@ -280,6 +276,7 @@ myRideListTransformerProp listres =
             HATCHBACK_TIER -> "ic_hatchback_ac"
             TAXI -> "ny_ic_non_ac"
             TAXI_PLUS -> "ny_ic_sedan_ac"
+            SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
             _ -> "ny_ic_ac_mini"
 
           

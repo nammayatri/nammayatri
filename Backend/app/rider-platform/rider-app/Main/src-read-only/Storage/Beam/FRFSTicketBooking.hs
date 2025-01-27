@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSTicketBooking where
@@ -14,6 +12,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT
@@ -34,9 +33,17 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     estimatedPrice :: B.C f Kernel.Types.Common.HighPrecMoney,
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fromStationId :: B.C f Kernel.Prelude.Text,
+    googleWalletJWTUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
+    journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -52,14 +59,9 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     quoteId :: B.C f Kernel.Prelude.Text,
     refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     riderId :: B.C f Kernel.Prelude.Text,
-    routeId :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes),
     routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
-    serviceTierDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    serviceTierLongName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    serviceTierProviderCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    serviceTierShortName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    serviceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
@@ -76,6 +78,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['journeyId], ['quoteId], ['riderId], ['searchId]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

@@ -1,11 +1,8 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.Sos where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import API.Types.UI.Sos
 import AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
@@ -356,7 +353,7 @@ getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
   where
     processCallRecord :: Text -> Maybe Text -> Call.CallStatus -> DCall.CallStatus -> Flow ()
     processCallRecord callSid mbdigitPressed validStatus res = do
-      let digitPressed = fromMaybe "0" $ T.replace "\"" "" <$> mbdigitPressed
+      let digitPressed = fromMaybe "1" $ T.replace "\"" "" <$> mbdigitPressed
       QCallStatus.updateCustomerIvrResponse callSid (Just digitPressed) validStatus
       logDebug $ "digitPressed : " <> digitPressed
       case res.rideId of
@@ -414,12 +411,11 @@ incidentReportHandler person merchantId merchantOpCityId rideId token coordinate
   where
     scheduleIncidentFollowUp :: IncidentReportRes -> Flow ()
     scheduleIncidentFollowUp res = do
-      maxShards <- asks (.maxShards)
       let scheduleAfter = max 2 riderConfig.policeTriggerDelay
           callPoliceAPIJobData = CallPoliceApiJobData {rideId, personId = person.id, jmCode = res.incidentData.jmCode}
       logDebug $ "Scheduling safety alert police call after : " <> show scheduleAfter
       Redis.withCrossAppRedis $ Redis.setExp (mkRideCallPoliceAPIKey rideId) (1 :: Int) riderConfig.hardLimitForSafetyJobs
-      createJobIn @_ @'CallPoliceApi scheduleAfter maxShards callPoliceAPIJobData
+      createJobIn @_ @'CallPoliceApi (Just merchantId) (Just merchantOpCityId) scheduleAfter callPoliceAPIJobData
       pure ()
 
 sendUnattendedSosTicketAlert :: Text -> Flow ()

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.AadhaarVerification where
@@ -22,4 +21,4 @@ data AadhaarVerification = AadhaarVerification
     personName :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (ToJSON), (FromJSON), (Show), (Eq))
+  deriving (Generic, ToJSON, FromJSON, Show)

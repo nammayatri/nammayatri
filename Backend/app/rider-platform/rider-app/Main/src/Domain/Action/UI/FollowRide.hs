@@ -1,49 +1,31 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
-import Data.OpenApi (ToSchema)
-import Data.Text (unpack, unwords)
-import Data.Time hiding (secondsToNominalDiffTime)
-import Data.Time.Format
 import qualified Domain.Action.UI.Booking as DAB
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as PDEN
 import Domain.Action.UI.Profile as DAP
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.PersonDefaultEmergencyNumber as PDEN
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.RiderConfig as DRC
 import Environment
-import qualified Environment
 import EulerHS.Prelude hiding (elem, id, unpack, unwords)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude hiding (mapM_, unwords)
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import Servant
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN
-import qualified Storage.Beam.Person as BeamP
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as PDEN
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import Tools.Error
-import Tools.Notifications
 
 getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
 getFollowRide (mbPersonId, _) = do

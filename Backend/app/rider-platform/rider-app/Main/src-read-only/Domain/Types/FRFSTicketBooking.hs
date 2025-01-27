@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketBooking where
@@ -8,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -16,6 +16,7 @@ import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
@@ -36,9 +37,17 @@ data FRFSTicketBooking = FRFSTicketBooking
     estimatedPrice :: Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    frequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
@@ -53,14 +62,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routeId :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierProviderCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
@@ -86,6 +90,6 @@ data FRFSTicketBookingStatus
   | TECHNICAL_CANCEL_REJECTED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

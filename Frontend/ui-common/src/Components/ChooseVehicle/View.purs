@@ -46,6 +46,7 @@ view push config =
     toPrice = fromMaybe "" (priceRange DA.!! 1)
     accessibilityText = selectedVehicle <> (if isActiveIndex then " selected : " else " Un Selected : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
     blackListedSearchResultType = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL,QUOTES INTER_CITY]
+    isFindingQuotes = (JB.getKeyInSharedPrefKeys "LOCAL_STAGE") == "FindingQuotes"
   in
     frameLayout
       [ width MATCH_PARENT
@@ -66,7 +67,17 @@ view push config =
           , gravity RIGHT
           , afterRender push $ const $ NoAction config
           , accessibility DISABLE
+          , visibility $ boolToVisibility $ not isFindingQuotes
           ] <> if os == "IOS" then [] else [pivotY 1.0])[]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
+          , cornerRadius 12.0
+          , stroke $ "1," <> Color.grey900
+          , afterRender push $ const $ NoAction config
+          , accessibility DISABLE
+          , visibility $ boolToVisibility $ isFindingQuotes
+          ][]
         , linearLayout
             [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -127,7 +138,7 @@ view push config =
           , width $ V ((EHC.screenWidth unit) * 3/10)
           , clickable true
           , accessibility DISABLE
-          , onClick push $ const $ case config.showInfo && isActiveIndex of
+          , onClick push $ const $ case (config.showInfo && isActiveIndex) || isFindingQuotes of
                                     false -> OnSelect config
                                     true  -> if config.showInfo && blackListedSearchResultType then ShowRateCard config else NoAction config                        
           ][]
@@ -198,7 +209,7 @@ variantsView push state =
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
                             , gravity CENTER
                             , onClick (\action -> if isInActive then do 
-                                                     void $ pure $ JB.toast "Not available at this moment"
+                                                     void $ pure $ EHU.showToast "Not available at this moment"
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
                             , accessibility if isInActive then DISABLE else ENABLE
@@ -306,7 +317,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails
+      enableRateCard = (JB.getKeyInSharedPrefKeys "LOCAL_STAGE") == "FindingQuotes" || (config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails)
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout

@@ -24,6 +24,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
@@ -129,7 +130,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
     let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
-    notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam (Just searchTry.tripCategory)
+    notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
     let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
   where
@@ -158,9 +159,11 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
               waitingTime = Nothing,
+              stopWaitingTimes = [],
               actualRideDuration = Nothing,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedCongestionCharge = Nothing,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
@@ -171,7 +174,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               tollCharges = Nothing,
               vehicleAge = vehicleAge,
               currency = searchReq.currency,
-              distanceUnit = searchReq.distanceUnit
+              distanceUnit = searchReq.distanceUnit,
+              merchantOperatingCityId = Just searchReq.merchantOperatingCityId
             }
       pure $ Fare.fareSum fareParams
 
@@ -271,6 +275,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 renderedAt = Nothing,
                 respondedAt = Nothing,
+                middleStopCount = Just $ length searchReq.stops,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
                 isFavourite = isFavourite,
                 ..

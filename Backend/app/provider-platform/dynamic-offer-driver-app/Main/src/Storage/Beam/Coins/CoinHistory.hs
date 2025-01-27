@@ -11,13 +11,11 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import qualified Database.Beam as B
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH

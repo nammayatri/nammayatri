@@ -39,7 +39,7 @@ buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL
 buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
   noOfEntries <- QLM.countOrders entityId
-  let order = noOfEntries + 1
+  let order = if noOfEntries == 0 then 1 else noOfEntries
   now <- getCurrentTime
   let version = QLM.latestTag
       createdAt = now

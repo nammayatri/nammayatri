@@ -5,7 +5,8 @@ imports:
   ServiceTierType: Domain.Types.Common
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
-
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 Estimate:
     tableName: estimate
@@ -33,6 +34,7 @@ Estimate:
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
+      tipOptions: Maybe [Int]
       isScheduled: Bool
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
@@ -40,10 +42,8 @@ Estimate:
       eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
-
-    excludedFields:
-      - merchantId
-      - merchantOperatingCityId
+      merchantId: Maybe (Id Merchant)
+      merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
     beamFields:
       farePolicy:
@@ -60,6 +60,7 @@ Estimate:
 
     sqlType:
       farePolicyId: character varying(36)
+      tipOptions: integer[]
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool

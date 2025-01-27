@@ -33,6 +33,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -60,6 +61,7 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -113,6 +115,8 @@ dependencies:
   - regex-compat
   - regex-tdfa
   - external
+  - singletons-th
+  - mock-registry
 
 ghc-options:
   - -fwrite-ide-info
@@ -120,7 +124,9 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat
@@ -147,3 +153,4 @@ library:
     - beckn-spec
     - location-updates
     - special-zone
+    - mock-registry

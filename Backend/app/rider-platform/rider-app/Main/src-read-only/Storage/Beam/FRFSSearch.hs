@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSSearch where
@@ -11,28 +9,33 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
-  { fromStationId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    agency :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    convenienceCost :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    journeyId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    journeyLegOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    pricingId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    skipBooking :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    partnerOrgId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    partnerOrgTransactionId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    quantity :: (B.C f Kernel.Prelude.Int),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    routeId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    toStationId :: (B.C f Kernel.Prelude.Text),
-    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    fromStationId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
+    lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    quantity :: B.C f Kernel.Prelude.Int,
+    riderId :: B.C f Kernel.Prelude.Text,
+    routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStationId :: B.C f Kernel.Prelude.Text,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -42,6 +45,6 @@ instance B.Table FRFSSearchT where
 
 type FRFSSearch = FRFSSearchT Identity
 
-$(enableKVPG (''FRFSSearchT) [('id)] [[('riderId)]])
+$(enableKVPG ''FRFSSearchT ['id] [['riderId]])
 
-$(mkTableInstances (''FRFSSearchT) "frfs_search")
+$(mkTableInstances ''FRFSSearchT "frfs_search")

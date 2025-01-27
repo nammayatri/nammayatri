@@ -33,3 +33,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN online_payment boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN gateway_and_registry_priority_list text[]  default '{"NY"}';

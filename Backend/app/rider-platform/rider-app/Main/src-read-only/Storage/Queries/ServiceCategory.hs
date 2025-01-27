@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.ServiceCategory where
+module Storage.Queries.ServiceCategory (module Storage.Queries.ServiceCategory, module ReExport) where
 
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
@@ -13,6 +13,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServiceCategory as Beam
+import Storage.Queries.ServiceCategoryExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
 create = createWithKV
@@ -41,35 +42,3 @@ updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
-  fromTType' (Beam.ServiceCategoryT {..}) = do
-    pure $
-      Just
-        Domain.Types.ServiceCategory.ServiceCategory
-          { allowedSeats = allowedSeats,
-            availableSeats = availableSeats,
-            description = description,
-            id = Kernel.Types.Id.Id id,
-            name = name,
-            peopleCategory = Kernel.Types.Id.Id <$> peopleCategory,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
-  toTType' (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
-    Beam.ServiceCategoryT
-      { Beam.allowedSeats = allowedSeats,
-        Beam.availableSeats = availableSeats,
-        Beam.description = description,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.name = name,
-        Beam.peopleCategory = Kernel.Types.Id.getId <$> peopleCategory,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

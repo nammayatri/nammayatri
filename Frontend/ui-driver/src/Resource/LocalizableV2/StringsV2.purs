@@ -13,6 +13,7 @@ import Resource.Localizable.KN (getKn)
 import Resource.Localizable.ML (getMl)
 import Resource.Localizable.TA (getTa)
 import Resource.Localizable.TE (getTe)
+import Resource.Localizable.OD (getOd)
 import Resource.Localizable.TypesV2
 import Locale.Utils
 import Language.Types
@@ -27,6 +28,7 @@ stringsMap =
     , tamil: getTa
     , kannada: getKn
     , telugu: getTe
+    , odiya: getOd
     }
 
 infixl 1 readFromNT as @~
@@ -58,6 +60,7 @@ getStringV2 key =
       "ML_IN" -> stringsMap @~ malayalam @~ key
       "TA_IN" -> stringsMap @~ tamil @~ key
       "TE_IN" -> stringsMap @~ telugu @~ key
+      "OD_IN" -> stringsMap @~ odiya @~ key
       _ -> stringsMap @~ english @~ key
 
 getString :: String -> STR -> String
@@ -72,6 +75,7 @@ getString language str =
       "ML_IN" -> stringsMap @~ malayalam
       "TA_IN" -> stringsMap @~ tamil
       "TE_IN" -> stringsMap @~ telugu
+      "OD_IN" -> stringsMap @~ odiya
       _ -> stringsMap @~ english
   in
     proxy $ langMap
@@ -433,6 +437,7 @@ getProxy str = case str of
   VEHICLE_ISSUE -> \a -> a @~ vehicle_issue
   FARE_UPDATED -> \a -> a @~ fare_updated
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> \a -> a @~ frequent_cancellations_will_lead_to_less_rides
+  FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> \a -> a @~ frequent_cancellations_will_lead_to_blocking
   CONTINUE -> \a -> a @~ continue
   CONFIRM_PASSWORD -> \a -> a @~ confirm_password
   DEMO_MODE -> \a -> a @~ demo_mode
@@ -1604,6 +1609,7 @@ getProxy str = case str of
   REFRESH_PAYMENT -> \a -> a @~ refresh_payment
   BY -> \a -> a @~ by
   CUSTOMERS -> \a -> a @~ customers
+  CUSTOMER -> \a -> a @~ customer
   RATING -> \a -> a @~ rating
   CANCELLATION -> \a -> a @~ cancellation
   I_SPEAK -> \a -> a @~ i_speak
@@ -1617,11 +1623,24 @@ getProxy str = case str of
   I_PLEDGE -> \a -> a @~ i_pledge
   ONLY_5_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_5_more_rides_for_n_points) arg1
   ONLY_3_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_3_more_rides_for_n_points) arg1
+  ONLY_4_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_4_more_rides_for_n_points) arg1
   YOU_GOT_N_POINTS arg1 -> \a -> (a @~ you_got_n_points) arg1
   DISCOUNTED -> \a -> a @~ discounted
   YATRI_POINTS_FAQS_QUES1_ANS4 arg1 -> \a -> (a @~ yatri_points_faqs_ques1_ans4) arg1
   YATRI_POINTS_TNC -> \a -> a @~ yatri_points_tnc
   YATRI_POINTS_FAQS_QUES2_ANS3 -> \a -> a @~ yatri_points_faqs_ques2_ans3
+  HOTSPOTS -> \a -> a @~ hotspots
+  VERY_HIGH -> \a -> a @~ very_high
+  HIGH -> \a -> a @~ high
+  VERY_HIGH_DEMAND_AREA -> \a -> a @~ very_high_demand_area
+  HIGH_DEMAND_AREA -> \a -> a @~ high_demand_area
+  MODERATE -> \a -> a @~ moderate
+  AVERAGE_DEMAND_AREA -> \a -> a @~ average_demand_area
+  THIS_AREA_IS_EXPERIENCING_AVERAGE_SEARCHES -> \a -> a @~ this_area_is_experiencing_average_searches
+  THIS_AREA_IS_EXPERIENCING_VERY_HIGH_SEARCHES -> \a -> a @~ this_area_is_experiencing_very_high_searches
+  THIS_AREA_IS_EXPERIENCING_HIGH_SEARCHES -> \a -> a @~ this_area_is_experiencing_high_searches
+  NAVIGATE -> \a -> a @~ navigate
+  HOTSPOTS_NOT_AVAILABLE_CURRENTLY -> \a -> a @~ hotspots_not_available_currently
   GST_WITH_PERCENTAGE arg1 -> \a -> (a @~ gst_with_percentage) arg1
   DISCOUNT_POINTS_UPTO arg1 -> \a -> (a @~ discount_points_upto) arg1
   CANNOT_DETECT_PAN_CARD -> \a -> a @~ cannot_detect_pan_card
@@ -1678,6 +1697,7 @@ getProxy str = case str of
   ADD_YOUR_PHOTOS -> \a -> a @~ add_your_photos
   ADD_PHOTO_CAPTION -> \a -> a @~ add_photo_caption
   COMPLETE_PROFILE -> \a -> a @~ complete_profile
+  COMPLETE_PROFILE_MSG -> \a -> a @~ complete_profile_msg
   EDIT_PROFILE -> \a -> a @~ edit_profile
   SAVE -> \a -> a @~ save
   MANAGE_VEHICLE -> \a -> a @~ manage_vehicle
@@ -1735,7 +1755,8 @@ getProxy str = case str of
   BUY_NEW_HOME -> \a -> a @~ buy_new_home
   FAVOURITES -> \a -> a @~ favourites
   POINTS_EARNED_ arg1 -> \a -> (a @~ points_earned_) arg1
-  FOR_METRO_RIDE -> \a -> a @~ for_metro_ride
+  FOR_METRO_PICKUP_RIDE -> \a -> a @~ for_metro_pickup_ride
+  FOR_METRO_DROP_RIDE -> \a -> a @~ for_metro_drop_ride
   CONTINUE_WITH arg1 -> \a -> (a @~ continue_with) arg1
   CONTACT_SUPPORT_FOR_HELP -> \a -> a @~ contact_support_for_help
   YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> \a -> a @~ you_have_switched_city_or_vehicle
@@ -1745,6 +1766,8 @@ getProxy str = case str of
   YOU_CAN_ACCESS_SCHEDULED_RIDES -> \a -> a @~ you_can_access_scheduled_rides
   FROM_YOUR_HOMESCREEN -> \a -> a @~ from_your_homescreen
   CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> \a -> a @~ currently_there_are_no_rides_available
+  DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED -> \a -> a @~ due_to_higher_cancellation_rate_you_are_blocked
+  BLOCKED_TILL arg1 arg2 -> \a -> (a @~ blocked_till) arg1 arg2
   CANCEL_BOOKING -> \a -> a @~ cancel_booking
   GO_TO_PICKUP -> \a -> a @~ go_to_pickup
   RIDE_SCHEDULED -> \a -> a @~ ride_scheduled
@@ -1770,6 +1793,7 @@ getProxy str = case str of
   UPCOMING_RIDE -> \a -> a @~ upcoming_ride
   ALL -> \a -> a @~ all
   TOMORROW -> \a -> a @~ tomorrow
+  WE_ARE_NOT_ABLE_TO_FETCH_YOUR_CURRENT_LOCATION -> \a -> a @~ we_are_not_able_to_fetch_your_current_location
   YOU_HAVE_AN_UPCOMING -> \a -> a @~ you_have_an_upcoming
   BOOKING -> \a -> a @~ booking
   INTERCITY_RIDE_ACCEPTED -> \a -> a @~ intercity_ride_accepted
@@ -1814,4 +1838,18 @@ getProxy str = case str of
   UPLOAD_PARCEL_IMAGE -> \a -> a @~ upload_parcel_image
   PICKUP_INSTRUCTION -> \a -> a @~ pickup_instruction
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
-  
+  TRUCK -> \a -> a @~ truck
+  REGISTER_YOUR_TRUCK -> \a -> a @~ register_your_truck
+  METRO_WARRIOR_MODE -> \a -> a @~ metro_warrior_mode
+  CHOOSE_METRO_STATION -> \a -> a @~ choose_metro_station
+  PRIMARY_METRO_STATION -> \a -> a @~ primary_metro_station
+  PRIMARY_STATION_INFO -> \a -> a @~ primary_station_info
+  NEARBY_STATIONS -> \a -> a @~ nearby_stations
+  NEARBY_STATION_INFO -> \a -> a @~ nearby_station_info
+  CHANGE -> \a -> a @~ change
+  DISABLE_METRO_WARRIORS_INFO -> \a -> a @~ disable_metro_warriors_info
+  CHOOSE_PREFERRED_METRO -> \a -> a @~ choose_preferred_metro
+  METRO_WARRIORS -> \a -> a @~ metro_warriors
+  SEARCH -> \a -> a @~ search
+  BUS__ -> \a -> a @~ bus__
+  DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed

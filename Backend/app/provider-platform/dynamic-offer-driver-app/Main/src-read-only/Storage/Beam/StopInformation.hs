@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.StopInformation where
@@ -13,20 +11,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StopInformationT f = StopInformationT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    rideId :: (B.C f Kernel.Prelude.Text),
-    stopEndLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    stopEndLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    stopLocId :: (B.C f Kernel.Prelude.Text),
-    stopOrder :: (B.C f Kernel.Prelude.Int),
-    stopStartLat :: (B.C f Kernel.Prelude.Double),
-    stopStartLon :: (B.C f Kernel.Prelude.Double),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    waitingTimeEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    waitingTimeStart :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    rideId :: B.C f Kernel.Prelude.Text,
+    stopEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    stopEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    stopLocId :: B.C f Kernel.Prelude.Text,
+    stopOrder :: B.C f Kernel.Prelude.Int,
+    stopStartLat :: B.C f Kernel.Prelude.Double,
+    stopStartLon :: B.C f Kernel.Prelude.Double,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    waitingTimeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    waitingTimeStart :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +34,6 @@ instance B.Table StopInformationT where
 
 type StopInformation = StopInformationT Identity
 
-$(enableKVPG (''StopInformationT) [('id)] [[('rideId)], [('stopLocId)]])
+$(enableKVPG ''StopInformationT ['id] [['rideId], ['stopLocId]])
 
-$(mkTableInstancesWithTModifier (''StopInformationT) "stop_information" [])
+$(mkTableInstancesWithTModifier ''StopInformationT "stop_information" [])

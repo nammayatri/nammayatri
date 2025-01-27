@@ -6,7 +6,6 @@
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.FarePolicy.FarePolicyInterCityDetails where
 
@@ -29,9 +28,12 @@ data FarePolicyInterCityDetailsT f = FarePolicyInterCityDetailsT
     kmPerPlannedExtraHour :: B.C f Kilometers,
     deadKmFare :: B.C f HighPrecMoney,
     perDayMaxHourAllowance :: B.C f Hours,
+    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
+    freeWatingTime :: B.C f (Maybe Minutes),
     perDayMaxAllowanceInMins :: B.C f (Maybe Minutes),
     defaultWaitTimeAtDestination :: B.C f Minutes,
     currency :: B.C f Currency,
+    stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)

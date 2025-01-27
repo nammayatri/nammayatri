@@ -21,13 +21,13 @@ module Domain.Action.ProviderPlatform.Management.Message
     getMessageInfo,
     getMessageDeliveryInfo,
     getMessageReceiverList,
+    postMessageEdit,
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import AWS.S3 (FileType (..))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -38,7 +38,6 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, throwError)
-import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -48,21 +47,20 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.MessageEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.ProviderManagementAPI $ Common.MessageAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+buildTransaction apiTokenInfo =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMessageUploadFile :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 postMessageUploadFile merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (req.fileType `elem` [Audio, Image]) $
     throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
-  transaction <- buildTransaction Common.PostMessageUploadFileEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageUploadFile)) req
+    Client.callManagementAPI checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageUploadFile)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
@@ -71,9 +69,9 @@ postMessageAddLink merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (((req.fileType == VideoLink || req.fileType == PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == ImageLink) $
     throwError $ InvalidRequest "Only support youtube video links and image links. For Audio use uploadFile API."
-  transaction <- buildTransaction Common.PostMessageAddLinkEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.postMessageAddLink) req
+    Client.callManagementAPI checkedMerchantId opCity (.messageDSL.postMessageAddLink) req
   where
     -- youtube link can be https://youtu.be/shorts/nWbI-DfwRpw or https://www.youtube.com/shorts/nWbI-DfwRpw
     checkIfYoutubeLink link = DT.isPrefixOf "https://" link && DT.isInfixOf "youtu" link
@@ -83,35 +81,43 @@ postMessageAdd merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (length req.mediaFiles <= 1) $
     throwError $ InvalidRequest "Only support one media file per message. More than one media support will be added soon."
-  transaction <- buildTransaction Common.PostMessageAddEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.postMessageAdd) req
+    Client.callManagementAPI checkedMerchantId opCity (.messageDSL.postMessageAdd) req
 
 postMessageSend :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.SendMessageRequest -> Flow APISuccess
 postMessageSend merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostMessageSendEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageSend)) req
+    Client.callManagementAPI checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageSend)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 getMessageList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 getMessageList merchantShortId opCity apiTokenInfo mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.getMessageList) mbLimit mbOffset
+  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageList) mbLimit mbOffset
 
 getMessageInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Flow Common.MessageInfoResponse
 getMessageInfo merchantShortId opCity apiTokenInfo messageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.getMessageInfo) messageId
+  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageInfo) messageId
 
 getMessageDeliveryInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Flow Common.MessageDeliveryInfoResponse
 getMessageDeliveryInfo merchantShortId opCity apiTokenInfo messageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.getMessageDeliveryInfo) messageId
+  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageDeliveryInfo) messageId
 
 getMessageReceiverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 getMessageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.getMessageReceiverList) messageId number status limit offset
+  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageReceiverList) messageId number status limit offset
+
+--- << AUTOGENERATED Check this code, update export list and remove comment >> ---
+
+postMessageEdit :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.EditMessageRequest -> Flow APISuccess
+postMessageEdit merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.messageDSL.postMessageEdit) req

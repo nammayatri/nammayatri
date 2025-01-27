@@ -103,8 +103,9 @@ view push state =
     , background Color.white900
     , onBackPressed push $ const BackPressed
     ]
-    [ shimmerView state
-    , linearLayout 
+    [ 
+     shimmerView state,
+     linearLayout 
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
@@ -114,7 +115,7 @@ view push state =
         ]
         [ separatorView Color.greySmoke
         , linearLayout
-          [ weight 1.0
+          [ height MATCH_PARENT
           , width MATCH_PARENT
           , background Color.white900
           ][  linearLayout
@@ -176,7 +177,7 @@ termsAndConditionsView termsAndConditions isMarginTop =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
+         [ textFromHtml $ " •  " <> item
          , color Color.black700
          ] <> FontStyle.tags TypoGraphy
       ]
@@ -331,6 +332,7 @@ bookingConfirmationActions state push paymentStatus =
      [ width $ MATCH_PARENT
      , height WRAP_CONTENT
      , onClick push $ const GoHome
+      , padding $ PaddingBottom 20
      , gravity CENTER
      ][commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome]
   ]]

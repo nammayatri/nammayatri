@@ -21,6 +21,7 @@ import Services.API as API
 import Components.RateCard.Utils (getFareBreakupList)
 import Components.RateCard as RateCard
 import Common.RemoteConfig.Utils (tipConfigData)
+import RemoteConfig as RC
 import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
@@ -51,6 +52,7 @@ data Action
   | ShowRateCard ST.RidePreference
   | RateCardAction RateCard.Action
   | RateCardBannerClick
+  | ServiceTierInfoVideo API.ServiceTierType
 
 data ScreenOutput
   = GoBack BookingOptionsScreenState
@@ -140,6 +142,13 @@ eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state {
 
 eval RateCardBannerClick state = exit $ ExitToRateCardScreen state
 
+eval (ServiceTierInfoVideo serviceTierType) state = do
+  case serviceTierType of
+    API.DELIVERY_BIKE ->
+      let parcelConfig = RC.getParcelConfig "lazy"
+      in continueWithCmd state [pure $ OpenLink parcelConfig.introductionVideo]
+    _ -> continue state
+  
 eval _ state = update state
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config

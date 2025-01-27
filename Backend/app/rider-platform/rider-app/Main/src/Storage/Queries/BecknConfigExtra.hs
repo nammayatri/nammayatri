@@ -1,20 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.BecknConfigExtra where
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as Beam
-import Storage.Queries.OrphanInstances.BecknConfig
+import Storage.Queries.OrphanInstances.BecknConfig ()
 
 -- Extra code goes here --
 

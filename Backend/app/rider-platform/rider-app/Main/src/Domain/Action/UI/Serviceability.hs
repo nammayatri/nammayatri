@@ -28,10 +28,11 @@ import Data.Ord
 import qualified Domain.Types.HotSpot as DHotSpot
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
-import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -73,7 +74,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
-      specialLocationBody <- runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
+      specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
       return
         ServiceabilityRes
@@ -98,11 +99,13 @@ data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity
   { nearestOperatingCity :: CityState,
     currentCity :: CityState
   }
+  deriving (Eq, Show)
 
 data CityState = CityState
   { city :: Context.City,
     state :: Context.IndianState
   }
+  deriving (Eq, Show)
 
 getNearestOperatingAndCurrentCity ::
   ( CacheFlow m r,
@@ -152,7 +155,7 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
         If the pickup location is in the operating city, then return the city.
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
-      geoms <- runInReplica $ findGeometriesContaining latLong regions
+      geoms <- B.runInReplica $ findGeometriesContaining latLong regions
       case filter (\geom -> geom.city /= Context.AnyCity) geoms of
         [] ->
           find (\geom -> geom.city == Context.AnyCity) geoms & \case

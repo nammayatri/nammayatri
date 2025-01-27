@@ -12,12 +12,14 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as A
 import qualified Data.Aeson.Types as A
+import Data.Either.Extra (mapLeft)
 import Data.List (nub)
 import qualified Data.Map as M
-import Data.Scientific (toRealFloat)
+import Data.Scientific (fromFloatDigits, toRealFloat)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Time.Clock as Time
+import qualified Data.Vector as V
 import qualified JsonLogic
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -38,30 +40,35 @@ import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
 import qualified Lib.Yudhishthira.Types.UserData as DUserData
 
-data Handle m = Handle
-  { getUserTags :: Id Yudhishthira.User -> m (Maybe [Text]), -- Nothing if user not found
-    updateUserTags :: Id Yudhishthira.User -> [Text] -> m (),
-    createFetchUserDataJob :: Yudhishthira.UpdateKaalBasedTagsJobReq -> UTCTime -> m (),
-    createUpdateUserTagDataJob :: Yudhishthira.RunKaalChakraJobReq -> Id Yudhishthira.Event -> UTCTime -> m ()
+data Handle m action = Handle
+  { getUserTags :: Id Yudhishthira.User -> m (Maybe [Yudhishthira.TagNameValue]), -- Nothing if user not found
+    updateUserTags :: Id Yudhishthira.User -> [Yudhishthira.TagNameValue] -> m (),
+    action :: Id Yudhishthira.User -> action -> m ()
   }
 
 --  which is log level in PROD?
-skipUpdateUserTagsHandler :: (Monad m, Log m) => Handle m
+skipUpdateUserTagsHandler :: forall m action. (Monad m, Log m, MonadThrow m, Read action, Show action) => Handle m action
 skipUpdateUserTagsHandler =
   Handle
     { getUserTags = \userId -> logInfo ("Skip update user tags in DB selected: userId: " <> show userId) >> pure (Just []),
       updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
-      createFetchUserDataJob = \updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData,
-      createUpdateUserTagDataJob = \kaalChakraData eventId _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; for event: " <> show eventId
+      action = \userId action -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId
     }
 
 kaalChakraEvent ::
+  forall m r.
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
 kaalChakraEvent req = do
   eventId <- getEventId req.chakra
-  kaalChakraEventInternal eventId req
+  handle (errHandler eventId) (kaalChakraEventInternal eventId req)
+  where
+    errHandler eventId err = case req.action of
+      Yudhishthira.RUN -> throwM @m @SomeException err
+      Yudhishthira.SCHEDULE _ -> do
+        logError $ "Fetch user data job failed: " <> show err
+        pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
 
 kaalChakraEventInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
@@ -95,21 +102,27 @@ kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) d
   pure $ Yudhishthira.RunKaalChakraJobRes (Just eventId) Nothing Nothing batchedUserData.chakraBatchState
 
 updateUserTagsHandler ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
+  forall m r action.
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Read action, Show action) =>
+  Handle m action ->
   Yudhishthira.UpdateKaalBasedTagsJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
 updateUserTagsHandler h req = do
-  if req.updateUserTags
-    then updateUserTagsHandlerInternal h req
-    else updateUserTagsHandlerInternal skipUpdateUserTagsHandler req
+  handle (errHandler req.eventId) $
+    if req.updateUserTags
+      then updateUserTagsHandlerInternal h req
+      else updateUserTagsHandlerInternal (skipUpdateUserTagsHandler @m @action) req
+  where
+    errHandler eventId (err :: SomeException) = do
+      logError $ "Update user tags job failed: " <> show err
+      pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
 
 updateUserTagsHandlerInternal ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Read action, Show action) =>
+  Handle m action ->
   Yudhishthira.UpdateKaalBasedTagsJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
-updateUserTagsHandlerInternal h req = do
+updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getId) do
   let eventId = req.eventId
   startTime <- getCurrentTime
   chakraQueries <- QChakraQueries.findAllByChakra req.chakra
@@ -127,6 +140,7 @@ updateUserTagsHandlerInternal h req = do
   let limit = Just $ req.usersInBatch
   let offset = Just $ batchNumber * req.usersInBatch
   batchedUserData <- QUserDataE.findAllByEventIdWithLimitOffset eventId limit offset
+  logDebug $ "Running update user tags batch: " <> show batchNumber <> "; users found: " <> show (length batchedUserData)
   -- getting this, but maybe limit offset will leave some part of the data of trailing guyz begind so using this just as a medium to get the userIds to do tagging for.
 
   let defaultUserDataMap = Parse.mkDefaultUserDataMap chakraQueries
@@ -200,14 +214,15 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
           pure $ ChakraBatchedUserData newUserIds (Yudhishthira.Continue req.batchDelayInSec)
 
 kaalChakraEventUser ::
-  (BeamFlow m r, Monad m, Log m) =>
-  Handle m ->
+  forall m r action.
+  (BeamFlow m r, Monad m, Log m, Read action, Show action) =>
+  Handle m action ->
   [DNT.NammaTag] ->
   Id Yudhishthira.Event ->
   [Parse.DefaultDataMap] ->
   Id Yudhishthira.User ->
   m Yudhishthira.RunKaalChakraJobResForUser
-kaalChakraEventUser h filteredTags eventId defaultUserDataMap userId = do
+kaalChakraEventUser h filteredTags eventId defaultUserDataMap userId = withLogTag ("UserId-" <> userId.getId) do
   userDataList <- QUserData.findAllByUserIdAndEventId userId eventId
   -- Skip current user instead of throwing error
   let eUserData = do
@@ -234,13 +249,57 @@ kaalChakraEventUser h filteredTags eventId defaultUserDataMap userId = do
           mbOldTagsText <- h.getUserTags userId
           -- Skip current user instead of throwing error
           case updateUserTagValues userId tagValuesTuple mbOldTagsText of
-            Right updTagsText -> do
+            Right (updTagsText, actionDataList) -> do
               if Just updTagsText /= mbOldTagsText
-                then h.updateUserTags userId updTagsText
+                then do
+                  h.updateUserTags userId updTagsText
+                  forM_ actionDataList $ \actionData -> do
+                    runTagAction h userId actionData
                 else logDebug $ "Tags did not changed for current user: " <> show userId
               pure $ mkRunKaalChakraJobResForUser userId userDataValue mbOldTagsText (Just updTagsText)
             Left err -> logError err $> mkRunKaalChakraJobResForUser userId userDataValue mbOldTagsText Nothing
     Left err -> logError err $> mkRunKaalChakraJobResForUser userId (A.Object A.empty) Nothing Nothing
+
+runTagAction ::
+  forall m action.
+  (MonadFlow m, Read action, Show action) =>
+  Handle m action ->
+  Id Yudhishthira.User ->
+  ActionData ->
+  m ()
+runTagAction h userId actionData = do
+  let tagName = Yudhishthira.TagName actionData.tag.name
+  let tagValueNew = actionData.tagValueNew
+  if actionData.tagNameValueOld == Just actionData.tagNameValueNew
+    then logDebug $ "Tag " <> show tagName <> " did not changed for user; skipping."
+    else whenJust actionData.tag.actionEngine $ \tagActionEngine -> do
+      case forM actionData.tagNameValueOld (parseTagValueFromText actionData.tag) of
+        Left err -> do
+          logError $ "Could not parse old tag value: tagName: " <> show tagName <> "; tagValue: " <> show actionData.tagNameValueOld <> "; error: " <> show err <> "; skipping."
+        Right mbTagValueOld -> do
+          let actionDataObject = mkActionDataObject tagValueNew mbTagValueOld
+          let eTagActionObj = JsonLogic.jsonLogicEither tagActionEngine actionDataObject
+          case eTagActionObj of
+            Left err -> do
+              logError $ "Could not apply extra tag action rule to data: tagName: " <> show tagName <> "; data: " <> show actionDataObject <> "; error: " <> show err <> "; skipping."
+            Right (A.String actionTxt) -> case readMaybe @action (T.unpack actionTxt) of
+              Just action -> do
+                logInfo $ "Run extra tag action: tagName: " <> show tagName <> "; action: " <> show action <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
+                handle (errHandler action) $
+                  h.action userId action
+              Nothing -> do
+                logError $ "Could not parse action: tagName: " <> show tagName <> "; action: " <> actionTxt <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew <> "; skipping."
+            Right A.Null ->
+              logInfo $ "Empty extra tag action determined: tagName:" <> show tagName <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
+            Right val -> do
+              -- only String or Null value supported for now, we can add Array later
+              logError $ "String or Null expected for extra tag action: tagName: " <> show tagName <> "; data: " <> show val <> "; skipping."
+  where
+    errHandler action exc = logError $ "Extra tag action " <> show action <> " interrupted with error: " <> show @Text @SomeException exc
+
+mkActionDataObject :: Yudhishthira.TagValue -> Maybe Yudhishthira.TagValue -> A.Value
+mkActionDataObject tagValueNew mbTagValueOld = do
+  A.object ["newValue" A..= convertTagValueToJSON tagValueNew, "oldValue" A..= (convertTagValueToJSON <$> mbTagValueOld)]
 
 appendUserDataValue :: A.Value -> A.Value -> Either Text A.Value
 appendUserDataValue (A.Object obj1) (A.Object obj2) | null (A.intersection obj1 obj2) = Right $ A.Object (A.union obj1 obj2)
@@ -254,8 +313,8 @@ mkTagAPIEntity DNT.NammaTag {..} = Yudhishthira.TagAPIEntity {..}
 mkRunKaalChakraJobResForUser ::
   Id Yudhishthira.User ->
   A.Value ->
-  Maybe [Text] ->
-  Maybe [Text] ->
+  Maybe [Yudhishthira.TagNameValue] ->
+  Maybe [Yudhishthira.TagNameValue] ->
   Yudhishthira.RunKaalChakraJobResForUser
 mkRunKaalChakraJobResForUser userId userDataValue userOldTags userUpdatedTags = do
   Yudhishthira.RunKaalChakraJobResForUser {..}
@@ -264,7 +323,7 @@ applyRule ::
   Id Yudhishthira.User ->
   A.Value ->
   DNT.NammaTag ->
-  Either Text (Yudhishthira.TagName, Yudhishthira.TagValue)
+  Either Text (DNT.NammaTag, Yudhishthira.TagValue)
 applyRule userId userDataValue tag = case tag.rule of
   Yudhishthira.RuleEngine logic -> do
     let eTagValueObj = JsonLogic.jsonLogicEither logic userDataValue
@@ -274,36 +333,73 @@ applyRule userId userDataValue tag = case tag.rule of
       Right tagValueObj -> do
         case parseTagValue tagValueObj tag.possibleValues of
           Nothing -> Left $ "Value is not allowed: " <> show tagValueObj <> "; userId: " <> show userId <> "; tag: " <> tag.name <> "; skipping."
-          Just tagValue -> Right (Yudhishthira.TagName tag.name, tagValue)
+          Just tagValue -> Right (tag, tagValue)
   Yudhishthira.LLM _ -> Left $ "LLM is not implemented: tag: " <> tag.name <> "; skipping."
+
+type TagsMap = M.Map Yudhishthira.TagName
 
 updateUserTagValues ::
   Id Yudhishthira.User ->
-  [(Yudhishthira.TagName, Yudhishthira.TagValue)] ->
-  Maybe [Text] ->
-  Either Text [Text]
+  [(DNT.NammaTag, Yudhishthira.TagValue)] ->
+  Maybe [Yudhishthira.TagNameValue] ->
+  Either Text ([Yudhishthira.TagNameValue], [ActionData])
 updateUserTagValues userId _ Nothing = Left $ "User with userId: " <> show userId <> " did not found; skipping."
 updateUserTagValues userId updatedTags (Just oldTagsText) = do
   oldTagsMap <- (M.fromList <$>) $
     forM oldTagsText $ \oldTagText -> do
       case parseTagName oldTagText of
-        Nothing -> Left $ "Could not parse tag name: " <> oldTagText <> "; userId: " <> show userId <> "; skipping."
+        Nothing -> Left $ "Could not parse tag name: " <> show oldTagText <> "; userId: " <> show userId <> "; skipping."
         Just oldTagName -> Right (oldTagName, oldTagText)
-  let updTagsMap = foldl (\tagsMap (tagName, tagValue) -> M.insert tagName (showTag tagName tagValue) tagsMap) oldTagsMap updatedTags
-  Right $ snd <$> M.toList updTagsMap
+  let (updTagsMap, actionDataMap) = foldl foldFunc (oldTagsMap, M.empty :: TagsMap ActionData) updatedTags
+  Right (snd <$> M.toList updTagsMap, snd <$> M.toList actionDataMap)
+  where
+    foldFunc ::
+      (TagsMap Yudhishthira.TagNameValue, TagsMap ActionData) ->
+      (DNT.NammaTag, Yudhishthira.TagValue) ->
+      (TagsMap Yudhishthira.TagNameValue, TagsMap ActionData)
+    foldFunc (tagNameValueMapOld, actionDataMapOld) (tag, tagValueNew) = do
+      let tagName = Yudhishthira.TagName tag.name
+          tagNameValueOld = M.lookup tagName tagNameValueMapOld
+          tagNameValueNew = showTag tagName tagValueNew
+          tagNameValueMapNew = M.insert tagName tagNameValueNew tagNameValueMapOld
+          actionData = ActionData {tag, tagValueNew, tagNameValueNew, tagNameValueOld}
+          actionDataMapNew = M.insert tagName actionData actionDataMapOld
+      (tagNameValueMapNew, actionDataMapNew)
 
-parseTagName :: Text -> Maybe Yudhishthira.TagName
-parseTagName txt = case T.splitOn "#" txt of
+data ActionData = ActionData
+  { tag :: DNT.NammaTag,
+    tagValueNew :: Yudhishthira.TagValue,
+    tagNameValueNew :: Yudhishthira.TagNameValue,
+    tagNameValueOld :: Maybe Yudhishthira.TagNameValue -- only if it was present earlier
+  }
+  deriving (Show)
+
+parseTagName :: Yudhishthira.TagNameValue -> Maybe Yudhishthira.TagName
+parseTagName (Yudhishthira.TagNameValue txt) = case T.splitOn "#" txt of
   (tagName : _) -> Just (Yudhishthira.TagName tagName)
   _ -> Nothing
 
 showTag ::
   Yudhishthira.TagName ->
   Yudhishthira.TagValue ->
-  Text
-showTag (Yudhishthira.TagName tagName) (Yudhishthira.TextValue tagValueText) = tagName <> "#" <> tagValueText
-showTag (Yudhishthira.TagName tagName) (Yudhishthira.NumberValue tagValueDouble) = tagName <> "#" <> show tagValueDouble
-showTag (Yudhishthira.TagName tagName) (Yudhishthira.ArrayValue tagValueArray) = tagName <> "#" <> (T.intercalate "&" tagValueArray)
+  Yudhishthira.TagNameValue
+showTag (Yudhishthira.TagName tagName) (Yudhishthira.TextValue tagValueText) = Yudhishthira.TagNameValue $ tagName <> "#" <> tagValueText
+showTag (Yudhishthira.TagName tagName) (Yudhishthira.NumberValue tagValueDouble) = Yudhishthira.TagNameValue $ tagName <> "#" <> show tagValueDouble
+showTag (Yudhishthira.TagName tagName) (Yudhishthira.ArrayValue tagValueArray) = Yudhishthira.TagNameValue $ tagName <> "#" <> T.intercalate "&" tagValueArray
+
+-- inverse conversion for showTag
+parseTagValueFromText :: DNT.NammaTag -> Yudhishthira.TagNameValue -> Either Text Yudhishthira.TagValue
+parseTagValueFromText tag (Yudhishthira.TagNameValue txt) = case T.splitOn "#" txt of
+  [_, tagValue] -> do
+    case tag.possibleValues of
+      Yudhishthira.Range _d1 _d2 -> do
+        tagDouble <- mapLeft ("Couldn't parse double value: " <>) $ readEither @Text @Double tagValue
+        pure $ Yudhishthira.NumberValue tagDouble
+      _ -> case T.splitOn "&" tagValue of
+        [tagValueText] -> pure $ Yudhishthira.TextValue tagValueText -- we can't separate text value from array containting one item
+        [] -> Left "Tag value should not be empty"
+        tagValueArray -> pure $ Yudhishthira.ArrayValue tagValueArray
+  _ -> Left "Tag should have format tagName#tagValue"
 
 parseTagValue :: A.Value -> Yudhishthira.TagValues -> Maybe Yudhishthira.TagValue
 parseTagValue (A.String txt) possibleValues = case possibleValues of
@@ -320,6 +416,12 @@ parseTagValue (A.Number sci) possibleValues = do
     _ -> Nothing
 parseTagValue (A.Array arr') _ = Yudhishthira.ArrayValue <$> (mapM extractText (toList arr')) -- Add possible value checks
 parseTagValue _ _ = Nothing
+
+-- inverse conversion for parseTagValue
+convertTagValueToJSON :: Yudhishthira.TagValue -> A.Value
+convertTagValueToJSON (Yudhishthira.TextValue txt) = A.String txt
+convertTagValueToJSON (Yudhishthira.NumberValue d) = A.Number $ fromFloatDigits @Double d
+convertTagValueToJSON (Yudhishthira.ArrayValue arr') = A.Array $ V.fromList $ A.String <$> arr'
 
 extractText :: A.Value -> Maybe Text
 extractText (A.String txt) = Just txt
@@ -414,7 +516,7 @@ clearEventData chakra (Just eventId) = do
   QUserDataE.deleteUserDataWithEventId eventId
   logInfo $ "deleted all event user data"
 clearEventData chakra Nothing = do
-  logInfo $ "finished get uesr data job"
+  logInfo $ "finished get user data job"
   resetChakraBatchNumber chakra
   logInfo $ "batch number reset now"
 

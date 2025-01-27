@@ -14,6 +14,7 @@ let riderMigrationPath =
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
       , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
@@ -24,6 +25,7 @@ let outputPath =
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
       , _servantApiDashboard = ""
+      , _servantApiClient = ""
       , _sql =
         [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" }
         , { _1 = riderMigrationPath, _2 = "atlas_app" }
@@ -34,7 +36,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
-      | SERVANT_API_TREE
+      | API_TREE
+      | API_TREE_DASHBOARD
+      | API_TREE_COMMON
+      | API_TREE_CLIENT
       | API_TYPES
       | DOMAIN_HANDLER
       | DOMAIN_HANDLER_DASHBOARD
@@ -201,8 +206,11 @@ in  { _output = outputPath
       , GeneratorType.BEAM_QUERIES
       , GeneratorType.SQL
       ]
+    , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI
-    , _clientFunction = None Text
+    , _serverName = None Text
     , _folderName = None Text
+    , _migrationParams =
+        [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text
     }

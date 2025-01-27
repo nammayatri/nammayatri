@@ -33,6 +33,7 @@ Booking:
     status: BookingStatus
     hasStops : Maybe Bool
     dynamicPricingLogicVersion : Maybe Int
+    estimatedCongestionCharge : Maybe HighPrecMoney
     tripCategory: TripCategory
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text
@@ -285,9 +286,6 @@ BookingLocation:
   constraints:
     id: PrimaryKey
 
-  excludedFields:
-    - merchantId
-    - merchantOperatingCityId
 
   queries:
     findById:

@@ -120,7 +120,8 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
-                    
+            int stops = rideRequestBundle.getInt("middleStopCount", 0);
+            boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     tollCharges,
@@ -164,8 +165,11 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartDate,
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
+                    rideRequestBundle.getBoolean("isFavourite"),
                     rideRequestBundle.getDouble("parkingCharge"),
-                    getCurrTime
+                    getCurrTime,
+                    stops,
+                    roundTrip
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -182,7 +186,7 @@ public class RideRequestActivity extends AppCompatActivity {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant || model.isFavourite() || model.getRoundTrip()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
@@ -192,6 +196,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
@@ -201,6 +206,9 @@ public class RideRequestActivity extends AppCompatActivity {
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
+                holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
+                holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
+                holder.roundTripRideTypeTag.setVisibility(model.getRoundTrip() ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
@@ -269,6 +277,8 @@ public class RideRequestActivity extends AppCompatActivity {
 
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            holder.stopsInfo.setText(getString(model.getTollCharges() > 0 ? R.string.stops : R.string.stops_info, model.getStops()));
+            holder.stopsInfo.setVisibility(model.getStops() > 0? View.VISIBLE : View.GONE);
             if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);

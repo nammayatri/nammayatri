@@ -30,7 +30,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.CancellationRate as CR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as CR
 import qualified SharedLogic.DriverOnboarding as SD
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ

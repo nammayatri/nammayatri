@@ -2,7 +2,8 @@
 
 module Storage.Queries.RideExtra where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import Data.List.Extra (notNull)
 import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -19,11 +20,11 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (ByteString, whenNothingM_)
+import EulerHS.Prelude (ByteString, forM_, whenNothingM_)
 import EulerHS.Types (KVDBAnswer)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
@@ -45,21 +46,23 @@ import Tools.Metrics (CoreMetrics)
 createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
-create ride = do
-  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenJust ride.toLocation $ \location -> processLocation location
-  createRide' ride
-  where
-    processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
-
 createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
-  create ride
+  processSingleLocation ride.fromLocation SLM.buildPickUpLocationMapping
+  when (notNull ride.stops) $ processMultipleLocations ride.stops
+  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  createRide' ride
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+      QLM.createMany locationMappings
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   { dwTable1 :: f (B.TableEntity table1),
@@ -292,8 +295,8 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> m ([Booking], [Booking])
-findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> m ([Booking], [Booking])
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
@@ -304,9 +307,12 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
+              <> ([Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
+              <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
+              <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
           )
       ]
-      (if isOnlyActive then (Se.Asc BeamB.startTime) else (Se.Desc BeamB.startTime))
+      (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
   otherActivePartyBooking <-
@@ -319,7 +325,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
             pure $
               filter
                 ( \bk ->
-                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId)
+                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId) && (isNothing mbFromDate || isNothing mbToDate || (fromJust mbFromDate <= bk.createdAt && bk.createdAt <= fromJust mbToDate))
                 )
                 booking
           Nothing -> pure []

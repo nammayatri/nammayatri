@@ -93,6 +93,7 @@ data Pricing = Pricing
     fulfillmentType :: Text,
     distanceToNearestDriver :: Maybe Meters,
     tollNames :: Maybe [Text],
+    tipOptions :: Maybe [Int],
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
@@ -228,7 +229,11 @@ castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
 castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
+castVariant Variant.HERITAGE_CAB = (show Enums.CAB, "HERITAGE_CAB")
+castVariant Variant.EV_AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
 castVariant Variant.DELIVERY_LIGHT_GOODS_VEHICLE = (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
+castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
+castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -245,7 +250,9 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "PREMIUM_SEDAN") -> Just Variant.PREMIUM_SEDAN
   (Just "CAB", Just "BLACK") -> Just Variant.BLACK
   (Just "CAB", Just "SUV_PLUS") -> Just Variant.SUV_PLUS
+  (Just "CAB", Just "HERITAGE_CAB") -> Just Variant.HERITAGE_CAB
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
+  (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just Variant.EV_AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
@@ -258,6 +265,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just Variant.AMBULANCE_AC_OXY
   (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just Variant.AMBULANCE_VENTILATOR
   (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just Variant.DELIVERY_LIGHT_GOODS_VEHICLE
+  (Just "BUS", Just "BUS_NON_AC") -> Just Variant.BUS_NON_AC
+  (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -989,6 +998,35 @@ mkTollConfidenceTagGroupV2 tollConfidence' =
         }
     ]
 
+mkRideDetailsTagGroup :: Maybe Bool -> Maybe [Spec.TagGroup]
+mkRideDetailsTagGroup rideDetails' =
+  rideDetails' <&> \rideDetails ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDE_DETAILS_INFO,
+                  descriptorName = Just "Ride Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.IS_VALID_RIDE,
+                            descriptorName = Just "Is Valid Ride",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show rideDetails
+                  }
+              ]
+        }
+    ]
+
 mkVehicleAgeTagGroupV2 :: Maybe Months -> Maybe [Spec.TagGroup]
 mkVehicleAgeTagGroupV2 vehicleAge' =
   vehicleAge' <&> \vehicleAge ->
@@ -1203,7 +1241,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1218,7 +1256,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1283,6 +1321,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipOptions = Nothing,
       ..
     }
 
@@ -1306,6 +1345,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipOptions = Nothing,
       ..
     }
 
@@ -1328,6 +1368,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
             <> isBlockedRouteSingleton pricing.isBlockedRoute
             <> tollNamesSingleton pricing.tollNames
+            <> tipOptionSingleton pricing.tipOptions
             <> durationToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
@@ -1361,7 +1402,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorName = Just "Smart Tip Reason",
                       descriptorShortDesc = Nothing
                     },
-              tagValue = show <$> pricing.smartTipReason
+              tagValue = pricing.smartTipReason
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
@@ -1453,6 +1494,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                     },
               tagValue = show <$> tollNames
             }
+    tipOptionSingleton tipOptions
+      | isNothing tipOptions || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.TIP_OPTIONS,
+                      descriptorName = Just "Tip Options",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> tipOptions
+            }
     durationToNearestDriverTagSingleton
       | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
       | otherwise =
@@ -1490,7 +1546,11 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
                 Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
+                Variant.HERITAGE_CAB -> avgSpeed.heritagecab.getKilometers
+                Variant.EV_AUTO_RICKSHAW -> avgSpeed.evautorickshaw.getKilometers
                 Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
+                Variant.BUS_AC -> avgSpeed.busAc.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 
@@ -1506,10 +1566,16 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
             Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy = do
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
-      farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+      fareParamsBreakups =
+        case fareParametersInRateCard of
+          Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardBreakupItem) fareParams
+          _ -> []
+      filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
+      combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
+      farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
@@ -1523,6 +1589,11 @@ mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp 
           tagGroupList = Just farePolicyBreakupsTags
         }
     ]
+  where
+    findDup :: [RateCardBreakupItem] -> RateCardBreakupItem -> Bool
+    findDup [] _ = False
+    findDup (farePolicyCard : nextFarePolicy) fareParameter =
+      if farePolicyCard.title == fareParameter.title then True else findDup nextFarePolicy fareParameter
 
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =
@@ -1695,21 +1766,22 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
             tags = if isValueAddNP then dTags else Nothing
           }
 
-buildLocation :: MonadFlow m => Spec.Stop -> m DL.Location
-buildLocation stop = do
+buildLocation' :: MonadFlow m => Id DM.Merchant -> Spec.Stop -> m DL.Location'
+buildLocation' merchantId stop = do
   location <- stop.stopLocation & fromMaybeM (InvalidRequest "Location not present")
   guid <- generateGUID
   now <- getCurrentTime
   gps <- parseLatLong =<< (location.locationGps & fromMaybeM (InvalidRequest "Location GPS not present"))
   address <- parseAddress location >>= fromMaybeM (InvalidRequest "Location Address not present")
   return $
-    DL.Location
+    DL.Location'
       { DL.id = guid,
         createdAt = now,
         updatedAt = now,
         lat = gps.lat,
         lon = gps.lon,
-        address
+        address,
+        merchantId = Just merchantId
       }
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
@@ -1785,6 +1857,9 @@ getRiderName req = do
   let tagGroups = req.ratingTag
       tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_NAME tagGroups
    in tagValue
+
+getCancellationReason :: Spec.CancelReq -> Maybe Text
+getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
 
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState stateCode =

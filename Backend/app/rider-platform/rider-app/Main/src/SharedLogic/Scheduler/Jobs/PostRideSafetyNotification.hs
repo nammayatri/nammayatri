@@ -44,12 +44,13 @@ postRideSafetyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       rideId = jobData.rideId
   ride <- B.runInReplica $ QR.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  when (isNothing ride.wasRideSafe) $ do
+  when (isNothing ride.wasRideSafe && isNothing ride.rideRating) $ do
     riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     let entityData = NotifReq {title = "Did you have a safe journey?", message = "Thank you for riding with us. Please share your ride experience."}
+    logDebug "Triggering notification for post ride safety check"
     notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK
-    maxShards <- asks (.maxShards)
     let scheduleAfter = riderConfig.ivrTriggerDelay
         safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = personId}
-    createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
+    createJobIn @_ @'SafetyIVR ride.merchantId ride.merchantOperatingCityId scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)
+    logDebug "Created Safety IVR Job"
   return Complete

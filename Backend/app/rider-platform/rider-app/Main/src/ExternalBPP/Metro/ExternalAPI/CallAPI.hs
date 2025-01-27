@@ -15,51 +15,53 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Utils.Common
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => ProviderConfig -> m CMRLBusinessHour.BusinessHourResult
 getBusinessHour config = do
   case config of
     CMRL config' -> CMRLBusinessHour.getBusinessHour config'
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
 getDurationDetails config req = do
   case config of
     CMRL config' -> CMRLDurationDetails.getDurationDetails config' req
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
-getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLFareByOriginDest.FareByOriginDestReq -> m HighPrecMoney
+getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLFareByOriginDest.FareByOriginDestReq -> m (Maybe HighPrecMoney)
 getFareByOriginDest config fareReq = do
   case config of
     CMRL config' -> CMRLFareByOriginDest.getFareByOriginDest config' fareReq
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLFareMatrix.FareMatrixRes]
 getFareMatrix config = do
   case config of
     CMRL config' -> CMRLFareMatrix.getFareMatrix config'
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLQR.GenerateQRReq -> m [CMRLQR.TicketInfo]
 generateQRTickets config qrReq = do
   case config of
     CMRL config' -> CMRLQR.generateQRTickets config' qrReq
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
 getPassengerViewStatus config req = do
   case config of
     CMRL config' -> CMRLPassengerViewStatus.getPassengerViewStatus config' req
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLStationList.Station]
 getStationList config = do
   case config of
     CMRL config' -> CMRLStationList.getStationList config'
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"
 
 getTicketStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLTicketStatus.TicketStatusReq -> m CMRLTicketStatus.TicketStatusResult
 getTicketStatus config req = do
   case config of
     CMRL config' -> CMRLTicketStatus.getTicketStatus config' req
-    _ -> error "Unimplemented!"
+    _ -> throwError $ InternalError "Unimplemented!"

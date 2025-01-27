@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Payment
   ( module Reexport,
@@ -31,6 +30,7 @@ module Tools.Payment
     deleteCard,
     getPaymentIntent,
     cancelPaymentIntent,
+    verifyVpa,
   )
 where
 
@@ -76,6 +76,9 @@ orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
 refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
+
+verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
+verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 
 ---- Ride Payment Related Functions (mostly stripe) ---
 createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateCustomerReq -> m CreateCustomerResp
@@ -131,12 +134,16 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.PaymentServiceConfig vsc) -> func vsc req
     Just (DMSC.MetroPaymentServiceConfig vsc) -> func vsc req
     Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc req
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc req
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
 
 runWithServiceConfig1 ::
   ServiceFlow m r =>
@@ -192,7 +199,7 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 r
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking
+data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)

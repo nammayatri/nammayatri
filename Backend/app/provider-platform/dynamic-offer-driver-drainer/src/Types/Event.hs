@@ -33,6 +33,7 @@ data DBSyncMetric
   | QueryDrainLatency Action Latency
   | DrainerQueryExecutes Action Word
   | DrainerStopStatus Status
+  | KvConfigDecodeFailure
   | KafkaUpdateMissing
   | KafkaPushFailure Action ModelName
   | ProcessLatency Text Latency

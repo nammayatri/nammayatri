@@ -44,8 +44,8 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((*), (||), Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
-import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
+import Prelude ((*), (||), Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&), (>))
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState, fork, await)
 import PrestoDOM (singleLine, fontWeight, weight, imageView, lineHeight, maxLines, FontWeight(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -68,8 +68,8 @@ screen initialState st =
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
+        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList push initialState
         _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getFavouriteDriverList push initialState
-        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
         pure $ pure unit
           )
   ]
@@ -83,6 +83,7 @@ view push state = do
     , width MATCH_PARENT
     , background Color.white900
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+    , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
     ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout[
         height $ V 1
@@ -100,6 +101,7 @@ getFavouriteDriverList push state = do
   (favouriteDriversResp) <- lift $ lift $ Remote.getFavouriteDriverList 
   case favouriteDriversResp of
     Right resp -> do
+      void $ lift $ lift $ EHU.toggleLoader false
       liftFlowBT $ push $ GetFavouriteDriversListAPIResponseAction ( GetFavouriteDriverListRes resp)
       pure unit
     Left _ -> do
@@ -117,7 +119,6 @@ locationView push state =
                     ) (const AfterRender)
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
-  , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
   , margin $ MarginTop 120
   ]([  linearLayout
       [ height MATCH_PARENT
@@ -171,12 +172,12 @@ locationView push state =
 
 driverView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 driverView push state =
-  linearLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 135
-    , onBackPressed push $ const Back
+    -- , onBackPressed push $ const Back
     ][
       linearLayout
       [
@@ -376,7 +377,7 @@ favouriteDriverViews push state =
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
                         , gravity CENTER
-                        , text $ (getString BY) <> " " <> show item.favCount <> " " <> (getString CUSTOMERS)
+                        , text $ (getString BY) <> " " <> show item.favCount <> " " <> if item.favCount > 1 then getString CUSTOMERS else getString CUSTOMER
                         , color Color.black800
                         , margin $ MarginLeft 5
                         , textSize FontSize.a_15
@@ -517,10 +518,9 @@ savedLocationsView push state =
         ]]
     ]
 
-getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
-getSavedLocationsList action push state = do
-  void $ lift $ lift $ EHU.toggleLoader true
+getSavedLocationsList :: (Action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
+getSavedLocationsList push state = do
   (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
-  void $ lift $ lift $ EHU.toggleLoader false
-  liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
+  liftFlowBT $ push $ SavedLocationListAPIResponseAction ( SavedLocationsListRes savedLocationResp)
   pure unit
+

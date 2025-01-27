@@ -1,17 +1,11 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.PartnerOrgConfig where
 
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Domain.Types.PartnerOrgConfig as Domain
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, throwError)
-import Tools.Error
+import Kernel.Utils.Common (MonadFlow, throwError)
 
 getTypeAndJSONFromPOrgConfig :: PartnerOrganizationConfig -> (ConfigType, A.Value)
 getTypeAndJSONFromPOrgConfig pOrgCfg =
@@ -25,6 +19,7 @@ getPOrgConfigFromTypeAndJson config = \case
   RATE_LIMIT -> RateLimit <$> parseCfgJSON config RATE_LIMIT
   TICKET_SMS -> TicketSMS <$> parseCfgJSON config TICKET_SMS
   BPP_STATUS_CALL -> BPPStatusCall <$> parseCfgJSON config BPP_STATUS_CALL
+  WALLET_CLASS_NAME -> WalletClassName <$> parseCfgJSON config WALLET_CLASS_NAME
   where
     parseCfgJSON cfg cfgType = do
       case A.fromJSON cfg of

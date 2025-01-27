@@ -30,7 +30,7 @@ import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
 import Screens.Types (RideScheduledScreenState, City(..),NotificationBody)
 import Resources.Constants (cancelReasons, dummyCancelReason)
-import JBridge (hideKeyboardOnNavigation, toast)
+import JBridge (hideKeyboardOnNavigation)
 import Services.API
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
@@ -41,6 +41,9 @@ import Screens.Types (FareProductType(..)) as FPT
 import Language.Strings (getString)
 import Language.Types as STR
 import Debug (spy)
+import RemoteConfig as RemoteConfig
+import Locale.Utils (getLanguageLocale, languageKey)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -88,7 +91,7 @@ eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClic
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [pure GoBack]
 
-eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons false}}
+eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = RemoteConfig.cancelBookingReasonsConfigData (fetchLanguage $ getLanguageLocale languageKey) false}}
 
 eval (CancelRideActionController (PopUpModalController.OnButton1Click)) state = exit $ CancelRentalRide state
 

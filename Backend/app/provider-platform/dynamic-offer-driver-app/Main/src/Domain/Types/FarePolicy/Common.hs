@@ -12,13 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Domain.Types.FarePolicy.Common where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson
 import EulerHS.Prelude hiding (length, map)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)

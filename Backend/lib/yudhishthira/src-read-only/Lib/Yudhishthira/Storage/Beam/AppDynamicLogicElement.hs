@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement where
@@ -17,6 +15,7 @@ data AppDynamicLogicElementT f = AppDynamicLogicElementT
   { description :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     domain :: B.C f Lib.Yudhishthira.Types.LogicDomain,
     logic :: B.C f Data.Text.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     order :: B.C f Kernel.Prelude.Int,
     version :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

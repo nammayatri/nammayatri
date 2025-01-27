@@ -2,11 +2,10 @@
 
 module API.UI.Issue where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as DRR
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import Beckn.ACL.IGM.Utils
-import qualified Dashboard.RiderPlatform.Ride as DRR
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as DRPR
 import qualified Data.Set as Set
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
@@ -270,7 +269,7 @@ castRideInfo merchantId _ rideId = do
 
     cacheRideInfo :: DRR.RideInfoRes -> Flow ()
     cacheRideInfo rideInfoRes = do
-      let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRPR.COMPLETED, DRPR.CANCELLED]
+      let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRR.COMPLETED, DRR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
 castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp

@@ -21,10 +21,13 @@ import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified ExternalBPP.Bus.Flow as BusFlow
 import qualified ExternalBPP.Metro.Flow as MetroFlow
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
@@ -32,12 +35,32 @@ import qualified Storage.CachedQueries.Station as QStation
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-search :: Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Flow ()
+type FRFSSearchFlow m r =
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    EncFlow m r
+  )
+
+type FRFSConfirmFlow m r =
+  ( MonadFlow m,
+    BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
+  )
+
+search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> m ()
 search merchant merchantOperatingCity bapConfig searchReq = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
-    (METRO, Nothing) -> do
-      fork "FRFS ONDC METRO SearchReq" $ do
+    (_, Nothing) -> do
+      fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
         bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation merchantOperatingCity.city
@@ -54,11 +77,12 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         processOnSearch onSearchReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
+    processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
 
-init :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
+init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
@@ -76,6 +100,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       processOnInit onInitReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
+    processOnInit :: FRFSConfirmFlow m r => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'
@@ -141,5 +166,20 @@ status merchantId merchantOperatingCity bapConfig booking = do
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
   where
     processOnStatus onStatusReq = do
-      (merchant', booking') <- DOnStatus.validateRequest onStatusReq
-      DOnStatus.onStatus merchant' booking' onStatusReq
+      let bookingOnStatusReq = DOnStatus.Booking onStatusReq
+      (merchant', booking') <- DOnStatus.validateRequest bookingOnStatusReq
+      DOnStatus.onStatus merchant' booking' bookingOnStatusReq
+
+verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> Flow ()
+verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
+  case (bapConfig.vehicleCategory, integratedBPPConfig) of
+    (BUS, Just config) -> do
+      onStatusReq <- BusFlow.verifyTicket merchantId merchantOperatingCity config bapConfig encryptedQrData
+      processOnStatus onStatusReq
+    _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
+  where
+    processOnStatus onStatusReq = do
+      let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
+      (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
+      DOnStatus.onStatus merchant' booking' verificationOnStatusReq

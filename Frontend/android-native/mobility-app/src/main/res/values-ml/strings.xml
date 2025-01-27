@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">ചിത്രം പകർത്താൻ അനുമതി അനുവദിക്കുക</string>
     <string name="we_have_updated_your_app_kindly_relaunch">ഞങ്ങൾ നിങ്ങളുടെ ആപ്പ് അപ്‌ഡേറ്റ് ചെയ്‌തു, ആപ്പ് ഇപ്പോൾ വീണ്ടും ലോഡുചെയ്യും.</string>
     <string name="okay_got_it">ശരി, മനസ്സിലായി</string>
+    <string name="okay_got_it_smallcase">ശരി, മനസ്സിലായി</string>
+    <string name="sent">അയച്ചു</string>
     <string name="not_interested">താൽപ്പര്യമില്ല</string>
     <string name="too_far">വളരെ ദൂരെ</string>
     <string name="on_another_ride">മറ്റൊരു യാത്രയിൽ</string>
@@ -40,6 +42,9 @@
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
+    <string name="customer_is_waiting">ഉപഭോക്താവ് കാത്തിരിക്കുന്നു!</string>
+    <string name="please_start_moving_towards_the_pickup_location">ദയവായി പിക്കപ്പ് ലൊക്കേഷനിലേക്ക് നീങ്ങാൻ തുടങ്ങൂ</string>
+    <string name="quick_chats">ദ്രുത ചാറ്റുകൾ:</string>
     <string name="assistance_required">സഹായം ആവശ്യമാണ്</string>
     <string name="tip">ടിപ്പ്</string>
     <string name="qr_for_your_vpa_is_downloaded">നിങ്ങളുടെ vpa-യുടെ QR ഡൗൺലോഡ് ചെയ്തു!!!</string>
@@ -73,4 +78,7 @@
     <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
     <string name="parking_charges">%1$.0f₹ പാർക്കിംഗ്</string>
     <string name="includes">ഉൾപ്പെടുന്നു</string>
+    <string name="stops_info">%1$d സ്റ്റോപ്പുകൾ (സ്റ്റോപ്പ് ചാർജ് ഉൾപ്പെടെ)</string>
+    <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
+    <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
 </resources>

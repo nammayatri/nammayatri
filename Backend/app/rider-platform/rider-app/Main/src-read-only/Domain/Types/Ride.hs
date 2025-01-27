@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Ride where
@@ -57,6 +56,7 @@ data RideE e = Ride
     estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    feedbackSkipped :: Kernel.Prelude.Bool,
     fromLocation :: Domain.Types.Location.Location,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
@@ -67,6 +67,7 @@ data RideE e = Ride
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
+    pickupRouteCallCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -137,6 +138,7 @@ instance EncryptedItem Ride where
           estimatedEndTimeRange = estimatedEndTimeRange entity,
           fare = fare entity,
           favCount = favCount entity,
+          feedbackSkipped = feedbackSkipped entity,
           fromLocation = fromLocation entity,
           hasStops = hasStops entity,
           id = id entity,
@@ -147,6 +149,7 @@ instance EncryptedItem Ride where
           onlinePayment = onlinePayment entity,
           otp = otp entity,
           paymentStatus = paymentStatus entity,
+          pickupRouteCallCount = pickupRouteCallCount entity,
           rideEndTime = rideEndTime entity,
           rideRating = rideRating entity,
           rideStartTime = rideStartTime entity,
@@ -209,6 +212,7 @@ instance EncryptedItem Ride where
             estimatedEndTimeRange = estimatedEndTimeRange entity,
             fare = fare entity,
             favCount = favCount entity,
+            feedbackSkipped = feedbackSkipped entity,
             fromLocation = fromLocation entity,
             hasStops = hasStops entity,
             id = id entity,
@@ -219,6 +223,7 @@ instance EncryptedItem Ride where
             onlinePayment = onlinePayment entity,
             otp = otp entity,
             paymentStatus = paymentStatus entity,
+            pickupRouteCallCount = pickupRouteCallCount entity,
             rideEndTime = rideEndTime entity,
             rideRating = rideRating entity,
             rideStartTime = rideStartTime entity,

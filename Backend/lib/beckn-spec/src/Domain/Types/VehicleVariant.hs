@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,7 +15,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.VehicleVariant where
 
@@ -24,6 +23,7 @@ import Data.Aeson
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data VehicleVariant
@@ -45,7 +45,13 @@ data VehicleVariant
   | SUV_PLUS
   | DELIVERY_BIKE
   | DELIVERY_LIGHT_GOODS_VEHICLE
+  | BUS_NON_AC
+  | BUS_AC
+  | HERITAGE_CAB
+  | EV_AUTO_RICKSHAW
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+
+instance CH.ClickhouseValue VehicleVariant
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
 
@@ -60,6 +66,7 @@ castServiceTierToVariant = \case
   DVST.SUV -> SUV
   DVST.TAXI_PLUS -> TAXI_PLUS
   DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
+  DVST.EV_AUTO_RICKSHAW -> EV_AUTO_RICKSHAW
   DVST.PREMIUM_SEDAN -> PREMIUM_SEDAN
   DVST.BLACK -> BLACK
   DVST.BLACK_XL -> BLACK_XL
@@ -70,8 +77,11 @@ castServiceTierToVariant = \case
   DVST.AMBULANCE_AC_OXY -> AMBULANCE_AC_OXY
   DVST.AMBULANCE_VENTILATOR -> AMBULANCE_VENTILATOR
   DVST.SUV_PLUS -> SUV_PLUS
+  DVST.HERITAGE_CAB -> HERITAGE_CAB
   DVST.DELIVERY_BIKE -> DELIVERY_BIKE
   DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DELIVERY_LIGHT_GOODS_VEHICLE
+  DVST.BUS_NON_AC -> BUS_NON_AC
+  DVST.BUS_AC -> BUS_AC
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -91,8 +101,12 @@ castVariantToServiceTier = \case
   AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
   AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
   SUV_PLUS -> DVST.SUV_PLUS
+  EV_AUTO_RICKSHAW -> DVST.EV_AUTO_RICKSHAW
+  HERITAGE_CAB -> DVST.HERITAGE_CAB
   DELIVERY_BIKE -> DVST.DELIVERY_BIKE
   DELIVERY_LIGHT_GOODS_VEHICLE -> DVST.DELIVERY_LIGHT_GOODS_VEHICLE
+  BUS_NON_AC -> DVST.BUS_NON_AC
+  BUS_AC -> DVST.BUS_AC
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -112,8 +126,12 @@ castVehicleVariantToVehicleCategory = \case
   AMBULANCE_AC_OXY -> DVC.AMBULANCE
   AMBULANCE_VENTILATOR -> DVC.AMBULANCE
   SUV_PLUS -> DVC.CAR
+  EV_AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
+  HERITAGE_CAB -> DVC.CAR
   DELIVERY_BIKE -> DVC.MOTORCYCLE
   DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
+  BUS_NON_AC -> DVC.BUS
+  BUS_AC -> DVC.BUS
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
 castServiceTierToVehicleCategory = \case
@@ -136,8 +154,12 @@ castServiceTierToVehicleCategory = \case
   DVST.AMBULANCE_AC_OXY -> DVC.AMBULANCE
   DVST.AMBULANCE_VENTILATOR -> DVC.AMBULANCE
   DVST.SUV_PLUS -> DVC.CAR
+  DVST.EV_AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
+  DVST.HERITAGE_CAB -> DVC.CAR
   DVST.DELIVERY_BIKE -> DVC.MOTORCYCLE
   DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
+  DVST.BUS_NON_AC -> DVC.BUS
+  DVST.BUS_AC -> DVC.BUS
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)

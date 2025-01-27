@@ -34,7 +34,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
     namespace "in.juspay.mobility"
 
     buildFeatures{
@@ -43,9 +43,9 @@ android {
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
-    versionCode 147
-    versionName "2.5.17"
+        targetSdkVersion 34
+    versionCode 171
+    versionName "3.0.30"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,7 +60,7 @@ android {
         }
     }
 
-    // If you are not able to generate signed APK uncomment this
+    // If you are not able to generate signed APK uncomment this 
     // packagingOptions {
     //     exclude 'META-INF/DEPENDENCIES'
     //     exclude 'META-INF/LICENSE'
@@ -156,9 +156,21 @@ android {
             resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
             dimension "mode"
         }
+        oyUser {
+            applicationId "in.mobility.odishayatri"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
         nyUser {
             applicationId "in.juspay.nammayatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        oyDriver {
+            applicationId "in.mobility.odishayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
@@ -229,9 +241,11 @@ android {
     sourceSets {
         nyUser.setRoot('src/user/nammaYatri')
         myUser.setRoot('src/user/manaYatri')
+        oyUser.setRoot('src/user/odishaYatri')
         bridgeUser.setRoot('src/user/bridge')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
         myDriver.setRoot('src/driver/manaYatriPartner')
+        oyDriver.setRoot('src/driver/odishaYatriPartner')
         bridgeDriver.setRoot('src/driver/bridgeDriver')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
@@ -249,6 +263,8 @@ android {
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
+        oyUser.res.srcDir('src/user/common/res')
+        oyDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -310,6 +326,7 @@ dependencies {
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
+    oyDriverImplementation project(path: ':mobility-driver')
     bridgeDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
@@ -319,6 +336,7 @@ dependencies {
     bridgeUserImplementation project(path: ':mobility-customer')
     ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
+    oyUserImplementation project(path: ':mobility-customer')
     implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'

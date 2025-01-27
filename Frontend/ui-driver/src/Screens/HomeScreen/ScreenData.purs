@@ -25,6 +25,7 @@ import Screens.Types as ST
 import RemoteConfig.Utils as RU
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
+import Engineering.Helpers.Commons(getPastYears)
 
 initData :: HomeScreenState
 initData = 
@@ -123,6 +124,7 @@ initData =
           , tripStartTime : Nothing
           , tripEndTime : Nothing
           , specialLocationTag : Nothing
+          , metroRideCoinData : Nothing
           }
       , driverGotoState:
           { gotoCount: 0
@@ -175,6 +177,32 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , favPopUp : defaultFavPopUpData
+      , blockExpiryTime : ""
+      , completingProfileRes : {
+          completed : 0
+        , pledge : []
+        , vehicalOffer : []
+        , languages : []
+        , aspirations : [] 
+        , homeTown : Nothing
+        , calendarState:
+          { calendarPopup: false
+          , endDate: Nothing
+          , selectedTimeSpan: dummyDateItem
+          , startDate: Just dummyDateItem
+          , weeks: []
+          }
+        , drivingSince : Nothing
+        , addImagesState: addImagesState'
+        , viewImageState: { image : "", imageName : Nothing}
+        , uploadedImagesIds: []
+        , addedImages: []
+        , datePickerState : datePickerState'
+        , inputTextState : inputTextState'
+        }
+      , isSpecialLocWarrior : false
+      , bus_number : ""
     }
   , props:
       { isFreeRide: false
@@ -235,6 +263,7 @@ initData =
       , waitTimeStatus: NoStatus
       , isMockLocation: false
       , accountBlockedPopup: false
+      , accountBlockedPopupDueToCancellations: false
       , showCoinsPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
@@ -270,8 +299,39 @@ initData =
       , intercityInfoPopUp : false
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
+      , retryRideList : false
+      , showParcelIntroductionPopup : false 
+      , showMetroWarriorWarningPopup : false
+      , setBusOnline : false
+      , bus_input_data : ""
       }
   }
+
+dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
+
+addImagesState' = {
+  images: [],
+  stateChanged: false,
+  isLoading: false,
+  imageMediaIds: []
+}
+
+inputTextState' = {
+  feedback : "",
+  component : Empty,
+  others : others'
+}
+
+others' = {
+  pledge : "",
+  aspirations : ""
+}
+
+datePickerState' = {
+  activeIndex : 0,
+  dates : getPastYears 70,
+  id : ""
+}
 
 initialTollState :: TollState
 initialTollState = { 
@@ -281,6 +341,13 @@ initialTollState = {
 , tollAmbigous : false
 , estimatedCharge : 0.0
 }
+
+defaultFavPopUpData :: FavouritePopUp
+defaultFavPopUpData = {
+    visibility : false,
+    title : "",
+    message : ""
+  }
 
 dummyDriverRideStats :: DriverProfileStatsResp
 dummyDriverRideStats =

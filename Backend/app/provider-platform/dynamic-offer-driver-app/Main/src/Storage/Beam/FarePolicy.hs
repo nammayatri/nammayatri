@@ -11,7 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.FarePolicy where
 
@@ -31,6 +30,7 @@ data FarePolicyT f = FarePolicyT
     parkingCharge :: B.C f (Maybe HighPrecMoney),
     perStopCharge :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
+    tipOptions :: B.C f (Maybe [Int]),
     currency :: B.C f (Maybe Currency),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
@@ -49,7 +49,9 @@ data FarePolicyT f = FarePolicyT
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

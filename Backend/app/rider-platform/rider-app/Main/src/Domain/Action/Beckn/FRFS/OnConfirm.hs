@@ -17,22 +17,31 @@ module Domain.Action.Beckn.FRFS.OnConfirm where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import Data.Aeson
+import Data.HashMap.Strict
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Domain.Action.Beckn.FRFS.Common
+import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Domain.Types.FRFSQuote as FQ
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant as Merchant
+import qualified Domain.Types.PartnerOrgConfig as DPOC
+import Domain.Types.PartnerOrganization
+import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude ((+||), (||+))
 import ExternalBPP.CallAPI
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.External.Encryption as ENC
+import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,7 +50,9 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
+import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -53,7 +64,11 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
+import Tools.Error
 import qualified Tools.SMS as Sms
+import qualified Utils.Common.JWT.Config as GW
+import qualified Utils.Common.JWT.TransitClaim as TC
+import Web.JWT hiding (claims)
 
 validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
@@ -67,7 +82,7 @@ validateRequest DOrder {..} = do
     then do
       -- Booking is expired
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-      bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) ((frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)) >>= fromMaybeM (InternalError "Beckn Config not found")
+      bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
@@ -91,11 +106,20 @@ onConfirm merchant booking' dOrder = do
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  mRiderNumber <- mapM decrypt person.mobileNumber
+  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   buildReconTable merchant booking dOrder tickets mRiderNumber
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
   void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
   void $ CQP.clearPSCache booking.riderId
+  whenJust booking.partnerOrgId $ \pOrgId -> do
+    fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
+      let serviceName = DEMSC.WalletService GW.GoogleWallet
+      let mId = booking'.merchantId
+      let mocId' = booking'.merchantOperatingCityId
+      serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+      transitObjects' <- createTransitObjects booking pOrgId tickets person serviceAccount
+      url <- mkGoogleWalletLink serviceAccount transitObjects'
+      void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
@@ -198,7 +222,9 @@ mkTicket booking dTicket isTicketFree = do
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
         Ticket.id = ticketId,
+        Ticket.description = dTicket.description,
         Ticket.qrData = dTicket.qrData,
+        Ticket.qrRefreshAt = dTicket.qrRefreshAt,
         Ticket.riderId = booking.riderId,
         Ticket.status = status_,
         Ticket.ticketNumber = dTicket.ticketNumber,
@@ -212,15 +238,68 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
+mkTransitObjects :: Booking.FRFSTicketBooking -> Id PartnerOrganization -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Flow TC.TransitObject
+mkTransitObjects booking pOrgId ticket person serviceAccount = do
+  toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
+  fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
+  let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
+  let fromStaionNameLV = TC.LanguageValue {TC.language = "en-US", TC._value = fromStation.name}
+  let toStaionNameLV = TC.LanguageValue {TC.language = "en-US", TC._value = toStation.name}
+  let fromStationName = TC.Name {TC.defaultValue = fromStaionNameLV}
+  let toStationName = TC.Name {TC.defaultValue = toStaionNameLV}
+  walletPOCfg <- do
+    pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+    DPOC.getWalletClassNameConfig pOrgCfg.config
+  let barcode' =
+        TC.Barcode
+          { TC._type = show GWSA.QR_CODE,
+            TC.value = ticket.qrData
+          }
+  let passengerName' = fromMaybe "-" person.firstName
+  let className = fromMaybe ("namma_yatri_metro") $ lookup booking.merchantOperatingCityId.getId walletPOCfg.className
+  let istTimeText = GWSA.showTimeIst ticket.validTill
+  let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}
+  let textModuleValidUntil = TC.TextModule {TC._header = "Valid until", TC.body = istTimeText, TC.id = "myfield2"}
+  let textModules = [textModuleTicketNumber, textModuleValidUntil]
+  now <- getCurrentTime
+  let nowText = GWSA.utcTimeToText now
+  let validTillText = GWSA.utcTimeToText ticket.validTill
+  let timeInterval = TC.TimeInterval {TC.start = TC.DateTime {TC.date = nowText}, TC.end = TC.DateTime {TC.date = validTillText}}
+  return
+    TC.TransitObject
+      { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
+        TC.classId = serviceAccount.saIssuerId <> "." <> className,
+        TC.state = show GWSA.ACTIVE,
+        TC.tripType = show tripType',
+        TC.passengerType = show GWSA.SINGLE_PASSENGER,
+        TC.passengerNames = passengerName',
+        TC.ticketLeg =
+          TC.TicketLeg
+            { TC.originName = fromStationName,
+              TC.destinationName = toStationName
+            },
+        TC.barcode = barcode',
+        TC.textModulesData = textModules,
+        TC.validTimeInterval = timeInterval
+      }
+
 createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
 createTickets booking dTickets discountedTickets = go dTickets discountedTickets []
   where
-    go [] _ acc = return (reverse acc)
+    go [] _ acc = return (Prelude.reverse acc)
     go (d : ds) freeTicketsLeft acc = do
       let isTicketFree = freeTicketsLeft > 0
       ticket <- mkTicket booking d isTicketFree
       let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
       go ds newFreeTickets (ticket : acc)
+
+createTransitObjects :: Booking.FRFSTicketBooking -> Id PartnerOrganization -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Flow [TC.TransitObject]
+createTransitObjects booking pOrgId tickets person serviceAccount = go tickets []
+  where
+    go [] acc = return (Prelude.reverse acc)
+    go (x : xs) acc = do
+      transitObject <- mkTransitObjects booking pOrgId x person serviceAccount
+      go xs (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do
@@ -234,3 +313,37 @@ buildRecon recon ticket = do
         Recon.createdAt = now,
         Recon.updatedAt = now
       }
+
+mkGoogleWalletLink :: (MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String]) => TC.ServiceAccount -> [TC.TransitObject] -> m T.Text
+mkGoogleWalletLink serviceAccount tObject = do
+  let payload' =
+        TC.Payload
+          { TC.transitObjects = tObject
+          }
+  privateKey <- asks (.googleSAPrivateKey)
+  let payloadValue = toJSON payload'
+  let origins = ["www.example.com"] :: [String]
+  let originsValue = toJSON origins
+  let additionalClaims = TC.createAdditionalClaims [("payload", payloadValue), ("origins", originsValue), ("typ", String "savetowallet")]
+  let jwtHeader =
+        JOSEHeader
+          { typ = Just "JWT",
+            cty = Nothing,
+            alg = Just RS256,
+            kid = Nothing
+          }
+  let iss = stringOrURI . TC.saClientEmail $ serviceAccount
+  let aud = Left <$> stringOrURI "google"
+  iat <- numericDate <$> liftIO getPOSIXTime
+  let claims =
+        mempty
+          { iat = iat,
+            iss = iss,
+            aud = aud,
+            unregisteredClaims = additionalClaims
+          }
+  token' <- liftIO $ TC.createJWT' jwtHeader claims privateKey
+  token <- fromEitherM (\err -> InternalError $ "Failed to get jwt token" <> show err) token'
+  let textToken = snd token
+  let url = "https://pay.google.com/gp/v/save/" <> textToken
+  return url

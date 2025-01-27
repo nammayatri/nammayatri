@@ -212,6 +212,7 @@ library
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
       Domain.Types
+      Domain.Types.EmptyDynamicParam
       Domain.Types.FareProductType
       Domain.Types.RefereeLink
       Domain.Types.ServiceTierType
@@ -234,6 +235,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -252,6 +254,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies

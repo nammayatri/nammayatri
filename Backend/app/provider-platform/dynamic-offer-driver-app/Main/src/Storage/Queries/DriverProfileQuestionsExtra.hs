@@ -1,21 +1,12 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverProfileQuestionsExtra where
 
-import Data.List.Extra
 import Domain.Types.DriverProfileQuestions
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverProfileQuestions as Beam
-import Storage.Queries.OrphanInstances.DriverProfileQuestions
+import Storage.Queries.OrphanInstances.DriverProfileQuestions ()
 
 -- Extra code goes here --
 

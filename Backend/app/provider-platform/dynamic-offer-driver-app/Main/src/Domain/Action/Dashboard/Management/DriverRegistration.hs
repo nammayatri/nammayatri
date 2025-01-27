@@ -20,27 +20,21 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationRegisterRc,
     postDriverRegistrationRegisterGenerateAadhaarOtp,
     postDriverRegistrationRegisterVerifyAadhaarOtp,
-    auth,
-    verify,
     getDriverRegistrationUnderReviewDrivers,
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
-import qualified Domain.Action.UI.FleetDriverAssociation as FDV
-import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehiclePUC as DPUC
@@ -59,13 +53,11 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverSSN as QSSN
-import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
@@ -256,47 +248,6 @@ postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity driverId_ 
           shareCode = req.shareCode
         }
   pure (convertSubmitOtp res)
-
-auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> Flow Common.AuthRes
-auth merchantShortId opCity req = do
-  merchant <- findMerchantByShortId merchantShortId
-  res <-
-    DReg.auth
-      True
-      DReg.AuthReq
-        { mobileNumber = Just req.mobileNumber,
-          mobileCountryCode = Just req.mobileCountryCode,
-          merchantId = merchant.id.getId,
-          merchantOperatingCity = Just opCity,
-          registrationLat = Nothing,
-          registrationLon = Nothing,
-          name = Nothing,
-          email = Nothing,
-          identifierType = Just SP.MOBILENUMBER
-        }
-      Nothing
-      Nothing
-      Nothing
-      Nothing
-  pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
-
-verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> Flow APISuccess
-verify authId mbFleet fleetOwnerId req = do
-  let regId = Id authId :: Id SR.RegistrationToken
-  res <-
-    DReg.verify
-      regId
-      DReg.AuthVerifyReq
-        { otp = req.otp,
-          deviceToken = req.deviceToken,
-          whatsappNotificationEnroll = Nothing
-        }
-  when mbFleet $ do
-    checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
-    when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-    QFDV.create assoc
-  pure Success
 
 getDriverRegistrationUnderReviewDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
 getDriverRegistrationUnderReviewDrivers _merchantShortId _opCity _limit _offset = throwError (InternalError "Not Implemented")

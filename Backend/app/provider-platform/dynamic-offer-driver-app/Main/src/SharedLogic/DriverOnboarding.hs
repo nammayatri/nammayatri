@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.DriverOnboarding where
+module SharedLogic.DriverOnboarding
+  ( module SharedLogic.DriverOnboarding,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
@@ -34,6 +38,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
+import Domain.Utils as Reexport
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -126,10 +131,10 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
     countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
     let phoneNumber = countryCode <> mobileNumber
     merchantMessage <-
-      QMM.findByMerchantOpCityIdAndMessageKey merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM
+      QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
-    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
+    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
     when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
 
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
@@ -475,11 +480,6 @@ sortMaybe = DL.sortBy compareVehicles
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
-
-convertTextToUTC :: Maybe Text -> Maybe UTCTime
-convertTextToUTC a = do
-  a_ <- a
-  parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do

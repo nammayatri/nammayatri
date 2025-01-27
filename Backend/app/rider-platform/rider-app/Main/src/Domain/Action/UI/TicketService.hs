@@ -1,25 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.TicketService where
 
 import API.Types.UI.TicketService
-import qualified Control.Monad.Extra as ME
-import Data.List (findIndex, sortBy)
-import Data.List.Extra ((!?))
-import qualified Data.List.NonEmpty as DLN
 import qualified Data.Map as Map
-import Data.OpenApi (ToSchema)
 import Data.Ord as DO
 import qualified Data.Text as Data.Text
-import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
-import qualified Domain.Types.NotificationSoundsConfig as NSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Domain.Types.Person
 import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
@@ -38,14 +28,11 @@ import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface.Types as Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
-import Kernel.Types.Beckn.Ack
-import qualified Kernel.Types.Common as Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Kernel.Utils.Common
@@ -54,12 +41,10 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
-import Servant hiding (throwError)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.BusinessHour as QBH
-import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.SeatManagement as QTSM
@@ -72,7 +57,6 @@ import qualified Storage.Queries.TicketBookingService as QTBS
 import qualified Storage.Queries.TicketBookingServiceCategory as QTBSC
 import qualified Storage.Queries.TicketPlace as QTP
 import qualified Storage.Queries.TicketService as QTS
-import Tools.Auth
 import Tools.Error
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
@@ -175,6 +159,7 @@ getTicketPlacesServices _ placeId mbDate = do
             specialDayDescription = (.description) =<< mbSpecialOcc,
             specialDayType = (.specialDayType) <$> mbSpecialOcc,
             operationalDays = maybe service.operationalDays (: []) mbOperationalDay,
+            operationalDate = service.operationalDate,
             categories
           }
 
@@ -253,12 +238,13 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing
+            metadataGatewayReferenceId = Nothing,
+            splitSettlementDetails = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
       createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
     Nothing -> do
@@ -670,7 +656,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
-  if ticketBooking'.status == DTTB.Cancelled || order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+  if ticketBooking'.status == DTTB.Cancelled || ticketBooking'.status == DTTB.Booked
     then do
       return ticketBooking'.status
     else do

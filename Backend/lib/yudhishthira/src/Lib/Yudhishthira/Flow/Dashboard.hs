@@ -57,6 +57,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = tagRule,
                 description = description,
+                actionEngine = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -69,6 +70,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = tagRule,
                 description = description,
+                actionEngine,
                 createdAt = now,
                 updatedAt = now
               }
@@ -81,6 +83,7 @@ postTagCreate tagRequest = do
                 possibleValues = tagPossibleValues,
                 rule = Lib.Yudhishthira.Types.LLM "empty-context",
                 description = description,
+                actionEngine = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -102,6 +105,7 @@ postTagUpdate tagRequest = do
             possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
             rule = fromMaybe tag.rule tagRequest.tagRule,
             description = tagRequest.description <|> tag.description,
+            actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
             createdAt = tag.createdAt,
             updatedAt = now
           }
@@ -176,8 +180,8 @@ verifyTag fullTag = do
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 
 postRunKaalChakraJob ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Show action, Read action) =>
+  Handle m action ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   m Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postRunKaalChakraJob _h req =
@@ -233,12 +237,13 @@ verifyEventLogic event logics data_ = do
 verifyAndUpdateDynamicLogic ::
   forall m r a b.
   (BeamFlow m r, ToJSON a, FromJSON b) =>
+  Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Proxy b ->
   Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateDynamicLogic _ referralLinkPassword req logicData = do
+verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = do
   resp <- runLogics req.rules logicData
   let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
   let shouldVerifyOutput = fromMaybe False req.verifyOutput
@@ -275,6 +280,7 @@ verifyAndUpdateDynamicLogic _ referralLinkPassword req logicData = do
             { createdAt = now,
               updatedAt = now,
               description = req.description,
+              merchantId = mbMerchantId,
               ..
             }
 
@@ -358,8 +364,13 @@ getLogicRollout merchantOpCityId _ domain = do
           firstElement = DLNE.head logicRollouts
        in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout)
 
-upsertLogicRollout :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Kernel.Types.APISuccess.APISuccess
-upsertLogicRollout merchantOpCityId rolloutReq = do
+upsertLogicRollout ::
+  BeamFlow m r =>
+  Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  [Lib.Yudhishthira.Types.LogicRolloutObject] ->
+  m Kernel.Types.APISuccess.APISuccess
+upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
@@ -381,7 +392,14 @@ upsertLogicRollout merchantOpCityId rolloutReq = do
       when (rolloutSum /= 100) $ throwError $ InvalidRequest "Sum of rollout percentage should be 100"
       mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds) rollout
 
-    mkAppDynamicLogicRollout :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Lib.Yudhishthira.Types.RolloutVersion -> m AppDynamicLogicRollout
+    mkAppDynamicLogicRollout ::
+      BeamFlow m r =>
+      Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+      UTCTime ->
+      Lib.Yudhishthira.Types.LogicDomain ->
+      Text ->
+      Lib.Yudhishthira.Types.RolloutVersion ->
+      m AppDynamicLogicRollout
     mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds Lib.Yudhishthira.Types.RolloutVersion {..} = do
       logicsObject <- CADLE.findByDomainAndVersion domain version
       let _versionDescription = listToMaybe logicsObject >>= (.description)
@@ -393,6 +411,7 @@ upsertLogicRollout merchantOpCityId rolloutReq = do
             percentageRollout = rolloutPercentage,
             merchantOperatingCityId = cast merchantOperatingCityId,
             versionDescription = versionDescription <|> _versionDescription,
+            merchantId = mbMerchantId,
             ..
           }
 

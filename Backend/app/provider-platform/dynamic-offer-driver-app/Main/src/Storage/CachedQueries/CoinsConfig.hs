@@ -31,7 +31,14 @@ fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsE
 fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory =
   Hedis.safeGet (makeCoinConfigKey eventType merchantOpCityId vehicleCategory) >>= \case
     Just a -> return a
-    Nothing -> cacheCoinConfig eventType merchantOpCityId vehicleCategory /=<< Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
+    Nothing -> do
+      result <- Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehicleCategory)
+      result' <-
+        if null result
+          then Queries.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId Nothing
+          else return result
+      void $ cacheCoinConfig eventType merchantOpCityId vehicleCategory result
+      return result'
 
 cacheCoinConfig :: CacheFlow m r => DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> [CoinsConfig] -> m ()
 cacheCoinConfig eventType merchantOpCityId vehicleCategory coinsConfig = do
@@ -46,3 +53,27 @@ makeCoinConfigKey eventType merchantOpCityId vehicleCategory =
     <> pack (show eventType)
     <> ":vehicleCategory-"
     <> show vehicleCategory
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+fetchConfigOnEventAndFunctionBasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId vehicleCategory =
+  Hedis.safeGet (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory) >>= \case
+    Just a -> return a
+    Nothing -> cacheCoinConfigOnEventAndFunction eventType eventFunction merchantOpCityId vehicleCategory /=<< Queries.fetchConfigOnEventAndFunctionBasis eventType eventFunction merchantId merchantOpCityId (Just vehicleCategory)
+
+cacheCoinConfigOnEventAndFunction :: CacheFlow m r => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe CoinsConfig -> m ()
+cacheCoinConfigOnEventAndFunction eventType eventFunction merchantOpCityId vehicleCategory coinsConfig = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory) coinsConfig expTime
+
+makeCoinConfigOnEventAndFunctionKey :: DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Text
+makeCoinConfigOnEventAndFunctionKey eventType eventFunction merchantOpCityId vehicleCategory =
+  "cachedQueries:Coins:MocId-"
+    <> merchantOpCityId.getId
+    <> ":EventType-"
+    <> pack (show eventType)
+    <> ":vehicleCategory-"
+    <> (show vehicleCategory)
+    <> ":eventFunction-"
+    <> (show eventFunction)

@@ -1,20 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.BackgroundVerificationExtra where
 
 import Domain.Types.BackgroundVerification
-import Domain.Types.Person
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BackgroundVerification as Beam
-import Storage.Queries.OrphanInstances.BackgroundVerification
+import Storage.Queries.OrphanInstances.BackgroundVerification ()
 
 -- Extra code goes here --
 

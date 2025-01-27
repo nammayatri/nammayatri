@@ -1,13 +1,9 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.RentalDetails where
 
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Utils.JSON (removeNullFields)
 
 data NightShiftInfo = NightShiftInfo

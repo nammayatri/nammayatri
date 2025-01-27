@@ -152,3 +152,35 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN dynamic_logic_update_password text
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN feedback_alert_rating_threshold integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN use_user_settings_for_safety_ivr boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_program boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_start_date timestamp with time zone  default '2024-12-20 12:00:00.000000+00';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN threshold_cancellation_percentage_to_block integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_block integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN metro_booking_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_show_cancellation_rate integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_whatsapp boolean ;

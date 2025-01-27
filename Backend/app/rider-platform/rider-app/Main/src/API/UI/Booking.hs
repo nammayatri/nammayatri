@@ -52,6 +52,9 @@ type API =
              :> QueryParam "onlyActive" Bool
              :> QueryParam "status" SRB.BookingStatus
              :> QueryParam "clientId" (Id DC.Client)
+             :> QueryParam "fromDate" Integer
+             :> QueryParam "toDate" Integer
+             :> QueryParams "rideStatus" SRB.BookingStatus
              :> Get '[JSON] DBooking.BookingListRes
            :<|> "favourites"
              :> "list"
@@ -96,8 +99,8 @@ addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPI . withP
 editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
 editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> FlowHandler DBooking.BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> FlowHandler DBooking.BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId mbFromDate mbToDate mbBookingStatusList = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId mbFromDate mbToDate mbBookingStatusList
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
 favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver = withFlowHandlerAPI . DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver

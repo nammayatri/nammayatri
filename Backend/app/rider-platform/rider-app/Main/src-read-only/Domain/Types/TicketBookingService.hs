@@ -1,11 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketBookingService where
 
 import Data.Aeson
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -32,7 +31,7 @@ data TicketBookingService = TicketBookingService
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationCount :: Kernel.Prelude.Int,
-    visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    visitDate :: Kernel.Prelude.Maybe Data.Time.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)

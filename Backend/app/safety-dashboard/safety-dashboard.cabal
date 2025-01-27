@@ -121,6 +121,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -130,6 +131,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields -Wwarn=ambiguous-fields
   build-depends:
       aeson
@@ -203,6 +205,7 @@ executable safety-dashboard-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -212,6 +215,7 @@ executable safety-dashboard-exe
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson

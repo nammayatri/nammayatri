@@ -18,8 +18,8 @@ module Domain.Action.Dashboard.Management.Revenue
   )
 where
 
+import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Revenue as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import Data.Maybe
 import Data.Text hiding (drop, elem, filter, length, map)
 import Data.Time hiding (getCurrentTime)
@@ -46,7 +46,7 @@ getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  allFees <- CHDriverFee.findAllByStatus merchant.id [Common.CLEARED, Common.COLLECTED_CASH, Common.EXEMPTED, Common.PAYMENT_PENDING, Common.PAYMENT_OVERDUE] (Just from) (Just to)
+  allFees <- CHDriverFee.findAllByStatusSubSelect merchant.id [Common.CLEARED, Common.COLLECTED_CASH, Common.EXEMPTED, Common.PAYMENT_PENDING, Common.PAYMENT_OVERDUE] (Just from) (Just to)
   getAllFeeFromDriverFee `mapM` allFees
 
 getAllFeeFromDriverFee :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.AllFees
@@ -67,15 +67,15 @@ getRevenueCollectionHistory merchantShortId opCity mbFrom place mbTo volunteerId
       to = fromMaybe now mbTo
   let dayBasis = diffUTCTime to from_ > 24 * 60 * 60
   offlineCollectionFees <- case (place, volunteerId) of
-    (Nothing, Nothing) -> CHDriverFee.findAllByDate merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis Nothing
-    (Nothing, Just cId) -> CHDriverFee.findAllByDate merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis (Just [Id cId])
+    (Nothing, Nothing) -> CHDriverFee.findAllByDateSubSelect merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis Nothing
+    (Nothing, Just cId) -> CHDriverFee.findAllByDateSubSelect merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis (Just [Id cId])
     (Just stn, _) -> do
       volunteers <- findAllByPlace stn
       let relevantIds = case volunteerId of
             Just cId -> [Id cId | cId `elem` ((.id.getId) <$> volunteers)]
             _ -> (.id) <$> volunteers
-      CHDriverFee.findAllByDate merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis (Just relevantIds)
-  onlineCollectionFees <- CHDriverFee.findAllByDate merchant.id [Common.CLEARED] (Just from_) (Just to) dayBasis Nothing
+      CHDriverFee.findAllByDateSubSelect merchant.id [Common.COLLECTED_CASH] (Just from_) (Just to) dayBasis (Just relevantIds)
+  onlineCollectionFees <- CHDriverFee.findAllByDateSubSelect merchant.id [Common.CLEARED] (Just from_) (Just to) dayBasis Nothing
   onlineCollection <- getCollectionListElem `mapM` onlineCollectionFees
   offlineCollection <- getCollectionListElem `mapM` offlineCollectionFees
   pure $ Common.CollectionList {onlineCollection, offlineCollection}

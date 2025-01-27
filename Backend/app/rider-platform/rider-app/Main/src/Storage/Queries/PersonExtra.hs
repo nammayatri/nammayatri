@@ -49,8 +49,8 @@ findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = f
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> m ()
-updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion))
     do
@@ -64,7 +64,8 @@ updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersio
           Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice),
           Se.Set BeamP.clientModelName ((.deviceModel) <$> mbDevice),
           Se.Set BeamP.clientManufacturer ((.deviceManufacturer) =<< mbDevice),
-          Se.Set BeamP.backendAppVersion (Just deploymentVersion)
+          Se.Set BeamP.backendAppVersion (Just deploymentVersion),
+          Se.Set BeamP.clientReactNativeVersion mbRnVersion
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
@@ -79,6 +80,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Language ->
   Maybe Gender ->
+  Maybe Text ->
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
@@ -89,7 +91,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -104,6 +106,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
+        <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
         <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
         <> [Se.Set BeamP.clientBundleVersion (versionToText <$> mbBundleVersion) | isJust mbBundleVersion]
         <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]

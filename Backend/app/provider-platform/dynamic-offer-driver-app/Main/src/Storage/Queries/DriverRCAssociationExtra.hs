@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverRCAssociationExtra where
 
 import qualified Data.HashMap.Strict as HashMap
@@ -11,9 +8,7 @@ import Domain.Types.Person (Person)
 import Domain.Types.VehicleRegistrationCertificate
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude hiding (on)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -22,7 +17,7 @@ import qualified Storage.Beam.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.FleetDriverAssociation ()
-import Storage.Queries.OrphanInstances.DriverRCAssociation
+import Storage.Queries.OrphanInstances.DriverRCAssociation ()
 import Storage.Queries.VehicleRegistrationCertificate ()
 
 -- Extra code goes here --

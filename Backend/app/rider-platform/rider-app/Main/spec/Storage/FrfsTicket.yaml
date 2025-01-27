@@ -27,7 +27,9 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
+  Journey: Domain.Types.Journey
+  JourneyLegStatus: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
 
 FRFSSearch:
@@ -46,6 +48,10 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    journeyLegStatus: Maybe JourneyLegStatus
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+    frequency: Maybe Int
 
   beamFields:
     journeyLegInfo:
@@ -69,7 +75,6 @@ FRFSSearch:
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
-    # journeyId: "!SecondaryKey"
 
   queries:
     getTicketPlaces:
@@ -77,6 +82,10 @@ FRFSSearch:
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
       where: id
 
   extraOperations:
@@ -128,6 +137,10 @@ Station:
     deleteByStationCode:
       kvFunction: deleteWithKV
       where: code
+    findByStationCodeAndMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [code, merchantOperatingCityId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -142,17 +155,11 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe FRFSRoutes
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
     discountsJson: Maybe Text
     vehicleType: VehicleCategory
-    serviceTierProviderCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -163,11 +170,11 @@ FRFSQuote:
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
 
   beamFields:
     price:
@@ -180,9 +187,6 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
-    # For Bus it would be one route per leg, but for Metro it can be more than one route with transit stations for a single Journey leg.
-    FRFSRoutes:
-      enum: "Bus (Id Route), Metro [Id Route]"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -225,14 +229,8 @@ FRFSTicketBooking:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe FRFSRoutes
     quantity: Int
     vehicleType: VehicleCategory
-    serviceTierProviderCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -251,7 +249,7 @@ FRFSTicketBooking:
     customerCancelled: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -259,6 +257,15 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
+    lineColor : Maybe Text
+    lineColorCode : Maybe Text
+    googleWalletJWTUrl : Maybe Text
+    frequency : Maybe Int
+    journeyLegOrder : Maybe Int
+    journeyId: Maybe (Id Journey)
+    journeyOnInitDone: Maybe Bool
+    startTime: Maybe UTCTime
+    journeyLegStatus: Maybe JourneyLegStatus
 
   default:
     customerCancelled: "false"
@@ -295,6 +302,7 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
+    journeyId: "!SecondaryKey"
 
   queries:
     findById:
@@ -361,10 +369,25 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [cashbackPayoutOrderId]
       where: id
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    updateOnInitDone:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: id
     updateInterestDelayedByQuoteId:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
+      where: id
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -377,15 +400,17 @@ FRFSTicket:
 
   fields:
     id: Id FRFSTicket
+    description: Maybe Text
     frfsTicketBookingId: Id FRFSTicketBooking
     riderId: Id Person
     status: FRFSTicketStatus
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    qrRefreshAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
 
@@ -407,6 +432,10 @@ FRFSTicket:
     findAllByTicketBookingId:
       kvFunction: findAllWithKV
       where: frfsTicketBookingId
+    findByTicketBookingIdTicketNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
     updateStatusByTBookingIdAndTicketNumber:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -417,6 +446,11 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId]
+    updateRefreshTicketQRByTBookingIdAndTicketNumber:
+      kvFunction: updateWithKV
+      params: [qrData, qrRefreshAt]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
 
 FRFSTicketBookingPayment:
   tableName: frfs_ticket_booking_payment
@@ -543,7 +577,7 @@ FRFSConfig:
     isCancellationAllowed: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
-    customDates: '[Text]'
+    customDates: "[Text]"
     customEndTime: Text
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
@@ -577,7 +611,6 @@ FRFSConfig:
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
-
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
@@ -650,6 +683,7 @@ Route:
 
 RouteStopMapping:
   tableName: route_stop_mapping
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
   fields:
     routeCode: Text
     stopCode: Text
@@ -657,6 +691,7 @@ RouteStopMapping:
     stopName: Text
     stopPoint: LatLong
     sequenceNum: Int
+    estimatedTravelTimeFromPreviousStop: Maybe Seconds
     vehicleType: VehicleCategory
     timeBounds: TimeBound
     merchantId: Id Merchant
@@ -851,3 +886,21 @@ FRFSVehicleServiceTier:
       kvFunction: findOneWithKV
       where: id
 
+RouteTripMapping:
+  tableName: route_trip_mapping
+  fields:
+    routeCode: Text
+    tripCode: Text
+    tripStartTime: Text
+    tripEndTime: Text
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    tripCode: PrimaryKey
+  queries:
+    findAllTripIdByRouteCode:
+      kvFunction: findAllWithKV
+      where: routeCode

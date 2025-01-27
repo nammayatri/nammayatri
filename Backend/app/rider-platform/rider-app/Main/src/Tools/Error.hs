@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error (module Tools.Error) where
 
@@ -448,6 +447,29 @@ instance IsHTTPError StationError where
 
 instance IsAPIError StationError
 
+data GoogleWalletError
+  = JWTSignError Text
+  | FailedToCallWalletAPI Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GoogleWalletError
+
+instance IsBaseError GoogleWalletError where
+  toMessage = \case
+    JWTSignError msg -> Just $ "JWT Sign Error:-" <> msg
+    FailedToCallWalletAPI msg -> Just $ "Failed To Call Wallet API:-" <> msg
+
+instance IsHTTPError GoogleWalletError where
+  toErrorCode = \case
+    JWTSignError _ -> "JWT_SIGN_ERROR"
+    FailedToCallWalletAPI _ -> "FAILED_TO_CALL_WALLET_API"
+
+  toHttpCode = \case
+    JWTSignError _ -> E500
+    FailedToCallWalletAPI _ -> E400
+
+instance IsAPIError GoogleWalletError
+
 data PartnerOrgStationError
   = PartnerOrgStationNotFound Text Text
   | PartnerOrgStationNotFoundForStationId Text Text
@@ -680,6 +702,28 @@ instance IsHTTPError SafetyError where
     PoliceCallNotAllowed _ -> E400
 
 instance IsAPIError SafetyError
+
+data JourneyError
+  = JourneyNotFound Text
+  | JourneyLegReqDataNotFound Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''JourneyError
+
+instance IsBaseError JourneyError where
+  toMessage = \case
+    JourneyNotFound journeyId -> Just ("Journey with id: " <> journeyId <> " not found.")
+    JourneyLegReqDataNotFound sequenceNumber -> Just ("Request data for journey leg number: " <> show sequenceNumber <> " not found!")
+
+instance IsHTTPError JourneyError where
+  toErrorCode = \case
+    JourneyNotFound _ -> "JOURNEY_NOT_FOUND"
+    JourneyLegReqDataNotFound _ -> "JOURNEY_LEG_REQ_DATA_NOT_FOUND"
+  toHttpCode = \case
+    JourneyNotFound _ -> E400
+    JourneyLegReqDataNotFound _ -> E400
+
+instance IsAPIError JourneyError
 
 data CancellationError
   = CancellationNotSupported

@@ -11,7 +11,7 @@ module: Payout
 apis:
   - GET:
       endpoint: /payout/referral/history
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       query:
         limit: Int
         offset: Int
@@ -23,10 +23,12 @@ apis:
         to: UTCTime
       response:
         type: PayoutReferralHistoryRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - GET:
       endpoint: /payout/history
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       query:
         limit: Int
         offset: Int
@@ -37,56 +39,76 @@ apis:
         to: UTCTime
       response:
         type: PayoutHistoryRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - POST: # to unmark as fraud and pay
       endpoint: payout/verifyFraudStatus
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       request:
         type: UpdateFraudStatusReq
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - POST: # to pay the failed ones
       endpoint: payout/retryFailed
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       request:
         type: FailedRetryPayoutReq
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - POST: # retry all for given status
       endpoint: payout/retryAllWithStatus
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       request:
         type: RetryPayoutsReq
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - POST: # payout For Pending Vpa status.
       endpoint: payout/pendingPayout
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       request:
         type: PendingPayoutReq
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
   - POST: # delete incorrect vpa's
       endpoint: payout/deleteVPA
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      auth: ApiAuthV2
       request:
         type: DeleteVpaReq
       response:
         type: APISuccess
       migrate:
         endpointV2:
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+
+  - POST: # block/unlblock fraud drivers for payout
+      endpoint: payout/drivers/setBlockState
+      auth: ApiAuthV2
+      request:
+        type: SetDriversBlockStateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
 types:
 
@@ -143,4 +165,8 @@ types:
    - derive: "'HideSecrets"
   DeleteVpaReq:
    - driverIds: [Id Driver]
+   - derive: "'HideSecrets"
+  SetDriversBlockStateReq:
+   - driverIds: [Id Driver]
+   - blockState: Bool
    - derive: "'HideSecrets"

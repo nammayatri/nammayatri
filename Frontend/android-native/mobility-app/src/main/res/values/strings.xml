@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
     <string name="we_have_updated_your_app_kindly_relaunch">We have updated your app , The application will re-load now.</string>
     <string name="okay_got_it">OKAY,GOT IT</string>
+    <string name="okay_got_it_smallcase">Ok,Got it</string>
+    <string name="sent">Sent</string>
     <string name="not_interested">Not Interested</string>
     <string name="too_far">Too far</string>
     <string name="on_another_ride">On Another Ride</string>
@@ -44,6 +46,9 @@
     <string name="service" translatable="false">for_compilation</string>
     <string name="tip_included" translatable="false">" tip included!"</string>
     <string name="message_from_customer">Message from Customer</string>
+    <string name="customer_is_waiting">Customer is waiting!</string>
+    <string name="please_start_moving_towards_the_pickup_location">Please start moving towards the pickup location</string>
+    <string name="quick_chats">Quick Chats:</string>
     <string name="assistance_required">Assistance Required</string>
     <string name="tip">Tip</string>
     <string name="merchant_id" translatable="false">for_compilation</string>
@@ -87,4 +92,7 @@
     <string name="third_party_booking">"Third Party Booking"</string>
     <string name="parking_charges">%1$.0f₹ Parking</string>
     <string name="includes">Includes</string>
+    <string name="stops_info">%1$d Stops (incl. stop charge)</string>
+    <string name="stops">%1$d Stops</string>
+    <string name="round_trip">Round Trip</string>
 </resources>

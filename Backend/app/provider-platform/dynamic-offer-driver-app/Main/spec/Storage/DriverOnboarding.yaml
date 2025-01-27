@@ -131,6 +131,7 @@ DriverLicense:
     classOfVehicles: '[Text]'
     failedRules: '[Text]'
     verificationStatus: VerificationStatus
+    vehicleCategory: Maybe VehicleCategory
     consent: Bool
     consentTimestamp: UTCTime
     dateOfIssue: Maybe UTCTime
@@ -291,6 +292,7 @@ Image:
     id: Id Image
     personId: Id Person
     merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     s3Path: Text
     imageType: DocumentType
     failureReason: Maybe DriverOnboardingError
@@ -299,7 +301,6 @@ Image:
     workflowTransactionId: Maybe Text
     reviewerEmail: Maybe Text
     documentExpiry: Maybe UTCTime
-  excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
     personId: SecondaryKey

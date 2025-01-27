@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.AadhaarOtpReq where
@@ -13,14 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AadhaarOtpReqT f = AadhaarOtpReqT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    requestId :: (B.C f Kernel.Prelude.Text),
-    requestMessage :: (B.C f Kernel.Prelude.Text),
-    statusCode :: (B.C f Kernel.Prelude.Text),
-    transactionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    requestId :: B.C f Kernel.Prelude.Text,
+    requestMessage :: B.C f Kernel.Prelude.Text,
+    statusCode :: B.C f Kernel.Prelude.Text,
+    transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +28,6 @@ instance B.Table AadhaarOtpReqT where
 
 type AadhaarOtpReq = AadhaarOtpReqT Identity
 
-$(enableKVPG (''AadhaarOtpReqT) [('id)] [[('personId)]])
+$(enableKVPG ''AadhaarOtpReqT ['id] [['personId]])
 
-$(mkTableInstances (''AadhaarOtpReqT) "aadhaar_otp_req")
+$(mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req")

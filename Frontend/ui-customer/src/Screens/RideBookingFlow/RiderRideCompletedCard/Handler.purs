@@ -25,7 +25,7 @@ riderRideCompletedScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORTS)
     HomeScreen updatedState -> do 
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ HOME_SCREENS)
+      App.BackT $ App.BackPoint <$> (pure $ HOME_SCREENS updatedState.rideId)
     GoToNammaSafety updatedState triggerSos showTestDrill -> do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GOTO_NAMMASAFETY updatedState triggerSos showTestDrill)
@@ -35,7 +35,7 @@ riderRideCompletedScreen = do
     GoToDriversProfile updatedState -> do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_DRIVER_PROFILE updatedState)
-    GoToIssueReportChatScreenWithIssue updatedState issueType-> do
+    GoToIssueReportChatScreenWithIssue updatedState issueType -> do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType)
     _ -> App.BackT $ pure App.GoBack

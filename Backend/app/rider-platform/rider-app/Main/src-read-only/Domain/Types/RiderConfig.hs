@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -19,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
   { appUrl :: Kernel.Prelude.Text,
+    autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -48,8 +48,13 @@ data RiderConfig = RiderConfig
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    payoutReferralProgram :: Kernel.Prelude.Bool,
+    payoutReferralStartDate :: Kernel.Prelude.UTCTime,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
@@ -59,6 +64,7 @@ data RiderConfig = RiderConfig
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZoneRadius :: Kernel.Prelude.Int,
+    thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,

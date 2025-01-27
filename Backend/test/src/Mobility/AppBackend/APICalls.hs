@@ -53,9 +53,9 @@ cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
-  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing
+  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> Maybe Bool -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 knowYourDriver :: Text -> Id BRide.Ride -> Maybe Bool -> ClientM AppFeedback.DriverProfileResponse
@@ -78,7 +78,7 @@ callAppFeedback ratingValue rideId =
    in appFeedback appRegistrationToken request
 
 appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
-appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> ClientM AppBooking.BookingListRes
+appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [BRB.BookingStatus] -> ClientM AppBooking.BookingListRes
 appBookingStatus :<|> _ :<|> appBookingList :<|> _ :<|> _ = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
@@ -89,10 +89,10 @@ originServiceability regToken = origin
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
+    _ :<|> destination :<|> _ = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
-appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
+appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -135,7 +135,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing
+initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

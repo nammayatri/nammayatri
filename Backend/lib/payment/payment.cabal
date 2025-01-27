@@ -60,6 +60,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -79,6 +80,7 @@ library
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -87,6 +89,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson

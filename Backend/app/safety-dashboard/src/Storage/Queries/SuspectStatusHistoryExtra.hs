@@ -1,22 +1,15 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.SuspectStatusHistoryExtra where
 
-import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Suspect
 import qualified Domain.Types.SuspectFlagRequest
 import qualified Domain.Types.SuspectStatusHistory
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SuspectStatusHistory as Beam
-import Storage.Queries.OrphanInstances.SuspectStatusHistory
+import Storage.Queries.OrphanInstances.SuspectStatusHistory ()
 
 -- Extra code goes here --
 

@@ -31,6 +31,7 @@ import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.OrphanInstances.MerchantServiceConfig ()
+import qualified Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --
 findByMerchantOpCityIdAndService ::
@@ -114,6 +115,12 @@ getServiceNameConfigJSON = \case
   Domain.BusPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.BusPaymentService Payment.Stripe, toJSON cfg)
+  Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Stripe, toJSON cfg)
+  Domain.MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -127,3 +134,5 @@ getServiceNameConfigJSON = \case
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
+  Domain.WalletServiceConfig walletCfg -> case walletCfg of
+    GW.GoogleWalletConfig cfg -> (Domain.WalletService GW.GoogleWallet, toJSON cfg)

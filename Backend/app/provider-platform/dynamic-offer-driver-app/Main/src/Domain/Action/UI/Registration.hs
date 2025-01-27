@@ -15,10 +15,12 @@
 module Domain.Action.UI.Registration
   ( AuthReq (..),
     AuthRes (..),
+    AuthWithOtpRes (..),
     ResendAuthRes,
     AuthVerifyReq (..),
     AuthVerifyRes (..),
     auth,
+    authWithOtp,
     verify,
     resend,
     logout,
@@ -74,6 +76,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
+import Tools.MarketingEvents as TM
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -99,6 +102,13 @@ validateInitiateLoginReq AuthReq {..} =
 
 data AuthRes = AuthRes
   { authId :: Id SR.RegistrationToken,
+    attempts :: Int
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data AuthWithOtpRes = AuthWithOtpRes
+  { authId :: Id SR.RegistrationToken,
+    otpCode :: Text,
     attempts :: Int
   }
   deriving (Generic, ToJSON, ToSchema)
@@ -143,6 +153,24 @@ auth ::
   Maybe Text ->
   m AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+  authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
+  return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId}
+
+authWithOtp ::
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  Bool ->
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  m AuthWithOtpRes
+authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
@@ -181,9 +209,9 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
+  let otpHash = smsCfg.credConfig.otpHash
+      otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
-    let otpHash = smsCfg.credConfig.otpHash
-    let otpCode = SR.authValueHash token
     case otpChannel of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
@@ -208,7 +236,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
 
   let attempts = SR.attempts token
       authId = SR.id token
-  return $ AuthRes {attempts, authId}
+  return $ AuthWithOtpRes {attempts, authId, otpCode}
 
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
@@ -223,6 +251,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             merchantId = Just merchantId,
             active = False,
             onRide = False,
+            specialLocWarriorEnabledAt = Nothing,
             enabled = False,
             blocked = False,
             numOfLocks = 0,
@@ -258,6 +287,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             lastACStatusCheckedAt = Nothing,
             hasAdvanceBooking = False,
             tollRelatedIssueCount = Nothing,
+            extraFareMitigationFlag = Nothing,
             forwardBatchingEnabled = False,
             payoutVpa = Nothing,
             isInteroperable = False,
@@ -270,9 +300,18 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             dailyCancellationRateBlockingCooldown = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             blockReasonFlag = Nothing,
-            preferredPrimarySpecialLoc = Nothing,
+            onRideTripCategory = Nothing,
+            preferredPrimarySpecialLocId = Nothing,
             preferredSecondarySpecialLocIds = [],
-            isSpecialLocWarrior = False
+            isSpecialLocWarrior = False,
+            driverTripEndLocation = Nothing,
+            issueBreachCooldownTimes = Nothing,
+            hasRideStarted = Nothing,
+            softBlockExpiryTime = Nothing,
+            softBlockReasonFlag = Nothing,
+            softBlockStiers = Nothing,
+            isBlockedForReferralPayout = Nothing,
+            onboardingVehicleCategory = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
@@ -390,6 +429,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
+  TM.notifyMarketingEvents (TM.PersonEntity person) TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
   pure person
 
 verify ::

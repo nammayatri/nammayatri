@@ -151,6 +151,7 @@ _:
               applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/shared-services/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
@@ -199,7 +200,7 @@ _:
             (port: ''
               # Get the process ID using lsof for the specified port
               set +e
-              pid=$(${lib.getExe pkgs.lsof} -ti:${builtins.toString port})
+              pid=$(${pkgs.lsof}/bin/lsof -ti:${builtins.toString port})
               set -e
 
               # Check if lsof returned any process ID
@@ -226,7 +227,7 @@ _:
           cp -r ./app/example-service ./app/"''${name}"
           echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
           rm ./app/"''${name}"/example-service.cabal
-          ${lib.getExe pkgs.tree} ./app/"''${name}"
+          ${pkgs.tree}/bin/tree ./app/"''${name}"
         '';
       };
 

@@ -57,6 +57,7 @@ import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Helpers.CommonView as CommonView
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -106,47 +107,41 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-    PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
+  PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , onBackPressed push $ const BackPressed
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  ]
+  [ shimmerView state
+  , linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
-    , onBackPressed push $ const BackPressed
-    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+    , orientation VERTICAL
+    , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
+    , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
     ]
-    [ shimmerView state
-    , linearLayout 
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , background Color.white900
-        , orientation VERTICAL
-        , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
-        , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
-        ]
-        [ headerView state push
-        , linearLayout
-          [ height $ V 1 
+    [ headerView state push
+    , scrollView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , afterRender push $ const AfterRender
+      , fillViewport true
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , background Color.grey900
-          ] []
-        , separatorView Color.greySmoke
-        , scrollView
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , background Color.white900
-            , afterRender push $ const AfterRender
-            , fillViewport true
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , orientation VERTICAL
-                ]
-                (mainView state push)
-            ]
-        ]
-    , actionsView state push
+          , gravity CENTER
+          , orientation VERTICAL
+          ]
+          (mainView state push)
+      ]
     ]
+  , actionsView state push
+  ]
   where
   actionsView state push =
     case state.props.currentStage of
@@ -156,7 +151,14 @@ view push state =
       _ -> generalActionButtons state push
 
   headerView state push =
-    GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , CommonView.horizontalSeparatorView Color.grey900
+    ]
 
   mainView state push =
     [ ticketsListView state push ]
@@ -248,7 +250,7 @@ termsAndConditionsView termsAndConditions isMarginTop =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
+         [ textFromHtml $ " •  " <> item
          , color Color.black700
          ] <> FontStyle.tags TypoGraphy
       ]

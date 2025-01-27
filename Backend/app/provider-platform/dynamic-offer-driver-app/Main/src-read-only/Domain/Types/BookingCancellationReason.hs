@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BookingCancellationReason where
@@ -8,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Kernel.External.Maps
@@ -24,6 +24,7 @@ data BookingCancellationReason = BookingCancellationReason
     driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     source :: Domain.Types.BookingCancellationReason.CancellationSource

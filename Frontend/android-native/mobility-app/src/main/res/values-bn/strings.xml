@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">চিত্রটি ক্যাপচার করার অনুমতি দিন দয়া করে</string>
     <string name="we_have_updated_your_app_kindly_relaunch">আমরা আপনার অ্যাপ্লিকেশন আপডেট করেছি, অ্যাপ্লিকেশনটি এখন পুনরায় লোড হবে।</string>
     <string name="okay_got_it">আচ্ছা আমি বুঝে গেছি</string>
+    <string name="okay_got_it_smallcase">আচ্ছা আমি বুঝে গেছি</string>
+    <string name="sent">পাঠানো হয়েছে</string>
     <string name="upload_image">চিত্র আপলোড</string>
     <string name="not_interested">আগ্রহী নই</string>
     <string name="too_far">অনেক দূরে</string>
@@ -38,6 +40,9 @@
     <string name="select_date">তারিখ নির্বাচন করুন</string>
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
+    <string name="customer_is_waiting">গ্রাহক অপেক্ষা করছেন!</string>
+    <string name="please_start_moving_towards_the_pickup_location">দয়া করে পিকআপ লোকেশনের দিকে এগিয়ে যান</string>
+    <string name="quick_chats">দ্রুত চ্যাট:</string>
     <string name="assistance_required">সহায়তা প্রয়োজন</string>
     <string name="tip">টিপ</string>
     <string name="qr_for_your_vpa_is_downloaded">আপনার ভিপিএর জন্য QR ডাউনলোড করা হয়েছে!!!</string>
@@ -72,4 +77,7 @@
     <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
     <string name="parking_charges">%1$.0f₹ পার্কিং</string>
     <string name="includes">অন্তর্ভুক্ত</string>
+    <string name="stops_info">%1$d স্টপস (স্টপ চার্জ সহ)</string>
+    <string name="stops">%1$d স্টপস</string>
+    <string name="round_trip">রাউন্ড ট্রিপ</string>
 </resources>

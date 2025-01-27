@@ -294,6 +294,8 @@ type RegistrationScreenData = {
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
   registerationStepsAmbulance :: Array StepProgress,
+  registerationStepsTruck :: Array StepProgress,
+  registerationStepsBus :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -311,7 +313,9 @@ type RegistrationScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   vehicleTypeMismatch :: Boolean,
   linkedRc :: Maybe String,
-  accessToken :: String
+  accessToken :: String,
+  hvTxnId :: Maybe String,
+  hvFlowId :: Maybe String
 }
 
 type DocumentStatus = {
@@ -386,7 +390,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | MANUAL_VERIF
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | UnKnown
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | TruckCategory | BusCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
@@ -476,7 +480,9 @@ type DriverProfileScreenData = {
   cancellationWindow :: Maybe Int,
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
-  completingProfileRes :: CompletingProfileRes,
+  profileCompletedModules :: Int,
+  driverBlocked :: Boolean,
+  blockedExpiryTime :: String,
   favCount :: Maybe Int
 }
 
@@ -590,7 +596,8 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
-  canSwitchToInterCity :: Maybe Boolean
+  canSwitchToInterCity :: Maybe Boolean,
+  showDriverBlockedPopup :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1088,7 +1095,18 @@ type HomeScreenData =  {
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
+, blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
+, completingProfileRes :: CompletingProfileRes
+, favPopUp :: FavouritePopUp
+, isSpecialLocWarrior :: Boolean
+, bus_number :: String
+}
+
+type FavouritePopUp = {
+  visibility :: Boolean,
+  title :: String,
+  message :: String
 }
 
 type PlansState = {
@@ -1171,8 +1189,14 @@ type EndRideData = {
     tollAmbigous :: Boolean,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
-    specialLocationTag :: Maybe String
-  }
+    specialLocationTag :: Maybe String,
+    metroRideCoinData :: Maybe MetroRideCoinData
+}
+
+type MetroRideCoinData = {
+  coinsEarned :: Int,
+  metroRideType :: API.MetroRideType
+}
 
 type PaymentState = {
   rideCount :: Int,
@@ -1363,6 +1387,7 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
+  accountBlockedPopupDueToCancellations :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
@@ -1395,7 +1420,12 @@ type HomeScreenProps =  {
   homeScreenBannerVisibility :: Boolean,
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
-  intercityInfoPopUp :: Boolean
+  intercityInfoPopUp :: Boolean,
+  retryRideList :: Boolean,
+  showParcelIntroductionPopup :: Boolean,
+  showMetroWarriorWarningPopup :: Boolean,
+  setBusOnline :: Boolean,
+  bus_input_data :: String
  }
 
 type RideRequestPill = {
@@ -1723,7 +1753,8 @@ type OnBoardingSubscriptionScreenData = {
   freeTrialDays :: Maybe Int,
   freeTrialRides :: Maybe Int,
   totalRidesTaken :: Maybe Int,
-  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity
+  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity,
+  config :: AppConfig
 }
 
 type OnBoardingSubscriptionScreenProps = {
@@ -1939,7 +1970,10 @@ data NotificationType =  DRIVER_REACHED
                       | RIDE_REQUESTED
                       | TRIP_STARTED
                       | EDIT_LOCATION
+                      | USER_FAVOURITE_DRIVER
                       | DRIVER_REACHED_DESTINATION
+                      | TO_METRO_COINS
+                      | FROM_METRO_COINS
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -2610,7 +2644,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations | MetroWarriorWarning
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3034,6 +3068,7 @@ data CoinEarnedPopupType =
   | REFER_AND_EARN_COIN 
   | CONVERT_COINS_TO_CASH 
   | NO_COIN_POPUP
+  | SIX_RIDE_COMPLETED
 
 derive instance genericCoinEarnedPopupType :: Generic CoinEarnedPopupType _
 instance showCoinEarnedPopupType :: Show CoinEarnedPopupType where show = genericShow
@@ -3045,6 +3080,7 @@ type CoinEarnedPopupTypeShown = {
   oneMoreRide :: String,
   twoRideCompleted :: String,
   fiveRideCompleted :: String,
+  sixRideCompleted :: String,
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
   convertCoinsToCash :: String,
@@ -3139,8 +3175,9 @@ data HyperVergeKycResult = HyperVergeKycResult
     errorMessage :: Maybe String
   }
 derive instance genericHyperVergeKycResult :: Generic HyperVergeKycResult _
-instance decodeHyperVergeKycReult :: Decode HyperVergeKycResult where decode = defaultDecode
-instance encodeHyperVergeKycReult  :: Encode HyperVergeKycResult where encode = defaultEncode
+instance decodeHyperVergeKycResult :: Decode HyperVergeKycResult where decode = defaultDecode
+instance encodeHyperVergeKycResult  :: Encode HyperVergeKycResult where encode = defaultEncode
+instance showHyperVergeKycResult :: Show HyperVergeKycResult where show = genericShow
 
 data Details =
   LIVE_SELFIE LiveSelfie
@@ -3152,6 +3189,7 @@ instance decodeDetails :: Decode Details
   where
    decode body = (AADHAAR_DETAILS <$> decode body) <|> (PAN_DETAILS <$> decode body) <|> (LIVE_SELFIE <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeDetails  :: Encode Details where encode = defaultEncode
+instance showDetails :: Show Details where show = genericShow
 
 data LiveSelfie = LiveSelfie
   { selfieImage :: String,
@@ -3163,6 +3201,7 @@ data LiveSelfie = LiveSelfie
 derive instance genericLiveSelfie :: Generic LiveSelfie _
 instance decodeLiveSelfie :: Decode LiveSelfie where decode = defaultDecode
 instance encodeLiveSelfie  :: Encode LiveSelfie where encode = defaultEncode
+instance showLiveSelfie :: Show LiveSelfie where show = genericShow
 
 
 data PanDetails = PanDetails
@@ -3180,6 +3219,8 @@ data PanDetails = PanDetails
 derive instance genericPanDetails :: Generic PanDetails _
 instance decodePanDetails :: Decode PanDetails where decode = defaultDecode
 instance encodePanDetails  :: Encode PanDetails where encode = defaultEncode
+instance showPanDetails :: Show PanDetails where show = genericShow
+
 
 data AadhaarCardDetails = AadhaarCardDetails
   { aadhaarFrontImage :: String,
@@ -3199,6 +3240,7 @@ data AadhaarCardDetails = AadhaarCardDetails
 derive instance genericAadhaarCardDetails :: Generic AadhaarCardDetails _
 instance decodeAadhaarCardDetails :: Decode AadhaarCardDetails where decode = defaultDecode
 instance encodeAadhaarCardDetails  :: Encode AadhaarCardDetails where encode = defaultEncode
+instance showAadhaarCardDetails :: Show AadhaarCardDetails where show = genericShow
 
 data HvErrorCode = HvErrorCode
   { errorCode :: Int
@@ -3221,6 +3263,47 @@ type GullakSDKResp = {
   responseCode :: Int,
   isNewUser :: Boolean
 }
+------------------------------------------------------- HOTSPOT_SCREEN ------------------------------------------------------------------------
+
+type HotspotScreenState = {
+  data :: HotspotScreenData,
+  props :: HotspotScreenProps
+}
+
+type HotspotScreenData = {
+  pointsWithWeight :: Array PointsWithWeight,
+  dataExpiryAt :: String,
+  currentDriverLat :: Number,
+  currentDriverLon :: Number,
+  config :: AppConfig,
+  logField :: Object Foreign
+}
+
+type HotspotScreenProps = {
+  lastUpdatedTime :: String,
+  showNavigationSheet :: Boolean,
+  refreshAnimation :: Boolean,
+  selectedCircleColor :: String,
+  selectedCircleLatLng :: API.LatLong,
+  isAnyCircleSelected :: Boolean,
+  mapCorners :: {
+    leftPoint :: String,
+    topPoint :: String,
+    rightPoint :: String,
+    bottomPoint :: String
+  }
+}
+
+type PointsWithWeight = {
+  latlong :: API.LatLong,
+  weight :: Number,
+  id :: String
+}
+
+type NotificationBody = {
+  title :: String,
+  message :: String
+} 
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 
@@ -3241,3 +3324,27 @@ type UploadParcelImageScreenProps = {
   isStartRideActive :: Boolean,
   uploading :: Boolean
 } 
+
+type MetroWarriorsScreenState = {
+  data :: MetroWarriorsScreenData,
+  props :: MetroWarriorsScreenProps
+}
+
+type MetroWarriorsScreenData = {
+  listItem :: Maybe ListItem,
+  stationList :: Array API.SpecialLocation,
+  searchString :: Maybe String,
+  stationData :: MetroWarriorData,
+  remoteConfigData :: RC.MetroWarriorConfigEntity
+}
+
+type MetroWarriorsScreenProps = {
+  showStationList :: Boolean,
+  showShimmer :: Boolean
+}
+
+type MetroWarriorData = {
+  primaryStation :: Maybe API.SpecialLocationWarrior,
+  secondaryStationsData :: Array String,
+  isSpecialLocWarrior :: Boolean
+}

@@ -18,10 +18,12 @@ module Lib.DriverCoins.Types
     DCoins.DriverCoinsFunctionType (..),
     DCoins.CoinMessage (..),
     DCoins.CoinStatus (..),
+    DCoins.MetroRideType (..),
+    DCoins.isMetroRideType,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
@@ -29,13 +31,15 @@ import qualified Text.Show (show)
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
-  | EndRide {isDisabled :: Bool, ride :: Ride, metroRide :: Bool}
+  | EndRide {isDisabled :: Bool, ride :: Ride, metroRideType :: DCoins.MetroRideType}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
   | BulkUploadEvent
+  | LMS
+  | LMSBonus
   deriving (Generic, ToJSON, FromJSON)
 
 driverCoinsEventTypeToString :: DriverCoinsEventType -> String
@@ -48,6 +52,8 @@ driverCoinsEventTypeToString = \case
   LeaderBoard -> "LeaderBoard"
   Training -> "Training"
   BulkUploadEvent -> "BulkUploadEvent"
+  LMS -> "LMS"
+  LMSBonus -> "LMSBonus"
 
 instance Show DriverCoinsEventType where
   show = driverCoinsEventTypeToString

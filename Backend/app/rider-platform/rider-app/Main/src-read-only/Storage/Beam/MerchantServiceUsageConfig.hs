@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantServiceUsageConfig where
@@ -39,6 +37,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
+    getFirstPickupRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,

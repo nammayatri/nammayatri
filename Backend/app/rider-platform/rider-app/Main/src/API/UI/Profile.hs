@@ -23,8 +23,8 @@ module API.UI.Profile
     DProfile.UpdateProfileDefaultEmergencyNumbersResp,
     DProfile.GetProfileDefaultEmergencyNumbersResp (..),
     API,
-    getPersonDetails,
-    updatePerson,
+    getPersonDetails',
+    updatePerson',
     handler,
   )
 where
@@ -48,10 +48,16 @@ type API =
            :> QueryParam "toss" Int
            :> QueryParam "tenant" Text
            :> QueryParam "context" Text
+           :> Header "x-bundle-version" Version
+           :> Header "x-rn-version" Text
+           :> Header "x-client-version" Version
+           :> Header "x-config-version" Version
+           :> Header "x-device" Text
            :> Get '[JSON] DProfile.ProfileRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
              :> Header "x-bundle-version" Version
+             :> Header "x-rn-version" Text
              :> Header "x-client-version" Version
              :> Header "x-config-version" Version
              :> Header "x-device" Text
@@ -82,11 +88,17 @@ handler =
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) toss tenant context = withFlowHandlerAPI $ DProfile.getPersonDetails (personId, merchantId) toss tenant context
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
+getPersonDetails (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
 
-updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
+getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow DProfile.ProfileRes
+getPersonDetails' (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = DProfile.getPersonDetails (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+
+updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
+updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+
+updatePerson' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow APISuccess.APISuccess
+updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion
 
 updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
 updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId

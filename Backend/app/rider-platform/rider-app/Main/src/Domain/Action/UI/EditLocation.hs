@@ -1,12 +1,8 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.EditLocation where
 
 import API.Types.UI.EditLocation
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Location as QL
@@ -21,7 +17,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Servant.Client
-import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -29,7 +24,6 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
-import Tools.Auth
 
 getEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

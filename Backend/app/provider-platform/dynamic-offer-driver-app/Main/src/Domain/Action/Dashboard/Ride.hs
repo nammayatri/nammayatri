@@ -26,7 +26,8 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
+import qualified API.Types.Dashboard.RideBooking.Ride as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
@@ -44,6 +45,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
@@ -57,10 +59,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import SharedLogic.External.LocationTrackingService.Types
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -75,6 +78,7 @@ import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified System.Environment as Se
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -85,14 +89,13 @@ getRideList ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
-  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbFareDiff mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -104,12 +107,19 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbFareDiff) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
     throwError $ InvalidRequest "At least one filter is required"
+  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  let from = fromMaybe now mbfrom
+  let to = fromMaybe now mbto
+  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
+  rideItems <-
+    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+      then BppT.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to
+      else QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -242,7 +252,7 @@ rideInfo ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     CH.HasClickhouseEnv CH.ATLAS_KAFKA m
   ) =>
   Id DM.Merchant ->
@@ -345,7 +355,10 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideCity = Just $ show city.city,
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
         rideCreatedAt = ride.createdAt,
-        rideStatus = mkCommonRideStatus ride.status
+        rideStatus = mkCommonRideStatus ride.status,
+        roundTrip = booking.roundTrip,
+        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
+        estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime)
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
@@ -626,10 +639,8 @@ makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) =
 makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
   Common.RentalDetails
     Common.FParamsRentalDetails
-      { timeBasedFare = roundToIntegral timeBasedFare,
-        distBasedFare = roundToIntegral distBasedFare,
-        timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
-        distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
+      { timeFare = PriceAPIEntity timeBasedFare currency,
+        distanceFare = PriceAPIEntity distBasedFare currency,
         deadKmFare = PriceAPIEntity deadKmFare currency,
         extraDistanceWithUnit = convertMetersToDistance distanceUnit extraDistance,
         ..

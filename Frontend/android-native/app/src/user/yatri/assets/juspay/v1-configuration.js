@@ -100,6 +100,7 @@ window.getMerchantConfig = function () {
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],
+    "callOptions" : ["ANONYMOUS", "DIRECT"],
     "tipDisplayDuration" : 30,
     "profileCompletion" : "#FCC32C",
     "feedbackBackground": "#2C2F3A",
@@ -350,7 +351,7 @@ window.getMerchantConfig = function () {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
-      , "website" : "https://www.getyatri.com"
+      , "website" : "https://www.getyatri.com/"
       , "logoLight" : ""
     }
   })

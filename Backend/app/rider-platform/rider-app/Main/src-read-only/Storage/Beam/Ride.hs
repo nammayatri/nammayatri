@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Ride where
@@ -63,6 +61,7 @@ data RideT f = RideT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     favCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    feedbackSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isAlreadyFav :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -72,6 +71,7 @@ data RideT f = RideT
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
     paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus),
+    pickupRouteCallCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

@@ -9,6 +9,7 @@ imports:
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicket
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
@@ -21,7 +22,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
+  RouteStopInfo: SharedLogic.FRFSUtils
 
 module: FRFSTicketService
 types:
@@ -39,10 +41,6 @@ types:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
     vehicleType: VehicleCategory
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     quantity: Int
     discounts: Maybe [FRFSDiscountRes]
     price: HighPrecMoney
@@ -52,6 +50,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSDiscountRes:
     code: Text
@@ -60,6 +59,7 @@ types:
     description: Text
     tnc: Text
     eligibility: Bool
+    derive: "Show"
 
   FRFSDiscountReq:
     code: Text
@@ -76,10 +76,6 @@ types:
     _type: FRFSQuoteType
     quantity: Int
     vehicleType: VehicleCategory
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     validTill: UTCTime
@@ -91,6 +87,15 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    googleWalletJWTUrl: Maybe Text
+
+  FRFSVehicleServiceTierAPI:
+    _type: ServiceTierType
+    providerCode: Text
+    shortName: Text
+    longName: Text
+    description: Text
+    derive: "Show"
 
   FRFSRouteStationsAPI:
     code: Text
@@ -100,6 +105,9 @@ types:
     endPoint: LatLong
     color: Maybe Text
     stations: [FRFSStationAPI]
+    travelTime: Maybe Seconds
+    vehicleServiceTier: Maybe FRFSVehicleServiceTierAPI
+    priceWithCurrency: PriceAPIEntity
     sequenceNum: Maybe Int
     derive: "Show"
 
@@ -108,6 +116,7 @@ types:
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
+    description: Maybe Text
     createdAt: UTCTime
     derive: "Show"
 
@@ -133,13 +142,13 @@ types:
     derive: "Show"
 
   FRFSCanCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isCancellable : Maybe Bool
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
 
   FRFSCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
 
   FRFSConfigAPIRes:
     bookingStartTime: UTCTime
@@ -164,12 +173,17 @@ types:
     startPoint: LatLong
     endPoint: LatLong
     totalStops: Maybe Int
+    stops: Maybe [FRFSStationAPI]
     waypoints: Maybe [LatLong]
+    timeBounds: Maybe TimeBound
     derive: "Show"
 
   AutocompleteRes:
     routes: [FRFSRouteAPI]
     stops: [FRFSStationAPI]
+
+  FRFSTicketVerifyReq:
+    qrData: Text
 
 apis:
   # GET metro/bus routes for the merchant city
@@ -221,6 +235,8 @@ apis:
       auth: TokenAuth
       mandatoryQuery:
         vehicleType: VehicleCategory
+      query:
+        city: City
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
@@ -279,6 +295,8 @@ apis:
       auth: TokenAuth
       query:
         vehicleType: VehicleCategory
+        limit: Int
+        offset: Int
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
 
@@ -318,6 +336,17 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSCancelStatus
 
+  # Booking Ticket QR Verification
+  - POST:
+      endpoint: /frfs/ticket/verify
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   # Get FRFS Config
   - GET:

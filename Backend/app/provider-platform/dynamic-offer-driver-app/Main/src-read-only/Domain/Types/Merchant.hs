@@ -1,10 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Merchant where
 
 import Data.Aeson
+import qualified Domain.Types
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -20,6 +20,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     fromTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
     geoHashPrecisionValue :: Kernel.Prelude.Int,
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
     gstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

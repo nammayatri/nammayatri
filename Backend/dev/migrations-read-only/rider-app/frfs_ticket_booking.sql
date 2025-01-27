@@ -108,10 +108,52 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_stations_json text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN route_id TYPE text;
-
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN route_id;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id text;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounts_json text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_order integer ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frequency integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN start_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text ;

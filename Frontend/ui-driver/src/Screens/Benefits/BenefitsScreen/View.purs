@@ -18,7 +18,7 @@ import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
 import Language.Strings (getString, getStringEnToHi)
-import Language.Types (STR(..))
+import Language.Types as LT
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons
 import Effect.Aff (launchAff)
@@ -78,6 +78,13 @@ screen initialState =
                 $ do
                     (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
                     lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
+                    if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
+                      response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
+                      case response of
+                        Right (GenerateReferralCodeRes referralCode) -> do
+                          lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes referralCode))
+                        Left _ -> pure unit
+                    else pure unit
                     (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
                     lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
             void $ launchAff $ flowRunner defaultGlobalState do
@@ -190,7 +197,7 @@ referralStatsView push state =
      , cornerRadius 6.0
      , onClick (\_ -> if referralBonusVideo /= "" then void $ JB.openUrlInApp referralBonusVideo else pure unit) (const NoAction)
      ][ textView $ 
-        [ text $ getString REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK 
+        [ text $ getString LT.REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK 
         , color $ Color.black700
         , gravity CENTER_VERTICAL
         , weight 1.0
@@ -220,7 +227,7 @@ referralBonusView push state =
      , orientation VERTICAL
      , onClick push $ const $ GoToCustomerReferralTracker false
      ][textView $ 
-       [ text $ getString MY_REFERRAL_BONUS
+       [ text $ getString LT.MY_REFERRAL_BONUS
        , color $ Color.black700
        , margin $ MarginRight 36
        ] <> FontStyle.paragraphText TypoGraphy 
@@ -232,7 +239,7 @@ referralBonusView push state =
          , color Color.limeGreen
          ] <> FontStyle.title2 TypoGraphy
        , textView $ 
-         [ text $ getString $ TILL (convertUTCtoISC lastPayoutAt "DD MMM YYYY")
+         [ text $ getString $ LT.TILL (convertUTCtoISC lastPayoutAt "DD MMM YYYY")
          , color $ Color.black700
          , visibility $ boolToVisibility $ lastPayoutAt /= ""
          , margin $ MarginLeft 4
@@ -243,7 +250,7 @@ referralBonusView push state =
        , width MATCH_PARENT
        , visibility $ boolToVisibility $ not $ isNothing state.data.payoutVpa
        ][ textView $ 
-          [ textFromHtml $ getString LINKED_UPI_ID <> ": " <> "<b>" <> (fromMaybe "" state.data.payoutVpa) <> "</b>"
+          [ textFromHtml $ getString LT.LINKED_UPI_ID <> ": " <> "<b>" <> (fromMaybe "" state.data.payoutVpa) <> "</b>"
           , color $ Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
         ]
@@ -252,7 +259,7 @@ referralBonusView push state =
        , width MATCH_PARENT
        , visibility $ boolToVisibility $ isNothing state.data.payoutVpa
        ][ textView $ 
-          [ text $ getString TO_GET_MONEY <> ", "
+          [ text $ getString LT.TO_GET_MONEY <> ", "
           , color $ Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout
@@ -263,7 +270,7 @@ referralBonusView push state =
           , padding $ Padding 6 2 6 2
           , background Color.blue800
           ][ textView $ 
-             [ text $ getString ADD_UPI_ID
+             [ text $ getString LT.ADD_UPI_ID
              , color Color.white900
              , padding $ PaddingBottom 1
              ] <> FontStyle.tags TypoGraphy
@@ -295,7 +302,7 @@ emptyReferralBonusView push state =
      , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_coins_stack"
      ]
    , textView $ 
-     [ text $ getString $ EARN_FOR_EACH_REFERRAL (state.data.config.currency <> (show $ fromMaybe 0 state.data.payoutRewardAmount))
+     [ text $ getString $ LT.EARN_FOR_EACH_REFERRAL (state.data.config.currency <> (show $ fromMaybe 0 state.data.payoutRewardAmount))
      , color Color.black900
      , weight 1.0
      , height WRAP_CONTENT
@@ -321,8 +328,8 @@ tabView push state =
     , margin $ MarginBottom 16
     , gravity CENTER
     ]
-    [ tabItem push (state.props.driverReferralType == CUSTOMER) (getString REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
-    ,  tabItem push (state.props.driverReferralType == DRIVER) (getString REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
+    [ tabItem push (state.props.driverReferralType == CUSTOMER) (getString LT.REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
+    ,  tabItem push (state.props.driverReferralType == DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
   cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -416,7 +423,7 @@ driverReferralCode push state =
             , textView
                 $ [ width MATCH_PARENT
                   , gravity CENTER
-                  , text $ getString CLICK_TO_EXPAND
+                  , text $ getString LT.CLICK_TO_EXPAND
                   , color Color.black800
                   , background Color.blue600
                   , padding $ PaddingBottom 2
@@ -446,7 +453,7 @@ driverReferralCode push state =
                 , text state.data.referralCode
                 , color Color.black900
                 , fontStyle $ FontStyle.feFont LanguageStyle
-                , textSize FontSize.a_30
+                , textSize FontSize.a_20
                 , margin $ MarginTop 10
                 ]
             , linearLayout
@@ -469,7 +476,7 @@ driverReferralCode push state =
                     , width MATCH_PARENT
                     , color Color.black900
                     , padding $ Padding 0 4 10 0
-                    , text $ getString SHARE 
+                    , text $ getString LT.SHARE 
                     ]
                   <> FontStyle.body1 TypoGraphy
                 ]
@@ -487,7 +494,7 @@ driverReferralCode push state =
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
-      ][ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
+      ][ referralCountView false (getString LT.REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
        , referralCountView true config.infoText (show activatedCount) true push config.popupType
        ]
     ]
@@ -500,10 +507,10 @@ driverReferralCode push state =
     let appConfigs = getAppConfig appConfig
     in  {backgroundColor: Color.yellow900
         , qr_img: "ny_driver_app_qr_code"
-        , infoText: getString REFERRED_DRIVERS
+        , infoText: getString LT.REFERRED_DRIVERS
         , separatorColor: Color.white300
         , popupType: REFERRED_DRIVERS_POPUP
-        , referralText: DRIVER_REFERRAL_CODE
+        , referralText: LT.DRIVER_REFERRAL_CODE
         , referralDomain : appConfigs.appData.website
         }
 
@@ -511,10 +518,10 @@ driverReferralCode push state =
     let appConfigs = getAppConfig appConfig
     in  { backgroundColor: Color.frenchSkyBlue800
         , qr_img: "ny_customer_app_qr_code"
-        , infoText: getString ACTIVATED
+        , infoText: getString LT.ACTIVATED
         , separatorColor: Color.frenchSkyBlue400
         , popupType: ACTIVATED_CUSTOMERS_POPUP
-        , referralText: CUSTOMER_REFERRAL_CODE
+        , referralText: LT.CUSTOMER_REFERRAL_CODE
         , referralDomain : appConfigs.appData.website
         }
 
@@ -622,7 +629,7 @@ appQRCodeView push state =
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
-              , text $ getString $ DOWNLOAD_NAMMA_YATRI "DOWNLOAD_NAMMA_YATRI"
+              , text $ getString $ LT.DOWNLOAD_NAMMA_YATRI "DOWNLOAD_NAMMA_YATRI"
               , margin $ MarginVertical 10 7
               , color Color.black800
               ]
@@ -684,7 +691,7 @@ referralInfoPop push state =
             $ [ width MATCH_PARENT
               , height WRAP_CONTENT
               , gravity CENTER
-              , text $ getString GOT_IT
+              , text $ getString LT.GOT_IT
               , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP
               , margin $ MarginVertical 10 7
               , color Color.blue800
@@ -696,9 +703,9 @@ referralInfoPop push state =
   qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
   config = case state.props.referralInfoPopType of
-    REFERRED_DRIVERS_POPUP -> { heading: getString REFERRED_DRIVERS, subtext: getString $ REFERRED_DRIVERS_INFO "REFERRED_DRIVERS_INFO" }
-    REFERRED_CUSTOMERS_POPUP -> { heading: getString REFERRED_CUSTOMERS, subtext: getString $ REFERRED_CUSTOMERS_INFO "REFERRED_CUSTOMERS_INFO" }
-    ACTIVATED_CUSTOMERS_POPUP -> { heading: getString ACTIVATED_CUSTOMERS, subtext: getString ACTIVATED_CUSTOMERS_INFO }
+    REFERRED_DRIVERS_POPUP -> { heading: getString LT.REFERRED_DRIVERS, subtext: getString $ LT.REFERRED_DRIVERS_INFO "REFERRED_DRIVERS_INFO" }
+    REFERRED_CUSTOMERS_POPUP -> { heading: getString LT.REFERRED_CUSTOMERS, subtext: getString $ LT.REFERRED_CUSTOMERS_INFO "REFERRED_CUSTOMERS_INFO" }
+    ACTIVATED_CUSTOMERS_POPUP -> { heading: getString LT.ACTIVATED_CUSTOMERS, subtext: getString LT.ACTIVATED_CUSTOMERS_INFO }
     _ -> { heading: "", subtext: "" }
 
 savingWithGullak :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> String -> PrestoDOM (Effect Unit) w
@@ -755,7 +762,7 @@ rideLeaderBoardView push state =
     , orientation VERTICAL
     ]
     [ textView
-        $ [ text $ getStringEnToHi RIDE_LEADERBOARD
+        $ [ text $ getStringEnToHi LT.RIDE_LEADERBOARD
           , color Color.black800
           , margin $ MarginBottom 12
           , visibility $ boolToVisibility (shouldShowReferral state)
@@ -785,7 +792,7 @@ rideLeaderBoardView push state =
             , margin $ MarginLeft 25
             ]
             [ textView
-                $ [ text $ if driverNotInLBdOrLBNotReady then getStringEnToHi YOUR_DAILY_RANK else getStringEnToHi ACCEPT_RIDE_TO_ENTER_LEADERBOARD
+                $ [ text $ if driverNotInLBdOrLBNotReady then getStringEnToHi LT.YOUR_DAILY_RANK else getStringEnToHi LT.ACCEPT_RIDE_TO_ENTER_LEADERBOARD
                   , padding $ PaddingBottom 2
                   , color Color.green700
                   ]
@@ -874,7 +881,7 @@ learnAndEarnView push state =
   , padding $ PaddingHorizontal 16 16
   , visibility $ if (state.props.showShimmer && length (state.data.moduleList.remaining <> state.data.moduleList.completed) == 0) then GONE else VISIBLE
   ][ textView $
-     [ text $ getString LEARN_AND_EARN
+     [ text $ getString LT.LEARN_AND_EARN
      , color $ Color.black800
      , margin $ MarginVertical 12 12
      ] <> FontStyle.h2 TypoGraphy
@@ -956,9 +963,9 @@ moduleTitleAndNumberOfVideoView push state (LmsModuleRes moduleInfo) =
     getStatusForModule :: {moduleStatus :: String, moduleMargin :: Margin, noOfVideosToDisplay :: String}
     getStatusForModule = let zeroVideosLeft = moduleInfo.noOfVideos - moduleInfo.noOfVideosCompleted == 0
                          in case moduleInfo.moduleCompletionStatus of
-                              MODULE_NOT_YET_STARTED -> {moduleStatus : "NEW", moduleMargin : MarginRight 5, noOfVideosToDisplay : show moduleInfo.noOfVideos <> " " <> getString VIDEOS}
+                              MODULE_NOT_YET_STARTED -> {moduleStatus : "NEW", moduleMargin : MarginRight 5, noOfVideosToDisplay : show moduleInfo.noOfVideos <> " " <> getString LT.VIDEOS}
                               MODULE_ONGOING -> {moduleStatus : "PENDING", moduleMargin : if zeroVideosLeft then MarginRight 0 else MarginRight 5, 
-                                                noOfVideosToDisplay : if zeroVideosLeft then "" else show (moduleInfo.noOfVideos - moduleInfo.noOfVideosCompleted) <> " " <> getString VIDEOS}
+                                                noOfVideosToDisplay : if zeroVideosLeft then "" else show (moduleInfo.noOfVideos - moduleInfo.noOfVideosCompleted) <> " " <> getString LT.VIDEOS}
                               MODULE_COMPLETED -> {moduleStatus : "COMPLETED", moduleMargin : MarginRight 0, noOfVideosToDisplay : ""}
 
 statusPillView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> String -> Margin -> PrestoDOM (Effect Unit) w
@@ -988,9 +995,9 @@ statusPillView push state status pillMargin =
   where
     getPropertyAccordingToStatus :: {text :: String, textColor :: String, fontStyle :: forall properties. (Array (Prop properties)), cornerRadius :: Number, shouldImageBeVisible :: Boolean, pillBackgroundColor :: String, pillImage :: String}
     getPropertyAccordingToStatus = case status of
-      "COMPLETED" -> {text : getString COMPLETED_STR, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : true, pillBackgroundColor : Color.green900, pillImage : "ny_ic_white_tick"} 
-      "PENDING" -> {text : getString PENDING_STR_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle,  cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.orange900, pillImage : ""}
-      "NEW" -> {text : getString NEW_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.blue800, pillImage : ""}
+      "COMPLETED" -> {text : getString LT.COMPLETED_STR, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : true, pillBackgroundColor : Color.green900, pillImage : "ny_ic_white_tick"} 
+      "PENDING" -> {text : getString LT.PENDING_STR_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle,  cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.orange900, pillImage : ""}
+      "NEW" -> {text : getString LT.NEW_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.blue800, pillImage : ""}
       _ -> {text : "", textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, shouldImageBeVisible : false,  cornerRadius : 16.0, pillBackgroundColor : Color.white900, pillImage : ""}
 
 computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
@@ -1008,12 +1015,12 @@ checkTokenAndInitSDK push action = do
     void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = cachedToken, param2 = "false"}) push action
     pure unit
   else do
-    void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+    void $ EHU.loaderText (getString LT.LOADING) (getString LT.PLEASE_WAIT_WHILE_IN_PROGRESS)
     EHU.toggleLoader true
     response <- HelperAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
     case response of
       Left _ -> do
-        void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        void $ pure $ JB.toast $ getString LT.ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         pure unit
       Right (API.GetSdkTokenResp resp) -> do
         void $ pure $ setValueToLocalStore GULLAK_TOKEN $ resp.token <> "<$>" <> fromMaybe "" resp.expiry

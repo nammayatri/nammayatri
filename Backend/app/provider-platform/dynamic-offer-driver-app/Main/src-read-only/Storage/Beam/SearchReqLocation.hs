@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchReqLocation where
@@ -26,6 +24,8 @@ data SearchReqLocationT f = SearchReqLocationT
     instructions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime

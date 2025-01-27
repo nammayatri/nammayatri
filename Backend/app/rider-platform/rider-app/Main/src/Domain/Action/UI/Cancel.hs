@@ -22,6 +22,7 @@ module Domain.Action.UI.Cancel
     mkDomainCancelSearch,
     cancelSearch,
     getCancellationDuesDetails,
+    makeCustomerBlockingKey,
   )
 where
 
@@ -46,6 +47,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -68,7 +70,8 @@ data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
     reasonStage :: SCR.CancellationStage,
     additionalInfo :: Maybe Text,
-    reallocate :: Maybe Bool
+    reallocate :: Maybe Bool,
+    blockOnCancellationRate :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -81,7 +84,8 @@ data CancelRes = CancelRes
     merchant :: DM.Merchant,
     cancelStatus :: Text,
     city :: Context.City,
-    vehicleVariant :: DVeh.VehicleVariant
+    vehicleVariant :: DVeh.VehicleVariant,
+    cancellationReason :: Maybe Text
   }
 
 data CancelSearch = CancelSearch
@@ -121,6 +125,7 @@ softCancel bookingId _ = do
         merchant = merchant,
         cancelStatus = show Enums.SOFT_CANCEL,
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
+        cancellationReason = Nothing,
         ..
       }
 
@@ -137,7 +142,6 @@ cancel ::
   SBCR.CancellationSource ->
   m CancelRes
 cancel booking mRide req cancellationSource = do
-  let distanceUnit = booking.distanceUnit
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking mRide
@@ -165,12 +169,15 @@ cancel booking mRide req cancellationSource = do
                 else do
                   logInfo $ "Valid disToPickup received: " <> show disToPickup
                   pure $ Just disToPickup
-            buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just booking.merchantId) distanceUnit
+            buildBookingCancellationReason (Just res'.currPoint) disToPickupUpd (Just ride.id)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
-            buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
-      Nothing -> buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
+            buildBookingCancellationReason Nothing Nothing (Just ride.id)
+      Nothing -> buildBookingCancellationReason Nothing Nothing Nothing
   QBCR.upsert cancellationReason
+  when (req.blockOnCancellationRate == Just True) $ do
+    Redis.setExp (makeCustomerBlockingKey booking.id.getId) True 60
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -180,23 +187,26 @@ cancel booking mRide req cancellationSource = do
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
+        cancellationReason = if isValueAddNP then Just $ SCR.getCancellationReasonCode req.reasonCode else Nothing,
         ..
       }
   where
-    buildBookingCancellationReason currentDriverLocation disToPickup merchantId distanceUnit = do
+    buildBookingCancellationReason currentDriverLocation disToPickup mbRideId = do
       let CancelReq {..} = req
       now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = booking.id,
-            rideId = Nothing,
-            merchantId = merchantId,
+            rideId = mbRideId,
+            merchantId = Just booking.merchantId,
             source = cancellationSource,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
             driverCancellationLocation = currentDriverLocation,
-            driverDistToPickup = convertMetersToDistance distanceUnit <$> disToPickup,
+            driverDistToPickup = convertMetersToDistance booking.distanceUnit <$> disToPickup,
+            riderId = Just booking.riderId,
+            distanceUnit = booking.distanceUnit,
             createdAt = now,
             updatedAt = now,
             ..
@@ -314,3 +324,6 @@ getCancellationDuesDetails mbBookingId (personId, merchantId) = do
           res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
           return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
         _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+
+makeCustomerBlockingKey :: Text -> Text
+makeCustomerBlockingKey bid = "CCRBlock:" <> bid

@@ -39,3 +39,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN is_device_id_exists 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN is_flag_confirmed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN merchant_operating_city_id character varying(36) ;

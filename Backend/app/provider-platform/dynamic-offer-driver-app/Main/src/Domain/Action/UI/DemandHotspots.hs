@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.DemandHotspots
   ( getDriverDemandHotspots,
     updateDemandHotspotsOnSearch,
@@ -9,14 +6,11 @@ module Domain.Action.UI.DemandHotspots
 where
 
 import API.Types.UI.DemandHotspots
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withArray)
+import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Geohash as Geohash
-import Data.OpenApi (ToSchema)
 import Data.String.Conversions
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import qualified Data.Vector as V
 import Domain.Types.Merchant
@@ -35,14 +29,10 @@ import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, generateAplhaNumbericCode, getCurrentTime)
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
-import Servant hiding (throwError)
 import qualified Storage.Cac.TransporterConfig as CCT
-import Tools.Auth
 
 -- What it is:
 -- Entire city is divided into geohashes, whenever we encounter a search, we increase the frequency and whenver a booking happens

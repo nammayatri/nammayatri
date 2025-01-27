@@ -128,3 +128,17 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN upgrade_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_favourite boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN middle_stop_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN last_ride_id character varying(36) ;
+
+
+------- SQL updates -------
+

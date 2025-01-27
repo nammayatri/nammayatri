@@ -28,6 +28,8 @@ import ModifyScreenState (modifyScreenState)
 import LocalStorage.Cache (setInCache)
 import Data.Function.Uncurried (runFn2)
 import Storage (KeyStore(..))
+import Screens.Types as ST
+import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 
 metroTicketBookingScreen :: FlowBT String METRO_TICKET_SCREEN_OUTPUT
 metroTicketBookingScreen = do
@@ -44,7 +46,8 @@ metroTicketBookingScreen = do
             App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)
         MyMetroTicketScreen -> do
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN)
-        GoToMetroRouteMap -> do
+        GoToMetroRouteMap state -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> state)
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_ROUTE_MAP)
         SelectSrcDest srcdest updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
@@ -52,5 +55,15 @@ metroTicketBookingScreen = do
         Refresh updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updatedState)
-        GotoPaymentPage orderResp bookingId-> 
-            App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_PAYMENT_PAGE orderResp bookingId)
+        GotoPaymentPage orderResp bookingId updatedState -> 
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_PAYMENT_PAGE orderResp bookingId updatedState)
+        GotoSearchScreen updatedState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_SEARCH_SCREEN updatedState)
+        AadhaarVerificationSO state offerType -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> state)
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION_SCREEN state offerType)
+        EditStops updatedState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
+            App.BackT $ App.BackPoint <$> (pure $ EDIT_TICKET_BOOKING_STOPS updatedState)
+        

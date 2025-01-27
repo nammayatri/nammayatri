@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Person where
@@ -33,6 +32,7 @@ data PersonE e = Person
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    clientReactNativeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currentCity :: Kernel.Types.Beckn.Context.City,
@@ -49,6 +49,7 @@ data PersonE e = Person
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     followsRide :: Kernel.Prelude.Bool,
+    frequentLocGeohashes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gender :: Domain.Types.Person.Gender,
     hasCompletedMockSafetyDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasCompletedSafetySetup :: Kernel.Prelude.Bool,
@@ -70,6 +71,7 @@ data PersonE e = Person
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -111,6 +113,7 @@ instance EncryptedItem Person where
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
           clientDevice = clientDevice entity,
+          clientReactNativeVersion = clientReactNativeVersion entity,
           clientSdkVersion = clientSdkVersion entity,
           createdAt = createdAt entity,
           currentCity = currentCity entity,
@@ -127,6 +130,7 @@ instance EncryptedItem Person where
           falseSafetyAlarmCount = falseSafetyAlarmCount entity,
           firstName = firstName entity,
           followsRide = followsRide entity,
+          frequentLocGeohashes = frequentLocGeohashes entity,
           gender = gender entity,
           hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill entity,
           hasCompletedSafetySetup = hasCompletedSafetySetup entity,
@@ -148,6 +152,7 @@ instance EncryptedItem Person where
           nightSafetyChecks = nightSafetyChecks entity,
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
+          payoutVpa = payoutVpa entity,
           rating = rating entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
@@ -181,6 +186,7 @@ instance EncryptedItem Person where
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
             clientDevice = clientDevice entity,
+            clientReactNativeVersion = clientReactNativeVersion entity,
             clientSdkVersion = clientSdkVersion entity,
             createdAt = createdAt entity,
             currentCity = currentCity entity,
@@ -197,6 +203,7 @@ instance EncryptedItem Person where
             falseSafetyAlarmCount = falseSafetyAlarmCount entity,
             firstName = firstName entity,
             followsRide = followsRide entity,
+            frequentLocGeohashes = frequentLocGeohashes entity,
             gender = gender entity,
             hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill entity,
             hasCompletedSafetySetup = hasCompletedSafetySetup entity,
@@ -218,6 +225,7 @@ instance EncryptedItem Person where
             nightSafetyChecks = nightSafetyChecks entity,
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
+            payoutVpa = payoutVpa entity,
             rating = rating entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,

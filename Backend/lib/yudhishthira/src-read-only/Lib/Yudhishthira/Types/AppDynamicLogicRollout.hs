@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Yudhishthira.Types.AppDynamicLogicRollout where
@@ -13,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data AppDynamicLogicRollout = AppDynamicLogicRollout
   { domain :: Lib.Yudhishthira.Types.LogicDomain,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity,
     percentageRollout :: Kernel.Prelude.Int,
     timeBounds :: Data.Text.Text,

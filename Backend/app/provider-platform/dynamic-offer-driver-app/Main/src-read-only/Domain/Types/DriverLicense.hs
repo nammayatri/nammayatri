@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverLicense where
@@ -8,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -29,6 +29,7 @@ data DriverLicenseE e = DriverLicense
     licenseExpiry :: Kernel.Prelude.UTCTime,
     licenseNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -60,6 +61,7 @@ instance EncryptedItem DriverLicense where
           licenseExpiry = licenseExpiry entity,
           licenseNumber = licenseNumber_,
           rejectReason = rejectReason entity,
+          vehicleCategory = vehicleCategory entity,
           verificationStatus = verificationStatus entity,
           merchantId = merchantId entity,
           createdAt = createdAt entity,
@@ -83,6 +85,7 @@ instance EncryptedItem DriverLicense where
             licenseExpiry = licenseExpiry entity,
             licenseNumber = licenseNumber_,
             rejectReason = rejectReason entity,
+            vehicleCategory = vehicleCategory entity,
             verificationStatus = verificationStatus entity,
             merchantId = merchantId entity,
             createdAt = createdAt entity,

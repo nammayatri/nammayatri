@@ -5,10 +5,10 @@
 module Storage.Queries.Journey where
 
 import qualified Domain.Types.Journey
+import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -22,13 +22,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Journey.Journey] -> m ())
 createMany = traverse_ create
 
-updateEstimatedFare :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updateEstimatedFare estimatedFare id = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.estimatedFare (Kernel.Prelude.fmap (.amount) estimatedFare), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateNumberOfLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updateNumberOfLegs legsDone id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.legsDone legsDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Journey.Journey])
+findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m (Maybe Domain.Types.Journey.Journey))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -38,15 +33,13 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.convenienceCost convenienceCost,
+      Se.Set Beam.endTime endTime,
       Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
       Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
-      Se.Set Beam.estimatedFare (Kernel.Prelude.fmap (.amount) estimatedFare),
-      Se.Set Beam.currency (Kernel.Prelude.fmap (.currency) fare),
-      Se.Set Beam.fare (Kernel.Prelude.fmap (.amount) fare),
-      Se.Set Beam.legsDone legsDone,
       Se.Set Beam.modes modes,
       Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
+      Se.Set Beam.startTime startTime,
       Se.Set Beam.totalLegs totalLegs,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -61,14 +54,13 @@ instance FromTType' Beam.Journey Domain.Types.Journey.Journey where
       Just
         Domain.Types.Journey.Journey
           { convenienceCost = convenienceCost,
+            endTime = endTime,
             estimatedDistance = Kernel.Types.Common.Distance estimatedDistance distanceUnit,
             estimatedDuration = estimatedDuration,
-            estimatedFare = Kernel.Types.Common.mkPrice currency <$> estimatedFare,
-            fare = Kernel.Types.Common.mkPrice currency <$> fare,
             id = Kernel.Types.Id.Id id,
-            legsDone = legsDone,
             modes = modes,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
+            startTime = startTime,
             totalLegs = totalLegs,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -80,16 +72,14 @@ instance ToTType' Beam.Journey Domain.Types.Journey.Journey where
   toTType' (Domain.Types.Journey.Journey {..}) = do
     Beam.JourneyT
       { Beam.convenienceCost = convenienceCost,
+        Beam.endTime = endTime,
         Beam.distanceUnit = (.unit) estimatedDistance,
         Beam.estimatedDistance = (.value) estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.estimatedFare = Kernel.Prelude.fmap (.amount) estimatedFare,
-        Beam.currency = Kernel.Prelude.fmap (.currency) fare,
-        Beam.fare = Kernel.Prelude.fmap (.amount) fare,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.legsDone = legsDone,
         Beam.modes = modes,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
+        Beam.startTime = startTime,
         Beam.totalLegs = totalLegs,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

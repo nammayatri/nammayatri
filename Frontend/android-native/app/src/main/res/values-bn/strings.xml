@@ -50,4 +50,6 @@
     <string name="call_support">সাহায্য কল করুন</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"অতিরিক্ত ভাড়া নেই। টিপস নেই। অপেক্ষা চার্জ নেই।"</string>
     <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
+    <string name="tip_included"> টিপ অন্তর্ভুক্ত!</string>
+    <string name="round_trip">রাউন্ড ট্রিপ</string>
 </resources>

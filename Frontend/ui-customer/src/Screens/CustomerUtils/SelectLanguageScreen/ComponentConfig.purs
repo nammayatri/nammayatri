@@ -31,6 +31,7 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Prelude ((<>))
 import MerchantConfig.Types (Language)
+import Common.RemoteConfig as RC
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -58,10 +59,10 @@ menuButtonConfig state language = MenuButton.config {
         , selectedTextStyle = FontStyle.ParagraphText
         , unselectedTextStyle = FontStyle.ParagraphText
        }
-      , accessibilityHint = if language.name == "English" then language.name else language.subTitle
+      , accessibilityHint = if language.name == "English" then language.name else language.subtitle
       ,subTitleConfig
       {
-        text = language.subTitle
+        text = language.subtitle
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
@@ -74,7 +75,7 @@ menuButtonConfig state language = MenuButton.config {
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   in config 
     {

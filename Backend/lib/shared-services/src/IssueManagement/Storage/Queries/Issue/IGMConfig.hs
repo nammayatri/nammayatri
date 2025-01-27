@@ -1,10 +1,7 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module IssueManagement.Storage.Queries.Issue.IGMConfig where
 
-import qualified Data.Time as T
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IGMConfig as DIGMConfig
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as Beam

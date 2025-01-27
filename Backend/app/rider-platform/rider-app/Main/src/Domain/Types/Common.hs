@@ -1,10 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Common
-  ( module Domain.Types.Common,
-    module Domain.Types,
+  ( module Domain.Types,
   )
 where
 
@@ -15,7 +12,7 @@ import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
 import Tools.Beam.UtilsTH
 
-$(mkBeamInstancesForEnumAndList ''TravelMode)
+$(mkBeamInstancesForEnumAndList ''MultimodalTravelMode)
 $(mkBeamInstancesForEnum ''FareProductType)
 $(mkBeamInstancesForEnumAndList ''ServiceTierType)
 $(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)

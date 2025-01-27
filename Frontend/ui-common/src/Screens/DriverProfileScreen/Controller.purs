@@ -5,8 +5,9 @@ import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonSt
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Services.Common.Backend
+import Mobility.Prelude (startsWith)
 import Engineering.Helpers.Utils as EHU
-import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Commons 
 import Services.Common.API
 import Data.Array as DA
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -15,9 +16,15 @@ import Debug (spy)
 import JBridge as JB
 import Effect.Uncurried(runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
-import Data.String (joinWith)
+import Data.String (joinWith, null)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Effect (Effect)
+import Common.Types.App (LazyCheck(..))
+import Constants as Constants
+import Data.Lens ((^.))
+import Engineering.Helpers.Accessor
 
 data ScreenOutput = GoToBack
 
@@ -36,32 +43,51 @@ instance loggableAction :: Loggable Action where
 getImage :: DriverProfileScreenCommonState -> String
 getImage state = joinWith "" $ (DA.mapWithIndex(\index item -> if index == state.data.imgIdx then item else "")state.data.displayImages)
 
+renderBase64 :: String -> Effect Unit
+renderBase64 image = do
+  if not (null image) then void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = image, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2} else pure unit
+  pure unit
+
 eval :: Action -> DriverProfileScreenCommonState -> Eval Action ScreenOutput DriverProfileScreenCommonState
 
 eval (GetDriverProfileAPIResponseAction (DriverProfileRes resp)) state = do 
   let response = resp.response
       updatedState = state{data = getDriverProfile response}
-  _ <- pure $ EHU.toggleLoader false
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
 eval (PrevImg) state = do 
   let updatedState = state{data{ imgIdx = if state.data.imgIdx /= 0 then state.data.imgIdx - 1 else 0 }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
 eval (NextImg) state = do 
   let updatedState = state{data{ imgIdx = if DA.length state.data.displayImages - 1 /= state.data.imgIdx then state.data.imgIdx + 1 else state.data.imgIdx }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
-eval GoBack state = exit $ GoToBack
+eval GoBack state = do
+  if isParentView FunctionCall 
+    then do 
+      let mBPayload = getGlobalPayload Constants.globalPayload
+      case mBPayload of 
+        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+          Just screen -> if startsWith "driverprofile" screen then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                            else exit $ GoToBack
+          _ -> exit $ GoToBack
+        Nothing -> exit $ GoToBack
+    else exit $ GoToBack
 
 eval _ state = update state
 
@@ -73,7 +99,7 @@ getProfileImages arr1 arr2 =
 
 getDriverProfile :: (DriverProfile) -> DriverProfileScreenCommonData
 getDriverProfile (DriverProfile details) = {
-    certificates : EHC.convertTo2DArray details.certificates,
+    certificates : convertTo2DArray details.certificates,
     homeTown : details.homeTown,
     driverName : details.driverName,
     aboutMe : details.aboutMe,
@@ -113,6 +139,7 @@ getVariant variant = do
     AMBULANCE_AC_OXY -> "Ambulance Ac Oxy"
     AMBULANCE_VENTILATOR -> "Ambulance Ventilator"
     SUV_PLUS -> "Suv Plus"
+    _ -> ""
 
 getPillText :: String -> String
 getPillText pill = do

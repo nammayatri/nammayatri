@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
-import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==), (||), negate, (-))
+import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==), (||), negate, (-), unit)
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -36,7 +36,7 @@ import Constants as Const
 import Data.Array (filter, elem)
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Data.Maybe
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -103,6 +103,7 @@ sourceToDestinationConfig state = let
   fareProductType = state.data.selectedItem.rideType
   sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
+    , width = V $ screenWidth unit - 70 
     , sourceImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 3)
@@ -113,7 +114,7 @@ sourceToDestinationConfig state = let
       , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
       , maxLines = 3
-      , ellipsize = false
+      , ellipsize = true
       }
     , destinationImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"

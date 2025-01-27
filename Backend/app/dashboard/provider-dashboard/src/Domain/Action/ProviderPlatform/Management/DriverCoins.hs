@@ -19,29 +19,28 @@ module Domain.Action.ProviderPlatform.Management.DriverCoins
   )
 where
 
+import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
 postDriverCoinsBulkUploadCoins :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReq -> Flow APISuccess
 postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoins) req
+  Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoins) req
 
 postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReqV2 -> Flow APISuccess
 postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoinsV2) req
+  Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoinsV2) req
 
 getDriverCoinsCoinHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
 getDriverCoinsCoinHistory merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverCoinsDSL.getDriverCoinsCoinHistory) driverId mbLimit mbOffset
+  Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.getDriverCoinsCoinHistory) driverId mbLimit mbOffset

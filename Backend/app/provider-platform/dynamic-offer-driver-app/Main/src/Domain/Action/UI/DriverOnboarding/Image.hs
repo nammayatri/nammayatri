@@ -164,7 +164,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
+  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -254,13 +254,14 @@ mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id Person.Person ->
   Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   Text ->
   DVC.DocumentType ->
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   Maybe Documents.VerificationStatus ->
   Maybe Text ->
   m Domain.Image
-mkImage personId_ merchantId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
+mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -277,7 +278,8 @@ mkImage personId_ merchantId s3Path documentType_ mbRcId verificationStatus work
         reviewerEmail = Nothing,
         documentExpiry = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        merchantOperatingCityId = mbMerchantOpCityId
       }
 
 getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text

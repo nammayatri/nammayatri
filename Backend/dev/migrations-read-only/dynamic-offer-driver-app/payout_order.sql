@@ -42,3 +42,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN response_code text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN retried_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN merchant_operating_city_id text ;

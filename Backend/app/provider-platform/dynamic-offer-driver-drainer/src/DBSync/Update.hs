@@ -52,7 +52,7 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
   Env {..} <- ask
   let (entryId, byteString) = updateDataEntries
   let dbModel = dbUpdateObject.dbModel
-  if shouldPushToKafkaOnly dbModel _dontEnableDbTables
+  if shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbUpdateObject.forceDrainToDB
     then return $ Right entryId
     else do
       let updateQuery = getUpdateQueryForTable dbUpdateObject

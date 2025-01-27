@@ -1,6 +1,6 @@
 module Screens.EmergencyContactsScreen.Controller where
 
-import Prelude (class Show, bind, compare, discard, map, not, pure, unit, ($), (&&), (*), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
+import Prelude (class Show, bind, compare, discard, map, not, pure, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
 import PrestoDOM (Eval, update, ScrollState, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Components.GenericHeader as GenericHeader
@@ -8,16 +8,16 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import Screens (ScreenName(..), getScreen)
-import JBridge (toast, hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation)
 import Screens.Types (Contacts, EmergencyContactsScreenState, NewContacts, NewContactsProp)
 import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!), mapMaybe)
-import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText)
+import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText, emitTerminateApp, isParentView)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Styles.Colors as Color
 import Components.PopUpModal.Controller as PopUpModal
-import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, liftFlow)
+import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, liftFlow, getGlobalPayload)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Data.Array as DA
@@ -35,9 +35,15 @@ import Data.String.Regex (regex, replace)
 import Data.String.Regex.Flags (global)
 import Data.Either (Either(..))
 import Components.DropDownWithHeader as DropDownWithHeader
+import Common.Types.App (LazyCheck(..))
 import Services.API as API
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption, shareWithTimeContraintsRideOption)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Constants as Constants
+import Data.Lens ((^.))
+import Engineering.Helpers.Accessor
+import Debug (spy)
+import Mobility.Prelude as MP
 
 instance showAction :: Show Action where
   show _ = ""
@@ -182,17 +188,23 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { showInfoPopUp = false } }
 
-eval BackPressed state =
-  if state.props.addContactsManually then
-    continue state { props { addContactsManually = false } }
-  else if state.props.showAddContactOptions then
-    continue state { props { showAddContactOptions = false } }
-  else if state.props.showContactList then do
-    continue state { data { editedText = "" }, props { showContactList = false } }
-  else if state.props.showInfoPopUp then
-    continue state { props { showInfoPopUp = false, showContactList = false } }
-  else
-    exit $ GoToSafetyScreen state
+eval BackPressed state = do
+  if isParentView FunctionCall
+    then do 
+      let mBPayload = getGlobalPayload Constants.globalPayload
+      case mBPayload of
+        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+          Just screen -> do 
+            if MP.startsWith "emergencycontactscreen" screen then do
+              void $ pure $ emitTerminateApp Nothing true
+              continue state
+              else 
+                handleBackPress state
+          _ -> handleBackPress state
+        Nothing -> handleBackPress state
+    else handleBackPress state
+
+  
 
 eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) state = continueWithCmd state [ do pure BackPressed ]
 
@@ -318,3 +330,16 @@ getFormattedContact contact =
       Left _ -> contact.number
   in
     contact { number = formattedNumber }
+
+handleBackPress :: EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
+handleBackPress state = do 
+  if state.props.addContactsManually then
+    continue state { props { addContactsManually = false } }
+  else if state.props.showAddContactOptions then
+    continue state { props { showAddContactOptions = false } }
+  else if state.props.showContactList then do
+    continue state { data { editedText = "" }, props { showContactList = false } }
+  else if state.props.showInfoPopUp then
+    continue state { props { showInfoPopUp = false, showContactList = false } }
+  else
+    exit $ GoToSafetyScreen state

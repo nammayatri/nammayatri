@@ -7,6 +7,7 @@ module API.Action.RiderPlatform.Management.NammaTag
   )
 where
 
+import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified Dashboard.Common
 import qualified Domain.Action.RiderPlatform.Management.NammaTag
@@ -28,49 +29,133 @@ type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|>
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city :<|> getNammaTagAppDynamicLogicVersions merchantId city :<|> getNammaTagAppDynamicLogicDomains merchantId city :<|> getNammaTagQueryAll merchantId city :<|> postNammaTagUpdateCustomerTag merchantId city
 
-type PostNammaTagTagCreate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'CREATE_NAMMA_TAG :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTagCreate)
+type PostNammaTagTagCreate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_TAG_CREATE)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTagCreate
+  )
 
-type PostNammaTagTagUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'CREATE_NAMMA_TAG :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTagUpdate)
+type PostNammaTagTagUpdate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_TAG_UPDATE)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTagUpdate
+  )
 
-type DeleteNammaTagTagDelete = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'CREATE_NAMMA_TAG :> API.Types.RiderPlatform.Management.NammaTag.DeleteNammaTagTagDelete)
+type DeleteNammaTagTagDelete =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.DELETE_NAMMA_TAG_TAG_DELETE)
+      :> API.Types.RiderPlatform.Management.NammaTag.DeleteNammaTagTagDelete
+  )
 
-type PostNammaTagQueryCreate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'CREATE_CHAKRA_QUERY :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagQueryCreate)
+type PostNammaTagQueryCreate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_QUERY_CREATE)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagQueryCreate
+  )
 
-type PostNammaTagAppDynamicLogicVerify = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'APP_DYNAMIC_LOGIC_VERIFY :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicVerify)
+type PostNammaTagAppDynamicLogicVerify =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicVerify
+  )
 
-type GetNammaTagAppDynamicLogic = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'APP_DYNAMIC_LOGIC_VERIFY :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogic)
+type GetNammaTagAppDynamicLogic =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogic
+  )
 
-type PostNammaTagRunJob = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'RUN_KAAL_CHAKRA_JOB :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagRunJob)
+type PostNammaTagRunJob =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_RUN_JOB)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagRunJob
+  )
 
-type GetNammaTagTimeBounds = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'TIME_BOUNDS :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagTimeBounds)
+type GetNammaTagTimeBounds =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_TIME_BOUNDS)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagTimeBounds
+  )
 
-type PostNammaTagTimeBoundsCreate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'TIME_BOUNDS :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTimeBoundsCreate)
+type PostNammaTagTimeBoundsCreate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_TIME_BOUNDS_CREATE)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagTimeBoundsCreate
+  )
 
-type DeleteNammaTagTimeBoundsDelete = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'TIME_BOUNDS :> API.Types.RiderPlatform.Management.NammaTag.DeleteNammaTagTimeBoundsDelete)
+type DeleteNammaTagTimeBoundsDelete =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE)
+      :> API.Types.RiderPlatform.Management.NammaTag.DeleteNammaTagTimeBoundsDelete
+  )
 
 type GetNammaTagAppDynamicLogicGetLogicRollout =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'NAMMA_TAG
-      'APP_DYNAMIC_LOGIC_ROLLOUT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT)
       :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicGetLogicRollout
   )
 
 type PostNammaTagAppDynamicLogicUpsertLogicRollout =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'NAMMA_TAG
-      'APP_DYNAMIC_LOGIC_ROLLOUT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT)
       :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicUpsertLogicRollout
   )
 
-type GetNammaTagAppDynamicLogicVersions = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'APP_DYNAMIC_LOGIC_VERIFY :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicVersions)
+type GetNammaTagAppDynamicLogicVersions =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERSIONS)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicVersions
+  )
 
-type GetNammaTagAppDynamicLogicDomains = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'APP_DYNAMIC_LOGIC_VERIFY :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicDomains)
+type GetNammaTagAppDynamicLogicDomains =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicDomains
+  )
 
-type GetNammaTagQueryAll = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'GET_CHAKRA_QUERY :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagQueryAll)
+type GetNammaTagQueryAll =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_QUERY_ALL)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagQueryAll
+  )
 
-type PostNammaTagUpdateCustomerTag = (ApiAuth 'APP_BACKEND_MANAGEMENT 'NAMMA_TAG 'MANUAL_TAG_UPDATE :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagUpdateCustomerTag)
+type PostNammaTagUpdateCustomerTag =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.POST_NAMMA_TAG_UPDATE_CUSTOMER_TAG)
+      :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagUpdateCustomerTag
+  )
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.postNammaTagTagCreate merchantShortId opCity apiTokenInfo req

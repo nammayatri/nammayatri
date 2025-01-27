@@ -30,8 +30,8 @@ module SharedLogic.FareCalculator
   )
 where
 
+import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified BecknV2.OnDemand.Enums as Enums
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.CancellationFarePolicy as DTCFP
@@ -41,9 +41,11 @@ import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude as KP
+import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
@@ -75,6 +77,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
         fareParams.rideExtraTimeFare <&> \tbCharge -> do
           mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
 
+      -- This is not supposed to be passed separately as it is already passed in Base Fare hence in the filter it is removed
       nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
@@ -188,7 +191,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           extraTimeCaption = show Enums.EXTRA_TIME_FARE
           extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
 
-      catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
+          stateEntryPermitChargesCaption = show Enums.STATE_ENTRY_PERMIT_CHARGES
+          mbStateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . mkPrice <$> det.stateEntryPermitCharges
+
+      catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem, mbStateEntryPermitChargesItem]
 
     checkIfZero fare =
       if fare > 0
@@ -244,6 +250,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
+    stopWaitingTimes :: [Minutes],
     returnTime :: Maybe UTCTime,
     vehicleAge :: Maybe Months,
     roundTrip :: Bool,
@@ -254,13 +261,15 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
+    estimatedCongestionCharge :: Maybe HighPrecMoney,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
     noOfStops :: Int,
     currency :: Currency,
-    distanceUnit :: DistanceUnit
+    distanceUnit :: DistanceUnit,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -288,16 +297,17 @@ calculateFareParameters params = do
           DFP.ExtraDistanceFare congestionCharge -> HighPrecMoney (partOfNightShiftCharge.getHighPrecMoney * toRational congestionCharge) - partOfNightShiftCharge
       congestionChargeByPerMin =
         fp.congestionChargePerMin >>= \congestionChargePerMin ->
-          let duration = params.actualRideDuration <|> params.estimatedRideDuration
+          let duration = params.estimatedRideDuration <|> params.actualRideDuration
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
       congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
+      finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
-          + congestionChargeResultWithAddition ----------Needs to be changed to congestionChargeResult
+          + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -318,7 +328,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
-            congestionCharge = Just congestionChargeResultWithAddition, ----------Needs to be changed to congestionChargeResult
+            congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
             waitingCharge = resultWaitingCharge,
@@ -356,6 +366,8 @@ calculateFareParameters params = do
             sgst = fp.sgst,
             cgst = fp.cgst,
             platformFeeChargesBy = fp.platformFeeChargesBy,
+            merchantId = Just params.farePolicy.merchantId,
+            merchantOperatingCityId = params.merchantOperatingCityId,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
@@ -396,7 +408,10 @@ calculateFareParameters params = do
             Nothing -> 840
           allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDurationInMins) params.returnTime
           allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
-          extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
+          reservedTime = case params.returnTime of
+            Just rt -> max estimatedDuration (round $ diffUTCTime rt params.rideTime)
+            _ -> estimatedDuration
+          extraMins = max 0 (actualDuration - reservedTime) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
@@ -407,7 +422,8 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          extraHoursSpent = max 0 (fromIntegral (allowanceMins' - defaultWaitTimeAtDestination.getMinutes) / 60.0) :: Double
+          extraTimeSpent = max 0 ((diffUTCTime (fromMaybe params.rideTime params.returnTime) params.rideTime) - intToNominalDiffTime estimatedDuration) / 60
+          extraHoursSpent = max 0 (realToFrac extraTimeSpent - fromIntegral (defaultWaitTimeAtDestination.getMinutes)) / 60.0 :: Double
           fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
 
       let distPercent = case (actualDistance, estimatedDistance) of
@@ -423,7 +439,7 @@ calculateFareParameters params = do
       ( [],
         baseFare_,
         nightShiftCharge,
-        Nothing,
+        waitingChargeInfo,
         DFParams.InterCityDetails $
           DFParams.FParamsInterCityDetails
             { timeFare = fareByTime_,
@@ -431,7 +447,8 @@ calculateFareParameters params = do
               pickupCharge = deadKmFare,
               extraDistanceFare,
               extraTimeFare,
-              currency = params.currency
+              currency = params.currency,
+              ..
             }
         )
 
@@ -560,10 +577,12 @@ calculateFareParameters params = do
 
     countWaitingCharge :: WaitingChargeInfo -> Maybe HighPrecMoney
     countWaitingCharge waitingChargeInfo = do
-      let waitingTimeMinusFreeWatingTime = params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)
-      let chargedWaitingTime = if waitingTimeMinusFreeWatingTime < Just 0 then Nothing else waitingTimeMinusFreeWatingTime
+      let waitingTimeMinusFreeWatingTime = max 0 (fromMaybe (Minutes 0) (params.waitingTime <&> (\wt -> (-) wt waitingChargeInfo.freeWaitingTime)))
+      let totalStopWaitingTimeMinunFreeWaitingTime = sum $ params.stopWaitingTimes <&> (\wt -> max ((-) wt waitingChargeInfo.freeWaitingTime) 0)
+      let chargedWaitingTime = waitingTimeMinusFreeWatingTime + totalStopWaitingTimeMinunFreeWaitingTime
+      let mbChargedWaitingTime = if chargedWaitingTime == 0 then Nothing else Just chargedWaitingTime
       case waitingChargeInfo.waitingCharge of
-        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> chargedWaitingTime
+        PerMinuteWaitingCharge charge -> (\waitingTime -> HighPrecMoney $ toRational waitingTime * charge.getHighPrecMoney) <$> mbChargedWaitingTime
         ConstantWaitingCharge charge -> Just $ toHighPrecMoney charge -- Always charged, freeWaitingTime doesn't make sense in this case
     countPlatformFee :: HighPrecMoney -> Maybe PlatformFeeInfo -> Currency -> FareParametersDetails -> FareParametersDetails
     countPlatformFee fullCompleteRideCost platformFeeInfo currency = \case
@@ -613,7 +632,11 @@ calculateFareParameters params = do
             AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
             AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
             SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
+            HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
+            EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
             DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
+            BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
@@ -640,7 +663,7 @@ countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare + fromMaybe 0.0 det.rideDurationFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
-  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)
+  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
   DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
 
 addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
@@ -701,16 +724,19 @@ timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 36
 utcToIst :: Minutes -> UTCTime -> LocalTime
 utcToIst timeZoneDiff = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) -- IST is UTC + 5:30
 
+minuteOfDay :: TimeOfDay -> Int
+minuteOfDay (TimeOfDay hour minute _) = hour * 60 + minute
+
 -- Calculates hours for a partial day
 hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
 hoursInDay startUtc endUtc start end day
   | startDay == endDay = if startDay == day then diffMins else 0
   | otherwise =
     if day == startDay
-      then 1440 - todMin startTod
+      then 1440 - minuteOfDay startTod
       else
         if day == endDay
-          then todMin endTod
+          then minuteOfDay endTod
           else 1440
   where
     startDay = localDay start

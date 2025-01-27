@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Domain.Types.PayoutOrder where
@@ -24,6 +23,7 @@ data PayoutOrderE e = PayoutOrder
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder,
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -58,6 +58,7 @@ instance EncryptedItem PayoutOrder where
           id = id entity,
           lastStatusCheckedAt = lastStatusCheckedAt entity,
           merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
           mobileNo = mobileNo_,
           orderId = orderId entity,
           responseCode = responseCode entity,
@@ -84,6 +85,7 @@ instance EncryptedItem PayoutOrder where
             id = id entity,
             lastStatusCheckedAt = lastStatusCheckedAt entity,
             merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
             mobileNo = mobileNo_,
             orderId = orderId entity,
             responseCode = responseCode entity,

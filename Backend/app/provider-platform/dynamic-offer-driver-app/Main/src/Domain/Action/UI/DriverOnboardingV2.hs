@@ -1,18 +1,12 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
-import Data.List (intercalate, reverse)
-import Data.List.Split (splitOn)
 import Data.Maybe
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (UTCTime, defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
@@ -21,7 +15,6 @@ import Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverBankAccount as DDBA
-import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard as Domain
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
@@ -34,7 +27,6 @@ import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleServiceTier
 import Environment
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
@@ -50,10 +42,7 @@ import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Error.Throwing
-import Servant hiding (throwError)
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -61,7 +50,6 @@ import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -71,14 +59,11 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverSSN as QDriverSSN
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
-import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
-import Tools.Auth
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -124,18 +109,21 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE
   truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK
+  busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS
   cabConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
   autoConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
   bikeConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
   ambulanceConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
   truckConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments truckConfigsRaw)
+  busConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments busConfigsRaw)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = toMaybe cabConfigs,
         autos = toMaybe autoConfigs,
         bikes = toMaybe bikeConfigs,
         ambulances = toMaybe ambulanceConfigs,
-        trucks = toMaybe truckConfigs
+        trucks = toMaybe truckConfigs,
+        bus = toMaybe busConfigs
       }
   where
     toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
@@ -218,8 +206,10 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   actualDistance = mbDistance,
                   rideTime = now,
                   waitingTime = Nothing,
+                  stopWaitingTimes = [],
                   returnTime = Nothing,
                   vehicleAge = Nothing,
+                  estimatedCongestionCharge = Nothing,
                   roundTrip = False,
                   noOfStops = 0,
                   actualRideDuration = Nothing,
@@ -234,7 +224,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
                   currency = INR, -- fix it later
                   distanceUnit,
-                  tollCharges = Nothing
+                  tollCharges = Nothing,
+                  merchantOperatingCityId = Just merchantOperatingCityId
                 }
           let totalFareAmount = perRideKmFareParamsSum fareParams
               perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)

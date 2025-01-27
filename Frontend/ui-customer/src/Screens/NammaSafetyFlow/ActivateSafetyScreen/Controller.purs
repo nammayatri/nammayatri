@@ -41,6 +41,7 @@ import Components.Safety.SosButtonAndDescription as SosButtonAndDescription
 import Components.Safety.SafetyActionTileView as SafetyActionTileView
 import Components.OptionsMenu as OptionsMenu
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
+import Engineering.Helpers.Utils as EHU
 import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn7, runEffectFn3)
 import Timers (clearTimerWithId, waitingCountdownTimerV2Impl, startTimer)
@@ -56,6 +57,8 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Common.Types.App (LazyCheck (..))
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Debug 
 
 instance showAction :: Show Action where
@@ -170,21 +173,28 @@ eval BackPressed state = do
   void $ pure $ clearTimerWithId state.props.recordingTimerId
   let newState = state { props { triggerSiren = false } }
   if state.props.showCallPolice then do
+    void $ pure $ spy "BackPressed ActivateSafetyScreen" "If"
     void $ pure $ clearTimerWithId state.props.policeCallTimerId
     if state.props.isSafetyCenterDisabled 
       then exit $ GoBack newState
       else continue newState { props { showCallPolice = false, policeCallTimerValue = 5} }
   else 
-    continueWithCmd state [do
-    if state.props.isAudioRecordingActive then do
-      void $ runEffectFn1 JB.removeMediaPlayer ""
-      void $ runEffectFn1 JB.stopAudioRecording ""
-      pure unit
-    else
-      pure unit
-
-    pure $ Exit $ GoBack newState
-  ]
+    if isParentView FunctionCall 
+    then do 
+      void $ pure $ spy "BackPressed ActivateSafetyScreen" "Else If"
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else do
+      void $ pure $ spy "BackPressed ActivateSafetyScreen" "else"
+      continueWithCmd state [do
+        if state.props.isAudioRecordingActive then do
+          void $ runEffectFn1 JB.removeMediaPlayer ""
+          void $ runEffectFn1 JB.stopAudioRecording ""
+          pure unit
+        else
+          pure unit
+        pure $ Exit $ GoBack newState
+      ]
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 
@@ -366,10 +376,10 @@ eval (AudioPermission status) state =
 eval (UploadMultiPartDataCallback _ fileId) state = do
   void $ pure $ JB.toggleBtnLoader "" false
   if DS.null fileId then do
-    void $ pure $ JB.toast "Failed to upload media file. Please try again."
+    void $ pure $ EHU.showToast "Failed to upload media file. Please try again."
     continue state 
   else do
-    void $ pure $ JB.toast "Audio shared successfully"
+    void $ pure $ EHU.showToast "Audio shared successfully"
     continue state {props { recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false} }
 
 eval (SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording) state = 

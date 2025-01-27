@@ -1,30 +1,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Merchant where
 
 import API.Types.UI.Merchant
-import API.Types.UI.Merchant as API.Types.UI.Merchant
-import qualified API.Types.UI.Merchant
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T (unpack)
-import qualified "lib-dashboard" Domain.Types.Merchant
-import Domain.Types.MerchantConfigs as Domain.Types.MerchantConfigs
-import qualified Domain.Types.MerchantConfigs as Domain.Types.MerchantConfigs
-import qualified "lib-dashboard" Domain.Types.Person
+import Domain.Types.MerchantConfigs
 import "lib-dashboard" Domain.Types.Person.API as AP
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, getDbHash)
-import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Network.URI (isURI, parseURI)
-import Servant hiding (throwError)
+import Network.URI (isURI)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant

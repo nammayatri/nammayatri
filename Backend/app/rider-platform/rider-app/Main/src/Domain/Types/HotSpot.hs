@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.HotSpot where
 
@@ -28,7 +27,6 @@ import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
-import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 
 data HotSpot = HotSpot
   { _geoHash :: Text,
@@ -110,10 +108,10 @@ convertToHotSpot ::
   LatLong ->
   Maybe LA.LocationAddress ->
   Id Merchant ->
+  Maybe HotSpotConfig ->
   m (Maybe HotSpot)
-convertToHotSpot LatLong {..} _address merchantId = do
-  hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
-  case hotSpotConfig of
+convertToHotSpot LatLong {..} _address _merchantId mbHotSpotConfig = do
+  case mbHotSpotConfig of
     Just HotSpotConfig {..} -> do
       let mbGeoHash = DG.encode precisionToSetGeohash (lat, lon)
       case mbGeoHash of

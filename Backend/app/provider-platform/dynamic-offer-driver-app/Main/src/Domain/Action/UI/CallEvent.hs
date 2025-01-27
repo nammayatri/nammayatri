@@ -66,7 +66,6 @@ sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exoph
 
 callOnClickTracker :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => Id Ride.Ride -> m ()
 callOnClickTracker rideId = do
-  maxShards <- asks (.maxShards)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   transporterConfig <-
@@ -74,7 +73,7 @@ callOnClickTracker rideId = do
       >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   callStatusObj <- buildCallStatus booking.merchantOperatingCityId booking.providerId
   QCallStatus.create callStatusObj
-  createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
+  createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (Just booking.providerId) (Just booking.merchantOperatingCityId) (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) $
     CheckExotelCallStatusAndNotifyBAPJobData
       { rideId = ride.id,
         merchantOperatingCityId = Just (booking.merchantOperatingCityId)

@@ -59,7 +59,8 @@ import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
-import Screens.Types 
+import Screens.Types
+import Toast.ScreenData as ToastScreenData
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
@@ -79,9 +80,11 @@ import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
 import Screens.CancellationRateScreen.ScreenData as CancellationRateScreenData
 import Screens.CustomerReferralTrackerScreen.Types as CustomerReferralScreenTypes
+import Screens.HotspotScreen.ScreenData as HotspotScreenData
 import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
+import Screens.MetroWarriorsScreen.ScreenData as MetroWarriorsScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -108,6 +111,7 @@ newtype GlobalState = GlobalState {
   , selectedLanguageScreen :: SelectLanguageScreenState
   , helpAndSupportScreen :: HelpAndSupportScreenState
   , writeToUsScreen :: WriteToUsScreenState
+  , toast :: ToastScreenData.ToastState
   , permissionsScreen :: PermissionsScreenState
   , homeScreen :: HomeScreenState
   , editBankDetailsScreen :: EditBankDetailsScreenState
@@ -138,10 +142,12 @@ newtype GlobalState = GlobalState {
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
   , cancellationRateScreen :: CancellationRateScreenState
+  , hotspotScreen :: HotspotScreenState
   , rideRequestScreen :: RideRequestScreenData.RideRequestScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   , uploadParcelImageScreen :: UploadParcelImageScreenState
+  , metroWarriorsScreen :: MetroWarriorsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -188,6 +194,7 @@ defaultGlobalState = GlobalState {
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
 , chooseCityScreen : ChooseCityScreenData.initData
+, toast : ToastScreenData.initData
 , welcomeScreen : WelcomeScreenData.initData
 , driverEarningsScreen : DriverEarningsScreenData.initData
 , benefitsScreen : BenefitsScreenData.initData
@@ -198,10 +205,12 @@ defaultGlobalState = GlobalState {
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
 , cancellationRateScreen : CancellationRateScreenData.initData
+, hotspotScreen : HotspotScreenData.initData 
 , rideRequestScreen : RideRequestScreenData.initData ""
 , rideSummaryScreen : RideSummaryScreenData.initData
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
+, metroWarriorsScreen : MetroWarriorsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -269,10 +278,12 @@ data ScreenType =
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
   | CancellationRateScreenStateType (CancellationRateScreenState -> CancellationRateScreenState)
+  | HotspotScreenStateType (HotspotScreenState -> HotspotScreenState)
   | RideRequestScreenStateType (RideRequestScreenData.RideRequestScreenState ->RideRequestScreenData.RideRequestScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
   | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
+  | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -302,6 +313,8 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarni
                                    | GOTO_TRIP_DETAILS IndividualRideCardState
                                    | LOAD_MORE_HISTORY DriverEarningsScreenState
                                    | GOTO_COINS_EARNING_INFO DriverEarningsScreenState
+
+data HOTSPOT_SCREEN_OUTPUT = REFRESH_HOTSPOTS | BACK_TO_HOMESCREEN
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -437,7 +450,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
                           | UPDATE_ROUTE HomeScreenState
-                          | FCM_NOTIFICATION String HomeScreenState
+                          | FCM_NOTIFICATION String HomeScreenState NotificationBody
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
@@ -448,6 +461,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
+                          | GO_TO_COMPLETE_PROFILE_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
@@ -467,11 +481,14 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_ADD_UPI_SCREEN
                           | VERIFY_MANUAL_UPI HomeScreenState
                           | SWITCH_PLAN_FROM_HS PlanCardState HomeScreenState
+                          | GOTO_HOTSPOT_SCREEN HomeScreenState
                           | GO_TO_RIDE_REQ_SCREEN HomeScreenState String String
                           | GO_TO_RIDE_SUMMARY
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
                           | GO_TO_UPLOAD_PARCEL_IMAGE HomeScreenState
                           | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
+                          | UPDATE_METRO_WARRIOR HomeScreenState
+                          | GO_TO_METRO_WARRIOR HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -609,3 +626,6 @@ data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScre
                                                | HOME_SCREEN_FROM_REFERRAL_TRACKER
 
 data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadParcelImageScreenState
+
+data METRO_WARRIOR_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_WARRIOR MetroWarriorsScreenState
+                                  | UPDATE_WARRIOR_SETTINGS MetroWarriorsScreenState UpdateSpecialLocWarriorInfoReq

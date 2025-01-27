@@ -1,19 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.SearchRequestForDriverExtra where
 
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver as Domain
 import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as TC
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -22,17 +16,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import Kernel.Utils.Version
 import qualified Sequelize as Se
-import SharedLogic.DriverPool.Types
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.OrphanInstances.SearchRequestForDriver
+import Storage.Queries.OrphanInstances.SearchRequestForDriver ()
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.SearchRequest as QR
 
 -- Extra code goes here --
 

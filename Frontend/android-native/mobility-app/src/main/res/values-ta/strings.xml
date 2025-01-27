@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">படத்தைப் பிடிக்க அனுமதிகளை அனுமதிக்கவும்</string>
     <string name="we_have_updated_your_app_kindly_relaunch">உங்கள் பயன்பாட்டை நாங்கள் புதுப்பித்துள்ளோம், பயன்பாடு இப்போது மீண்டும் ஏற்றப்படும்.</string>
     <string name="okay_got_it">சரி, புரிந்தது</string>
+    <string name="okay_got_it_smallcase">சரி, புரிந்தது</string>
+    <string name="sent">அனுப்பப்பட்டது</string>
     <string name="upload_image">படத்தை பதிவேற்றம் செய்யவும்</string>
     <string name="not_interested">ஆர்வம் இல்லை</string>
     <string name="too_far">மற்றொரு சவாரி</string>
@@ -44,6 +46,9 @@
     <string name="and">மற்றும்</string>
     <string name="tip_included">டிப் சேர்க்கப்பட்டுள்ளது!</string>
     <string name="message_from_customer">வாடிக்கையாளரிடமிருந்து செய்தி</string>
+    <string name="customer_is_waiting">வாடிக்கையாளர் காத்திருக்கிறார்!</string>
+    <string name="please_start_moving_towards_the_pickup_location">பிக் அப் இடத்திற்கு செல்லத் தொடங்குங்கள்</string>
+    <string name="quick_chats">விரைவு அரட்டைகள்:</string>
     <string name="assistance_required">உதவி தேவை</string>
     <string name="tip">டிப்</string>
     <string name="qr_for_your_vpa_is_downloaded">உங்கள் vpa க்கான QR பதிவிறக்கப்பட்டது!!!</string>
@@ -78,4 +83,7 @@
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
     <string name="parking_charges">%1$.0f₹ பார்க்கிங்</string>
     <string name="includes">அடங்கும்</string>
+    <string name="stops_info">%1$d நிறுத்தங்கள் (நிறுத்த கட்டணத்துடன்)</string>
+    <string name="stops">%1$d நிறுத்தங்கள்</string>
+    <string name="round_trip">சுற்றுலா பயணம்</string>
 </resources>

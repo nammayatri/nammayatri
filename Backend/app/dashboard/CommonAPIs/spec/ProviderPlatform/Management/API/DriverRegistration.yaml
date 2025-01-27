@@ -5,6 +5,7 @@ imports:
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   Document: Dashboard.Common
+  VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
 
 module: DriverRegistration
@@ -14,21 +15,25 @@ helperApiPrefix: ""
 apis:
   - GET: # DocumentsListAPI
       endpoint: /{driverId}/documents/list
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: DocumentsListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
   - GET: # GetDocumentAPI
       endpoint: /getDocument/{imageId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
+      auth: ApiAuthV2
       params:
         imageId: Id Image
       response:
         type: GetDocumentResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
   - POST: # UploadDocumentAPI
       endpoint: /{driverId}/document/upload
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -38,9 +43,10 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI UploadDocumentEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
   - POST: # RegisterDLAPI
       endpoint: /{driverId}/register/dl
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -50,9 +56,10 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI RegisterDLEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
   - POST: # RegisterRCAPI
       endpoint: /{driverId}/register/rc
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -62,9 +69,10 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI RegisterRCEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
   - POST: # GenerateAadhaarOtpAPI
       endpoint: /{driverId}/register/generateAadhaarOtp
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GENERATE_AADHAAR_OTP
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -74,9 +82,10 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI GenerateAadhaarOtpEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GENERATE_AADHAAR_OTP
   - POST: # VerifyAadhaarOtpAPI
       endpoint: /{driverId}/register/verifyAadhaarOtp
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS VERIFY_AADHAAR_OTP
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -86,9 +95,10 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI VerifyAadhaarOtpEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS VERIFY_AADHAAR_OTP
   - GET: # UnderReviewDriversListAPI
       endpoint: /underReviewDrivers
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNDER_REVIEW_DRIVERS_LIST
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       query:
@@ -96,16 +106,20 @@ apis:
         - offset: Int
       response:
         type: UnderReviewDriversListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNDER_REVIEW_DRIVERS_LIST
   - GET: # DriverDocumentInfoAPI
       endpoint: /{driverId}/documents/info
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: "[DriverDocument]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
   - POST: # UpdateDocumentAPI
       endpoint: /documents/update
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
+      auth: ApiAuthV2
       request:
         type: UpdateDocumentRequest
       response:
@@ -113,6 +127,7 @@ apis:
       migrate:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
 
 types:
   DLDetails:
@@ -187,6 +202,7 @@ types:
     - multipleRC: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
     - vehicleDetails: Maybe DriverVehicleDetails
     - derive: "'HideSecrets"
   GenerateAadhaarOtpReq:
@@ -296,3 +312,6 @@ types:
     - dateOfExpiry: Maybe UTCTime
   ApproveDetails:
     - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

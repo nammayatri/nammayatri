@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Ride where
@@ -61,6 +60,7 @@ data Ride = Ride
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDriverSpecialLocWarrior :: Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPickupOrDestinationEdited :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

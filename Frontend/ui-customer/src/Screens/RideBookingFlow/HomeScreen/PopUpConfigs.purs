@@ -12,7 +12,6 @@ import Engineering.Helpers.Commons
 import Language.Strings
 import Language.Types
 
-
 finalFareExcludesToll :: HomeScreenState -> PopUpModal.Config
 finalFareExcludesToll lazyCheck = PopUpModal.config{
   margin = MarginHorizontal 24 24
@@ -86,7 +85,7 @@ intercityBusPhoneNumberPermission state = PopUpModal.config{
 , backgroundClickable = true
 , dismissPopup = true
 , coverImageConfig{
-    imageUrl = fetchImage APP_ASSET "ny_ic_ny_rs_phone_permission"
+    imageUrl = fetchImage APP_ASSET "ny_ic_rs_phone_permission"
   , visibility = VISIBLE
   , height =  V 83
   , width = V $ (screenWidth unit) - 80

@@ -1,0 +1,55 @@
+imports:
+  IssueListRes: Domain.Action.Dashboard.IssueList
+  Value: Data.Aeson
+  Person: IssueManagement.Common
+  Quote: IssueManagement.Common
+
+module: IssueList
+apiPrefix: issue
+
+apis:
+  - GET: # IssueListAPI
+      endpoint: /list
+      name: GetIssueListV1
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - mobileCountryCode: Text
+        - mobileNumber: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: IssueListRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS LIST_ISSUE
+  - POST:  # TicketStatusCallBackAPI
+      endpoint: /kapture/ticketStatus
+      name: PostIssueListTicketStatusCallBack
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
+
+types:
+  IssueListRes:
+    - list: [Issue]
+    - summary: Summary
+  Issue:
+    - id: Id Issue
+    - customerId: Id Person
+    - bookingId: Maybe (Id Quote)
+    - firstName: Maybe Text
+    - lastName: Maybe Text
+    - mobileNumber: Maybe Text
+    - contactEmail: Maybe Text
+    - reason: Text
+    - description: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  Summary:
+    - totalCount: Int
+    - count: Int

@@ -25,7 +25,7 @@ import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..), withinTimeRange)
-import JBridge (showDialer, hideKeyboardOnNavigation, toast, differenceBetweenTwoUTC)
+import JBridge (showDialer, hideKeyboardOnNavigation, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
@@ -151,6 +151,8 @@ myRideListTransform state listRes =
                   , status: (ride.status)
                   , isNull: false
                   , rideStartTime: (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A")
+                  , rideStartTimeUTC: fromMaybe "" ride.rideStartTime
+                  , rideEndTimeUTC: fromMaybe "" ride.rideEndTime
                   , rideEndTime: (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A")
                   , vehicleNumber: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleNumber)
                   , rideId: ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _id)
@@ -159,6 +161,7 @@ myRideListTransform state listRes =
                   , faresList: updatedFareList
                   , config: config
                   , email: ""
+                  , isLoading: false
                   , fromScreen: state.data.fromScreen
                   , description: ""
                   , accountStatus: ACTIVE

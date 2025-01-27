@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Init
-import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
@@ -12,7 +8,6 @@ import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
 import qualified Data.Maybe
-import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init
 import Domain.Types
@@ -25,10 +20,7 @@ import qualified Kernel.Types.App
 import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
-import Kernel.Utils.Common (type (:::))
 import qualified Kernel.Utils.Common
-import qualified Kernel.Utils.Text
-import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 
 buildDInitReq :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.InitReq -> Bool -> m Domain.Action.Beckn.Init.InitReq
 buildDInitReq subscriber req isValueAddNP = do
@@ -57,6 +49,7 @@ buildDInitReq subscriber req isValueAddNP = do
   let initReqDetails = case tripCategory of
         Delivery _ -> getDeliveryDetails orderItem.itemTags
         _ -> Nothing
+  let isAdvanceBookingEnabled = Just $ getAdvancedBookingEnabled orderItem.itemTags
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
@@ -120,3 +113,11 @@ getDeliveryDetails tagGroups = do
     splitInstructions ins = case T.splitOn "|" ins of
       [ins1, ins2] -> (correctIns ins1, correctIns ins2)
       _ -> (Nothing, Nothing)
+
+getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
+getAdvancedBookingEnabled tagGroups =
+  let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
+   in case tagValue of
+        Just "True" -> True
+        Just "False" -> False
+        _ -> False

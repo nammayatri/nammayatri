@@ -53,7 +53,9 @@ getEventName state event bulkUploadTitle = do
     API.PurpleRideCompleted -> getString PURPLE_RIDE_COMPLETED
     API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
     API.TrainingCompleted -> getString TRAINING_COMPLTED
-    API.MetroRideCompleted -> getString METRO_RIDE_COMPLETED
+    API.MetroRideCompleted metroRideType rideCount -> case rideCount of
+      Just count -> show count <> " " <> show metroRideType <> " " <> getString RIDE_COMPLETED
+      Nothing -> show metroRideType <> " " <> getString RIDE_COMPLETED
     API.BulkUploadFunction -> case bulkUploadTitle of
       Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
                         "HI_IN" -> title.hi
@@ -91,6 +93,10 @@ checkPopupShowToday popupType appConfig hsState = do
     ST.EIGHT_RIDE_COMPLETED ->
       if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.EIGHT_RIDE_COMPLETED
+        else ST.NO_COIN_POPUP
+    ST.SIX_RIDE_COMPLETED ->
+      if isPopupShownToday coinPopupInfo.sixRideCompleted && checkCoinIsEnabled && coinsConfig.sixRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+        then ST.SIX_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.FIVE_RIDE_COMPLETED ->
       if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && coinsConfig.fiveRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)

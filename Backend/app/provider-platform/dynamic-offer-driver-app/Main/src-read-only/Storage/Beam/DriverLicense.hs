@@ -1,12 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverLicense where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -30,6 +29,7 @@ data DriverLicenseT f = DriverLicenseT
     licenseNumberEncrypted :: B.C f Kernel.Prelude.Text,
     licenseNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

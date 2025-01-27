@@ -1,9 +1,5 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Beckn.OnDemand.Transformer.OnSearch where
 
-import qualified Beckn.ACL.Common
 import qualified Beckn.OnDemand.Utils.Common
 import Beckn.OnDemand.Utils.OnSearch
 import qualified BecknV2.OnDemand.Types
@@ -13,15 +9,11 @@ import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
-import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.Quote as DQuote
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Id
 import qualified Kernel.Types.Price
-import Kernel.Utils.Common (highPrecMoneyToText, type (:::))
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
 buildOnSearchMessage res bppConfig isValueAddNP = do
@@ -100,7 +92,7 @@ tfProviderItems res isValueAddNP pricing = do
       itemId_ = Just pricing.pricingId
       itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c, _) -> c) res.estimates) <> (map (\(_, _, c, _) -> c) res.quotes))
       itemPaymentIds_ = Nothing
-      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags res.transporterConfig pricing isValueAddNP
+      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags res.transporterConfig pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 

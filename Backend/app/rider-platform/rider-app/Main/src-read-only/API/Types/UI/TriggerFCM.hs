@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.TriggerFCM where
@@ -12,7 +11,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data FCMEntityData = FCMEntityData {channelId :: Kernel.Prelude.Maybe Data.Text.Text, personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, source :: Kernel.Prelude.Maybe API.Types.UI.TriggerFCM.MessageSource}
+data FCMEntityData = FCMEntityData {channelId :: Kernel.Prelude.Maybe Data.Text.Text, personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, source :: Kernel.Prelude.Maybe MessageSource}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -27,7 +26,7 @@ data TriggerFcmReq = TriggerFcmReq
     channelId :: Kernel.Prelude.Maybe Data.Text.Text,
     chatPersonId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     showNotification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    source :: Kernel.Prelude.Maybe API.Types.UI.TriggerFCM.MessageSource,
+    source :: Kernel.Prelude.Maybe MessageSource,
     title :: Data.Text.Text
   }
   deriving stock (Generic)

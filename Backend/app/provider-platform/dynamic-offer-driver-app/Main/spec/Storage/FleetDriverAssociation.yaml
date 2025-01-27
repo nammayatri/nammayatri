@@ -7,51 +7,35 @@ FleetDriverAssociation:
   tableName: fleet_driver_association
 
   fields:
-    id : Id FleetDriverAssociation
-    driverId : Id Person
-    isActive : Bool
-    fleetOwnerId : Text
-    associatedOn : Maybe UTCTime
-    associatedTill : Maybe UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
-
+    id: Id FleetDriverAssociation
+    driverId: Id Person
+    isActive: Bool
+    fleetOwnerId: Text
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
     fleetOwnerId: SecondaryKey
 
-
   queries:
-    findByDriverIdAndFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [driverId, fleetOwnerId, isActive]
-
     findAllDriverByFleetOwnerId:
       kvFunction: findAllWithKV
       where: fleetOwnerId
 
-    updateFleetDriverActiveStatus:
-      kvFunction: updateOneWithKV
-      params: [isActive, associatedTill]
-      where:
-        and: [driverId, fleetOwnerId]
-
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
-
 
   sqlType:
     id: text
     driverId: text
     fleetOwnerId: text
 
-
   extraOperations:
     - EXTRA_QUERY_FILE
-
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

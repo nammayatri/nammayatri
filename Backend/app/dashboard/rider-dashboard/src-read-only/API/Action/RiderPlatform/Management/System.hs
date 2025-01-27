@@ -7,6 +7,7 @@ module API.Action.RiderPlatform.Management.System
   )
 where
 
+import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.System
 import qualified Domain.Action.RiderPlatform.Management.System
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -25,7 +26,13 @@ type API = ("system" :> PostSystemRunQuery)
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postSystemRunQuery merchantId city
 
-type PostSystemRunQuery = (ApiAuth ('APP_BACKEND_MANAGEMENT) ('MIGRATION) ('RUN_QUERY) :> API.Types.RiderPlatform.Management.System.PostSystemRunQuery)
+type PostSystemRunQuery =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SYSTEM / 'API.Types.RiderPlatform.Management.System.POST_SYSTEM_RUN_QUERY)
+      :> API.Types.RiderPlatform.Management.System.PostSystemRunQuery
+  )
 
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.System.QueryData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.System.postSystemRunQuery merchantShortId opCity apiTokenInfo req

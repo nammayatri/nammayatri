@@ -1,11 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverQuoteExtra where
 
-import qualified Data.Text as T
 import qualified Data.Time as T
-import qualified Domain.Types as DTC
 import Domain.Types.DriverQuote
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Estimate as DEstimate
@@ -13,20 +8,14 @@ import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import Kernel.Utils.Version
 import qualified Sequelize as Se
-import SharedLogic.DriverPool.Types
 import qualified Storage.Beam.DriverQuote as BeamDQ
-import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
-import Storage.Queries.OrphanInstances.DriverQuote
+import Storage.Queries.OrphanInstances.DriverQuote ()
 
 -- Extra code goes here --
 

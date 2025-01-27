@@ -15,9 +15,11 @@ import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
@@ -25,7 +27,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf, setIsNotificationSchedulerRunningKey)
+import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, jobDuplicationPreventionKey, roundToHalf, setIsNotificationSchedulerRunningKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -71,7 +73,6 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
-    maxShards <- asks (.maxShards)
     if null driverFees
       then do
         if retryCount >= transporterConfig.notificationRetryCountThreshold
@@ -79,11 +80,15 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName False
             driverFeesPostRetries <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
             mapM_ handleNotificationFailureAfterRetiresEnd (driverFeesPostRetries <&> (.id))
-            scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName
+            let jobDataT :: Text = show jobData
+            hashedJobData <- getHash jobDataT
+            duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "Notification") (3600 * 12) True --- 12 hours expiry time  for duplication prevention  key
+            when duplicationKey $ do
+              scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
-            createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
+            createJobIn @_ @'SendPDNNotificationToDriver (Just merchant.id) (Just merchantOpCityId) dfCalculationJobTs $
               SendPDNNotificationToDriverJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = Just merchantOpCityId,
@@ -155,10 +160,9 @@ scheduleJobs ::
   UTCTime ->
   Id Merchant ->
   Id MerchantOperatingCity ->
-  Int ->
   Plan.ServiceNames ->
   m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName = do
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfStatusCheckTime = transporterConfig.orderAndNotificationStatusCheckTime
@@ -169,7 +173,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
   let normalFlowOrderStatusTime = addUTCTime (dfStatusCheckTime + dfNotificationTime) endTime
   let dfCalculationJobTs = max (diffUTCTime normalFlowExecutionTime now) fallBackExecutionTime
   let orderAndNotificationJobTs = max (diffUTCTime normalFlowOrderStatusTime now) fallBackOrderStatusCheckTime
-  createJobIn @_ @'MandateExecution dfCalculationJobTs maxShards $
+  createJobIn @_ @'MandateExecution (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
     MandateExecutionInfo
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
@@ -177,7 +181,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
         endTime = endTime,
         serviceName = Just serviceName
       }
-  createJobIn @_ @'OrderAndNotificationStatusUpdate orderAndNotificationJobTs maxShards $
+  createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs $
     OrderAndNotificationStatusUpdateJobData
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId
@@ -232,7 +236,8 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
           responseCode = Nothing,
           responseMessage = Nothing,
           createdAt = now,
-          updatedAt = now
+          updatedAt = now,
+          merchantId = Just merchantId
         }
     mkNotificationRequest driverInfoForPDN shortId = do
       now <- getCurrentTime

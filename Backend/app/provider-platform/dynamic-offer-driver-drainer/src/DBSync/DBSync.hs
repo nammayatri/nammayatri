@@ -9,15 +9,24 @@ import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
+import Data.Pool (withResource)
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
+import Data.Time.Clock hiding (getCurrentTime)
+import Database.PostgreSQL.Simple as PG
+import Database.PostgreSQL.Simple.Types as PGS
 import qualified Database.Redis as R
+import qualified EulerHS.KVConnector.Compression as C
 import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import Kafka.Producer as KafkaProd
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Utils.Text
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -39,17 +48,33 @@ peekDBCommand dbStreamKey count = do
     parseReadStreams = (>>= (\(R.XReadResponse _ entries) -> Just $ entryToTuple <$> entries))
     entryToTuple (R.StreamsRecord recordId items) = (parseStreamEntryId recordId, first decodeToText <$> items)
 
+getDecompressedValue :: ByteString -> Flow ByteString
+getDecompressedValue val = do
+  if C.isCompressionAllowed
+    then do
+      decompressedObject <- EL.runIO $ C.decompress val
+      case decompressedObject of
+        Left err -> do
+          EL.logError ("DECOMPRESSION_ERROR" :: Text) $ "Error while decompressing " <> show err
+          pure val
+        Right decompressedObject' -> do
+          EL.logDebug ("DECOMPRESSION_RESULT_SUCCESS" :: Text) $ "Original Decompressed value size: " <> show (length decompressedObject') <> " compressed value size: " <> show (length val)
+          pure decompressedObject'
+    else do
+      pure val
+
 -- Try to Parse to DBCommand
 -- If the key is dirty which means its already been pushed to mysql, then we will discard other we return the parsed DBCommand
 parseDBCommand :: Text -> (EL.KVDBStreamEntryID, [(Text, ByteString)]) -> Flow (Maybe (EL.KVDBStreamEntryID, DBCommand, ByteString))
 parseDBCommand dbStreamKey entries =
   case entries of
-    (id, [("command", val)]) ->
+    (id, [("command", val')]) -> do
+      val <- getDecompressedValue val'
       case A.eitherDecode $ BL.fromStrict val of
         Right cmd -> do
           pure $ Just (id, cmd, val)
         Left err -> do
-          logParseError $ ("Bad entries: " :: Text) <> show err
+          logParseError $ ("Bad entries: " :: Text) <> show err <> ("Unparsable values in stream" :: Text) <> show val
           void $
             publishDBSyncMetric $
               uncurry Event.ParseDBCommandError $
@@ -248,6 +273,7 @@ startDBSync = do
             _history = C.emptyHistory
           }
   forever $ do
+    getAndSetKvConfigs
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
     -- EL.runIO $ when stopRequested shutDownHandler
     when stopRequested $ do
@@ -292,6 +318,34 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+getAndSetKvConfigs :: Flow ()
+getAndSetKvConfigs = do
+  now <- EL.runIO getCurrentTime
+  kvConfigLastUpdatedTime <- EL.getOption KBT.KvConfigLastUpdatedTime >>= maybe (EL.setOption KBT.KvConfigLastUpdatedTime now >> pure now) pure
+  kvConfigUpdateFrequency <- EL.getOption KBT.KvConfigUpdateFrequency >>= maybe (pure 10) pure
+  when (round (diffUTCTime now kvConfigLastUpdatedTime) > kvConfigUpdateFrequency) $ do
+    fetchAndSetKvConfigs
+    EL.setOption KBT.KvConfigLastUpdatedTime now
+  pure ()
+
+fetchAndSetKvConfigs :: Flow ()
+fetchAndSetKvConfigs = do
+  Env {..} <- ask
+  let kvConfigsQuery = "SELECT config_value FROM " <> _esqDBCfg.connectSchemaName <> ".system_configs WHERE id = 'kv_configs'" :: T.Text
+  res <- EL.runIO $ withResource _connectionPool $ \conn -> PG.query_ conn (PGS.Query $ DTE.encodeUtf8 kvConfigsQuery) :: IO [Only T.Text]
+  case res of
+    [Only kvConfigs] -> do
+      let decodedKVConfigs = decodeFromText' @Tables (Just kvConfigs)
+      case decodedKVConfigs of
+        Just decodedKVConfigs' -> EL.setOption KBT.Tables decodedKVConfigs'
+        Nothing -> do
+          EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to decode kv configs" :: Text)
+          publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+    err -> do
+      EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to fetch kv configs" <> show err :: Text)
+      publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+      EL.throwException (InternalError "Failed to fetch kv configs")
 
 flushKafkaProducerAndPublishMetrics :: Flow ()
 flushKafkaProducerAndPublishMetrics = do

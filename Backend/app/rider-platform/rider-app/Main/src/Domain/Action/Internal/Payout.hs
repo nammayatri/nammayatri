@@ -1,6 +1,7 @@
 module Domain.Action.Internal.Payout
   ( juspayPayoutWebhookHandler,
     payoutProcessingLockKey,
+    castOrderStatus,
   )
 where
 
@@ -8,6 +9,8 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.VehicleCategory as DV
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import qualified Kernel.External.Payout.Interface as Juspay
@@ -18,6 +21,7 @@ import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -28,7 +32,10 @@ import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonStats as QPersonStats
 import Tools.Error
 import qualified Tools.Payout as Payout
 
@@ -62,24 +69,51 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
-      unless (payoutOrder.status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]) do
+      let personId = Id payoutOrder.customerId
+      payoutConfig <- CPC.findByCityIdAndVehicleCategory merchanOperatingCityId DV.AUTO_CATEGORY >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
+      unless (isPayoutStatusSuccess payoutOrder.status) do
         case payoutOrder.entityName of
           Just DPayment.METRO_BOOKING_CASHBACK -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \bookingId -> do
-              when (payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]) do
+              when (isPayoutStatusSuccess payoutStatus) do
                 QFTB.updatePayoutStatusById (Just $ castPayoutOrderStatus payoutStatus) (Id bookingId)
               fork "Update Payout Status and Transactions for MetroBooking" $ do
-                callPayoutService (Id bookingId) payoutOrderId
-          _ -> throwError $ InternalError $ "Unsupported Payout Entity: " <> show payoutOrder.entityName
+                callPayoutService payoutOrder payoutConfig
+          Just DPayment.REFERRAL_AWARD_RIDE -> do
+            when (isPayoutStatusSuccess payoutStatus) do
+              personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+              QPersonStats.updateReferralAmountPaid (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
+            fork "Update Payout Status and Transactions for Referral Award" $ do
+              callPayoutService payoutOrder payoutConfig
+          Just DPayment.REFERRED_BY_AWARD -> do
+            when (isPayoutStatusSuccess payoutStatus) do
+              QPersonStats.updateReferredByEarningsPayoutStatus (Just $ castOrderStatus payoutStatus) personId
+            fork "Update Payout Status and Transactions for ReferredBy Award" $ do
+              callPayoutService payoutOrder payoutConfig
+          Just DPayment.BACKLOG -> do
+            when (isPayoutStatusSuccess payoutStatus) do
+              QPersonStats.updateBacklogPayoutStatus (Just $ castOrderStatus payoutStatus) personId
+            fork "Update Payout Status and Transactions for Backlog Referral Award" $ do
+              callPayoutService payoutOrder payoutConfig
+          Just DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> do
+            when (isPayoutStatusSuccess payoutStatus) do
+              let mbStatus = Just $ castOrderStatus payoutStatus
+              QPersonStats.updateBacklogAndReferredByPayoutStatus mbStatus mbStatus personId
+            fork "Update Payout Status and Transactions for Referred By And Backlog Award" $ do
+              callPayoutService payoutOrder payoutConfig
+          _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
-    callPayoutService bookingId payoutOrderId = do
-      booking <- B.runInReplica $ QFTB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = Nothing}
+    isPayoutStatusSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+
+    callPayoutService payoutOrder payoutConfig = do
+      let personId = Id payoutOrder.customerId
+      person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
           serviceName = DEMSC.PayoutService TPayout.Juspay
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus booking.merchantId booking.merchantOperatingCityId serviceName
-      void $ DPayment.payoutStatusService (cast booking.merchantId) (cast booking.riderId) createPayoutOrderStatusReq createPayoutOrderStatusCall
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId serviceName
+      void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
 castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DFTB.CashbackStatus
 castPayoutOrderStatus payoutOrderStatus =
@@ -93,3 +127,16 @@ castPayoutOrderStatus payoutOrderStatus =
     Payout.FULFILLMENTS_CANCELLED -> DFTB.MANUAL_VERIFICATION
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DFTB.MANUAL_VERIFICATION
     _ -> DFTB.PROCESSING
+
+castOrderStatus :: Payout.PayoutOrderStatus -> DPS.PayoutStatus
+castOrderStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DPS.Success
+    Payout.FULFILLMENTS_SUCCESSFUL -> DPS.Success
+    Payout.ERROR -> DPS.Failed
+    Payout.FAILURE -> DPS.Failed
+    Payout.FULFILLMENTS_FAILURE -> DPS.Failed
+    Payout.CANCELLED -> DPS.Failed
+    Payout.FULFILLMENTS_CANCELLED -> DPS.Failed
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPS.ManualReview
+    _ -> DPS.Processing

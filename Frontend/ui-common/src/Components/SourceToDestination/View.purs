@@ -15,7 +15,7 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map)
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map, (-), unit)
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action(..), Config, PillInfo)
 import PrestoDOM 
@@ -24,7 +24,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
-import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, screenWidth)
 import Constants (defaultSeparatorCount, getSeparatorFactor)
 import Data.Array ((!!), length)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
@@ -36,7 +36,9 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation (scaleYAnimWithDelay)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config =
+view push config = 
+  if config.showSourceDestWithStops then viewWithStops push config
+  else
   frameLayout
   [ height WRAP_CONTENT
   , width config.width
@@ -46,6 +48,7 @@ view push config =
   ][ relativeLayout
       ([ height WRAP_CONTENT
       , width MATCH_PARENT
+      -- , orientation VERTICAL
       ] <> case config.id of
         Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
         Nothing -> [])((if config.destinationTextConfig.text /= "" then [ 
@@ -65,6 +68,50 @@ view push config =
     , distanceLayout config
     ]
 
+
+viewWithStops :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+viewWithStops push config =
+  frameLayout
+    [ height WRAP_CONTENT
+    , width config.width
+    , gravity CENTER_VERTICAL
+    , margin config.margin
+    , afterRender push $ const AfterRender
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        [ relativeLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            ]
+            [ linearLayout[
+              height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , margin config.separatorLayoutMargin
+              ][
+              SeparatorView.view $ (separatorConfig config)]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , orientation VERTICAL
+                , width MATCH_PARENT
+                ]
+                [ linearLayout
+                    [ height WRAP_CONTENT
+                    , orientation VERTICAL
+                    , width MATCH_PARENT
+                    , id $ getNewIDWithTag $ "source_destiniation_view" <> (fromMaybe "" config.id)
+                    , visibility $ boolToVisibility config.showDestination
+                    ]
+                    [ sourceLayout push config
+                    ]
+                , destinationLayout config push
+                ]
+            ]
+        ]
+    , distanceLayout config
+    ]
 
 sourceLayout :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 sourceLayout push config =
@@ -98,7 +145,7 @@ sourceLayout push config =
           Nothing -> [])
           $ [  textView $
             [ text config.sourceTextConfig.text
-            , width MATCH_PARENT
+            , width $ V $ (screenWidth unit) - 20
             , accessibility DISABLE
             , padding config.sourceTextConfig.padding
             , margin config.sourceTextConfig.margin
@@ -214,7 +261,7 @@ destinationLayout config push =
           [ text config.destinationTextConfig.text
           , layoutGravity "center_vertical"
           , padding config.destinationTextConfig.padding
-          , width MATCH_PARENT
+          , width $ V $ (screenWidth unit) - 20
           , margin config.destinationTextConfig.margin
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
@@ -267,7 +314,7 @@ separatorConfig :: Config -> SeparatorView.Config
 separatorConfig config = 
   let count = case config.id of 
                 Nothing -> defaultSeparatorCount  
-                Just layoutId -> (runFn1 getLayoutBounds $ getNewIDWithTag $ "source_layout_" <> layoutId).height / getSeparatorFactor
+                Just layoutId -> (runFn1 getLayoutBounds $ getNewIDWithTag $ "source_destiniation_view" <> layoutId).height / getSeparatorFactor
   in {
     orientation : VERTICAL
   , count : if config.overrideSeparatorCount > 0 then config.overrideSeparatorCount else if count < defaultSeparatorCount then defaultSeparatorCount else count

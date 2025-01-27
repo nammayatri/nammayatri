@@ -13,71 +13,81 @@ apis:
       endpoint: /uploadFile
       multipart:
         type: UploadFileRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
+      auth: ApiAuthV2
       response:
         type: UploadFileResponse
       migrate:
         endpoint: MessageAPI UploadFileEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
   - POST:
       endpoint: /addLink
       request:
         type: AddLinkAsMedia
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
+      auth: ApiAuthV2
       response:
         type: UploadFileResponse
       migrate:
         endpoint: MessageAPI AddLinkEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
   - POST:
       endpoint: /add
       request:
         type: AddMessageRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
+      auth: ApiAuthV2
       response:
         type: AddMessageResponse
       migrate:
         endpoint: MessageAPI AddMessageEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
   - POST:
       endpoint: /send
       multipart:
         type: SendMessageRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+      auth: ApiAuthV2
       response:
         type: APISuccess
       migrate:
         endpoint: MessageAPI SendMessageEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+  - POST:
+      endpoint: /edit
+      request:
+        type: EditMessageRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
   - GET:
       endpoint: /list
       query:
         - limit: Int
         - offset: Int
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
+      auth: ApiAuthV2
       response:
         type: MessageListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
   - GET:
       endpoint: /{messageId}/info
       params:
         messageId: Id Message
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
+      auth: ApiAuthV2
       response:
         type: MessageInfoResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
   - GET:
       endpoint: /{messageId}/deliveryInfo
       params:
         messageId: Id Message
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
+      auth: ApiAuthV2
       response:
         type: MessageDeliveryInfoResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
   - GET:
       endpoint: /{messageId}/receiverList
       params:
@@ -87,10 +97,11 @@ apis:
         - status: MessageDeliveryStatus
         - limit: Int
         - offset: Int
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
+      auth: ApiAuthV2
       response:
         type: MessageReceiverListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
 types:
   AddLinkAsMedia:
     - url: Text
@@ -171,4 +182,15 @@ types:
     - status: MessageDeliveryStatus
   MessageDeliveryStatus:
     - enum: "Failed, Success, Queued, Sending"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
+  EditMessageRequest:
+    - messageId: Id Message
+    - title: Maybe Text
+    - description: Maybe Text
+    - shortDescription: Maybe Text
+    - label: Maybe Text
+    - messageTranslations: [MessageTranslation]
+
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

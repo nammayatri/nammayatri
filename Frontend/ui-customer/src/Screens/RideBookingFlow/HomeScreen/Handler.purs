@@ -15,24 +15,39 @@
 
 module Screens.HomeScreen.Handler where
 
-import Control.Monad.Except.Trans (lift)
-import Control.Transformers.Back.Trans as App
-import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Utils (toggleLoader)
-import Engineering.Helpers.Commons (markPerformance)
-import ModifyScreenState (modifyScreenState)
-import Prelude (bind, discard, ($), (<$>), pure, void)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.HomeScreen.View as HomeScreen
-import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..), ParcelAction(..))
-import Screens.Types (BottomNavBarIcon(..))
-import Screens.HomeScreen.Transformer(getTripDetailsState)
-import Presto.Core.Types.Language.Flow (getLogFields)
+
 import Debug
 import Screens.HomeScreen.Controllers.Types
 
+import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans as App
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (markPerformance)
+import Engineering.Helpers.Utils (toggleLoader)
+import Helpers.Utils as HU
+import ModifyScreenState (modifyScreenState)
+import Prelude (bind, discard, ($), (<$>), pure, void, (==), (&&))
+import Presto.Core.Types.Language.Flow (getLogFields)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.HomeScreen.Transformer (getTripDetailsState)
+import Screens.HomeScreen.View as HomeScreen
+import Screens.Types (BottomNavBarIcon(..))
+import Screens.Types (Stage(HomeScreen, RideAccepted, ReAllocated))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..), ParcelAction(..))
+import Data.Array (elem)
+import Common.Types.App as Common
+
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
+  (GlobalState state) <- getState
+  if (HU.isParentView Common.FunctionCall) && state.homeScreen.props.currentStage == HomeScreen then do
+      void $ pure $ HU.emitTerminateApp Nothing true
+      pure HybridAppExit
+      else homeScreen'
+
+homeScreen' ::FlowBT String HOME_SCREEN_OUTPUT
+homeScreen' = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
@@ -86,12 +101,15 @@ homeScreen = do
     ConfirmFare updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ CONFIRM_FARE updatedState)
-    GoToTicketBookingFlow updatedState -> do 
+    GoToTicketBookingFlow updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState{props{focussedBottomIcon = MOBILITY}})
           App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
-    GoToMetroTicketBookingFlow updatedState -> do 
+    GoToMetroTicketBookingFlow updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
+    GoToSearchLocationScreenForRoutes updatedState sorce -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN_FOR_ROUTE_SEARCH updatedState sorce)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -175,9 +193,9 @@ homeScreen = do
     CheckFlowStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHECK_FLOW_STATUS)
-    RetryFindingQuotes showLoader updatedState -> do
+    RetryFindingQuotes showLoader estimateId updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader)
+      App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader estimateId)
     CallDriver updatedState callType exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType exophoneNumber)
@@ -194,13 +212,13 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
-    GoToRentalsFlow updatedState -> do 
+    GoToRentalsFlow updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
-    GoToScheduledRides updatedState bookingId-> do 
+    GoToScheduledRides updatedState bookingId-> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES bookingId)
-    Add_Stop updatedState -> do 
+    Add_Stop updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
     GoToNammaSafety updatedState triggerSos showTestDrill -> do
@@ -244,10 +262,10 @@ homeScreen = do
     GoToRideRelatedIssues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
-    Go_To_Search_Location_Flow updatedState isSource-> do 
+    Go_To_Search_Location_Flow updatedState isSource-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
-    RideSearchSO -> 
+    RideSearchSO ->
       App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
     ConfirmRentalRideSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
@@ -271,12 +289,12 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
     GoToTripSelectionScreen state -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)
     RideSummary state -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)    
-    GoToParcelInstructions updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)
+    GoToParcelInstructions updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_PARCEL_INSTRUCTIONS updatedState))
     GetDeliveryImage updatedState -> do
@@ -285,3 +303,6 @@ homeScreen = do
     GoToDeliveryDetails updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_DELIVERY_DETAILS updatedState))
+    GoToBusTicketBookingFlow state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN state)

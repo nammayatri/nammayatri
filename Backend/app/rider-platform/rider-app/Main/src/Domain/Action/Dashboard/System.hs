@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.Dashboard.System (postSystemRunQuery, generateInsertQuery) where
 
 import qualified API.Types.RiderPlatform.Management.System
@@ -9,18 +6,12 @@ import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy as BSL
 import Data.Char as DC
-import Data.OpenApi (ToSchema)
-import Data.Pool (Pool, withResource)
 import qualified Data.Scientific as S
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
-import Data.Text.Format (format)
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Tuple.Extra as DTX
 import qualified Data.Vector as DV
 import Database.PostgreSQL.Simple as PG
-import Database.PostgreSQL.Simple.ToField (ToField, toField)
 import Database.PostgreSQL.Simple.Types (Query (Query))
 import qualified Domain.Types.Merchant
 import Domain.Types.UtilsTH
@@ -28,16 +19,11 @@ import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as KP
-import Kernel.Storage.Esqueleto hiding (Value)
-import Kernel.Storage.Esqueleto.Config (EsqDBConfig)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
-import Kernel.Utils.Error.Throwing (throwError)
-import Kernel.Utils.Logging (logDebug)
-import Servant hiding (throwError)
 import qualified Storage.Beam.HotSpotConfig as HSC
 import qualified Storage.Beam.Issue as ISU
 import qualified Storage.Beam.MerchantConfig as MC
@@ -47,7 +33,6 @@ import qualified Storage.Beam.PayoutConfig as PC
 import qualified Storage.Beam.PlaceBasedServiceConfig as PBSC
 import qualified Storage.Beam.RideRelatedNotificationConfig as RRNC
 import qualified Storage.Beam.RiderConfig as RC
-import Tools.Auth
 
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.System.QueryData -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery _ _ req = do

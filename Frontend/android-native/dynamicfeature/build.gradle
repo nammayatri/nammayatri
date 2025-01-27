@@ -61,6 +61,12 @@ android {
         passCulturePartner {
             dimension "app"
         }
+        oyUser {
+            dimension "app"
+        }
+        oyDriver {
+            dimension "app"
+        }
     }
 
     compileOptions {
@@ -102,6 +108,7 @@ dependencies {
     //ct
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.clevertap.android:clevertap-android-sdk:4.4.0'
+    implementation 'com.google.android.play:feature-delivery:2.1.0'
 
     // Other Dependencies
     implementation fileTree(dir: "libs", include: ["*.jar"])

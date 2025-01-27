@@ -30,6 +30,7 @@ import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
@@ -47,8 +48,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.Booking
 import SharedLogic.Cancel
-import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator as FareCalculator
@@ -83,7 +85,8 @@ data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
 data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
-    userReallocationEnabled :: Maybe Bool
+    userReallocationEnabled :: Maybe Bool,
+    cancellationReason :: Maybe Text
   }
   deriving (Show)
 
@@ -106,16 +109,16 @@ cancel req merchant booking mbActiveSearchTry = do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+      void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
       QRide.updateStatus ride.id SRide.CANCELLED
       when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation
+    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-
+    when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
@@ -164,19 +167,20 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason disToPickup currentLocation = do
+    buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
-            rideId = Nothing,
+            rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = Nothing,
-            driverId = Nothing,
+            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
+            driverId = (.driverId) <$> mbRide,
             additionalInfo = Nothing,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             ..
           }
 

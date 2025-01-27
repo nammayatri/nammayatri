@@ -29,6 +29,7 @@ data LocationAddress = LocationAddress
     ward :: Maybe Text,
     placeId :: Maybe Text,
     instructions :: Maybe Text,
+    title :: Maybe Text,
     extras :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq, PrettyShow)

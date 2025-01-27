@@ -32,6 +32,7 @@ Location:
       id: Id Location
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
       derive: "Eq"
 
@@ -48,6 +49,7 @@ Location:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   toTType:
@@ -62,12 +64,11 @@ Location:
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
     instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
     extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,extras}|E
-
-  excludedFields: [merchantId, merchantOperatingCityId]
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
 
   queries:
     updateAddress:

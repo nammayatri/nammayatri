@@ -15,12 +15,13 @@
 
 module Screens.SavedLocationScreen.Handler where
 
-import Prelude ( bind, discard, ($), (<$>), pure)
+import Prelude ( void, bind, discard, ($), (<$>), pure)
 import Engineering.Helpers.BackTrack (getState)
 import Screens.SavedLocationScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Engineering.Helpers.Utils (toggleLoader)
 import Screens.SavedLocationScreen.View as SavedLocationScreen
 import Types.App (FlowBT, GlobalState(..), SAVED_LOCATION_SCREEN_OUTPUT(..))
 import ModifyScreenState (modifyScreenState)

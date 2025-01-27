@@ -31,8 +31,10 @@ import SessionCache (getValueFromWindow)
 import Data.Array as Array
 import Data.Int as DI
 import Data.Maybe (Maybe(..), fromMaybe)
+import Common.Types.App (LazyCheck(..))
 import PrestoDOM.List (ListItem)
 import Services.API as API
+import Helpers.Utils (isParentView, emitTerminateApp)
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Debug
 import Screens.DataExplainWithFetch.ComponentConfig (getBooleanFromOptions)
@@ -64,7 +66,12 @@ eval AfterRender state = continue state
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
-eval BackPressed state = exit Exit
+eval BackPressed state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit Exit
 
 eval (SetBannerItem bannerItem) state = continue state { data { bannerData { bannerItem = Just bannerItem } } }
 

@@ -17,11 +17,10 @@ module SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout where
 import qualified Domain.Action.Internal.Payout as DAP
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FRFSTicketBooking
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
+import Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PayoutConfig
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -72,8 +71,7 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         case rescheduleTimeDiff of
           Just timeDiff' -> do
             logDebug "Rescheduling the Job for Next Day"
-            maxShards <- asks (.maxShards)
-            createJobIn @_ @'MetroIncentivePayout timeDiff' maxShards $
+            createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
               MetroIncentivePayoutJobData
                 { merchantOperatingCityId = merchantOpCityId,
                   toScheduleNextPayout = toScheduleNextPayout,
@@ -100,13 +98,13 @@ callPayout ::
     EsqDBFlow m r,
     SchedulerFlow r
   ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   FRFSTicketBooking ->
   Maybe PayoutConfig ->
   CashbackStatus ->
   m ()
-callPayout merchantId _ booking payoutConfig statusForRetry = do
+callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
   case payoutConfig of
     Just config -> do
       uid <- generateGUID
@@ -121,22 +119,11 @@ callPayout merchantId _ booking payoutConfig statusForRetry = do
             emailId <- mapM decrypt person.email
             let amount = fromMaybe 0 booking.eventDiscountAmount
                 entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq =
-                  Juspay.CreatePayoutOrderReq
-                    { orderId = uid,
-                      customerPhone = fromMaybe "6666666666" phoneNo,
-                      customerEmail = fromMaybe "dummymail@gmail.com" emailId,
-                      customerId = person.id.getId,
-                      orderType = config.orderType,
-                      remark = config.remark,
-                      customerName = fromMaybe "Unknown Rider" person.firstName,
-                      customerVpa = payoutVpa,
-                      ..
-                    }
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
-            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()
         Nothing -> do

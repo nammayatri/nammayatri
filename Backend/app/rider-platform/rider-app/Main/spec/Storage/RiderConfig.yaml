@@ -17,6 +17,7 @@ RiderConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
+    metroBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
@@ -60,6 +61,12 @@ RiderConfig:
     feedbackAlertRatingThreshold: Int
     postRideSafetyNotificationDelay: NominalDiffTime
     useUserSettingsForSafetyIVR: Bool
+    payoutReferralProgram: Bool
+    payoutReferralStartDate: UTCTime
+    thresholdCancellationPercentageToBlock: Maybe Int
+    minRidesToBlock: Maybe Int
+    minRidesToShowCancellationRate: Maybe Int
+    autoSendBookingDetailsViaWhatsapp: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -78,10 +85,16 @@ RiderConfig:
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
     useUserSettingsForSafetyIVR: Maybe Bool
+    payoutReferralProgram : Maybe Bool
+    payoutReferralStartDate: Maybe UTCTime
 
   constraints:
     merchantOperatingCityId: PrimaryKey
 
+  intermediateTransformers:
+    fromTType:
+      - now: Kernel.Types.Common.getCurrentTime|EM
+      - payoutReferralStartDate_: fromMaybe now payoutReferralStartDate|E
   fromTType:
     ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
     executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
@@ -99,6 +112,8 @@ RiderConfig:
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
     useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
+    payoutReferralProgram: fromMaybe False payoutReferralProgram|E
+    payoutReferralStartDate: payoutReferralStartDate_|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -117,6 +132,8 @@ RiderConfig:
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
+    payoutReferralProgram: Just payoutReferralProgram|E
+    payoutReferralStartDate: Just payoutReferralStartDate|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -140,6 +157,8 @@ RiderConfig:
     maximumWalkDistance: "600"
     postRideSafetyNotificationDelay : "60"
     useUserSettingsForSafetyIVR: "false"
+    payoutReferralProgram: "false"
+    payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
 
   queries:
     findByMerchantOperatingCityId:

@@ -84,6 +84,7 @@ import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
+import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 
@@ -119,7 +120,13 @@ data ProfileRes = ProfileRes
     customerReferralCode :: Maybe Text,
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
-    aadhaarVerified :: Bool
+    aadhaarVerified :: Bool,
+    hasTakenValidBusRide :: Bool,
+    payoutVpa :: Maybe Text,
+    referralEarnings :: Maybe HighPrecMoney,
+    referredByEarnings :: Maybe HighPrecMoney,
+    referralAmountPaid :: Maybe HighPrecMoney,
+    cancellationRate :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -188,18 +195,33 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getPersonDetails ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context = do
+getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  let device = getDeviceFromText mbDevice
+      totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
+      rate = (personStats.userCancelledRides * 100) `div` max 1 totalRides
+      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate)
+  let cancellationPerc = if sendCancellationRate then Just rate else Nothing
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
+  when ((decPerson.clientBundleVersion /= mbBundleVersion || decPerson.clientSdkVersion /= mbClientVersion || decPerson.clientConfigVersion /= mbClientConfigVersion || decPerson.clientReactNativeVersion /= mbRnVersion || decPerson.clientDevice /= device) && isJust device) do
+    deploymentVersion <- asks (.version)
+    void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
@@ -213,6 +235,7 @@ getPersonDetails (personId, _) toss tenant' context = do
       hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
       hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknEnums.AMBULANCE
       hasTakenValidTruckRide = validRideCount hasTakenValidRide BecknEnums.TRUCK
+      hasTakenValidBusRide = validRideCount hasTakenValidRide BecknEnums.BUS
   newCustomerReferralCode <-
     if isNothing person.customerReferralCode
       then do
@@ -224,9 +247,9 @@ getPersonDetails (personId, _) toss tenant' context = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -237,6 +260,7 @@ getPersonDetails (personId, _) toss tenant' context = do
           hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
           hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
           hasTakenValidTruckRide = hasTakenValidTruckRide,
+          hasTakenValidBusRide = hasTakenValidBusRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
@@ -246,6 +270,10 @@ getPersonDetails (personId, _) toss tenant' context = do
           hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
           hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
           isBlocked = blocked,
+          referralEarnings = Just personStats.referralEarnings,
+          referredByEarnings = Just personStats.referredByEarnings,
+          referralAmountPaid = Just personStats.referralAmountPaid,
+          cancellationRate = cancellationPerc,
           ..
         }
 
@@ -255,10 +283,10 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
-updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
-  whenJust mPerson (\_ -> throwError PersonEmailExists)
+  whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -275,6 +303,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       req.notificationToken
       req.language
       req.gender
+      mbRnVersion
       (mbClientVersion <|> req.clientVersion)
       (mbBundleVersion <|> req.bundleVersion)
       mbClientConfigVersion

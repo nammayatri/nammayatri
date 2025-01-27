@@ -301,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         String driverProfileUrl = baseUrl + "/driver/profile";
         try {
-            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
             Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
             MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, null, "GET", false);
             return apiResponse.getResponseBody();
@@ -403,9 +403,11 @@ public class MainActivity extends AppCompatActivity {
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
+        String okHttpConfig = "{}";
         try{
             isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
             isPerfEnabledCustomer = remoteConfigs.getBoolean("perf_enabled_customer");
+            okHttpConfig = remoteConfigs.getString("ok_http_config");
             Log.i("PERF", "Fetched from remote config - perf enabled : " + isPerfEnabled);
 
         }catch(Exception e){
@@ -451,6 +453,8 @@ public class MainActivity extends AppCompatActivity {
         sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
+        sharedPref.edit().putString("OK_HTTP_CONFIG", okHttpConfig).apply();
+
 
         try {
             MapsInitializer.initialize(getApplicationContext());

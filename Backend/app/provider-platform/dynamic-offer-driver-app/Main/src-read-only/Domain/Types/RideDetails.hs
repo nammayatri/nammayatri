@@ -1,10 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.RideDetails where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Ride
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -21,6 +22,8 @@ data RideDetailsE e = RideDetails
     driverNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -47,6 +50,8 @@ instance EncryptedItem RideDetails where
           driverNumber = driverNumber_,
           fleetOwnerId = fleetOwnerId entity,
           id = id entity,
+          merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
           vehicleAge = vehicleAge entity,
           vehicleClass = vehicleClass entity,
           vehicleColor = vehicleColor entity,
@@ -65,6 +70,8 @@ instance EncryptedItem RideDetails where
             driverNumber = driverNumber_,
             fleetOwnerId = fleetOwnerId entity,
             id = id entity,
+            merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
             vehicleAge = vehicleAge entity,
             vehicleClass = vehicleClass entity,
             vehicleColor = vehicleColor entity,

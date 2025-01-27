@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler (SchedulerType)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
@@ -136,7 +137,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 merchant,
                 searchReq,
                 tripQuoteDetails = tripQuoteDetails,
-                customerExtraFee = Nothing,
+                customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
                 isAllocatorBatch = False
@@ -153,13 +154,14 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       QQuote.create newQuote
       QRB.createBooking newBooking
+      when newBooking.isScheduled $ void $ addScheduledBookingInRedis newBooking
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
                 merchant,
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],
-                customerExtraFee = Nothing,
+                customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch,
                 isAllocatorBatch = False
@@ -258,5 +260,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = newBooking.distanceUnit,
+            merchantOperatingCityId = Just newBooking.merchantOperatingCityId,
             ..
           }

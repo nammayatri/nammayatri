@@ -250,6 +250,8 @@ let superPositionConfig =
       , enableSuperPosition = False
       }
 
+let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
@@ -306,6 +308,7 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey
+    , internalClickhouseAPIKey = sec.internalClickhouseAPIKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
@@ -351,4 +354,11 @@ in  { esqDBCfg
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
+    , ltsCfg = LocationTrackingeServiceConfig
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , googleSAPrivateKey = sec.googleSAPrivateKey
     }

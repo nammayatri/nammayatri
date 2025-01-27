@@ -26,11 +26,14 @@ import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
 
 -------- Serviceability----------
@@ -43,6 +46,9 @@ type API =
            :<|> "destination"
              :> ReqBody '[JSON] ServiceabilityReq
              :> Post '[JSON] DServiceability.ServiceabilityRes
+           :<|> "isInterCity"
+             :> ReqBody '[JSON] BPPInternal.IsIntercityReq
+             :> Post '[JSON] BPPInternal.IsIntercityResp
        )
 
 newtype ServiceabilityReq = ServiceabilityReq
@@ -54,6 +60,7 @@ handler :: FlowServer API
 handler regToken =
   checkOrignServiceability origin regToken
     :<|> checkDestinationServiceability destination regToken
+    :<|> checkForIsInterCity regToken
 
 checkOrignServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
@@ -70,3 +77,11 @@ checkDestinationServiceability ::
   FlowHandler DServiceability.ServiceabilityRes
 checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
+
+checkForIsInterCity ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  BPPInternal.IsIntercityReq ->
+  FlowHandler BPPInternal.IsIntercityResp
+checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  BPPInternal.getIsInterCity merchant req

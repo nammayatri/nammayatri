@@ -425,7 +425,7 @@ onUpdate = \case
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId}
+    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- make all the booking parties inactive during rellocation
     QBPL.makeAllInactiveByBookingId booking.id
@@ -482,11 +482,10 @@ onUpdate = \case
           | otherwise = True
     when triggerIVRFlow $ do
       logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
-      maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.ivrTriggerDelay
           safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
       logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
+      createJobIn @_ @'SafetyIVR (Just booking.merchantId) (Just merchantOperatingCityId) scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing Nothing
@@ -680,6 +679,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }

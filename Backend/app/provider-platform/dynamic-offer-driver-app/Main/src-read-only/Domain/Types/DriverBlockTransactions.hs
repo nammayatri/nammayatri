@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverBlockTransactions where
@@ -14,7 +13,8 @@ import qualified Tools.Beam.UtilsTH
 import qualified Tools.Error
 
 data DriverBlockTransactions = DriverBlockTransactions
-  { blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+  { actionType :: Kernel.Prelude.Maybe Domain.Types.DriverBlockTransactions.ActionType,
+    blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockReasonFlag :: Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag,
     blockTimeInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -31,6 +31,10 @@ data DriverBlockTransactions = DriverBlockTransactions
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data ActionType = BLOCK | UNBLOCK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data BlockedBy = Dashboard | Application deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ActionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BlockedBy)

@@ -20,7 +20,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
     pure $
       Just
         Domain.Types.Plan.Plan
-          { basedOnEntity = basedOnEntity,
+          { allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
+            basedOnEntity = basedOnEntity,
             cgstPercentage = cgstPercentage,
             description = description,
             eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -29,6 +30,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             id = Kernel.Types.Id.Id id,
             isDeprecated = isDeprecated,
             isOfferApplicable = isOfferApplicable,
+            listingPriority = listingPriority,
             maxAmount = maxAmount,
             maxCreditLimit = maxCreditLimit,
             maxMandateAmount = maxMandateAmount,
@@ -49,7 +51,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
   toTType' (Domain.Types.Plan.Plan {..}) = do
     Beam.PlanT
-      { Beam.basedOnEntity = basedOnEntity,
+      { Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
+        Beam.basedOnEntity = basedOnEntity,
         Beam.cgstPercentage = cgstPercentage,
         Beam.description = description,
         Beam.eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -58,6 +61,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDeprecated = isDeprecated,
         Beam.isOfferApplicable = isOfferApplicable,
+        Beam.listingPriority = listingPriority,
         Beam.maxAmount = maxAmount,
         Beam.maxCreditLimit = maxCreditLimit,
         Beam.maxMandateAmount = maxMandateAmount,

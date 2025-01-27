@@ -1,4 +1,4 @@
-imports:
+imports: #
   Driver: Dashboard.Common
   Image: Dashboard.Common
   VehicleVariant: Dashboard.Common
@@ -8,24 +8,26 @@ imports:
   ServiceNames: Dashboard.Common.Driver
   Version: Kernel.Types.Version
   City: Kernel.Types.Beckn.Context
-  AddVehicleReq: Dashboard.ProviderPlatform.Fleet.Driver
-  RCStatusReq: Dashboard.ProviderPlatform.Fleet.Driver
+  AddVehicleReq: API.Types.ProviderPlatform.Fleet.Driver
+  RCStatusReq: API.Types.ProviderPlatform.Fleet.Driver
   DriverFeeStatus:  Dashboard.Common.Driver
 module: Driver
 
 apis:
   - GET: # DriverOutstandingBalanceAPI
       endpoint: /paymentDue
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS BALANCE_DUE
+      auth: ApiAuthV2
       query:
         - countryCode: Text
       mandatoryQuery:
         - phone: Text
       response:
         type: "[DriverOutstandingBalanceResp]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS BALANCE_DUE
   - POST: # EnableDriverAPI
       endpoint: /{driverId}/enable
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -33,9 +35,10 @@ apis:
       migrate:
         endpoint: DriverAPI EnableDriverEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
   - POST: # DriverCashCollectionAPI
       endpoint: /{driverId}/collectCash
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -43,7 +46,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/collectCash
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
             request:
@@ -53,9 +56,10 @@ apis:
       migrate:
         endpoint: DriverAPI CollectCashEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
   - POST: # DriverCashCollectionAPIV2
       endpoint: /{driverId}/v2/collectCash/{serviceName}
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
         serviceName: ServiceNames
@@ -64,7 +68,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/collectCash/v2/{token}/{serviceName}
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               token: Text
@@ -74,9 +78,10 @@ apis:
       migrate:
         endpoint: DriverAPI CollectCashEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
   - POST: # DriverCashExemptionAPI
       endpoint: /{driverId}/exemptCash
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -84,7 +89,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/exemptCash
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
             request:
@@ -94,9 +99,10 @@ apis:
       migrate:
         endpoint: DriverAPI ExemptCashEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
   - POST: # DriverCashExemptionAPIV2
       endpoint: /{driverId}/v2/exemptCash/{serviceName}
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
         serviceName: ServiceNames
@@ -105,7 +111,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/exemptCash/v2/{token}/{serviceName}
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               token: Text
@@ -115,9 +121,10 @@ apis:
       migrate:
         endpoint: DriverAPI ExemptCashEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
   - GET: # DriverInfoAPI
       endpoint: /info
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
+      auth: ApiAuthV2
       query:
         - mobileNumber: Text
         - mobileCountryCode: Text
@@ -128,10 +135,12 @@ apis:
         - personId: Id Driver
       response:
         type: DriverInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
       helperApi:
         - GET:
             endpoint: /info/{fleetOwnerId}/{mbFleet}
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
+            auth: ApiAuthV2
             query:
               - mobileNumber: Text
               - mobileCountryCode: Text
@@ -147,7 +156,7 @@ apis:
               type: DriverInfoRes
   - POST: # UnlinkVehicleAPI
       endpoint: /{driverId}/unlinkVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -155,9 +164,10 @@ apis:
       migrate:
         endpoint: DriverAPI UnlinkVehicleEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
   - POST: # EndRCAssociationAPI
       endpoint: /{driverId}/endRCAssociation
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -165,22 +175,24 @@ apis:
       migrate:
         endpoint: DriverAPI EndRCAssociationEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
         type: AddVehicleReq
       response:
         type: APISuccess
-      validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+      validation: API.Types.ProviderPlatform.validateAddVehicleReq
       migrate:
         endpoint: DriverAPI AddVehicleEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
   - POST: # SetRCStatusAPI
       endpoint: /{driverId}/setRCStatus
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -190,9 +202,10 @@ apis:
       migrate:
         endpoint: DriverAPI SetRCStatusEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
   - POST:
       endpoint: /{driverId}/exemptDriverFee/{serviceName}
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
         serviceName: ServiceNames
@@ -203,7 +216,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/exemptDriverFee/v2/{token}/{serviceName}
-            auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
+            auth: ApiAuthV2
             request:
                type: ExemptionAndCashCollectionDriverFeeReq
             params:
@@ -212,6 +225,8 @@ apis:
               serviceName: ServiceNames
             response:
               type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
 
 types:
   DriverOutstandingBalanceResp:
@@ -272,6 +287,9 @@ types:
     - driverTag: Maybe [Text]
     - email: Maybe Text
     - blockedInfo : [DriverBlockTransactions]
+    - softBlockStiers: Maybe [Text]
+    - softBlockExpiryTime: Maybe UTCTime
+    - softBlockReasonFlag: Maybe Text
   DriverLicenseAPIEntity:
     - driverLicenseId: Id DriverLicense
     - documentImageId1: Id Image
@@ -338,3 +356,5 @@ types:
     - isExempt: Bool
     - derive: "'HideSecrets"
 
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

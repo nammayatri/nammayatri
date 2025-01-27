@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,7 +13,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
@@ -45,6 +45,8 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
@@ -53,8 +55,10 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
-import EulerHS.Prelude hiding (id)
+import qualified Domain.Types.Trip as DTrip
+import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
@@ -74,6 +78,8 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -188,9 +194,39 @@ mkQAPIEntityList _ _ _ = [] -- This should never happen as all the list are of s
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: DL.LocationAPIEntity,
     toLocation :: Maybe DL.LocationAPIEntity,
+    stops :: [DL.LocationAPIEntity],
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
-    paymentMethods :: [DMPM.PaymentMethodAPIEntity]
+    paymentMethods :: [DMPM.PaymentMethodAPIEntity],
+    journey :: Maybe [JourneyData]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data JourneyData = JourneyData
+  { totalMinFare :: HighPrecMoney,
+    totalMaxFare :: HighPrecMoney,
+    duration :: Maybe Seconds,
+    distance :: Distance,
+    modes :: [DTrip.MultimodalTravelMode],
+    startTime :: Maybe UTCTime,
+    endTime :: Maybe UTCTime,
+    journeyId :: Id DJ.Journey,
+    journeyLegs :: [JourneyLeg]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data JourneyLeg = JourneyLeg
+  { journeyLegOrder :: Int,
+    journeyMode :: DTrip.MultimodalTravelMode,
+    journeyLegId :: Id DJL.JourneyLeg,
+    fromLatLong :: LatLong,
+    toLatLong :: LatLong,
+    fromStationCode :: Maybe Text,
+    toStationCode :: Maybe Text,
+    color :: Maybe Text,
+    colorCode :: Maybe Text,
+    duration :: Seconds,
+    distance :: Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -203,23 +239,29 @@ data OfferRes
   deriving (Show, Generic)
 
 instance ToJSON OfferRes where
-  toJSON = genericToJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  toJSON = genericToJSON $ objectWithSingleFieldParsing safeToLower
 
 instance FromJSON OfferRes where
-  parseJSON = genericParseJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing safeToLower
 
 instance ToSchema OfferRes where
-  declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+  declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing safeToLower
+
+safeToLower :: String -> String
+safeToLower (f : rest) = toLower f : rest
+safeToLower [] = []
 
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id SSR.SearchRequest -> m GetQuotesRes
-getQuotes searchRequestId = do
+getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Id SSR.SearchRequest -> Maybe Bool -> m GetQuotesRes
+getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-  whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
+  unless (mbAllowMultiple == Just True) $ do
+    activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
+    whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
+  journeyData <- getJourneys searchRequest
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
@@ -228,9 +270,11 @@ getQuotes searchRequestId = do
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
           toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+          stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
           quotes = offers,
           estimates,
-          paymentMethods = []
+          paymentMethods = [],
+          journey = journeyData
         }
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()
@@ -248,7 +292,8 @@ processActiveBooking booking cancellationStage = do
                   { reasonCode = CancellationReasonCode "Active booking",
                     reasonStage = cancellationStage,
                     additionalInfo = Nothing,
-                    reallocate = Nothing
+                    reallocate = Nothing,
+                    blockOnCancellationRate = Nothing
                   }
           fork "active booking processing" $ do
             dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
@@ -274,7 +319,7 @@ getOffers searchRequest = do
       quoteList <- sortByNearestDriverDistance <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       let quotes = case searchRequest.riderPreferredOption of
             SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
             _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
@@ -283,7 +328,7 @@ getOffers searchRequest = do
       quoteList <- sortByEstimatedFare <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       let quotes = OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
   where
@@ -315,3 +360,44 @@ sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
+
+getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
+getJourneys searchRequest = do
+  case searchRequest.hasMultimodalSearch of
+    Just True -> do
+      allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
+      journeyData <-
+        forM allJourneys \journey -> do
+          journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
+          journeyLegs <- do
+            forM journeyLegsFromOtp \journeyLeg -> do
+              return $
+                JourneyLeg
+                  { journeyLegOrder = journeyLeg.sequenceNumber,
+                    journeyMode = journeyLeg.mode,
+                    journeyLegId = journeyLeg.id,
+                    fromLatLong = LatLong {lat = journeyLeg.startLocation.latitude, lon = journeyLeg.startLocation.longitude},
+                    toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
+                    fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
+                    toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
+                    color = journeyLeg.routeDetails >>= (.shortName),
+                    colorCode = journeyLeg.routeDetails >>= (.color),
+                    duration = journeyLeg.duration,
+                    distance = journeyLeg.distance
+                  }
+          let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegsFromOtp
+          let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegsFromOtp
+          return $
+            JourneyData
+              { totalMinFare = estimatedMinFare,
+                totalMaxFare = estimatedMaxFare,
+                modes = journey.modes,
+                journeyLegs,
+                startTime = journey.startTime,
+                endTime = journey.endTime,
+                journeyId = journey.id,
+                duration = journey.estimatedDuration,
+                distance = journey.estimatedDistance
+              }
+      return $ Just journeyData
+    _ -> return Nothing

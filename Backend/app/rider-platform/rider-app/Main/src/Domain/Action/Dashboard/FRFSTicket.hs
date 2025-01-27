@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.Dashboard.FRFSTicket
   ( getFRFSTicketFrfsRoutes,
     postFRFSTicketFrfsRouteAdd,
@@ -15,15 +12,12 @@ where
 
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
-import Dashboard.RiderPlatform.FRFSTicket
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import Data.List (groupBy)
-import qualified Data.List.NonEmpty as NE
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
-import Data.Ord (comparing)
 import qualified Data.Text
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
@@ -32,21 +26,16 @@ import Domain.Types.Station
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (groupBy, id)
-import Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import Kernel.Types.Error
-import Kernel.Types.GuidLike (generateGUID)
 import qualified Kernel.Types.Id
-import Kernel.Types.Time (getCurrentTime)
 import Kernel.Types.TimeBound
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Logging (logInfo)
-import Servant hiding (Header, throwError)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
@@ -56,8 +45,6 @@ import Storage.Queries.RouteExtra as RE
 import Storage.Queries.RouteStopFare as QRSF
 import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
-import Storage.Queries.StationExtra as SE
-import Tools.Auth
 
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do
@@ -145,10 +132,10 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
     case maybeFirstFare of
       Nothing -> throwError (InvalidRequest "No fares found for the start stop")
       Just firstFare -> do
-        startStop <- QStation.findByStationCode firstFare.startStopCode >>= fromMaybeM (InvalidRequest "Invalid from station id")
+        startStop <- QStation.findByStationCodeAndMerchantOperatingCityId firstFare.startStopCode merchantOperatingCity.id >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> firstFare.startStopCode <> " or merchantOperatingCityId: " <> merchantOperatingCity.id.getId)
 
         endStops <- forM fares $ \fare -> do
-          endStop <- QStation.findByStationCode fare.endStopCode >>= fromMaybeM (InvalidRequest "Invalid to station id")
+          endStop <- QStation.findByStationCodeAndMerchantOperatingCityId fare.endStopCode merchantOperatingCity.id >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> fare.endStopCode <> " or merchantOperatingCityId: " <> merchantOperatingCity.id.getId)
           return
             API.Types.RiderPlatform.Management.FRFSTicket.FRFSEndStopsFareAPI
               { name = endStop.name,
@@ -289,7 +276,7 @@ postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  stationExists <- QStation.findByStationCode code
+  stationExists <- QStation.findByStationCodeAndMerchantOperatingCityId code merchantOpCity.id
   newId <- generateGUID
   now <- getCurrentTime
   case stationExists of
@@ -315,8 +302,10 @@ postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
       pure Success
 
 postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationDelete _merchantShortId _opCity code _vehicleType = do
-  _ <- QStation.findByStationCode code >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
+postFRFSTicketFrfsStationDelete merchantShortId opCity code _vehicleType = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  _ <- QStation.findByStationCodeAndMerchantOperatingCityId code merchantOpCity.id >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
   stopMappings <- QRSM.findByStopCode code
   unless (null stopMappings) $ throwError InvalidAction
   QStation.deleteByStationCode code

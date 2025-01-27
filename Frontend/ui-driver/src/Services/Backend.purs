@@ -20,11 +20,12 @@ import Locale.Utils
 import Services.API
 
 import Common.Types.App (Version(..))
+import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import ConfigProvider
 import Data.Array as DA
-import Data.Either (Either(..), either)
+import Data.Either (Either(..), either, hush)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
@@ -35,10 +36,10 @@ import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
-import Foreign.Generic (encode)
+import Foreign.Generic (encode, decode)
 import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
-import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig, decodeErrorPayload)
 import Engineering.Helpers.Events as Events
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
 import Juspay.OTP.Reader as Readers
@@ -53,11 +54,11 @@ import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
-import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREENOUTPUT(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
@@ -70,6 +71,8 @@ import MerchantConfig.Types as MCT
 import Common.RemoteConfig.Utils as CommonRC
 import Screens.NoInternetScreen.Handler as NoInternetScreen
 import Helpers.API as HAPI
+import Resource.Localizable.TypesV2 as LT2
+import Resource.Localizable.StringsV2 as StringsV2
 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -284,13 +287,23 @@ driverActiveInactiveBT status status_n = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.driverActiveInactiveSilent status status_n) identity errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
-        errorHandler (ErrorPayload errorPayload) =  do
-            let codeMessage = decodeErrorCode errorPayload.response.errorMessage
-                accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
-            if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+        dummyErrorResponseDriverActivity = ErrorResponseDriverActivity {blockExpiryTime: "", blockReason : ""}
+        errorHandler (ErrorPayload errorResp) =  do
+            let codeMessage = decodeErrorCode errorResp.response.errorMessage
+                accountBlocked = errorResp.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+                noPlanSelectedForDriver = errorResp.code == 400 && codeMessage == "NO_PLAN_SELECTED"
+            (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
+                Just resp -> pure resp
+                _ -> pure dummyErrorResponseDriverActivity
+            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
-            pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
+            pure if noPlanSelectedForDriver then 
+                    toast $ (StringsV2.getStringV2 LT2.no_plan_selected)
+                else if not accountBlocked then 
+                    toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN 
+                else unit
             void $ lift $ lift $ toggleLoader false
+            if noPlanSelectedForDriver then void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "true" else void $ pure unit
             BackT $ pure GoBack
 
 driverActiveInactive :: String -> String -> Flow GlobalState (Either ErrorResponse DriverActiveInactiveResp)
@@ -377,7 +390,8 @@ cancelRide productId payload = do
 makeCancelRideReq :: String -> String -> DriverCancelRideReq
 makeCancelRideReq info reason = DriverCancelRideReq {
     "additionalInfo": info,
-    "reasonCode": reason
+    "reasonCode": reason,
+    "doCancellationRateBasedBlocking": true
 }
 
 --------------------------------- logOutBT ---------------------------------------------------------------------------------------------------------------------------------
@@ -583,10 +597,9 @@ updateDriverInfoBT payload = do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
-mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
+mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReqEntity
 mkUpdateDriverInfoReq dummy
-  = UpdateDriverInfoReq
-    { middleName: Nothing
+  = { middleName: Nothing
     , firstName: Nothing
     , lastName: Nothing
     , deviceToken: Nothing
@@ -612,6 +625,7 @@ mkUpdateDriverInfoReq dummy
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
     , canSwitchToInterCity: Nothing
+    , isSpecialLocWarrior: Nothing
     }
 
 
@@ -748,6 +762,7 @@ getCorrespondingErrorMessage errorPayload = do
         "EXITED_BY_USER" -> getString EXITED_BY_USER
         "IMAGE_VALIDATION_EXCEED_LIMIT" -> getString IMAGE_VALIDATION_EXCEED_LIMIT
         "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY" -> getString CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY
+        "DRIVER_UNSUBSCRIBED" -> getString DRIVER_UNSUBSCRIBED
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -812,11 +827,16 @@ mkCategory category =
         Just ST.CarCategory -> Just "CAR"
         Just ST.BikeCategory -> Just "MOTORCYCLE"
         Just ST.AmbulanceCategory -> Just "AMBULANCE"
-        _ -> case (getValueToLocalStore VEHICLE_CATEGORY) of
+        Just ST.TruckCategory -> Just "TRUCK"
+        Just ST.BusCategory -> Just "BUS"
+        Just ST.UnKnown -> Nothing
+        Nothing -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
                 "AutoCategory" -> Just "AUTO_CATEGORY"
                 "BikeCategory" -> Just "MOTORCYCLE"
                 "AmbulanceCategory" -> Just "AMBULANCE"
+                "TruckCategory" -> Just "TRUCK"
+                "BusCategory" -> Just "BUS"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  ApiSuccessResult
@@ -1778,14 +1798,12 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
 
 ---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
 
-
 fetchDriverProfile ::  Boolean -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
 fetchDriverProfile isImages = do
         headers <- getHeaders "" true
         withAPIResult (EP.getDriverProfile isImages) unwrapResponse $ callAPI headers $ DriverProfileDataReq isImages
     where
         unwrapResponse (x) = x
-
 
 --------------------------------- getCoinInfo ---------------------------------------------------------------------------------------------------
 
@@ -1801,6 +1819,18 @@ getCoinInfoBT lazy = do
   where
     errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack
 
+-------------------------------------------------------------- Demand Hotspots API -------------------------------------------------------------
+
+getDemandHotspotsBT :: String -> FlowBT String DemandHotspotsResp
+getDemandHotspotsBT dummy = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.demandHotspots "") (\x → x) errorHandler (lift $ lift $ callAPI headers (DemandHotspotsReq dummy))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        pure $ toast $ getString HOTSPOTS_NOT_AVAILABLE_CURRENTLY
+        void $ lift $ lift $ toggleLoader false
+        BackT $ pure GoBack
+
 -------------------------- REACHED DESTINATION --------------------------------------------
 
 driverReachedDestination :: String -> DriverReachedReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -1809,3 +1839,24 @@ driverReachedDestination rideId payload = do
     withAPIResult (EP.driverReachedDestination rideId) unwrapResponse $ callAPI headers $ DriverReachedDestinationRequest rideId payload
     where
         unwrapResponse (x) = x
+
+------------------------------- HyperVerge Sdk Calls logging ------------------------------------
+
+updateHVSdkCallLog :: HVSdkCallLogReq -> Flow GlobalState (Either ErrorResponse HVSdkCallLogResp)
+updateHVSdkCallLog req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.updateHVSdkCallLog "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeupdateHVSdkCallLogReq :: String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> HVSdkCallLogReq
+makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackResponse = HVSdkCallLogReq
+    { "callbackResponse" : callbackResponse,
+      "docType" : docType,
+      "failureReason" : failureReason,
+      "hvFlowId" : hvFlowId,
+      "status" : status,
+      "txnId" : txnId
+    }
+    

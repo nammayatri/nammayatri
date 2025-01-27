@@ -43,10 +43,25 @@ data DOrder = DOrder
 
 data DTicket = DTicket
   { qrData :: Text,
+    description :: Maybe Text,
     bppFulfillmentId :: Text,
     ticketNumber :: Text,
     validTill :: UTCTime,
-    status :: Text
+    status :: Text,
+    qrRefreshAt :: Maybe UTCTime
+  }
+
+data DTicketPayload = DTicketPayload
+  { transactionId :: Text,
+    fromRouteProviderCode :: Text,
+    toRouteProviderCode :: Text,
+    adultQuantity :: Int,
+    childQuantity :: Int,
+    busTypeProviderCode :: Text,
+    expiry :: Text,
+    ticketNumber :: Text,
+    ticketAmount :: Money,
+    refreshAt :: Maybe UTCTime
   }
 
 getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity

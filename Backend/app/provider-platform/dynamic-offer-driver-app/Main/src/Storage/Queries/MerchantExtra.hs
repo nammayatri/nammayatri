@@ -1,19 +1,14 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.MerchantExtra where
 
 import Domain.Types.Merchant as DM
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
-import Storage.Queries.OrphanInstances.Merchant
+import Storage.Queries.OrphanInstances.Merchant ()
 
 -- Extra code goes here --
 loadAllProviders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Merchant]

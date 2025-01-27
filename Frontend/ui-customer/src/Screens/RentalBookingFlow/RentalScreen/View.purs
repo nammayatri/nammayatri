@@ -46,7 +46,7 @@ import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
 import Helpers.Utils (decodeError, fetchImage, getCityConfig, FetchImageFrom(..))
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
-import JBridge (renderSlider, sliderConfig, toast)
+import JBridge (renderSlider, sliderConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)

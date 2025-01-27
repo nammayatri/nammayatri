@@ -21,7 +21,9 @@ instance FromTType' Beam.Feedback Domain.Types.Feedback.Feedback where
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
-            rideId = Kernel.Types.Id.Id rideId
+            rideId = Kernel.Types.Id.Id rideId,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.Feedback Domain.Types.Feedback.Feedback where
@@ -31,5 +33,7 @@ instance ToTType' Beam.Feedback Domain.Types.Feedback.Feedback where
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.rideId = Kernel.Types.Id.getId rideId
+        Beam.rideId = Kernel.Types.Id.getId rideId,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

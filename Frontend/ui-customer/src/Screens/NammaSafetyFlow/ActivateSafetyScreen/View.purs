@@ -46,6 +46,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Either (Either (..))
 import PrestoDOM.Animation as PrestoAnim
 import JBridge as JB
+import Engineering.Helpers.Utils as EHU
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getVehicleDetails, getPrimaryContact)
 import Data.String as DS
 import Components.Safety.SosButtonAndDescription as SosButtonAndDescription
@@ -85,7 +86,7 @@ screen initialState =
                                   let errMessage = if err.code == 400 
                                                      then err.response.errorMessage 
                                                      else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                                  void $ pure $ JB.toast errMessage
+                                  void $ pure $ EHU.showToast errMessage
                             else
                               EHC.liftFlow $ push $ GoToActiveSos
                       EHC.liftFlow $ push $ DisableShimmer

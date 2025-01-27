@@ -15,6 +15,7 @@
 module Domain.Action.UI.SearchRequestForDriver where
 
 import Control.Applicative ((<|>))
+import Data.Aeson.TH
 import Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
@@ -97,9 +98,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     tollNames :: Maybe [Text],
     parkingCharge :: Maybe HighPrecMoney,
     isFavourite :: Maybe Bool,
-    isReferredRideReq :: Maybe Bool
+    isReferredRideReq :: Maybe Bool,
+    roundTrip :: Maybe Bool,
+    middleStopCount :: Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToSchema, Show)
+
+$(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge = do
@@ -132,9 +137,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
               { lat = fromMaybe 0.0 nearbyReq.lat,
                 lon = fromMaybe 0.0 nearbyReq.lon
               },
-          driverMinExtraFee = roundToIntegral <$> nearbyReq.driverMinExtraFee,
+          driverMinExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMinExtraFee,
           driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
-          driverMaxExtraFee = roundToIntegral <$> nearbyReq.driverMaxExtraFee,
+          driverMaxExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMaxExtraFee,
           driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
           driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
           driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
@@ -163,6 +168,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isOnRide = nearbyReq.isForwardRequest,
           isReferredRideReq = searchRequest.driverIdForSearch $> True,
           isFavourite = nearbyReq.isFavourite,
+          roundTrip = searchRequest.roundTrip,
+          middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           ..
         }
   where
@@ -193,5 +200,6 @@ convertDomainType DLoc.Location {..} =
       full_address = address.fullAddress,
       instructions = address.instructions,
       extras = address.extras,
+      merchantOperatingCityId = merchantOperatingCityId,
       ..
     }

@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.EditBooking where
 
 import API.Types.UI.EditBooking
 import qualified Data.Geohash as DG
-import Data.OpenApi (ToSchema)
 import Data.Text as T
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.LocationMapping as DLM
@@ -24,7 +20,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
@@ -35,7 +30,6 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSR
-import Tools.Auth
 
 postEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

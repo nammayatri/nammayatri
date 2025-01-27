@@ -1,0 +1,468 @@
+{
+  "info": {
+    "_postman_id": "2c525cfb-f086-4321-88da-22f6c4b09d1a",
+    "name": "NammaYatri | Registry Api Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29211606"
+  },
+  "item": [
+    {
+      "name": "CRUD",
+      "item": [
+        {
+          "name": "Add registry entry",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const moment = require('moment');",
+                  "pm.environment.set(\"current_time\", moment.utc().format(\"YYYY-MM-DDTHH:mm:ssZ\"));",
+                  "",
+                  "pm.environment.set(\"test_subscriber_uk_id\", \"69\");",
+                  "pm.environment.set(\"test_subscriber_id\", \"abcd.test.subscriber\");",
+                  "pm.environment.set(\"test_subscriber_city\", \"std:011\");"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Expect response body to have \"ACK\" status', () => {",
+                  "    pm.response.to.have.body('{\"message\":{\"ack\":{\"status\":\"ACK\"}}}');",
+                  "})"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "\n    {\n        \"status\": \"SUBSCRIBED\",\n        \"valid_from\": \"{{current_time}}\",\n        \"signing_public_key\": \"1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=\",\n        \"domain\": \"ONDC:TRV10\",\n        \"type\": \"BPP\",\n        \"valid_until\": \"{{current_time}}\",\n        \"country\": \"IND\",\n        \"created\": \"{{current_time}}\",\n        \"subscriber_id\": \"{{test_subscriber_id}}\",\n        \"encr_public_key\": \"1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=\",\n        \"city\": \"std:011\",\n        \"updated\": \"{{current_time}}\",\n        \"ukId\": \"{{test_subscriber_uk_id}}\",\n        \"subscriber_url\": \"https://nammayatri.in/\"\n    }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock-registry}}/create",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lookup API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Expect response body to have all fields related to subscriber', () => {",
+                  "    const responseBody = pm.response.json();",
+                  "    pm.expect(responseBody.length, \"more than one subscriber received\").to.deep.equal(1);",
+                  "",
+                  "    const type = 'BPP';",
+                  "    pm.expect(responseBody[0].type).to.deep.equal(type);",
+                  "",
+                  "    const domain = 'ONDC:TRV10';",
+                  "    pm.expect(responseBody[0].domain).to.deep.equal(domain);",
+                  "",
+                  "    const city = pm.environment.get(\"test_subscriber_city\");",
+                  "    pm.expect(responseBody[0].city).to.deep.equal(city);",
+                  "",
+                  "    const ukId = pm.environment.get(\"test_subscriber_uk_id\");",
+                  "    pm.expect(responseBody[0].ukId).to.deep.equal(ukId);",
+                  "",
+                  "    const subId = pm.environment.get(\"test_subscriber_id\");",
+                  "    pm.expect(responseBody[0].subscriber_id).to.deep.equal(subId);",
+                  "})"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\" : \"BPP\",\n    \"domain\" : \"ONDC:TRV10\",\n    \"city\" : \"{{test_subscriber_city}}\",\n    \"ukId\" : \"{{test_subscriber_uk_id}}\",\n    \"subscriber_id\" : \"{{test_subscriber_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{mock-registry}}/lookup",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "lookup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Subscriber with both city fields as empty",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 400\", () => {",
+                  "    if (pm.response.code !== 400) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(400)",
+                  "    }",
+                  "",
+                  "    pm.response.to.have.jsonBody(\"errorCode\", \"INVALID_REQUEST\");",
+                  "    ",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ny_registry_api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uniqueKeyId\": \"{{test_subscriber_uk_id}}\",\n    \"subscriberId\": \"{{test_subscriber_id}}\",\n    \"subscriberType\": \"BPP\",\n    \"domain\": \"ONDC:TRV10\",\n    \"appendCities\": null,\n    \"replaceCities\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock-registry}}/updateCities",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "updateCities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Subscriber with invalid city codes",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 400\", () => {",
+                  "    if (pm.response.code !== 400) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(400)",
+                  "    }",
+                  "",
+                  "    pm.response.to.have.jsonBody(\"errorCode\", \"INVALID_REQUEST\"); ",
+                  "});",
+                  "",
+                  "pm.test('Expect error message to have only \"std:0\" & \"std:012345678\" to be invalid codes', () => {",
+                  "    const responseBody = pm.response.json();",
+                  "    const errMsg = responseBody.errorMessage",
+                  "",
+                  "    pm.expect(errMsg.includes('cities [\\\"std:0\\\",\\\"std:012345678\\\"] doesn\\'t'), \"city code pattern is possibly changed\").to.equal(true);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ny_registry_api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uniqueKeyId\": \"{{test_subscriber_uk_id}}\",\n    \"subscriberId\": \"{{test_subscriber_id}}\",\n    \"subscriberType\": \"BPP\",\n    \"domain\": \"ONDC:TRV10\",\n    \"appendCities\": [\n        \"std:0\",\n        \"std:012345678\",\n        \"std:080\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock-registry}}/updateCities",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "updateCities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add City \"std:080\"",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Expect response body to have added \"std:080\" city', () => {",
+                  "    const responseBody = pm.response.json();",
+                  "",
+                  "    pm.expect(responseBody.added).to.deep.equal([\"std:080\"]);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ny_registry_api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uniqueKeyId\": \"{{test_subscriber_uk_id}}\",\n    \"subscriberId\": \"{{test_subscriber_id}}\",\n    \"subscriberType\": \"BPP\",\n    \"domain\": \"ONDC:TRV10\",\n    \"appendCities\": [\n        \"std:080\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock-registry}}/updateCities",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "updateCities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replace Cities to [\"std:011\", \"std:0124\"]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Expect response body to have added \"std:0124\" city and removed \"std:080\" city', () => {",
+                  "    const responseBody = pm.response.json();",
+                  "",
+                  "    pm.expect(responseBody.added).to.deep.equal([\"std:0124\"]);",
+                  "",
+                  "    pm.expect(responseBody.removed).to.deep.equal([\"std:080\"])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{ny_registry_api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uniqueKeyId\": \"{{test_subscriber_uk_id}}\",\n    \"subscriberId\": \"{{test_subscriber_id}}\",\n    \"subscriberType\": \"BPP\",\n    \"domain\": \"ONDC:TRV10\",\n    \"replaceCities\": [\n        \"std:011\",\n        \"std:0124\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock-registry}}/updateCities",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "updateCities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete registry entry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request),",
+                  "        console.log('res', pm.response.text())",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Expect response body to have \"ACK\" status', () => {",
+                  "    pm.response.to.have.body('{\"message\":{\"ack\":{\"status\":\"ACK\"}}}');",
+                  "})"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{mock-registry}}/delete?unique_key_id={{test_subscriber_uk_id}}&subscriber_id={{test_subscriber_id}}",
+              "host": [
+                "{{mock-registry}}"
+              ],
+              "path": [
+                "delete"
+              ],
+              "query": [
+                {
+                  "key": "unique_key_id",
+                  "value": "{{test_subscriber_uk_id}}"
+                },
+                {
+                  "key": "subscriber_id",
+                  "value": "{{test_subscriber_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -233,6 +233,12 @@ getSmartTipSuggestion item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
   return parsedTagValue
 
+getTipOptions :: Spec.Item -> Maybe [Int]
+getTipOptions item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TIP_OPTIONS item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe [Int]
+  return parsedTagValue
+
 getSmartTipReason :: Spec.Item -> Maybe Text
 getSmartTipReason item = Utils.getTagV2 Tag.INFO Tag.SMART_TIP_REASON item.itemTags
 

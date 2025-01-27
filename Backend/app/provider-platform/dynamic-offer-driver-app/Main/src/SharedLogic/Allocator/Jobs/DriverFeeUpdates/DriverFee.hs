@@ -42,6 +42,7 @@ import Domain.Types.Person
 import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
@@ -55,7 +56,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -117,7 +118,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
-      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
+      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview) (mbDriverPlan >>= (.vehicleCategory))
       let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
       mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
       let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
@@ -190,8 +191,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   case listToMaybe driverFees of
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
-      maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
+      let jobDataT :: Text = show jobData
+      hashedJobData <- getHash jobDataT
+      duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
+      when duplicationKey do
+        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
@@ -436,6 +440,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
         driverId = driverFee.driverId,
         lastStatusCheckedAt = Nothing,
         serviceName = driverFee.serviceName,
+        merchantId = Just driverFee.merchantId,
         merchantOperatingCityId = driverFee.merchantOperatingCityId,
         updatedAt = now,
         createdAt = now
@@ -448,12 +453,11 @@ scheduleJobs ::
   UTCTime ->
   Id Merchant ->
   Id MerchantOperatingCity ->
-  Int ->
   ServiceNames ->
   SubscriptionConfig ->
   CalculateDriverFeesJobData ->
   m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData = do
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let timeDiffNormalFlow = addUTCTime dfNotificationTime endTime
@@ -466,7 +470,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
   when scheduleNotification $ do
-    createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
+    createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
       SendPDNNotificationToDriverJobData
         { merchantId = merchantId,
           merchantOperatingCityId = Just merchantOpCityId,
@@ -476,7 +480,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           serviceName = Just serviceName
         }
   when (subscriptionConfigs.useOverlayService && scheduleOverlay) $ do
-    createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
+    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
       SendOverlayJobData
         { merchantId = merchantId,
           rescheduleInterval = Nothing,
@@ -494,7 +498,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           serviceName = Just serviceName,
           vehicleCategory = Nothing
         }
-    createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
+    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
       SendOverlayJobData
         { merchantId = merchantId,
           rescheduleInterval = Nothing,
@@ -513,7 +517,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           vehicleCategory = Nothing
         }
   when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
-    createJobIn @_ @'SendManualPaymentLink paymentLinkSendJobTs maxShards $
+    createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
       SendManualPaymentLinkJobData
         { merchantId = merchantId,
           merchantOperatingCityId = merchantOpCityId,
@@ -534,7 +538,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
         case isDfCaclculationJobScheduled of
           ----- marker ---
           Nothing -> do
-            createJobIn @_ @'CalculateDriverFees dfCalculationJobTs' maxShards $
+            createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
               CalculateDriverFeesJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = Just merchantOpCityId,

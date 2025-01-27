@@ -46,12 +46,7 @@ type BecknAPICallFlow m r =
   )
 
 callBPPStatus ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
-  ) =>
+  BecknAPICallFlow m r =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   BecknConfig ->
   Context.City ->
@@ -65,13 +60,9 @@ callBPPStatus booking bapConfig city merchantId = do
     void $ status providerUrl bknStatusReq merchantId
 
 search ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BecknAPICallFlow m r
   ) =>
   BaseUrl ->
   Spec.SearchReq ->
@@ -83,13 +74,9 @@ search gatewayUrl req merchantId = do
   callBecknAPIWithSignature' merchantId bapId "search" Spec.searchAPI gatewayUrl internalEndPointHashMap req
 
 init ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BecknAPICallFlow m r
   ) =>
   BaseUrl ->
   Spec.InitReq ->
@@ -101,13 +88,9 @@ init providerUrl req merchantId = do
   callBecknAPIWithSignature' merchantId bapId "init" Spec.initAPI providerUrl internalEndPointHashMap req
 
 confirm ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BecknAPICallFlow m r
   ) =>
   BaseUrl ->
   Spec.ConfirmReq ->
@@ -119,12 +102,7 @@ confirm providerUrl req merchantId = do
   callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
 
 status ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
-  ) =>
+  BecknAPICallFlow m r =>
   BaseUrl ->
   Spec.StatusReq ->
   Id Merchant.Merchant ->
@@ -135,13 +113,9 @@ status providerUrl req merchantId = do
   callBecknAPIWithSignature' merchantId bapId "status" Spec.statusAPI providerUrl internalEndPointHashMap req
 
 cancel ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BecknAPICallFlow m r
   ) =>
   BaseUrl ->
   Spec.CancelReq ->
@@ -171,5 +145,5 @@ callBecknAPIWithSignature' ::
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") $ do
-    void $ pushLogs b (toJSON req') merchantId.getId
+    void $ pushLogs b (toJSON req') merchantId.getId "PUBLIC_TRANSPORT"
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

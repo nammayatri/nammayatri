@@ -19,6 +19,7 @@ PayoutOrder:
     customerId : Text
     orderId : Text
     merchantId : Text
+    merchantOperatingCityId : Maybe Text
     city : Text
     amount : Price
     status : PayoutOrderStatus
@@ -97,6 +98,7 @@ PayoutTransaction:
     amount : Price
     status : Text
     merchantId: Text
+    merchantOperatingCityId : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:

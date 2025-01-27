@@ -12,7 +12,9 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
+import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
+import Kernel.Beam.Functions as B
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
@@ -24,6 +26,7 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
+import SharedLogic.Payment
 import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -33,6 +36,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -57,6 +61,9 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    subscriptionConfig <-
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+        >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
@@ -68,7 +75,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         successfulNotifications <- nubBy (\x y -> x.driverFeeId == y.driverFeeId) <$> QNTF.findAllByDriverFeeIdAndStatus (driverFees <&> (.id)) JuspayTypes.SUCCESS --- notification_success instead of success in shared kernel---
         let mapDriverFeeById_ = Map.fromList (map (\driverFee_ -> (driverFee_.id, driverFee_)) driverFees)
             mapDriverPlanByDriverId = Map.fromList driverIdsAndDriverPlanToNotify
-        driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications)
+        driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' subscriptionConfig successfulNotifications)
         changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverExecutionRequests <&> (.driverFee) <&> (.id))
         QDF.updateAutopayPaymentStageByIds (Just EXECUTION_ATTEMPTING) ((.driverFee.id) <$> driverExecutionRequests)
         for_ driverExecutionRequests $ \executionData -> do
@@ -85,13 +92,13 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
               Just mandateId -> Just (dplan.driverId, (dplan, mandateId))
               Nothing -> Nothing
         )
-    mapExecutionRequestAndInvoice mapDriverFeeById mapDriverPlanByDriverId_ executionDate = do
+    mapExecutionRequestAndInvoice mapDriverFeeById mapDriverPlanByDriverId_ executionDate subscriptionConfig = do
       mapMaybe
         ( \notification -> do
             case mapDriverFeeById Map.!? NTF.driverFeeId notification of
               Just driverFee -> do
                 let dplan = mapDriverPlanByDriverId_ Map.!? cast @P.Driver @P.Person (DF.driverId driverFee)
-                buildExecutionRequestAndInvoice driverFee notification executionDate <$> dplan
+                buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig <$> dplan
               Nothing -> Nothing
         )
 
@@ -103,20 +110,25 @@ buildExecutionRequestAndInvoice ::
   DF.DriverFee ->
   NTF.Notification ->
   UTCTime ->
+  DSC.SubscriptionConfig ->
   (DP.DriverPlan, Id Mandate) ->
   m (Maybe ExecutionData)
-buildExecutionRequestAndInvoice driverFee notification executionDate (driverPlan, mandateId) = do
+buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig (driverPlan, mandateId) = do
   invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
   case invoice' of
     Just invoice -> do
-      let executionRequest =
+      let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+      vendorFees <- if splitEnabled then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
+      let splitSettlementDetails = if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) else Nothing
+          executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
                 amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
                 customerId = driverFee.driverId.getId,
                 notificationId = notification.shortId,
                 mandateId = mandateId.getId,
-                executionDate
+                executionDate,
+                splitSettlementDetails = splitSettlementDetails
               }
       return $
         Just
@@ -159,7 +171,7 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   let paymentService = subscriptionConfig.paymentServiceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
-      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
+      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService))
       case exec of
         Left err -> do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing

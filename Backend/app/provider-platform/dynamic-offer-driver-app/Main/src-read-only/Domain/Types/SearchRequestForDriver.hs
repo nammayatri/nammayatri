@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SearchRequestForDriver where
@@ -59,6 +58,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    middleStopCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     mode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

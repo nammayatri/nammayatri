@@ -1,13 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.MessageReport where
 
-import Data.Aeson
 import qualified Data.Aeson as A
 import Data.ByteString
 import qualified Data.Map as M
@@ -16,11 +11,7 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Domain.Types.Message as Msg
-import Domain.Types.Person (Driver)
 import Kernel.Prelude
-import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 -- Extra code goes here --
 

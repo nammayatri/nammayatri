@@ -4,7 +4,7 @@ import Prelude
 import Screens.DriverProfileScreenCommon.Controller (Action(..), eval, ScreenOutput, getVariant, getPillText, getAspirationsText)
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, maxLines, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, horizontalScrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar, scrollBarX, shimmerFrameLayout)
+import PrestoDOM 
 import Effect (Effect)
 import Animation as Anim
 import Styles.Colors as Color
@@ -29,7 +29,7 @@ import Control.Monad.Trans.Class (lift)
 import Data.Either(Either(..))
 import PrestoDOM.Animation 
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Presto.Core.Types.Language.Flow (delay)
+import Presto.Core.Types.Language.Flow (delay, fork, await)
 import Effect.Uncurried(runEffectFn1)
 import Debug (spy)
 import Data.Int (fromNumber, round, fromString)
@@ -39,7 +39,7 @@ import Font.Size as FontSize
 import PrestoDOM.Properties (lineHeight, cornerRadii, ellipsize)
 import Font.Style (bold, semiBold, regular)
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
+import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight, textFromHtml)
 import Language.Types (STR(..))
 import Common.Resources.Constants (secondsInOneYear)
 import Data.Function.Uncurried (runFn2)
@@ -52,6 +52,7 @@ screen initialState =
     , globalEvents : [
     (\push -> do
        _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getDriverProfile push initialState
+       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getDriverProfileWithImages push initialState
        pure $ pure unit
       )
     ]
@@ -62,34 +63,40 @@ screen initialState =
             eval action state
     }
 
+getDriverProfileWithImages :: forall action. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
+getDriverProfileWithImages push state = do
+    (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
+    then SB.getDriverProfileById state.props.driverId true
+    else SB.getDriverProfile state.props.rideId true
+    case driversProfileRespWithImage of
+            Right resp -> do
+                liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
+                pure unit
+            Left _ -> do
+                void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
+                liftFlowBT $ push $ GoBack
+                pure unit
+
 getDriverProfile :: forall action. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
 getDriverProfile push state = do
   void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
-  (driversProfileResp) <- lift $ lift $ if state.props.rideId == "" 
-    then SB.getDriverProfileById state.props.driverId false
-    else SB.getDriverProfile state.props.rideId false
-  case driversProfileResp of
+  driversProfileResponse <- lift $ lift $ fork $ do
+    (driversProfileResp) <- if state.props.rideId == "" 
+        then SB.getDriverProfileById state.props.driverId false
+        else SB.getDriverProfile state.props.rideId false
+    case driversProfileResp of
         Right resp -> do
-            void $ lift $ lift $ EHU.toggleLoader false
-            liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
-        Left _ -> do
-            void $ pure $ JB.toast $ getString NOT_AVAILABLE
-            void $ lift $ lift $ EHU.toggleLoader false
-            liftFlowBT $ push $ GoBack
-
-  (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
-    then SB.getDriverProfileById state.props.driverId true
-    else SB.getDriverProfile state.props.rideId true
-  case driversProfileRespWithImage of
-        Right resp -> do
-            liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
+            EHC.liftFlow $ push $ GetDriverProfileAPIResponseAction resp
             pure unit
         Left _ -> do
-            void $ pure $ JB.toast $ getString NOT_AVAILABLE
-            liftFlowBT $ push $ GoBack
+            void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
+            EHC.liftFlow $ push $ GoBack
             pure unit
 
+  lift $ lift $ await driversProfileResponse
+  void $ lift $ lift $ EHU.toggleLoader false
+  pure unit
 
 view :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -158,35 +165,45 @@ sfl height' radius' =
     ][]
   ]
 
-
 back :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 back push state =
     imageView [
       width $ V 22
     , height $ V 22
-    , margin $ Margin 15 20 0 12
+    , margin $ if DA.null state.data.displayImages then Margin 15 20 0 0 else  Margin 15 20 0 12
     , onClick push $ const GoBack
+    , accessibilityHint "Back : Button"
+    , accessibility ENABLE
     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_bold"
     ]
 
 driverProfile :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 driverProfile push state = 
+    let wid = screenWidth unit
+        hgt = if DA.length state.data.displayImages > 0 then ((screenWidth unit)*4)/5 else ((screenWidth unit)*165)/373 -- if there is an actual image then we have to make height / width = 5 / 4 else 373 / 165
+    in
     relativeLayout[
-        width MATCH_PARENT
-    ,   height WRAP_CONTENT
+        width $ V wid
+    ,   height $ V hgt
     ][
         linearLayout
-        [ width $ V $ (screenWidth unit)
-        , height $ V $ ((screenWidth unit)*4)/5
+        [ width $ V $ wid
+        , height $ V $ hgt
         , id $ getNewIDWithTag "add_image_component_images"
-        , visibility $ boolToVisibility $ DA.length state.data.displayImages > 0
         ][]
-    ,   imageView [
-          width $ V $ (screenWidth unit)
-        , height $ V $ ((screenWidth unit)*4)/5
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_dummy_image"
-        , visibility $ boolToVisibility $ DA.length state.data.displayImages == 0
-        , background Color.white900
+    ,   linearLayout[
+            height WRAP_CONTENT,
+            width MATCH_PARENT,
+            gravity CENTER
+        ][
+            imageView [
+                width $ V $ 88
+                , height $ V $ 88
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+                , visibility $ boolToVisibility $ DA.null state.data.displayImages
+                , background Color.white900
+                , margin $ MarginLeft 16
+            ]
         ]
     ,   linearLayout[
             width MATCH_PARENT
@@ -219,57 +236,73 @@ driverProfile push state =
         ]
     ]
 
-getElement :: Int -> Array String -> String
-getElement idx arr = fromMaybe "" (DA.index arr idx)
-
-header :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
-header push state =
+driverProfileData :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+driverProfileData push state = 
     let (DriverStatSummary stats) = state.data.driverStats
-    in
-    relativeLayout[
-        height WRAP_CONTENT
-    ,   width MATCH_PARENT
-    ][
-        driverProfile push state
-    ,   linearLayout[
-            width $ V $ (screenWidth unit)
-        ,   height $ V $ ((screenWidth unit)*4)/5
+        wid = screenWidth unit
+        hgt = if DA.length state.data.displayImages > 0 then ((screenWidth unit)*4)/5 else ((screenWidth unit)*165)/373
+        colour = if DA.length state.data.displayImages > 0 then Color.white900 else Color.black900
+        mrg = if DA.length state.data.displayImages > 0 then 0 else 16
+    in 
+    linearLayout[
+            width $ V $ wid
+        ,   height $ V $ hgt
         ,   orientation VERTICAL
+        ,   margin $ MarginTop mrg
         ][
-                linearLayout[weight 1.0][]
+            linearLayout[weight 1.0][]
+        ,   linearLayout
+            [
+            height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ Padding 15 0 0 15
+            , orientation VERTICAL
+            , gravity $ if DA.null state.data.displayImages then CENTER else LEFT
+            ][
+                textView $ 
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text state.data.driverName
+                , color $ colour
+                , margin $ MarginBottom 5
+                ] <> FontStyle.h2 CT.TypoGraphy
+
             ,   linearLayout
                 [
-                height WRAP_CONTENT
-                , width MATCH_PARENT
-                , padding $ Padding 15 0 0 10
-                , orientation VERTICAL
+                width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , orientation HORIZONTAL
+                , margin $ MarginBottom 10
                 ][
                     textView $ 
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
-                    , text state.data.driverName
-                    , color Color.white900
-                    , margin $ MarginBottom 5
-                    ] <> FontStyle.h2 CT.TypoGraphy
-
-                ,   linearLayout
-                    [
-                    width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , orientation HORIZONTAL
-                    , margin $ MarginBottom 10
+                    , text $ getVariant state.data.vechicleVariant
+                    , color $ colour
+                    , margin $ MarginRight 5
+                    ] <> FontStyle.body3 CT.TypoGraphy
+                ,   linearLayout[
+                        width WRAP_CONTENT
+                    ,   height WRAP_CONTENT
+                    ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 0
                     ][
-                        textView $ 
+                        imageView
+                        [ width $ V 5
+                        , height $ V 5
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_dot"
+                        , margin $ Margin 0 6 5 0
+                        ]
+                    ,   textView $ 
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
-                        , text $ getVariant state.data.vechicleVariant
-                        , color Color.white900
+                        , text $ getElement 0 state.data.vehicleTags
+                        , color $ colour
                         , margin $ Margin 0 0 5 0
                         ] <> FontStyle.body3 CT.TypoGraphy
                     ,   linearLayout[
                             width WRAP_CONTENT
                         ,   height WRAP_CONTENT
-                        ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 0
+                        ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 1
                         ][
                             imageView
                             [ width $ V 5
@@ -280,14 +313,14 @@ header push state =
                         ,   textView $ 
                             [ width WRAP_CONTENT
                             , height WRAP_CONTENT
-                            , text $ getElement 0 state.data.vehicleTags
-                            , color Color.white900
+                            , text $ getElement 1 state.data.vehicleTags
+                            , color $ colour
                             , margin $ Margin 0 0 5 0
                             ] <> FontStyle.body3 CT.TypoGraphy
                         ,   linearLayout[
                                 width WRAP_CONTENT
                             ,   height WRAP_CONTENT
-                            ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 1
+                            ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 2
                             ][
                                 imageView
                                 [ width $ V 5
@@ -298,57 +331,57 @@ header push state =
                             ,   textView $ 
                                 [ width WRAP_CONTENT
                                 , height WRAP_CONTENT
-                                , text $ getElement 1 state.data.vehicleTags
-                                , color Color.white900
+                                , text $ getElement 2 state.data.vehicleTags
+                                , color colour
                                 , margin $ Margin 0 0 5 0
-                                ] <> FontStyle.body3 CT.TypoGraphy
-                            ,   linearLayout[
-                                    width WRAP_CONTENT
-                                ,   height WRAP_CONTENT
-                                ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 2
-                                ][
-                                    imageView
-                                    [ width $ V 5
-                                    , height $ V 5
-                                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_dot"
-                                    , margin $ Margin 0 6 5 0
-                                    ]
-                                ,   textView $ 
-                                    [ width WRAP_CONTENT
-                                    , height WRAP_CONTENT
-                                    , text $ getElement 2 state.data.vehicleTags
-                                    , color Color.white900
-                                    , margin $ Margin 0 0 5 0
-                                    ] <> FontStyle.body3 CT.TypoGraphy  
-                                ]
-                            ] 
-                        ]
+                                ] <> FontStyle.body3 CT.TypoGraphy  
+                            ]
+                        ] 
                     ]
-            ,   linearLayout
-                [
-                height WRAP_CONTENT
+                ]
+        ,   linearLayout
+            [
+              height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation HORIZONTAL
+            , background $ if DA.length state.data.displayImages > 0 then Color.lightGreyBlue1 else Color.grey800
+            , cornerRadius 24.0
+            , visibility $ boolToVisibility $ stats.likedByRidersNum > 0
+            ][
+                imageView [ 
+                width $ V 16
+                , height $ V 16
+                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET $  if DA.length state.data.displayImages > 0 then "ny_ic_heart_cream" else "ny_ic_heart_black"
+                , margin $ Margin 10 5 8 5
+                ]
+            ,   textView $
+                [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , orientation HORIZONTAL
-                , background Color.lightGreyBlue1
-                , cornerRadius 24.0
-                , visibility $ boolToVisibility $ stats.likedByRidersNum > 0
-                ][
-                    imageView [ 
-                    width $ V 16
-                    , height $ V 16
-                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_heart_cream"
-                    , margin $ Margin 10 5 8 5
-                    ]
-                ,   textView $
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , text $ getString BY <> " " <> show stats.likedByRidersNum <> " " <> getString CUSTOMERS
-                    , color Color.yellow800
-                    , margin $ Margin 0 2 6 0
-                    ] <> FontStyle.tags CT.TypoGraphy
+                , text $ getString BY <> " " <> show stats.likedByRidersNum <> " " <> if stats.likedByRidersNum > 1 then getString CUSTOMERS else getString CUSTOMER
+                , color $ if DA.length state.data.displayImages > 0 then Color.yellow800 else Color.black900
+                , margin $ Margin 0 4 6 0
+                ] <> FontStyle.tags CT.TypoGraphy
                 ]
-                ]
+            ]
+        ,   linearLayout[ 
+                width MATCH_PARENT, 
+                height $ V $ 1, 
+                margin $ Margin 15 0 15 0,
+                background Color.grey900
+            ][]
         ]
+
+getElement :: Int -> Array String -> String
+getElement idx arr = fromMaybe "" (DA.index arr idx)
+
+header :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+header push state =
+    relativeLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ][
+        driverProfile push state
+    ,   driverProfileData push state
     ]
 
 driverStats :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
@@ -470,6 +503,11 @@ driverStats push state =
 driverInfoCard :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 driverInfoCard push state =
     let drivingYears = (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") state.data.onboardedAt)
+        textForLanguages = "🌏     " <> getString I_SPEAK <> " " <> joinWith "" (DA.mapWithIndex(\index item -> do
+            if index == 0 then "<b>" <> item <> "</b>" 
+            else if index /= 0 && index /= (DA.length state.data.languages) - 1 then ", " <> "<b>" <> item <> "</b>"
+            else getString AND <> "<b>" <> item <> "</b>"
+            )state.data.languages)
     in
     linearLayout[
         height WRAP_CONTENT
@@ -495,9 +533,7 @@ driverInfoCard push state =
             textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ "🌏    " <> getString I_SPEAK <> " " <> joinWith "" (DA.mapWithIndex(\index item -> do
-                if index == 0 then item else if index /= 0 && index /= (DA.length state.data.languages) - 1 then ", " <> item else getString AND <> item
-                )state.data.languages)
+            , textFromHtml $ textForLanguages
             , color Color.black700
             ] <> FontStyle.body1 CT.TypoGraphy
         ]
@@ -641,8 +677,8 @@ reviews push state =
             height WRAP_CONTENT
         ,   width MATCH_PARENT
         ,   background Color.blue600
-        ,   padding $ Padding 0 24 0 24
         ,   scrollBarX false
+        ,   padding $ PaddingBottom 24
         ][
             linearLayout[
                 height WRAP_CONTENT
@@ -676,7 +712,7 @@ ratings push state =
             height WRAP_CONTENT
         ,   width MATCH_PARENT
         ,   background Color.blue600
-        ,   padding $ Padding 16 24 16 0
+        ,   padding $ Padding 16 24 16 24
         ,   orientation VERTICAL
         ][
             linearLayout[

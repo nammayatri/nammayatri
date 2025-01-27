@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Merchant
   ( module Dashboard.Common.Merchant,
@@ -23,10 +21,12 @@ where
 import Control.Applicative ((<|>))
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Kernel.External.Call.Types
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
@@ -34,8 +34,10 @@ import qualified Kernel.External.Notification.FCM.Flow as FCM
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import Kernel.External.SMS.Types (SmsService (..))
 import Kernel.External.Types (Language)
 import qualified Kernel.External.Verification as Verification
+import Kernel.External.Whatsapp.Types (WhatsappService (..))
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.Beckn.Context as Context
@@ -43,6 +45,7 @@ import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
@@ -190,7 +193,8 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     useAdvancedDirections :: Bool,
     googleRouteConfig :: Maps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
-    useNewPlaces :: Bool
+    useNewPlaces :: Bool,
+    googleAutocompleteParams :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -214,7 +218,8 @@ data MMICfgUpdateReq = MMICfgUpdateReq
     mmiAuthSecret :: Text,
     mmiApiKey :: Text,
     mmiKeyUrl :: BaseUrl,
-    mmiNonKeyUrl :: BaseUrl
+    mmiNonKeyUrl :: BaseUrl,
+    mmiAutocompleteParams :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -564,6 +569,16 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 
 ---- CreateMerchantOperatingCity ------------------------
 
+data MerchantData = MerchantData
+  { name :: Text,
+    shortId :: Text,
+    subscriberId :: Text,
+    uniqueKeyId :: Text,
+    networkParticipantId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
   { file :: FilePath,
     reqContentType :: Text,
@@ -578,7 +593,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
-    distanceUnit :: Maybe DistanceUnit
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -600,6 +616,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "rcNumberPrefixList" form
       <*> parseMaybeInput "currency" form
       <*> parseMaybeInput "distanceUnit" form
+      <*> parseMaybeJsonInput "merchantData" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -609,6 +626,14 @@ parseInput fieldName form = case lookupInput fieldName form of
 parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
 parseMaybeInput fieldName form = case lookupInput fieldName form of
   Right val -> Right $ readMaybe (T.unpack val)
+  Left _ -> Right Nothing
+
+parseMaybeJsonInput :: FromJSON b => Text -> MultipartData tag -> Either String (Maybe b)
+parseMaybeJsonInput fieldName form = case lookupInput fieldName form of
+  Right val -> do
+    case eitherDecode $ BL.fromStrict (TE.encodeUtf8 val) of
+      Right jsonVal -> Right $ Just jsonVal
+      Left err -> Left err
   Left _ -> Right Nothing
 
 newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
@@ -630,7 +655,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
-    distanceUnit :: Maybe DistanceUnit
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -775,6 +801,49 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Text,
     bodyType :: Maybe Text,
     priority :: Maybe Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ConfigFailoverReq = ConfigFailoverReq
+  { merchantOperatingCity :: Kernel.Prelude.Maybe Context.City,
+    priorityOrder :: Kernel.Prelude.Maybe PriorityListWrapperType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigFailoverReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data ConfigNames
+  = BecknNetwork
+  | SmsProvider
+  | WhatsappProvider
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData ConfigNames where
+  parseQueryParam = readEither
+
+instance ToHttpApiData ConfigNames where
+  toUrlPiece = show
+
+data NetworkEnums
+  = ONDC
+  | NY
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData NetworkEnums where
+  parseQueryParam = readEither
+
+instance ToHttpApiData NetworkEnums where
+  toUrlPiece = show
+
+data PriorityListWrapperType = PriorityListWrapperType
+  { networkTypes :: [NetworkEnums],
+    smsProviders :: [SmsService],
+    whatsappProviders :: [WhatsappService]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

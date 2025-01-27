@@ -1,10 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.TicketService where
 
+import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.TicketService
@@ -20,6 +19,8 @@ data TicketServiceT f = TicketServiceT
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,
     maxVerification :: B.C f Kernel.Prelude.Int,
+    operationalEndDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
+    operationalStartDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     operationalDays :: B.C f [Kernel.Prelude.Text],
     placesId :: B.C f Kernel.Prelude.Text,
     service :: B.C f Kernel.Prelude.Text,

@@ -11,6 +11,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Beam
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -48,6 +49,7 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogi
   updateWithKV
     [ Se.Set Beam.description description,
       Se.Set Beam.logic ((Data.String.Conversions.cs . Data.Aeson.encode) logic),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -61,6 +63,7 @@ instance FromTType' Beam.AppDynamicLogicElement Lib.Yudhishthira.Types.AppDynami
           { description = description,
             domain = domain,
             logic = (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs) logic,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
             order = order,
             version = version,
             createdAt = createdAt,
@@ -73,6 +76,7 @@ instance ToTType' Beam.AppDynamicLogicElement Lib.Yudhishthira.Types.AppDynamicL
       { Beam.description = description,
         Beam.domain = domain,
         Beam.logic = (Data.String.Conversions.cs . Data.Aeson.encode) logic,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.order = order,
         Beam.version = version,
         Beam.createdAt = createdAt,

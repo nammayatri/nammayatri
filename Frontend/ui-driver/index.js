@@ -12,7 +12,7 @@ try {
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
 const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds",  "addToLogList"])
-window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION"]);
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION", "USER_FAVOURITE_DRIVER", "FROM_METRO_COINS", "TO_METRO_COINS"]);
 
 console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
 if (window.JBridge.firebaseLogEventWithParams){  
@@ -33,8 +33,13 @@ if (window.JBridge.firebaseLogEventWithParams){
         if (shouldLog) {
           window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
+        try{
+          const result = window.JBridgeProxy[fnName](...arguments);
+          return result;
+        }catch(e){
+          console.error(e);
+          return;
+        }
       };
     });
 }

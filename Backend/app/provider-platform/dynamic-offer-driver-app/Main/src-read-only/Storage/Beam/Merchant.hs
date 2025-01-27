@@ -1,11 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Merchant where
 
 import qualified Database.Beam as B
+import qualified Domain.Types
 import Domain.Types.Common ()
 import qualified Domain.Types.Merchant
 import Kernel.External.Encryption
@@ -22,6 +21,7 @@ data MerchantT f = MerchantT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
     fromTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    gatewayAndRegistryPriorityList :: B.C f (Kernel.Prelude.Maybe [Domain.Types.GatewayAndRegistryService]),
     geoHashPrecisionValue :: B.C f Kernel.Prelude.Int,
     destinationRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,
     originRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,

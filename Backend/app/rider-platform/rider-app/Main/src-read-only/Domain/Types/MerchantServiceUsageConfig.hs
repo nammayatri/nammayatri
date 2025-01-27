@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.MerchantServiceUsageConfig where
@@ -38,6 +37,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,
     getExophone :: Kernel.External.Call.Types.CallService,
+    getFirstPickupRoute :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
     getFrfsAutocompleteDistances :: Kernel.External.Maps.Types.MapsService,
     getMultiModalService :: Kernel.External.MultiModal.Types.MultiModalService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,

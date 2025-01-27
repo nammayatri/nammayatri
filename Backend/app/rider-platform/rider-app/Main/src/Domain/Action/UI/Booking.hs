@@ -120,7 +120,8 @@ handleConfirmTtlExpiry booking = do
         { reasonCode = CancellationReasonCode "External/Beckn API failure",
           reasonStage = OnConfirm,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
 
 callOnStatus :: SRB.Booking -> Flow ()
@@ -152,9 +153,11 @@ checkBookingsForStatus (currBooking : bookings) = do
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
-  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
+  let mbFromDate = millisecondsToUTC <$> mbFromDate'
+  let mbToDate = millisecondsToUTC <$> mbToDate'
+  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do
@@ -162,7 +165,7 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus
       let allBookingsNotScheduled = length $ filter (\booking -> booking.startTime < now) allbookings
       if allBookingsNotScheduled == limit
         then do
-          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId
+          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList
         else do
           returnResonseAndClearStuckRides allbookings rbList personId
     else do
@@ -195,7 +198,7 @@ processStop bookingId loc merchantId isEdit = do
   uuid <- generateGUID
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   validateStopReq booking isEdit loc merchant
-  location <- buildLocation loc
+  location <- buildLocation merchantId booking.merchantOperatingCityId loc
   prevOrder <- QLM.maxOrderByEntity booking.id.getId
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
@@ -249,8 +252,13 @@ validateStopReq booking isEdit loc merchant = do
     (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
     _ -> throwError (InvalidRequest "Ride Unserviceable")
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
-buildLocation req = do
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  StopReq ->
+  m Location
+buildLocation merchantId merchantOperatingCityId req = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -260,6 +268,8 @@ buildLocation req = do
         address = req.address,
         createdAt = now,
         updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         ..
       }
 

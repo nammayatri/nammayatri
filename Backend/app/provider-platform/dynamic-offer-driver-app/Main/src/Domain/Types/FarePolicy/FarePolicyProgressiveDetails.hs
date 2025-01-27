@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   ( module Reexport,
@@ -22,7 +21,7 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Domain.Types.Common

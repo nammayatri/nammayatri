@@ -1,6 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.IntegratedBPPConfig where
 
@@ -8,6 +6,7 @@ import Data.Aeson
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Base64
+import Kernel.Types.Time
 
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
@@ -19,7 +18,8 @@ data EBIXConfig = EBIXConfig
   deriving anyclass (FromJSON, ToJSON)
 
 data CUMTAConfig = CUMTAConfig
-  { cipherKey :: Base64
+  { cipherKey :: Base64,
+    qrRefreshTtl :: Maybe Seconds
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

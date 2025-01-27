@@ -20,7 +20,7 @@ module Domain.Action.ProviderPlatform.Management.DriverGoHome
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import qualified Dashboard.Common.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -31,7 +31,6 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -41,34 +40,33 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverGoHomeEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverGoHomeAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+buildTransaction apiTokenInfo driverId =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 getDriverGoHomeGetHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
 getDriverGoHomeGetHomeLocation merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetHomeLocation) driverId
+  Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetHomeLocation) driverId
 
 postDriverGoHomeUpdateHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
 postDriverGoHomeUpdateHomeLocation merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverGoHomeUpdateHomeLocationEndpoint apiTokenInfo (Just driverId) $ Just req
+  transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverGoHomeDSL.postDriverGoHomeUpdateHomeLocation) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.postDriverGoHomeUpdateHomeLocation) driverId req
 
 postDriverGoHomeIncrementGoToCount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverGoHomeIncrementGoToCount merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverGoHomeIncrementGoToCountEndpoint apiTokenInfo (Just driverId) T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverGoHomeDSL.postDriverGoHomeIncrementGoToCount) driverId
+    Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.postDriverGoHomeIncrementGoToCount) driverId
 
 getDriverGoHomeGetGoHomeInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.CachedGoHomeRequestInfoRes
 getDriverGoHomeGetGoHomeInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetGoHomeInfo) driverId
+  Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetGoHomeInfo) driverId

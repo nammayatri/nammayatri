@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module BecknV2.OnDemand.Enums where
 
@@ -151,6 +150,7 @@ data QuoteBreakupTitle
   | DISTANCE_FARE
   | CANCELLATION_CHARGES
   | TOLL_CHARGES
+  | STATE_ENTRY_PERMIT_CHARGES
   | CONGESTION_CHARGE
   | -- Custom Titles not in ONDC Spec
     SERVICE_CHARGE

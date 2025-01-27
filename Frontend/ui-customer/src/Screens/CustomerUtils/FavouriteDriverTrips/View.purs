@@ -72,6 +72,8 @@ getFavouriteDriverTrips push state = do
       liftFlowBT $ push $ GetFavouriteDriversTripsAPIResponseAction (resp)
       pure unit
     Left _ -> do
+      void $ pure $ EHU.showToast $ getString NOT_AVAILABLE
+      liftFlowBT $ push $ BackPressed
       pure unit
 
 view :: forall w. (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> PrestoDOM (Effect Unit) w
@@ -148,7 +150,7 @@ view push state =
                     ] [ imageView
                         [ imageWithFallback $ fetchImage FF_ASSET "ic_vehicle_side" 
                         , width $ V 35
-                        , visibility VISIBLE
+                        , visibility GONE
                         , height $ V 35
                         ]
                       , linearLayout

@@ -11,12 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as DPM
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
@@ -30,6 +29,7 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
@@ -48,6 +48,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
+    tipOptions :: Maybe [Int],
     additionalCongestionCharge :: HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
@@ -61,7 +62,9 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
@@ -141,6 +144,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    tipOptions :: Maybe [Int],
     distanceUnit :: DistanceUnit,
     govtCharges :: Maybe Double,
     tollCharges :: Maybe HighPrecMoney,
@@ -162,8 +166,10 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
+    disableRecompute :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show)
 
@@ -199,14 +205,20 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} =
-  FullFarePolicy {..}
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> Maybe Bool -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} disableRecompute =
+  FullFarePolicy
+    { merchantId = merchantId',
+      ..
+    }
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
 fullFarePolicyToFarePolicy ffp@FullFarePolicy {..} =
   let cancellationFarePolicyId = (.id) <$> ffp.cancellationFarePolicy
-   in FarePolicy {..}
+   in FarePolicy
+        { merchantId = Just merchantId,
+          ..
+        }
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

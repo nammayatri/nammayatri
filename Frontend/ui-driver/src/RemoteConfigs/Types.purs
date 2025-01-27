@@ -25,6 +25,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
+import Common.RemoteConfig.Types as CRT
 
 type HVConfigs = {
   selfie_flow_id :: String,
@@ -52,13 +53,13 @@ type CancellationThresholdConfig  = {
 
 type ReferralPopUpDelays = {
   refer_now :: Int,
-  add_upi :: Int, 
+  add_upi :: Int,
   verify_upi :: Int
 }
 
 type MetroCoinsEvent = {
-  coins :: Int,
-  minDistance :: Int
+  coinsFromMetroRide :: Int,
+  coinsToMetroRide :: Int
 }
 
 type EnableOtpRideConfig = {
@@ -67,6 +68,10 @@ type EnableOtpRideConfig = {
 
 type EnableScheduledRides = {
   enableScheduledRides :: Boolean
+}
+
+type EnableHotspotsFeature = {
+  enableHotspotsFeature :: Boolean
 }
 
 type LocationUpdateServiceConfig = {
@@ -103,6 +108,7 @@ type CoinsConfig = {
   rideCompletedCoinEvent :: Boolean,
   twoRideCoinEvent :: Boolean,
   fiveRideCoinEvent :: Boolean,
+  sixRideCoinEvent :: Boolean,
   eightRideCoinEvent :: Boolean,
   tenRideCoinEvent :: Boolean,
   prupleRideCoinEvent :: Boolean,
@@ -121,4 +127,36 @@ type EventsConfig = {
   enabled :: Boolean,
   pushEventChunkSize :: Int,
   loggingIntervalInMs :: Number
+}
+
+type ProfileCompletionReminder = {
+  reminderDuration :: Int
+}
+
+type RideAssignedAudioConfig = {
+  rideShare :: Maybe String 
+, intercity :: Maybe String
+, roundTrip :: Maybe String
+, oneWay :: Maybe String
+, delivery :: Maybe String
+, rental :: Maybe String
+}
+
+type ParcelConfig = {
+  introductionVideo :: String
+}
+
+type MetroWarriorConfig = CRT.VariantLevelRemoteConfig MetroWarriorConfigEntity
+
+type MetroWarriorConfigEntity = {
+  videoUrl :: String,
+  isMetroWarriorEnabled :: Boolean,
+  cacheInvalidateCounter :: Int,
+  defaultSecondaryStations :: Array String,
+  defaultPrimaryStation :: String
+}
+
+type RideEndAudioConfig = {
+  enableRideEndAudio :: Boolean
+, rideEndAudioUrl :: Maybe String
 }

@@ -57,6 +57,7 @@ library
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -149,6 +150,7 @@ executable rider-app-drainer-exe
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts

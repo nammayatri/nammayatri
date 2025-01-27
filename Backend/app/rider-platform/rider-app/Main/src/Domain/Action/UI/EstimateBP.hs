@@ -1,38 +1,27 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.EstimateBP where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import API.Types.UI.EstimateBP as DTEst
 import qualified API.Types.UI.EstimateBP
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import Data.OpenApi (ToSchema)
-import Domain.Types.Estimate
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.SearchRequest as DSearch
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.Prelude (head)
 import qualified Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
-import Kernel.Types.Price (Price (..), PriceAPIEntity (..))
+import Kernel.Types.Price (PriceAPIEntity (..))
 import Kernel.Utils.Common
-import Servant
 import qualified Storage.Clickhouse.EstimateBreakup as CH
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 
 getRideEstimateBreakup :: ((Kernel.Prelude.Maybe (Id.Id Person.Person), Id.Id Merchant.Merchant) -> Id.Id Ride.Ride -> Environment.Flow API.Types.UI.EstimateBP.EstimateDetailsRes)
 getRideEstimateBreakup (_, _) rideId_ = do

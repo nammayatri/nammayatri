@@ -16,8 +16,9 @@
 module Storage.CachedQueries.Merchant.MerchantMessage
   ( create,
     findAllByMerchantOpCityId,
-    findByMerchantOpCityIdAndMessageKey,
+    findByMerchantOpCityIdAndMessageKeyVehicleCategory,
     clearCache,
+    clearCacheById,
   )
 where
 
@@ -25,6 +26,7 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -49,22 +51,34 @@ cacheMerchantMessageForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantOpCityIdAndMessageKey id messageKey =
-  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
-    Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
-    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantOpCityIdAndMessageKey id messageKey
-
 cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
 cacheMerchantMessage merchantMessage = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey
+  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey merchantMessage.vehicleCategory
   Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
 
-makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
-makeMerchantOpCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
+makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Text
+makeMerchantOpCityIdAndMessageKey id messageKey mbVehicleCategory = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory
+
+findByMerchantOpCityIdAndMessageKeyVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory =
+  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory) >>= \case
+    Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
+    Nothing -> do
+      res <- Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory
+      case res of
+        Just a -> do
+          cacheMerchantMessage a
+          return $ Just a
+        Nothing -> case vehicleCategory of
+          Nothing -> return Nothing
+          _ -> findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> m ()
-clearCache merchantOpCityId messageKey = do
-  Hedis.del (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey)
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()
+clearCache merchantOpCityId messageKey mbVehicleCategory = do
+  Hedis.del (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey mbVehicleCategory)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOpCityId)

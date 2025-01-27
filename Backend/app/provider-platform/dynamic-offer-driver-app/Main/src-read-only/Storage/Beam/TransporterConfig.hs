@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.TransporterConfig where
@@ -75,6 +73,7 @@ data TransporterConfigT f = TransporterConfigT
     dailyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     dpBlackListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
@@ -120,12 +119,14 @@ data TransporterConfigT f = TransporterConfigT
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,
+    fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
+    issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],
@@ -138,9 +139,11 @@ data TransporterConfigT f = TransporterConfigT
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minThresholdForPassThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
@@ -155,6 +158,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTimeLimit :: B.C f Kernel.Types.Common.Seconds,
+    otpRideStartRestrictionRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
@@ -163,6 +167,8 @@ data TransporterConfigT f = TransporterConfigT
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
+    recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,

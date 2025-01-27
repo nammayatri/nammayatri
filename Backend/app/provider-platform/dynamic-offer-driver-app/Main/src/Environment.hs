@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Environment where
 
@@ -20,10 +19,12 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Database.PostgreSQL.Simple as PG
+import Domain.Types (GatewayAndRegistryService (..))
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
-import Kernel.Prelude (NominalDiffTime, (>>>=))
+import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -35,12 +36,13 @@ import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as KTC
 import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
+import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -50,6 +52,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
@@ -58,7 +61,8 @@ import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
-import TransactionLogs.Types
+import TransactionLogs.Types hiding (ONDC)
+import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -137,7 +141,13 @@ data AppCfg = AppCfg
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     quoteRespondCoolDown :: Int,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic, FromDhall)
 
@@ -231,7 +241,13 @@ data AppEnv = AppEnv
     psqlConn :: PG.Connection,
     serviceClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseCfg :: ClickhouseCfg,
-    kafkaClickhouseCfg :: ClickhouseCfg
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic)
 
@@ -250,7 +266,7 @@ toConnectInfo config =
     }
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv cfg@AppCfg {..} = do
+buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
@@ -287,7 +303,6 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
-  -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
@@ -310,17 +325,36 @@ type Flow = FlowR AppEnv
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache performLookup
     where
-      performLookup sub =
-        fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id >>>= \registryUrl ->
-          Registry.registryLookup registryUrl sub
-      fetchFromDB subscriberId uniqueId merchantId = do
-        mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
+      performLookup sub = do
+        mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId sub.subscriber_id sub.unique_key_id
         case mbRegistryMapFallback of
-          Just registryMapFallback -> pure $ Just registryMapFallback.registryUrl
-          Nothing ->
-            do
-              mbMerchant <- CM.findById (Id merchantId)
-              pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
+          Just registryMapFallback -> do
+            Registry.registryLookup registryMapFallback.registryUrl sub
+          Nothing -> do
+            merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
+            performRegistryLookup merchant.gatewayAndRegistryPriorityList sub merchant 1
+      fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
+      fetchUrlFromList priorityList = do
+        case priorityList of
+          (NY : _) -> asks (.nyRegistryUrl)
+          _ -> asks (.ondcRegistryUrl)
+      retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      retryWithNextRegistry _ registryUrl sub merchant tryNumber = do
+        logError $ "registry " <> show registryUrl <> " seems down, trying with next registryUrl"
+        let maxRetries = length merchant.gatewayAndRegistryPriorityList
+        if tryNumber > maxRetries
+          then throwError $ InternalError "Max retries reached, perhaps all registries are down"
+          else do
+            let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+            performRegistryLookup networkPriorityList sub merchant tryNumber
+      performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      performRegistryLookup priorityList sub merchant tryNumber = do
+        fetchUrlFromList priorityList >>= \registryUrl -> do
+          Registry.registryLookup registryUrl sub
+            `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
+      reorderList :: [a] -> [a]
+      reorderList [] = []
+      reorderList (x : xs) = xs ++ [x]
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

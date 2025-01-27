@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,7 +15,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.ServiceTierType where
 
@@ -47,6 +46,10 @@ data ServiceTierType
   | SUV_PLUS
   | DELIVERY_BIKE
   | DELIVERY_LIGHT_GOODS_VEHICLE
+  | BUS_NON_AC
+  | BUS_AC
+  | HERITAGE_CAB
+  | EV_AUTO_RICKSHAW
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 $(mkHttpInstancesForEnum ''ServiceTierType)

@@ -1,11 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.TicketBooking where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.TicketBooking
@@ -28,7 +26,7 @@ data TicketBookingT f = TicketBookingT
     status :: B.C f Domain.Types.Extra.TicketBooking.BookingStatus,
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    visitDate :: B.C f Data.Time.Calendar.Day,
+    visitDate :: B.C f Data.Time.Day,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

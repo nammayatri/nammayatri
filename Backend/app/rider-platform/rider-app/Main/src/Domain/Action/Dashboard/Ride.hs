@@ -11,28 +11,31 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.Dashboard.Ride
-  ( shareRideInfo,
-    shareRideInfoByShortId,
-    rideList,
+  ( getRideInfo,
+    getShareRideInfoByShortId,
+    getRideList,
     rideInfo,
-    multipleRideCancel,
-    MultipleRideCancelReq,
+    getShareRideInfo,
+    postRideCancelMultiple,
     rideSync,
-    ticketRideList,
+    getRideKaptureList,
+    getRideTripRoute,
+    getRidePickupRoute,
+    postRideSyncMultiple,
+    validateMultipleRideSyncReq,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified "dashboard-helper-api" Dashboard.Common as Common
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
@@ -50,14 +53,18 @@ import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
@@ -71,25 +78,6 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-
-data BookingCancelledReq = BookingCancelledReq
-  { bookingId :: Id DTB.Booking,
-    cancellationReasonCode :: CancellationReasonCode,
-    cancellationStage :: CancellationStage,
-    additionalInfo :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-newtype MultipleRideCancelReq = MultipleRideCancelReq
-  { multipleRideCancelInfo :: [BookingCancelledReq]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Common.HideSecrets MultipleRideCancelReq where
-  hideSecrets = identity
-
----------------------------------------------------------------------
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
@@ -110,16 +98,21 @@ mkCommonBookingLocation Location {..} =
 mkAddressRes :: LocationAddress -> Common.LocationAddress
 mkAddressRes LocationAddress {..} = Common.LocationAddress {..}
 
-shareRideInfo ::
+getShareRideInfo ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Ride ->
   Flow Common.ShareRideInfoRes
-shareRideInfo merchantId rideId = do
+getShareRideInfo merchantId _ rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   buildShareRideInfo merchantId ride
 
-shareRideInfoByShortId :: ShortId DM.Merchant -> ShortId Common.Ride -> Flow Common.ShareRideInfoRes
-shareRideInfoByShortId merchantId rideId = do
+getShareRideInfoByShortId ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  ShortId Common.Ride ->
+  Flow Common.ShareRideInfoRes
+getShareRideInfoByShortId merchantId _ rideId = do
   let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
   ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
   buildShareRideInfo merchantId ride
@@ -203,8 +196,9 @@ castSosStatus = \case
 
 ---------------------------------------------------------------------
 
-rideList ::
+getRideList ::
   ShortId DM.Merchant ->
+  Context.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -214,14 +208,14 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
+getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
   case (mbFrom, mbTo) of
     (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
@@ -256,8 +250,15 @@ buildRideListItem QRide.RideItem {..} = do
         ..
       }
 
-ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+getRideKaptureList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.TicketRideListRes
+getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ = do
   merchant <- findMerchantByShortId merchantShortId
   let totalRides = 5
   let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
@@ -321,6 +322,15 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           tripCategory = detail.tripCategory,
           endOtp = ride.endOtp
         }
+
+getRideInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Flow Common.RideInfoRes
+getRideInfo merchantShortId _ rideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  rideInfo merchant.id rideId
 
 rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
 rideInfo merchantId reqRideId = do
@@ -406,7 +416,8 @@ rideInfo merchantId reqRideId = do
         fareBreakup = transformFareBreakup <$> fareBreakup,
         estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
         computedPrice = ride.totalFare <&> (.amount),
-        rideCreatedAt = ride.createdAt
+        rideCreatedAt = ride.createdAt,
+        roundTrip = booking.roundTrip
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
@@ -446,9 +457,10 @@ castCancellationSource = \case
 
 bookingCancel ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  BookingCancelledReq ->
+  Common.BookingCancelledReq ->
   m ()
-bookingCancel BookingCancelledReq {..} = do
+bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
+  let bookingId = cast @Common.Booking @DTB.Booking reqBookingId
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
   unless (isBookingCancellable booking) $
     throwError (BookingInvalidStatus (show booking.status))
@@ -483,14 +495,17 @@ buildBookingCancellationReason booking mbRideId = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }
 
-multipleRideCancel ::
-  MultipleRideCancelReq ->
+postRideCancelMultiple ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideCancelReq ->
   Flow APISuccess
-multipleRideCancel req = do
+postRideCancelMultiple _ _ req = do
   mapM_ bookingCancel req.multipleRideCancelInfo
   pure Success
 
@@ -515,3 +530,43 @@ rideSync merchant reqRideId = do
   Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
   void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
   pure Success
+
+getRideTripRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  Flow Maps.GetRoutesResp
+getRideTripRoute merchantShortId _ rideId pickupLocationLat pickupLocationLon =
+  mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
+
+getRidePickupRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  Flow Maps.GetRoutesResp
+getRidePickupRoute merchantShortId _ rideId currLocationLat currLocationLon =
+  mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
+
+postRideSyncMultiple ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideSyncReq ->
+  Flow Common.MultipleRideSyncResp
+postRideSyncMultiple merchantShortId _ req = do
+  runRequestValidation validateMultipleRideSyncReq req
+  merchant <- findMerchantByShortId merchantShortId
+  logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
+  respItems <- forM req.rides $ \reqItem -> do
+    info <- handle Common.listItemErrHandler $ do
+      void $ rideSync merchant reqItem.rideId
+      pure Common.SuccessItem
+    pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+  pure $ Common.MultipleRideSyncResp {list = respItems}
+
+validateMultipleRideSyncReq :: Validate Common.MultipleRideSyncReq
+validateMultipleRideSyncReq Common.MultipleRideSyncReq {..} = do
+  validateField "rides" rides $ UniqueField @"rideId"

@@ -19,6 +19,8 @@ module Lib.DriverScore.Types
 where
 
 import Data.Time
+import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -67,5 +69,7 @@ data DriverRideRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
         ride :: DR.Ride,
+        booking :: DB.Booking,
+        driverInfo :: DI.DriverInformation,
         fareParameter :: Maybe FareParameters
       }

@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
       Se.Set Beam.bookingSyncStatusCallSecondsDiffThreshold bookingSyncStatusCallSecondsDiffThreshold,
@@ -69,8 +70,13 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.localPoliceNumber localPoliceNumber,
       Se.Set Beam.makeMultiModalSearch (Just makeMultiModalSearch),
       Se.Set Beam.maximumWalkDistance (Just maximumWalkDistance),
+      Se.Set Beam.metroBookingAllowed metroBookingAllowed,
+      Se.Set Beam.minRidesToBlock minRidesToBlock,
+      Se.Set Beam.minRidesToShowCancellationRate minRidesToShowCancellationRate,
       Se.Set Beam.payoutBatchDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay),
       Se.Set Beam.payoutBatchSize payoutBatchSize,
+      Se.Set Beam.payoutReferralProgram (Just payoutReferralProgram),
+      Se.Set Beam.payoutReferralStartDate (Just payoutReferralStartDate),
       Se.Set Beam.placeNameCacheExpiryDays placeNameCacheExpiryDays,
       Se.Set Beam.policeTriggerDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay),
       Se.Set Beam.postRideSafetyNotificationDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) postRideSafetyNotificationDelay),
@@ -80,6 +86,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.sensitiveWordsForExactMatch sensitiveWordsForExactMatch,
       Se.Set Beam.settleCancellationFeeBeforeNextRide settleCancellationFeeBeforeNextRide,
       Se.Set Beam.specialZoneRadius specialZoneRadius,
+      Se.Set Beam.thresholdCancellationPercentageToBlock thresholdCancellationPercentageToBlock,
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
       Se.Set Beam.useUserSettingsForSafetyIVR (Just useUserSettingsForSafetyIVR),
@@ -92,10 +99,13 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
 
 instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   fromTType' (Beam.RiderConfigT {..}) = do
+    now <- Kernel.Types.Common.getCurrentTime
+    let payoutReferralStartDate_ = fromMaybe now payoutReferralStartDate
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
+            autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
             bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,
@@ -125,8 +135,13 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             makeMultiModalSearch = fromMaybe False makeMultiModalSearch,
             maximumWalkDistance = fromMaybe 600 maximumWalkDistance,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            metroBookingAllowed = metroBookingAllowed,
+            minRidesToBlock = minRidesToBlock,
+            minRidesToShowCancellationRate = minRidesToShowCancellationRate,
             payoutBatchDelay = fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay),
             payoutBatchSize = payoutBatchSize,
+            payoutReferralProgram = fromMaybe False payoutReferralProgram,
+            payoutReferralStartDate = payoutReferralStartDate_,
             placeNameCacheExpiryDays = placeNameCacheExpiryDays,
             policeTriggerDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay),
             postRideSafetyNotificationDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay),
@@ -136,6 +151,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             sensitiveWordsForExactMatch = sensitiveWordsForExactMatch,
             settleCancellationFeeBeforeNextRide = settleCancellationFeeBeforeNextRide,
             specialZoneRadius = specialZoneRadius,
+            thresholdCancellationPercentageToBlock = thresholdCancellationPercentageToBlock,
             timeDiffFromUtc = timeDiffFromUtc,
             trackingShortUrlPattern = trackingShortUrlPattern,
             useUserSettingsForSafetyIVR = fromMaybe False useUserSettingsForSafetyIVR,
@@ -149,6 +165,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
+        Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,
         Beam.bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,
@@ -178,8 +195,13 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.makeMultiModalSearch = Just makeMultiModalSearch,
         Beam.maximumWalkDistance = Just maximumWalkDistance,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.metroBookingAllowed = metroBookingAllowed,
+        Beam.minRidesToBlock = minRidesToBlock,
+        Beam.minRidesToShowCancellationRate = minRidesToShowCancellationRate,
         Beam.payoutBatchDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay,
         Beam.payoutBatchSize = payoutBatchSize,
+        Beam.payoutReferralProgram = Just payoutReferralProgram,
+        Beam.payoutReferralStartDate = Just payoutReferralStartDate,
         Beam.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
         Beam.policeTriggerDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay,
         Beam.postRideSafetyNotificationDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) postRideSafetyNotificationDelay,
@@ -189,6 +211,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.sensitiveWordsForExactMatch = sensitiveWordsForExactMatch,
         Beam.settleCancellationFeeBeforeNextRide = settleCancellationFeeBeforeNextRide,
         Beam.specialZoneRadius = specialZoneRadius,
+        Beam.thresholdCancellationPercentageToBlock = thresholdCancellationPercentageToBlock,
         Beam.timeDiffFromUtc = timeDiffFromUtc,
         Beam.trackingShortUrlPattern = trackingShortUrlPattern,
         Beam.useUserSettingsForSafetyIVR = Just useUserSettingsForSafetyIVR,

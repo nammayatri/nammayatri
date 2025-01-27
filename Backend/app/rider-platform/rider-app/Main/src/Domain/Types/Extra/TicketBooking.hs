@@ -1,7 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.TicketBooking where
 
@@ -9,14 +6,7 @@ import Control.Lens.Operators
 import Data.Aeson
 import Data.OpenApi
 import qualified Data.Text as T
-import qualified Data.Time.Calendar
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
-import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
-import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 

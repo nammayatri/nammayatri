@@ -22,6 +22,7 @@ module Environment
     BAPs (..),
     buildAppEnv,
     releaseAppEnv,
+    cacheRegistryKey,
   )
 where
 
@@ -30,7 +31,9 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Database.PostgreSQL.Simple as PG
+import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
@@ -52,7 +55,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -62,13 +65,15 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
 import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
-import TransactionLogs.Types
+import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
@@ -95,6 +100,7 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     metricsSearchDurationTimeout :: Seconds,
@@ -143,7 +149,14 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic, FromDhall)
 
@@ -165,6 +178,7 @@ data AppEnv = AppEnv
     dashboardClickhouseCfg :: ClickhouseCfg,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     graceTerminationPeriod :: Seconds,
@@ -231,7 +245,14 @@ data AppEnv = AppEnv
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
     sosAlertsTopicARN :: Text,
-    psqlConn :: PG.Connection
+    psqlConn :: PG.Connection,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic)
 
@@ -251,7 +272,7 @@ buildAppEnv cfg@AppCfg {..} = do
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -282,7 +303,6 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
-  -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
@@ -315,17 +335,39 @@ instance Registry Flow where
   registryLookup = Registry.withSubscriberCache performLookup
     where
       performLookup sub = do
-        fetchFromDB sub.merchant_id >>= \registryUrl -> do
+        merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
+        performRegistryLookup merchant.gatewayAndRegistryPriorityList sub merchant 1
+      fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
+      fetchUrlFromList priorityList = do
+        case priorityList of
+          (NY : _) -> asks (.nyRegistryUrl)
+          _ -> asks (.ondcRegistryUrl)
+      retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      retryWithNextRegistry _ registryUrl sub merchant tryNumber = do
+        logError $ "registry " <> show registryUrl <> " seems down, trying with next registryUrl"
+        let maxRetries = length merchant.gatewayAndRegistryPriorityList
+        if tryNumber > maxRetries
+          then throwError $ InternalError "Max retries reached, perhaps all registries are down"
+          else do
+            let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+            performRegistryLookup networkPriorityList sub merchant tryNumber
+      performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      performRegistryLookup priorityList sub merchant tryNumber = do
+        fetchUrlFromList priorityList >>= \registryUrl -> do
           Registry.registryLookup registryUrl sub
-      fetchFromDB merchantId = do
-        merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
-        pure $ merchant.registryUrl
+            `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
+      reorderList :: [a] -> [a]
+      reorderList [] = []
+      reorderList (x : xs) = xs ++ [x]
+
+cacheRegistryKey :: Text
+cacheRegistryKey = "taxi-bap:registry:"
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Redis.get . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  setKey = Redis.set . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  delKey = Redis.del . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  getKey = Redis.get . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  setKey = Redis.set . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  delKey = Redis.del . (cacheRegistryKey <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . (cacheRegistryKey <>) . lookupRequestToRedisKey

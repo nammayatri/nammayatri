@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FareProduct where
@@ -17,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FareProduct = FareProduct
   { area :: Lib.Types.SpecialLocation.Area,
+    disableRecompute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     farePolicyId :: Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct,

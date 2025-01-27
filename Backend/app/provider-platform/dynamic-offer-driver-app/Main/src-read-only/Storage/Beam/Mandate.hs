@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Mandate where
@@ -21,12 +19,14 @@ data MandateT f = MandateT
     id :: B.C f Kernel.Prelude.Text,
     mandatePaymentFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     maxAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerApp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerAppName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startDate :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.Mandate.MandateStatus,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

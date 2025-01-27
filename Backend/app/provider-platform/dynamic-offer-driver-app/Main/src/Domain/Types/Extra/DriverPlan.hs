@@ -1,15 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.DriverPlan where
 
 import Data.Aeson
 import qualified Data.Aeson as A
 import Kernel.Prelude
-import Kernel.Types.Common
-import Kernel.Types.Id
 
 -- Extra code goes here --
 

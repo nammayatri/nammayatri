@@ -1,26 +1,16 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.OnSearch
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
-import qualified Data.Maybe
-import qualified Data.Text
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
-import qualified Domain.Types.SearchRequest
-import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (logInfo, type (:::))
 import Kernel.Utils.Error
 import Tools.Error
 
@@ -113,6 +103,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
+      let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
       pure $
         Left $
@@ -145,6 +136,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               tripCategory = tripCategory,
               vehicleCategory,
               vehicleIconUrl = vehicleIconUrl,
+              tipOptions,
               smartTipSuggestion,
               smartTipReason
             }

@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 
 module Types.DBSync.Create where
@@ -15,7 +14,8 @@ data DBCreateObject = DBCreateObject
   { dbModel :: DBModel,
     contents :: DBCreateObjectContent,
     mappings :: Mapping,
-    contentsObj :: A.Object
+    contentsObj :: A.Object,
+    forceDrainToDB :: Bool
   }
   deriving stock (Show)
 
@@ -26,6 +26,7 @@ instance FromJSON DBCreateObject where
     tagObject :: DBModelObject <- command A..: "tag"
     contents <- command A..: "contents"
     mbMappings <- o A..:? "mappings"
+    forceDrainToDB <- o A..:? "forceDrainToDB" A..!= False
     contentsObj <-
       o A..:? "modelObject" >>= \case
         Just (A.Object obj) -> pure obj

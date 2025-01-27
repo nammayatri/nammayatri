@@ -7,9 +7,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
@@ -266,7 +264,7 @@ data MerchantConfig = MerchantConfig
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
 
-data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION
   deriving stock (Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

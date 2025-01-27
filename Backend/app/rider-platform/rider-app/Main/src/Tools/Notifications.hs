@@ -15,7 +15,6 @@
 module Tools.Notifications where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
-import Data.Aeson (object)
 import Data.Default.Class
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -24,6 +23,7 @@ import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
+import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -78,11 +78,6 @@ templateText txt = "{#" <> txt <> "#}"
 
 createNotificationReq :: Text -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
 createNotificationReq key modifier = modifier $ def {notificationKey = key}
-
-data EmptyDynamicParam = EmptyDynamicParam
-
-instance ToJSON EmptyDynamicParam where
-  toJSON EmptyDynamicParam = object []
 
 data NotificationRequest = NotificationRequest
   { subCategory :: Maybe Notification.SubCategory,
@@ -169,27 +164,28 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language
   when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
   whenJust mbMerchantPN \merchantPN -> do
-    let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
-    notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
-    notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
-    let title = buildTemplate dynamicTemplateParams merchantPN.title
-        body = buildTemplate dynamicTemplateParams merchantPN.body
-        notificationData =
-          Notification.NotificationReq
-            { category = merchantPN.fcmNotificationType,
-              subCategory = notiData.subCategory,
-              showNotification = notiData.showType,
-              messagePriority = notiData.priority,
-              entity = entity,
-              body = body,
-              title = title,
-              auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
-              sound = notificationSound,
-              ttl = notiData.ttl,
-              dynamicParams = dynamicParams
-            }
-    --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-    notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+    when (merchantPN.shouldTrigger) $ do
+      let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
+      notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
+      notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
+      let title = buildTemplate dynamicTemplateParams merchantPN.title
+          body = buildTemplate dynamicTemplateParams merchantPN.body
+          notificationData =
+            Notification.NotificationReq
+              { category = merchantPN.fcmNotificationType,
+                subCategory = notiData.subCategory,
+                showNotification = notiData.showType,
+                messagePriority = notiData.priority,
+                entity = entity,
+                body = body,
+                title = title,
+                auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
+                sound = notificationSound,
+                ttl = notiData.ttl,
+                dynamicParams = dynamicParams
+              }
+      --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
+      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 --------------------------------------------------------------------------------------------------
 
@@ -202,7 +198,7 @@ notifyOnDriverOfferIncoming ::
   [DBppDetails.BppDetails] ->
   m ()
 notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList = do
-  isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+  isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
       notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
   dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty
@@ -285,6 +281,11 @@ newtype RideStartedParam = RideStartedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype TripAssignedData = TripAssignedData
+  { tripCategory :: Maybe TripCategory
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 notifyOnRideStarted ::
   ServiceFlow m r =>
   SRB.Booking ->
@@ -296,7 +297,7 @@ notifyOnRideStarted booking ride = do
       driverName = ride.driverName
       serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let entity = Notification.Entity Notification.Product rideId.getId ()
+  let entity = Notification.Entity Notification.Product rideId.getId (TripAssignedData booking.tripCategory)
       dynamicParams = RideStartedParam driverName
   -- finding other booking parties for delivery --
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
@@ -354,10 +355,9 @@ notifyOnRideCompleted booking ride otherParties = do
     riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
-      maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
           postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
-      createJobIn @_ @'PostRideSafetyNotification scheduleAfter maxShards (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
+      createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
 
 -- title = "Trip finished!"
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"

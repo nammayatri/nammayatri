@@ -41,6 +41,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (getValueToLocalStore, KeyStore(..))
+import Common.RemoteConfig.Utils(getInvoiceConfig)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -201,6 +202,8 @@ topPillView config push =
 
 priceAndDistanceUpdateView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 priceAndDistanceUpdateView config push = 
+  let invoiceConfig = getInvoiceConfig config.variant config.driverCity
+  in
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -246,6 +249,14 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
+        , textView 
+          $ [   height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text $ config.driverInvoiceText
+              , color Color.black800
+              , visibility $ boolToVisibility (fromMaybe true invoiceConfig.isEnabled && config.isDriver)
+              , margin $ MarginBottom 10
+            ] <> FontStyle.body1 TypoGraphy
         , linearLayout [
             height WRAP_CONTENT
           , width MATCH_PARENT
@@ -798,13 +809,14 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
-          height $ V 165
-        , width $ V 165
-        , margin $ MarginVertical 8 13
-        , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
-      ]
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ]
+        $ imageView
+            [ height $ V 165
+            , width $ V 165
+            , margin $ MarginVertical 8 13
+            , id $ getNewIDWithTag config.driverUpiQrCard.id
+            , qr (Qr config.driverUpiQrCard.paymentVpa 165 0)
+            ]
     ]
   ]
 
@@ -820,7 +832,7 @@ noVpaView config =
     , cornerRadius 16.0
     , gravity CENTER
     , padding $ Padding 16 16 16 16
-    , margin $ MarginBottom 24
+    , margin $ MarginVertical 10 10
     ][
         imageView
         [ height $ V 24

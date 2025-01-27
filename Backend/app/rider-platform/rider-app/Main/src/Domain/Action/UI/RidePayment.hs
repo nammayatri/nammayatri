@@ -1,11 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
 import Data.Maybe (listToMaybe)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
@@ -24,7 +20,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -32,7 +27,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import qualified Tools.Payment as Payment
 
 data DFareBreakup = DFareBreakup

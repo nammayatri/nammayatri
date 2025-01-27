@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), VehicleCategory(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -28,7 +28,7 @@ import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
+import Common.Types.App (EventPayload(..), LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -51,7 +51,7 @@ import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, n
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastYears, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
-import Foreign.Class (class Decode, class Encode, decode)
+import Foreign.Class (class Decode, class Encode, decode, encode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -75,12 +75,12 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo, HomeScreenState)
-import Data.Int (fromString, even, fromNumber)
+import Data.Int (fromString, even, fromNumber, ceil, toNumber)
 import Data.Int as Int
 import Data.Function.Uncurried (Fn1)
 import Storage (getValueToLocalStore)
@@ -95,6 +95,7 @@ import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
 import Data.Map as DM
 import Engineering.Helpers.Utils as EHU
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Engineering.Helpers.GeoHash as EHG
 import Data.List as DL
 import Data.Argonaut.Core
@@ -112,13 +113,14 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import JBridge as JB
 
 
 type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
-foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
+foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> String -> action)  -> Effect Unit
 foreign import onMarkerClickCallbackMapper :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> String
 foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
@@ -131,8 +133,9 @@ foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
+foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
-foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Effect Unit 
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
@@ -374,6 +377,9 @@ getVehicleType vehicleType =
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
+    "DELIVERY_LIGHT_GOODS_VEHICLE" -> getString TRUCK
+    "BUS_NON_AC" -> "Non AC Bus"
+    "BUS_AC" -> "AC Bus"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -418,8 +424,8 @@ rideLabelConfig _ = [
       text = getString ASSISTANCE_REQUIRED,
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_wheelchair,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig
     { label = "Safety",
@@ -427,8 +433,8 @@ rideLabelConfig _ = [
       text = getString SAFETY_IS_OUR_RESPONSIBILITY,
       secondaryText = getString LEARN_MORE,
       imageUrl = fetchImage FF_ASSET  "ny_ic_user_safety_shield",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = fetchImage FF_ASSET  "ic_cancel_prevention"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET  "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig  
     { label = "GOTO",
@@ -447,7 +453,7 @@ rideLabelConfig _ = [
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_location_pin_white,",
       cancelText = "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     }
 ]
 
@@ -605,6 +611,7 @@ getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
+      city = getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys
   in case variant of
       "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -620,10 +627,10 @@ getVehicleVariantImage variant =
       "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "AUTO_RICKSHAW" -> 
-        case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
+        case city of
+          _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
           "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-          "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           _           -> fetchImage FF_ASSET "ic_vehicle_front"
       "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
@@ -636,6 +643,9 @@ getVehicleVariantImage variant =
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
+
+isKeralaCity :: String -> Boolean 
+isKeralaCity city = DA.elem city ["Kochi", "Kozhikode", "Thrissur", "Trivandrum"]
 
 getVariantRideType :: String -> String
 getVariantRideType variant =
@@ -729,6 +739,22 @@ splitBasedOnLanguage str =
                 "TE_IN" | len > 6 -> 6
                 _ -> 0
 
+emitTerminateApp :: Maybe String -> Boolean -> Unit
+emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , ride_status : Nothing
+  , trip_id : Nothing
+  , screen : screen
+  , exit_app : exitApp
+  }
+}
+
+isParentView :: LazyCheck -> Boolean
+isParentView lazy = false -- NOTE:: Adding this temporary to pass the build check
+
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =
   let config = getAppConfig appConfig 
@@ -771,6 +797,7 @@ generateLanguageList languages = map getLanguage languages
       "MALAYALAM" -> {name:"മലയാളം", value:"ML_IN", subtitle: "Malayalam"}
       "BENGALI" -> {name:"বাংলা", value:"BN_IN", subtitle: "Bengali"}
       "ENGLISH" -> {name : "English", value: "EN_US", subtitle: "English"}
+      "ODIA" -> {name: "ଓଡିଆ", value: "OD_IN", subtitle: "Odia"}
       _ -> {name : "English", value: "EN_US", subtitle: "English"}
 
 getDriverStatus :: String -> DriverStatus
@@ -969,6 +996,7 @@ getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
   SA.HATCHBACK_TIER -> "ic_hatchback_ac"
   SA.TAXI -> "ic_taxi"
   SA.TAXI_PLUS -> "ny_ic_sedan_ac"
+  SA.SUV_PLUS_TIER -> "ny_ic_suv_plus_side"
   _ -> "ny_ic_sedan"
 
 getLatestAndroidVersion :: Merchant -> Int
@@ -1000,6 +1028,11 @@ getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
 
+getDefaultPixelSize :: Int -> Int
+getDefaultPixelSize size =
+  let pixels = runFn1 getPixels ""
+      androidDensity = (runFn1 getDeviceDefaultDensity "") / defaultDensity
+  in ceil $ (toNumber size / pixels) * androidDensity
     
 sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType 
 sortIssueCategories language (GetCategoriesRes response) =
@@ -1049,6 +1082,7 @@ driverVehicleToVechicleServiceTier vehicle =
         "AC Mini" -> SA.ECO
         "AUTO_RICKSHAW"  ->  SA.AUTO_RICKSHAW
         "XL Cab" -> SA.SUV_TIER
+        "XL Plus" -> SA.SUV_PLUS_TIER
         _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
@@ -1077,6 +1111,7 @@ vehicleVariantImage vehicle =
                   "AUTO"  ->  "ny_ic_auto_left_view"
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
+                  "SUV_PLUS" -> "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"
 
 getVehicleVariantName :: VehicleCategory -> String
@@ -1086,7 +1121,15 @@ getVehicleVariantName variant =
                   CarCategory -> getString CAB
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
+                  TruckCategory -> getString TRUCK
+                  BusCategory ->  "BUS"
                   UnKnown -> ""
+
+defaultNotificationBody :: NotificationBody
+defaultNotificationBody = {
+  title : "",
+  message : ""
+}
 
 getRegisterationStepClickEventName :: ST.RegisterationStep -> String
 getRegisterationStepClickEventName step = case step of
@@ -1170,3 +1213,62 @@ getVehicleCategorySelectedEvent category = case category of
   ST.BikeCategory -> "bike_selected"
   ST.AmbulanceCategory -> "ambulance_selected"
   _ -> ""
+
+
+getHvErrorMsg :: Maybe String -> String
+getHvErrorMsg errorCode = 
+  case errorCode of
+    Just "112" -> getString AADHAAR_FRONT_NOT_DETECTED
+    Just "113" -> getString AADHAAR_BACK_NOT_DETECTED
+    Just "151" -> getString UNABLE_TO_EXTRACT_NAME
+    Just "152" -> getString UNABLE_TO_EXTRACT_DOB
+    Just "134" -> getString UNABLE_TO_EXTRACT_ID
+    Just "128" -> getString IMAGE_B_W
+    Just "136" -> getString PARTIAL_DOC_DETECTED
+    Just "127" -> getString DOC_IS_BLURRED
+    Just "165" -> getString FACE_MATCH_FAILED
+    Just "114" -> getString PAN_NOT_DETECTED
+    Just "120" -> getString UNABLE_TO_VERIFY_SELFIE
+    Just "123" -> getString BLURRED_SELFIE
+    Just "124" -> getString EYES_CLOSED_SELFIE
+    Just "125" -> getString MULTIPLE_FACES_IN_SELFIE
+    Just "126" -> getString FACE_BLOCKED
+    Just "140" -> getString REMOVE_EYEWERE
+    Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
+    _ -> getString UNKNOWN_ERROR
+
+isTokenWithExpValid :: String -> Boolean
+isTokenWithExpValid token = do
+  let tokenWithExp = DS.split (DS.Pattern "<$>") token
+      cachedToken = fromMaybe "" (tokenWithExp DA.!! 0)
+      isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (ReExport.getCurrentUTC "")) > 0
+  isTokenValid && not (DS.null cachedToken)
+  
+getSrcDestConfig :: HomeScreenState -> UpdateRouteSrcDestConfig
+getSrcDestConfig state = 
+  if state.props.currentStage == ST.RideAccepted then
+    {
+      srcLat : state.data.currentDriverLat,
+      srcLon : state.data.currentDriverLon,
+      destLat : state.data.activeRide.src_lat,
+      destLon : state.data.activeRide.src_lon,
+      source : "",
+      destination : state.data.activeRide.source
+    }
+  else if state.data.activeRide.tripType == ST.Rental then
+    {
+      srcLat : fromMaybe state.data.activeRide.src_lat state.data.activeRide.lastStopLat,
+      srcLon : fromMaybe state.data.activeRide.src_lon state.data.activeRide.lastStopLon,
+      destLat : fromMaybe 0.0 state.data.activeRide.nextStopLat,
+      destLon : fromMaybe 0.0 state.data.activeRide.nextStopLon,
+      source : fromMaybe state.data.activeRide.source state.data.activeRide.lastStopAddress,
+      destination : fromMaybe "" state.data.activeRide.nextStopAddress
+    }
+  else {
+      srcLat : state.data.activeRide.src_lat,
+      srcLon : state.data.activeRide.src_lon,
+      destLat : state.data.activeRide.dest_lat,
+      destLon : state.data.activeRide.dest_lon,
+      source : state.data.activeRide.source,
+      destination : fromMaybe "" state.data.activeRide.destination
+  }

@@ -1,19 +1,14 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.VehicleInsuranceExtra where
 
 import Domain.Types.Image
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleInsurance as BeamVI
-import Storage.Queries.OrphanInstances.VehicleInsurance
+import Storage.Queries.OrphanInstances.VehicleInsurance ()
 
 -- Extra code goes here --
 

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -10,6 +9,7 @@ import qualified Domain.Types.DriverFee
 import Domain.Types.Extra.Notification as ReExport
 import qualified Domain.Types.Extra.Notification
 import qualified Domain.Types.Mandate
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -35,6 +35,7 @@ data Notification = Notification
     sourceAmount :: Kernel.Types.Common.HighPrecMoney,
     status :: Domain.Types.Extra.Notification.NotificationStatus,
     txnDate :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)

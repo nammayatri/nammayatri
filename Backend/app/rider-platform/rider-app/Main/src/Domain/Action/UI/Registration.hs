@@ -209,8 +209,9 @@ auth ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   runRequestValidation validateAuthReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
@@ -234,13 +235,13 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
+            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           Person.findByEmailAndMerchantId merchant.id email
-            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
+            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
         return (person, EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
@@ -257,7 +258,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
       RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
@@ -309,8 +310,9 @@ signatureAuth ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   runRequestValidation validateSignatureAuthReq req
   smsCfg <- asks (.smsCfg)
@@ -326,7 +328,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) merchant Nothing) return
+      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
@@ -335,11 +337,11 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
   if not person.blocked
     then do
       deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing person
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing person
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
@@ -358,13 +360,14 @@ buildPerson ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe Device ->
   DMerchant.Merchant ->
   Context.City ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DPO.PartnerOrganization) ->
   m SP.Person
-buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion clientDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId = do
+buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion mbRnVersion clientDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp =
@@ -421,6 +424,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         clientSdkVersion = clientSdkVersion,
         clientBundleVersion = clientBundleVersion,
         clientConfigVersion = clientConfigVersion,
+        clientReactNativeVersion = mbRnVersion,
         clientDevice = clientDevice,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         whatsappNotificationEnrollStatus = Nothing,
@@ -446,7 +450,9 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
-        informPoliceSos = False
+        informPoliceSos = False,
+        payoutVpa = Nothing,
+        frequentLocGeohashes = Just []
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -582,11 +588,12 @@ createPerson ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Text ->
   Maybe Device ->
   DMerchant.Merchant ->
   Maybe (Id DPO.PartnerOrganization) ->
   m SP.Person
-createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant mbPartnerOrgId = do
+createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant mbPartnerOrgId = do
   let currentCity = merchant.defaultCity
   merchantOperatingCityId <-
     CQMOC.findByMerchantIdAndCity merchant.id currentCity
@@ -595,7 +602,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
           ( MerchantOperatingCityNotFound $
               "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
           )
-  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId
+  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
@@ -621,7 +628,14 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             referralCount = 0,
             createdAt = now,
             updatedAt = now,
-            ticketsBookedInEvent = Just 0
+            ticketsBookedInEvent = Just 0,
+            referralAmountPaid = 0,
+            referralEarnings = 0,
+            referredByEarnings = 0,
+            validActivations = 0,
+            referredByEarningsPayoutStatus = Nothing,
+            backlogPayoutStatus = Nothing,
+            backlogPayoutAmount = 0
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person
@@ -762,5 +776,5 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 allowBlockedUserLogin = Nothing
               }
       createdPerson <-
-        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing merchant Nothing
+        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
       pure $ createdPerson.id

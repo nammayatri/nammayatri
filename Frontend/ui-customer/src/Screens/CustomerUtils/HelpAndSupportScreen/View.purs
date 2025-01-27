@@ -46,11 +46,11 @@ import Language.Types (STR(..))
 import Prelude (when, Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, shimmerFrameLayout, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.HelpAndSupportScreen.Transformer 
+import Screens.HelpAndSupportScreen.Transformer
 import Screens.Types as ST
 import Services.API (RideBookingListRes(..), FetchIssueListResp(..), FetchIssueListReq(..))
 import Services.Backend as Remote
@@ -61,6 +61,10 @@ import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
+import Components.Loader.DotLoader as DotLoader
+import Components.Loader.Types as DotLoaderTypes
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -92,6 +96,7 @@ view push state =
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
+  , onBackPressed push $ const BackPressed
  ]$[linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -99,9 +104,8 @@ view push state =
     , background Color.white900
     , accessibility if state.props.showDeleteAccountView || state.props.isCallConfirmation || DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
-    , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL 
+    , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , scrollView
           [ height WRAP_CONTENT
@@ -113,10 +117,37 @@ view push state =
             , orientation VERTICAL
             ]([
                 linearLayout
+                [ visibility $ boolToVisibility state.data.isLoading
+                , height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ][
+                  linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation HORIZONTAL
+                  , background Color.catskillWhite
+                  ] [  textView $
+                      [ text $ getString YOUR_RECENT_RIDE
+                      , color Color.charcoalGrey
+                      , width WRAP_CONTENT
+                      , margin $ Margin 16 12 0 12
+                      ] <> FontStyle.subHeading2 LanguageStyle
+                  ],
+                  linearLayout
+                  [ visibility $ boolToVisibility state.data.isLoading
+                  , height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , padding (Padding 0 10 0 10)
+                  , gravity CENTER
+                  , orientation VERTICAL
+                  ] [recentRideViewShimmer]
+                ],
+                linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation HORIZONTAL
-                , visibility $ boolToVisibility $ not $  state.props.apiFailure || state.data.isNull
+                , visibility $ boolToVisibility $ not $  state.props.apiFailure || state.data.isNull || state.data.isLoading
                 , background Color.catskillWhite
                 ] [  textView $
                     [ text $ getString YOUR_RECENT_RIDE
@@ -156,9 +187,9 @@ view push state =
     <> (if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)] else [])
     <> (if state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL then [issueListModal push state] else [])
 
-------------------------------- recentRide --------------------------
-recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideView state push =
+
+recentRideViewShimmer :: forall w . PrestoDOM (Effect Unit) w
+recentRideViewShimmer  =
   linearLayout
   [ margin (Margin 16 16 16 16)
   , background Color.white900
@@ -167,7 +198,100 @@ recentRideView state push =
   , orientation VERTICAL
   , stroke ("1," <> Color.greyLight)
   , height WRAP_CONTENT
-  , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
+  ][
+    linearLayout
+    [ height $ if EHC.os == "IOS" then V 134 else WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    ][  linearLayout
+        [ background Color.greyLight
+        , PP.cornerRadii $ PTD.Corners 8.0 true false false false
+        , height MATCH_PARENT
+        , width $ V 130
+        ][]
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin (MarginLeft 12) ][
+            linearLayout [
+                width MATCH_PARENT
+              , weight 1.0
+              , height $ V 0
+              , orientation VERTICAL
+              , padding (Padding 0 10 0 10)
+              ] [
+                linearLayout [
+                  width $ V 100
+                , background Color.greyLight
+                , height $ V 10
+                , margin (Margin 0 0 0 25)
+                ][]
+              , linearLayout [
+                  width $ V 160
+                , background Color.greyLight
+                , height $ V 10
+                , margin (Margin 0 0 0 10)
+                ][]
+              , linearLayout [
+                  width $ V 140
+                , background Color.greyLight
+                , height $ V 10
+                , margin $ (Margin 0 0 0 20)
+                ][]
+              , linearLayout [
+                  width $ V 50
+                , background Color.greyLight
+                , height $ V 10
+                ][]
+              ]
+          ]
+        ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height $ V 1
+    , background Color.greyLight
+    ][]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding (Padding 10 10 10 10)
+    , orientation HORIZONTAL
+    ][
+       linearLayout
+        [ width $ V 80
+        , height $ V 10
+        , background Color.greyLight
+        ] []
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity RIGHT
+        ][  linearLayout
+            [
+              height $ V 15
+            , width $ V 15
+            , background Color.greyLight
+            ] []
+        ]
+      ]
+    ]
+------------------------------- recentRide --------------------------
+recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+recentRideView state push = 
+  let hiddenCondition = state.data.isNull || state.props.apiFailure
+  in
+  PrestoAnim.animationSet[ Anim.fadeIn $ not $ hiddenCondition] $
+  linearLayout
+  [ margin (Margin 16 16 16 16)
+  , background Color.white900
+  , cornerRadius 8.0
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , stroke ("1," <> Color.greyLight)
+  , height WRAP_CONTENT
+  , visibility if hiddenCondition then GONE else VISIBLE
   , onClick push $ const ReportIssue
   ][
     linearLayout
@@ -206,7 +330,7 @@ recentRideView state push =
     textView $
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
         , accessibilityHint "Report An Issue With This Trip : Button"
-        , accessibility ENABLE 
+        , accessibility ENABLE
         , color Color.blue900
         ] <> FontStyle.tags LanguageStyle
      ,  linearLayout
@@ -302,7 +426,7 @@ addFaqSection topicList = topicList <> [{ categoryAction : Just "FAQ"
 allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
 allTopicsView state push topicList =
   let _ = spy "hello world allTopicsView" topicList
-  in 
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -321,10 +445,10 @@ allTopicsView state push topicList =
                     "CALL_SUPPORT"       -> const $ CallSupport
                     "DELETE_ACCOUNT"     -> const $ DeleteAccount
                     "FAQ"                -> const $ SelectFaqCategory item
-                    _ | item.isRideRequired 
+                    _ | item.isRideRequired
                                          -> const $ SelectRide item
                     _                    -> const $ OpenChat item
-                  
+
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -351,7 +475,7 @@ allTopicsView state push topicList =
                 ][  imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
                     , height $ V 15
-                    , width $ V 15  
+                    , width $ V 15
                     ]
                   ]
               ]
@@ -375,13 +499,13 @@ deleteAccountView state push=
   , accessibility if DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
   , clickable true
   ][
-    GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state) 
+    GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state)
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding (Padding 16 12 16 12)
     , background Color.blue600
-    ][ 
+    ][
       textView
       [ text if state.props.btnActive || state.data.accountStatus == ST.DEL_REQUESTED then (getString WE_WOULD_APPRECIATE_YOUR_REASONING) else (getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK)
       , textSize FontSize.a_12
@@ -399,7 +523,7 @@ deleteAccountView state push=
         , height WRAP_CONTENT
         , background Color.white900
         , alignParentBottom "true,-1"
-        , weight 1.0 
+        , weight 1.0
         ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigSubmitRequest state)]
       ]
     ]
@@ -434,7 +558,7 @@ editTextView state push =
               , gravity CENTER_VERTICAL
               , padding $ PaddingLeft 10
               , margin $ MarginTop 5
-              , visibility $ boolToVisibility $ (strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10 
+              , visibility $ boolToVisibility $ (strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10
               ][  imageView $
                   [ width $ V 24
                   , height $ V 24
@@ -473,9 +597,9 @@ headingView state title =
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
   void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  void $ EHU.toggleLoader true
+  -- void $ EHU.toggleLoader false
   (rideBookingListResponse) <- Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
-  void $ EHU.toggleLoader false
+  -- void $ EHU.toggleLoader false
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
       Left (err) -> doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
@@ -507,8 +631,8 @@ issueListState state = let
         issueListTypeModal = state.data.issueListType ,
         headerConfig {
           headTextConfig {
-            text = if (state.data.issueListType == ST.REPORTED_ISSUES_MODAL) 
-              then (getString REPORTED_ISSUES) <> " : " <> (toStringJSON (DA.length state.data.ongoingIssueList)) 
+            text = if (state.data.issueListType == ST.REPORTED_ISSUES_MODAL)
+              then (getString REPORTED_ISSUES) <> " : " <> (toStringJSON (DA.length state.data.ongoingIssueList))
               else (getString RESOLVED_ISSUES) <> " : " <> (toStringJSON (DA.length state.data.resolvedIssueList))
           }
         },

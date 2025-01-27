@@ -22,10 +22,9 @@ import static in.juspay.mobility.common.utils.Utils.encodeImageToBase64;
 import static in.juspay.mobility.common.utils.Utils.getCircleOptionsFromJSON;
 import static android.graphics.Color.green;
 import static android.graphics.Color.parseColor;
-import static android.graphics.Color.rgb;
-
 import android.Manifest;
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
@@ -91,6 +90,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.animation.LinearInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
@@ -140,6 +140,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
@@ -154,14 +155,18 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
+import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.Feature;
 import com.google.maps.android.data.Layer;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
 import in.juspay.mobility.common.cropImage.CropImage;
 
 import org.json.JSONArray;
@@ -225,6 +230,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
+    private static final String HOTSPOTS = "hotspots";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     protected static final String LOCATION_IS_FAR = "LocationIsFar";
     protected static Boolean editLocation = false;
@@ -244,6 +250,8 @@ public class MobilityCommonBridge extends HyperBridge {
     protected float zoom = 17.0f;
     // CallBacks
     protected String storeLocateOnMapCallBack = null;
+    protected String storeHotspotMapCallback = null;
+    protected String storeCircleOnClickCallback = null;
     protected String storeEditLocationCallBack = null;
     protected String storeDashboardCallBack = null;
     private String storeImageUploadCallBack = null;
@@ -300,6 +308,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private PaymentPage paymentPage;
 
     protected  Receivers receivers;
+    private Integer debounceAnimateCameraCounter;
     private ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener;
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
@@ -690,6 +699,15 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void storeCallbackHotspotMap(String callback) {
+        storeHotspotMapCallback = callback;
+    }
+    @JavascriptInterface
+    public void storeCallbackCircleOnClick(String callback) {
+        storeCircleOnClickCallback = callback;
+    }
+
+    @JavascriptInterface
     public void storeCallBackImageUpload(String callback) {
         storeImageUploadCallBack = callback;
     }
@@ -918,12 +936,27 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    protected void updateRippleCircleWithId(String id, CircleRippleEffectOptions config, LatLng source){
+    @JavascriptInterface
+    public void drawCircleOnMap(String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String circleId = payload.optString("circleId", "");
+            double centerLat = payload.optDouble("centerLat", 0.0);
+            double centerLon = payload.optDouble("centerLon", 0.0);
+            boolean showPrimaryStrokeColor = payload.optBoolean("showPrimaryStrokeColor", true);
+            CircleRippleEffectOptions config = setCircleConfigFromJSON(payload, showPrimaryStrokeColor);
+            updateRippleCircleWithId(circleId, config, new LatLng(centerLat, centerLon));
+        } catch (JSONException e) {
+            Log.i(MAPS, "drawCircleOnMap error for ", e);
+        }
+    }
+
+    protected void updateRippleCircleWithId(String id, CircleRippleEffectOptions config, LatLng source) {
         if (circleRipples != null) {
             CircleRippleEffect circle = circleRipples.get(id);
             if (circle == null) {
                 CircleRippleEffect circleRippleEffect = new CircleRippleEffect(1, config);
-                circleRippleEffect.draw(googleMap, source);
+                circleRippleEffect.draw(googleMap, source, bridgeComponents, storeCircleOnClickCallback);
                 circleRipples.put(id, circleRippleEffect);
             } else {
                 circle.updateCircle(config);
@@ -959,7 +992,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, position);
                     String circleId = circleConfig.optString("circleId", "");
                     removeAllPolylines("");
-                    CircleRippleEffectOptions options = setCircleConfigFromJSON(circleConfig, distFromSource);
+                    CircleRippleEffectOptions options = setCircleConfigFromJSON(circleConfig, (distFromSource <= editPickupThreshold));
                     updateRippleCircleWithId(circleId, options, position);
                 }
                 if (googleMap != null) {
@@ -983,6 +1016,13 @@ public class MobilityCommonBridge extends HyperBridge {
                             String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, latitude, longitude);
                             bridgeComponents.getJsCallback().addJsToWebView(javascript);
                         }
+                        if (storeHotspotMapCallback != null && bridgeComponents != null) {
+                            LatLngBounds latLngBounds = googleMap.getProjection().getVisibleRegion().latLngBounds;
+                            LatLng southwest = latLngBounds.southwest;
+                            LatLng northeast = latLngBounds.northeast;
+                            String javascript = String.format("window.callUICallback('%s','%s','%s','%s','%s');", storeHotspotMapCallback, southwest.latitude, northeast.latitude, northeast.longitude, southwest.longitude);
+                            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                        }
                     });
                 }
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
@@ -1002,16 +1042,20 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public CircleRippleEffectOptions setCircleConfigFromJSON (JSONObject json, double distFromSource){
+    public CircleRippleEffectOptions setCircleConfigFromJSON(JSONObject json, boolean showPrimaryStrokeColor) {
         float radius = (float) json.optDouble("radius", 0.0);
-        String strokeColour = distFromSource > editPickupThreshold ? json.optString("secondaryStrokeColor", "#FFFFFF") : json.optString("primaryStrokeColor", "#FFFFFF");
+        String strokeColour = showPrimaryStrokeColor ? json.optString("primaryStrokeColor", "#FFFFFF") : json.optString("secondaryStrokeColor", "#FFFFFF");
         int fillColor = parseColor(json.optString("fillColor", "#FFFFFF"));
         int strokeWidth = json.optInt("strokeWidth", 0);
+        String strokePattern = json.optString("strokePattern", "NORMAL");
+        boolean isClickable = json.optBoolean("isCircleClickable", false);
         CircleRippleEffectOptions options = new CircleRippleEffectOptions();
         options.radius(radius);
         options.strokeWidth(strokeWidth);
         options.fromStrokeColor(strokeColour);
         options.fillColor(fillColor);
+        options.strokePattern(strokePattern);
+        options.isCircleClickable(isClickable);
         return options;
     }
 
@@ -1072,7 +1116,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "") : "";
                 LatLng markerLatlng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                 JSONObject circleConfigJSON = payload.optJSONObject("circleConfig");
-                String circleId = payload.optString("circleId", "");
+                String circleId = circleConfigJSON.optString("circleId", "");
                 List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
 
                 final JSONObject hotSpotConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("hotSpotConfig") : null;
@@ -1098,7 +1142,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             if (googleMap != null && editLocation) {
                                 removeAllPolylines("");
                                 double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, markerLatlng);
-                                CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON, distFromSource);
+                                CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON, (distFromSource <= editPickupThreshold));
                                 updateRippleCircleWithId(circleId, circleConfig, markerLatlng);
                             }
                             if (zoneMarkers != null) {
@@ -1819,7 +1863,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     for (Map.Entry<String, Marker> marker : markers.entrySet()) {
                         Marker m = marker.getValue();
                         m.setVisible(false);
+                        m.remove();
                     }
+                    markers.clear();
                 }
             } catch (Exception e) {
                 Log.e(MAPS, "RemoveAllMarkers error ", e);
@@ -2238,8 +2284,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 this.googleMap = googleMap;
                 googleMapInstance.put(pureScriptId, googleMap);
                 System.out.println("Inside getMapAsync " + googleMap);
-                googleMap.setMinZoomPreference(7.0f);
-                googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+                if (mapType.equals(HOTSPOTS)) {
+                    googleMap.setMinZoomPreference(10.0f);
+                    googleMap.setMaxZoomPreference(19.0f);
+                } else {
+                    googleMap.setMinZoomPreference(7.0f);
+                    googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
+                }
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
                 googleMap.getUiSettings().setMyLocationButtonEnabled(false);
                 if (isLocationPermissionEnabled()) {
@@ -2251,29 +2302,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     return true;
                 });
                 try {
-                    if (mapType.equals(LOCATE_ON_MAP)) {
-                        MarkerConfig config = getMarkerConfigWithIdAndName(LOCATE_ON_MAP, LOCATE_ON_MAP);
-                        upsertMarkerV2(config, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f, pureScriptId);
-                        this.googleMap.setOnCameraMoveListener(() -> {
-                            try {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                MarkerConfig markerConfig = getMarkerConfigWithIdAndName(LOCATE_ON_MAP, LOCATE_ON_MAP);
-                                upsertMarkerV2(markerConfig, String.valueOf(lat), String.valueOf(lng), 160, 0.5f, 0.9f, pureScriptId);
-                            } catch (Exception e) {
-                                Log.i(MAPS, "Marker creation error for ", e);
-                            }
-                        });
-                        this.googleMap.setOnCameraIdleListener(() -> {
-                            if (callback != null) {
-                                double lat = (googleMap.getCameraPosition().target.latitude);
-                                double lng = (googleMap.getCameraPosition().target.longitude);
-                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", callback, "LatLon", lat, lng);
-                                Log.e(MAPS, javascript);
-                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                            }
-                        });
-                    }
                     setMapCustomTheme();
                     if (lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) {
                         LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
@@ -2375,7 +2403,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 .factor(i)
                                 .fillColor(options.getFillColor())
                                 .radius((i) * options.getRadius()));
-                circleRippleEffect.draw(googleMap, point);
+                circleRippleEffect.draw(googleMap, point, bridgeComponents, null);
                 circleRipples.put(prefix + "_" + i, circleRippleEffect);
             }
         });
@@ -2820,7 +2848,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 int index = polyline.getPoints().size() - 1;
                                 rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
                                 }
-                                if (rotation != 0.0) currMarker.setRotation(rotation);
+                                if (rotation != 0.0 && currMarker != null) currMarker.setRotation(rotation);
                                 currMarker.setAnchor(sourceAnchorU, sourceAnchorV);
                                 markers.put(sourceIconId, currMarker);
                             } else {
@@ -3719,6 +3747,287 @@ public class MobilityCommonBridge extends HyperBridge {
         } catch (Exception e) {
             Log.e("ADD_MARKER", e.toString());
         }
+    }
+
+    @JavascriptInterface
+    public String isCoordOnPath(String json, double currLat, double currLng, int speed) throws JSONException {
+        LatLng currPoint = new LatLng(currLat, currLng);
+        ArrayList<LatLng> path = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(json);
+        int distanceRemaining;
+        JSONArray coordinates = jsonObject.getJSONArray("points");
+        int eta;
+        int resultIndex;
+        JSONObject result = new JSONObject();
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
+            JSONObject coordinate = (JSONObject) coordinates.get(i);
+            double lng = coordinate.getDouble("lng");
+            double lat = coordinate.getDouble("lat");
+            LatLng tempPoints = new LatLng(lat, lng);
+            path.add(tempPoints);
+        }
+        if (path.size() == 0) {
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
+            return result.toString();
+        }
+        double locationOnPathThres = Double.parseDouble(getKeysInSharedPref("ACCURACY_THRESHOLD").equals("__failed") ? "30.0" : getKeysInSharedPref("ACCURACY_THRESHOLD"));
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
+        if (resultIndex == -1) {
+            result.put("points", coordinates);
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", false);
+        } else if (resultIndex == (path.size() - 2) || resultIndex == (path.size() - 1)) {
+            distanceRemaining = (int) SphericalUtil.computeLength(path);
+            eta = distanceRemaining / speed;
+            result.put("points", coordinates);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
+        } else if (resultIndex == 0) {
+            path.clear();
+            result.put("points", new JSONArray());
+            result.put("eta", 0);
+            result.put("distance", 0);
+            result.put("isInPath", true);
+        } else {
+            path.subList(resultIndex + 2, path.size()).clear();
+            distanceRemaining = (int) SphericalUtil.computeLength(path);
+            eta = distanceRemaining / speed;
+            JSONArray remainingPoints = new JSONArray();
+            for (int i = path.size() - 1; i >= 0; i--) {
+                LatLng point = path.get(i);
+                JSONObject tempPoints = new JSONObject();
+                tempPoints.put("lat", point.latitude);
+                tempPoints.put("lng", point.longitude);
+                remainingPoints.put(tempPoints);
+            }
+            result.put("points", remainingPoints);
+            result.put("eta", eta);
+            result.put("distance", distanceRemaining);
+            result.put("isInPath", true);
+        }
+        return result.toString();
+    }
+
+    @JavascriptInterface
+    public void updateRoute(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID","");
+                GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
+                if (gMap != null) {
+                    try {
+                        MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+                        float zoomLevel;
+                        try {
+                            zoomLevel = (float) mapRemoteConfig.zoomLevel;
+                        }catch (Exception e){
+                            zoomLevel = 20.0f;
+                        }
+                        String json = payload.optString("json", "");
+                        JSONObject destMarkerConfig = payload.optJSONObject("destMarkerConfig");
+                        String dest = (destMarkerConfig != null) ? destMarkerConfig.optString("pointerIcon", "") : "";
+                        String eta = payload.optString("eta", "");
+                        String locationName = payload.optString("locationName" , "");
+                        String src = payload.optString("srcMarker", "");
+                        String specialLocation = payload.optString("specialLocation", "");
+                        String polylineKey = payload.optString("polylineKey", "DEFAULT");
+                        JSONObject destMarkerActionImageConfig = (destMarkerConfig != null) ? destMarkerConfig.optJSONObject("actionImage") : null;
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        int dashUnit = specialLocationObject.optInt("dashUnit", 1);
+                        int gapUnit = specialLocationObject.optInt("gapUnit", 0);
+                        boolean autoZoom = payload.optBoolean("autoZoom", true);
+                        ArrayList<LatLng> path = new ArrayList<>();
+                        JSONObject jsonObject = new JSONObject(json);
+                        JSONArray coordinates = jsonObject.getJSONArray("points");
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            LatLng tempPoint = new LatLng(lat, lng);
+                            path.add(tempPoint);
+                        }
+                        Marker currMarker = (Marker) markers.get(src);
+                        if (currMarker != null)
+                        {
+                            currMarker.setTitle("Vehicle Icon On Map");
+                            currMarker.hideInfoWindow();
+                        }
+                        Marker destMarker = (Marker) markers.get(dest);
+                        String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(locationName);
+                        markerConfig.setLabelImage(destinationSpecialTagIcon);
+                        if (destMarkerActionImageConfig != null) markerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
+                        if (destMarker != null)
+                        {
+                            destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false, MarkerType.NORMAL_MARKER, markerConfig))));
+                            destMarker.setTitle("Driver is " + eta);
+                        }
+                        PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(pureScriptID,polylineKey);
+                        Polyline polyline = getPolyLine(false, polylineDataPoints);
+                        if (polyline != null) {
+                            polyline.setEndCap(new ButtCap());
+                            if (path.size() == 0) {
+                                if (destMarker != null) {
+                                    LatLng destination = destMarker.getPosition();
+                                    animateMarkerNew(src, destination, currMarker, eta );
+                                    Polyline overlayPolylines = getPolyLine(true, polylineDataPoints);
+                                    if (overlayPolylines != null) {
+                                        overlayPolylines.remove();
+                                    }
+                                    polyline.remove();
+                                    if(polylineDataPoints != null)
+                                    {
+                                        polylineDataPoints.setPolyline(null);
+                                        polylineDataPoints.setOverlayPolylines(null);
+                                    }
+                                    setPolyLineDataByMapInstance(pureScriptID, polylineKey, polylineDataPoints);
+                                    if(currMarker != null) {currMarker.setAnchor(0.5f, 0);}
+                                    mapUpdate.isMapMoved = false;
+                                    mapUpdate.isMapIdle = true;
+                                    animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
+                                }
+                            } else {
+                                double destinationLat = path.get(0).latitude;
+                                double destinationLon = path.get(0).longitude;
+                                double sourceLat = path.get(path.size() - 1).latitude;
+                                double sourceLong = path.get(path.size() - 1).longitude;
+                                LatLng destination = path.get(path.size() - 1);
+                                animateMarkerNew(src, destination, currMarker, eta );
+                                PatternItem dash = new Dash(dashUnit);
+                                PatternItem gap = new Gap(gapUnit);
+                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(dash, gap);
+                                polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                                polyline.setPoints(path);
+                                if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    mapUpdate.isMapMoved = false;
+                                    mapUpdate.isMapIdle = true;
+                                    debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                } else {
+                                    debounceAnimateCameraCounter--;
+                                }
+                            }
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void animateMarkerNew(String src, LatLng destination, final Marker marker, String infoLabelText) {
+        if (marker != null) {
+            LatLng startPosition = marker.getPosition();
+            ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+            valueAnimator.setDuration(2000); // TODO :: get this value from Local Storage to maintain sync with PS
+            valueAnimator.setInterpolator(new LinearInterpolator());
+            valueAnimator.addUpdateListener(animation -> {
+                try {
+                    float v = animation.getAnimatedFraction();
+                    LatLng newPosition = SphericalUtil.interpolate(startPosition, destination, v);
+                    float rotation = bearingBetweenLocations(startPosition, destination);
+                    if (rotation > 1.0){
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(infoLabelText);
+                        markerConfig.setRotation(rotation);
+                        marker.setRotation(0.0f);
+                        marker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(src, false, MarkerType.NORMAL_MARKER, markerConfig)));
+                    }
+                    marker.setPosition(newPosition);
+                    marker.setAnchor(0.5f, 0.7f);
+                    markers.put(src, marker);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            valueAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                }
+            });
+            valueAnimator.start();
+        }
+    }
+
+    private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
+        double PI = 3.14159;
+        double lat1 = latLng1.latitude * PI / 180;
+        double long1 = latLng1.longitude * PI / 180;
+        double lat2 = latLng2.latitude * PI / 180;
+        double long2 = latLng2.longitude * PI / 180;
+        double dLon = (long2 - long1);
+        double y = Math.sin(dLon) * Math.cos(lat2);
+        double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1)
+                * Math.cos(lat2) * Math.cos(dLon);
+        double brng = Math.atan2(y, x);
+        brng = Math.toDegrees(brng);
+        brng = (brng + 360) % 360;
+        return (float) brng;
+    }
+
+    @JavascriptInterface
+    public String getExtendedPath(String json) throws JSONException {
+        ArrayList<LatLng> path = new ArrayList<>();
+        ArrayList<LatLng> extendedPath = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(json);
+        JSONArray coordinates = jsonObject.getJSONArray("points");
+        if (coordinates.length() <= 1) return json;
+        int pointsFactor = Integer.parseInt(getKeysInSharedPref("POINTS_FACTOR"));
+
+        for (int i = coordinates.length() - 1; i >= 0; i--) {
+            JSONObject coordinate = (JSONObject) coordinates.get(i);
+            double lng = coordinate.getDouble("lng");
+            double lat = coordinate.getDouble("lat");
+            LatLng tempPoints = new LatLng(lat, lng);
+            path.add(tempPoints);
+        }
+        for (int i = 0, j = 1; i < path.size() - 1 && j <= path.size() - 1; i++, j++) {
+            LatLng point1 = path.get(i);
+            LatLng point2 = path.get(j);
+            extendedPath.add(point1);
+            double distanceBtw = SphericalUtil.computeDistanceBetween(point1, point2);
+            int noOfPoints = (int) Math.ceil(distanceBtw / pointsFactor);
+            float fraction = 1.0f / (noOfPoints + 1);
+            for (int k = 1; k <= noOfPoints; k++) {
+                LatLng point = getNewLatLng(fraction * k, point1, point2);
+                extendedPath.add(point);
+            }
+        }
+        extendedPath.add(path.get(path.size() - 1));
+        JSONObject newPoints = new JSONObject();
+        JSONArray remainingPoints = new JSONArray();
+        for (int i = extendedPath.size() - 1; i >= 0; i--) {
+            LatLng point = extendedPath.get(i);
+            JSONObject tempPoints = new JSONObject();
+            tempPoints.put("lat", point.latitude);
+            tempPoints.put("lng", point.longitude);
+            remainingPoints.put(tempPoints);
+        }
+        newPoints.put("points", remainingPoints);
+        return newPoints.toString();
+    }
+
+    private LatLng getNewLatLng(float fraction, LatLng a, LatLng b) {
+        double lat = (b.latitude - a.latitude) * fraction + a.latitude;
+        double lngDelta = b.longitude - a.longitude;
+        // Take the shortest path across the 180th meridian.
+        if (Math.abs(lngDelta) > 180) {
+            lngDelta -= Math.signum(lngDelta) * 360;
+        }
+        double lng = lngDelta * fraction + a.longitude;
+        return new LatLng(lat, lng);
     }
 
     // region Shared Preference Utils
@@ -5059,7 +5368,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Use displayBase64Image instead
     @JavascriptInterface
     public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
+        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
     }
 
     // Deprecated on 5-Jan-2024
@@ -5134,7 +5443,7 @@ public class MobilityCommonBridge extends HyperBridge {
             boolean adjustViewBounds = configObj.optBoolean("adjustViewBounds", true);
 
             // call api to get base64image
-            String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
+            String base64Image = source.startsWith("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
 
             // convert base64Image to imageView
             ExecutorManager.runOnMainThread(() -> {
@@ -5561,3 +5870,4 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 }
+

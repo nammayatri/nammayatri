@@ -88,6 +88,7 @@ Person:
     customerReferralCode: Maybe Text
     clientSdkVersion : Maybe Version
     clientBundleVersion : Maybe Version
+    clientReactNativeVersion : Maybe Text
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
@@ -101,6 +102,8 @@ Person:
     informPoliceSos : Bool
     androidId: Maybe Text
     customerNammaTags: "Maybe [Text]"
+    payoutVpa: Maybe Text
+    frequentLocGeohashes: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -239,6 +242,11 @@ Person:
       params: [whatsappNotificationEnrollStatus, updatedAt]
       where: id
 
+    updateFreqLocGeohashes:
+      kvFunction: updateWithKV
+      params: [frequentLocGeohashes]
+      where: id
+
     setIsNewFalse:
       kvFunction: updateWithKV
       params: [isNew, updatedAt]
@@ -308,6 +316,11 @@ Person:
     updateCustomerTags:
       kvFunction: updateWithKV
       params: [customerNammaTags]
+      where: id
+
+    updatePayoutVpa:
+      kvFunction: updateWithKV
+      params: [payoutVpa]
       where: id
 
   extraOperations:

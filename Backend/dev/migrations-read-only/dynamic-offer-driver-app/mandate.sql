@@ -13,3 +13,13 @@ ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN start_date timestamp with 
 ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.mandate ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN merchant_id character varying(36) ;

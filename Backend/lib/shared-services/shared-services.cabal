@@ -27,7 +27,6 @@ flag Local
 library
   exposed-modules:
       IssueManagement.API.Beckn.Issue
-      IssueManagement.API.Dashboard.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils
       IssueManagement.Beckn.ACL.Issue
@@ -83,12 +82,26 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      Registry.Beckn.Interface
+      Registry.Beckn.Interface.Nammayatri
+      Registry.Beckn.Interface.Types
+      Registry.Beckn.Nammayatri.Flow
+      Registry.Beckn.Nammayatri.Types
       UrlShortner.Common
       UrlShortner.Types
+      API.Types.ProviderPlatform.IssueManagement
+      API.Types.ProviderPlatform.IssueManagement.Endpoints.Issue
+      API.Types.ProviderPlatform.IssueManagement.Issue
+      API.Types.RiderPlatform.IssueManagement
+      API.Types.RiderPlatform.IssueManagement.Endpoints.Issue
+      API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
+      API.Types.RiderPlatform.IssueManagement.Issue
+      API.Types.RiderPlatform.IssueManagement.IssueList
   other-modules:
       Paths_shared_services
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -96,6 +109,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -123,6 +137,7 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
@@ -150,6 +165,7 @@ library
     , lens
     , location-updates
     , mobility-core
+    , mock-registry
     , openapi3
     , persistent
     , postgresql-simple
@@ -168,6 +184,7 @@ library
     , servant-openapi3
     , servant-server
     , singletons
+    , singletons-th
     , special-zone
     , stm
     , string-conversions

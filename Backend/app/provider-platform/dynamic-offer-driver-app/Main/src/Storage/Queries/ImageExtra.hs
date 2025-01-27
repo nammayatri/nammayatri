@@ -1,32 +1,25 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.ImageExtra where
 
-import API.Types.UI.DriverOnboardingV2 as DTOV2
 import qualified Data.List as DL
 import qualified Data.Time as DT
 import Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image as DImage
-import Domain.Types.Merchant hiding (Status (APPROVED))
 import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (on)
-import Kernel.Types.Cac
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as BeamI
 import qualified Storage.Cac.TransporterConfig as QTC
-import Storage.Queries.OrphanInstances.Image
+import Storage.Queries.OrphanInstances.Image ()
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants

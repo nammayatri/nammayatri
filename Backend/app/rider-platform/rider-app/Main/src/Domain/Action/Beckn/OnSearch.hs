@@ -132,6 +132,7 @@ data EstimateInfo = EstimateInfo
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
+    tipOptions :: Maybe [Int],
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text
   }
@@ -263,10 +264,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
+      updateRiderPreferredOption quotes
 
       let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
       whenJust mbRequiredEstimate $ \requiredEstimate ->
-        SLCF.createFares searchRequest.journeyLegInfo requiredEstimate.estimatedTotalFare (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
+        SLCF.createFares searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
 
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
@@ -285,8 +287,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
     filterQuotesByPrefference _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        Rental -> filter (not . isNotRental) _quotesInfo
-        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        Rental -> filter (\qInfo -> not (qInfo.vehicleVariant `elem` ambulanceVariants) && (not $ isNotRental qInfo)) _quotesInfo
+        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
+        Ambulance -> filter (\qInfo -> qInfo.vehicleVariant `elem` ambulanceVariants) _quotesInfo
         Delivery -> []
         _ -> filter isNotRental _quotesInfo
 
@@ -294,6 +297,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
+        InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
@@ -327,6 +331,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
     isNotBlackListed :: [Enums.VehicleCategory] -> Enums.VehicleCategory -> Bool
     isNotBlackListed blackListedVehicles vehicleCategory = vehicleCategory `notElem` blackListedVehicles
+
+    updateRiderPreferredOption quotes = case listToMaybe quotes of
+      Just quote -> do
+        let actualRiderPreferredOption = case quote.quoteDetails of
+              DQuote.InterCityDetails _ -> InterCity
+              _ -> OneWay
+        when (actualRiderPreferredOption == InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption InterCity quote.requestId
+      _ -> pure ()
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::

@@ -84,6 +84,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -112,6 +113,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   extra-libraries:
       cac_client

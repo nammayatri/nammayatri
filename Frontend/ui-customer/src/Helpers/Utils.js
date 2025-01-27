@@ -71,12 +71,6 @@ export const getCurrentDatev2 = function (string) {
   return today;
 }
 
-
-export const compareDate = function (date1, date2) {
-  console.log("comparing : ", date1, date2);
-  return date1 >= date2;
-}
-
 export const getNextDate = function (unit) {
   const currentDate = new Date();
   const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
@@ -615,3 +609,34 @@ export const decodeErrorCode = function (a) {
     return " ";
   }
 };
+
+export const isHybridApp = ()=>{
+  try {
+    return (window.__payload.payload.isHybrid === true);
+  } catch (unhandled){
+    return false;
+  }
+}
+
+export const decodeErrorMessage = function (a) {
+  try {
+    const errorMessagee = JSON.parse(a).errorMessage;
+    if(errorMessagee === null)
+    {
+      return "";
+    }
+    return  errorMessagee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};
+
+
+export const releaseBackpress = function (unit) {
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: false }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}

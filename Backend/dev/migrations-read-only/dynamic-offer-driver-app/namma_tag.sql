@@ -25,3 +25,8 @@ ALTER TABLE atlas_driver_offer_bpp.namma_tag ADD COLUMN llm_context text ;
 --- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
 ALTER TABLE atlas_driver_offer_bpp.namma_tag ALTER COLUMN rule DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.namma_tag ADD COLUMN action_engine json ;

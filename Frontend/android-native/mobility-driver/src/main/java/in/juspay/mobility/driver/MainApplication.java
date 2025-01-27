@@ -3,8 +3,9 @@ import android.app.Application;
 import java.lang.reflect.Method;
 import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactNativeHost;
+import com.google.android.play.core.splitcompat.SplitCompatApplication;
 
-public class MainApplication extends Application implements ReactApplication {
+public class MainApplication extends SplitCompatApplication implements ReactApplication {
 
     @Override
     public ReactNativeHost getReactNativeHost() {

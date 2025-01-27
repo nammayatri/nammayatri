@@ -84,6 +84,7 @@ Ride:
     rideStartTime: Maybe UTCTime
     rideEndTime: Maybe UTCTime
     rideRating: Maybe Int
+    feedbackSkipped: Bool
     allowedEditLocationAttempts: Maybe Int
     allowedEditPickupLocationAttempts: Maybe Int
     driversPreviousRideDropLoc : Maybe LatLong
@@ -113,6 +114,7 @@ Ride:
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     tipAmount: Maybe Price
     wasRideSafe: Maybe Bool
+    pickupRouteCallCount: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -202,6 +204,7 @@ Ride:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     paymentStatus: Kernel.Prelude.fromMaybe Domain.Types.Ride.Completed paymentStatus|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
+    feedbackSkipped: Kernel.Prelude.fromMaybe False feedbackSkipped|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
     estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
@@ -231,6 +234,7 @@ Ride:
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
     paymentStatus: Kernel.Prelude.Just paymentStatus|E
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
+    feedbackSkipped: Kernel.Prelude.Just feedbackSkipped|E
     driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
     driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
@@ -252,6 +256,7 @@ Ride:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     tipAmount: Maybe HighPrecMoney
+    feedbackSkipped: Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -283,6 +288,7 @@ Ride:
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
       params: [destinationReachedAt]
+      where: id
     updateTipByRideId:
       kvFunction: updateOneWithKV
       params: [tipAmount]
@@ -291,6 +297,15 @@ Ride:
       kvFunction: updateOneWithKV
       params: [estimatedEndTimeRange]
       where: id
+    updateFeedbackSkipped:
+      kvFunction: updateOneWithKV
+      params: [feedbackSkipped]
+      where: id
+    updatePickupRouteCallCount:
+      kvFunction: updateOneWithKV
+      params: [pickupRouteCallCount]
+      where: id
+
   excludedDefaultQueries:
     - create
     - createMany

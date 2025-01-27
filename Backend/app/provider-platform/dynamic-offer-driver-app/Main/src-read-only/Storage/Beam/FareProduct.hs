@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FareProduct where
@@ -18,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data FareProductT f = FareProductT
   { area :: B.C f Lib.Types.SpecialLocation.Area,
+    disableRecompute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enabled :: B.C f Kernel.Prelude.Bool,
     farePolicyId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,

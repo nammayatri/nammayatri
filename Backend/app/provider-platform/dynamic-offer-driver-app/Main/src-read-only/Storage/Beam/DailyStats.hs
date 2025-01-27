@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DailyStats where
@@ -25,7 +23,9 @@ data DailyStatsT f = DailyStatsT
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     numRides :: B.C f Kernel.Prelude.Int,
     payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),

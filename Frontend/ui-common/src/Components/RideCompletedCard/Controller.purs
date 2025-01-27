@@ -90,7 +90,10 @@ type Config = {
   showIntercityDetails :: Boolean ,
   parkingCharges :: ParkingChargesConfig,
   showIntercityRideDetails :: Boolean,
-  interCityTextConfig :: IntercityRideTextConfig
+  interCityTextConfig :: IntercityRideTextConfig,
+  variant :: String,
+  driverCity :: String,
+  driverInvoiceText :: String
 }
 
 data Theme = DARK | LIGHT
@@ -198,7 +201,8 @@ config = {
     id : "",
     vpa : "",
     vpaIcon : "",
-    collectCashText : ""
+    collectCashText : "",
+    paymentVpa : ""
   },
   noVpaCard : {
     title : "",
@@ -252,7 +256,10 @@ config = {
   parkingCharges : {
     parkingChargesTitle : "",
     parkingChargesDescription :""
-  }
+  },
+  variant : "",
+  driverCity : "",
+  driverInvoiceText : ""
 }
 
 type CustomerIssue = {
@@ -339,7 +346,8 @@ type DriverUpiQrCard = {
   id :: String,
   vpa :: String,
   vpaIcon :: String,
-  collectCashText :: String
+  collectCashText :: String,
+  paymentVpa :: String
 }
 
 type NoVpaCard = {

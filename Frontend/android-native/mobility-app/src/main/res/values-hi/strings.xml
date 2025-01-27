@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">कृपया छवि को कैप्चर करने के लिए अनुमति दें</string>
     <string name="we_have_updated_your_app_kindly_relaunch">हमने आपका ऐप अपडेट कर दिया है, एप्लिकेशन अब फिर से लोड होगा।</string>
     <string name="okay_got_it">ठीक है समझ आ गया</string>
+    <string name="okay_got_it_smallcase">ठीक है समझ आ गया</string>
+    <string name="sent">भेजा</string>
     <string name="upload_image">तस्विर अपलोड करें</string>
     <string name="not_interested">रुचि नहीं</string>
     <string name="too_far">बहुत दूर</string>
@@ -43,7 +45,10 @@
     <string name="new_ride_available_for_offering">पेशकश के लिए उपलब्ध नई सवारी</string>
     <string name="and">और</string>
     <string name="tip_included">टिप शामिल है!</string>
-    <string name="message_from_customer">"ग्राहक की ओर से संदेश "</string>
+    <string name="message_from_customer">"ग्राहक की ओर से संदेश</string>
+    <string name="customer_is_waiting">ग्राहक इंतजार कर रहा है!</string>
+    <string name="please_start_moving_towards_the_pickup_location">कृपया पिकअप स्थान की ओर बढ़ना शुरू करें</string>
+    <string name="quick_chats">त्वरित चैट:</string>
     <string name="assistance_required">सहायता आवश्यक है</string>
     <string name="tip">टिप</string>
     <string name="driver_receipt_downloaded">ड्राइवर रसीद डाउनलोड हो गई!!!</string>
@@ -78,4 +83,8 @@
     <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
     <string name="parking_charges">%1$.0f₹ पार्किंग</string>
     <string name="includes">शामिल</string>
+    <string name="stops_info">%1$d स्टॉप्स (स्टॉप चार्ज सहित)</string>
+    <string name="stops">%1$d स्टॉप्स</string>
+    <string name="round_trip">राउंड ट्रिप</string>
+
 </resources>

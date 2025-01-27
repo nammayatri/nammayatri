@@ -260,8 +260,8 @@ public class NotificationUtils {
                     sheetData.putDouble("destLng", addressDrop.has("lon") && !addressDrop.isNull("lon") ? addressDrop.getDouble("lon"): 0.0);
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
                     sheetData.putString("addressDrop", addressDrop.has("full_address") && !addressDrop.isNull("full_address") ? addressDrop.getString("full_address") : "");
-                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);
-                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 20);
+                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 0);
+                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 0);
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
@@ -287,6 +287,9 @@ public class NotificationUtils {
                     sheetData.putInt("driverDefaultStepFee", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
+                    sheetData.putBoolean("isFavourite", entity_payload.has("isFavourite") && entity_payload.optBoolean("isFavourite", false));
+                    sheetData.putInt("middleStopCount", entity_payload.optInt("middleStopCount", 0));
+                    sheetData.putBoolean("roundTrip" , entity_payload.optBoolean("roundTrip", false));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);

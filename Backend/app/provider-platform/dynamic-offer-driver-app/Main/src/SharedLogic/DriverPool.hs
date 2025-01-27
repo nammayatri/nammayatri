@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
@@ -107,6 +106,7 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
+import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
@@ -562,6 +562,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   Id DMOC.MerchantOperatingCity ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+  logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
   now <- getCurrentTime
   goHomeRequests <-
     mapMaybeM
@@ -572,11 +573,14 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       )
       randomDriverPool
   let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocWarriorDrivers -----" <> show specialLocWarriorDrivers
   specialLocgoHomeRequests <-
     mapMaybeM
       ( \specialLocWarriorDriver -> runMaybeT $ do
           driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
-          preferredLoc <- MaybeT $ return driverInfo.preferredPrimarySpecialLoc
+          specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
+          preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
+          preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
           preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
           let gHR =
                 DDGR.DriverGoHomeRequest
@@ -588,11 +592,14 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     mbReachedHome = Nothing,
                     numCancellation = 0,
                     status = DDGR.ACTIVE,
-                    updatedAt = now
+                    updatedAt = now,
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId
                   }
           return (gHR, specialLocWarriorDriver)
       )
       specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -617,7 +624,10 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsToDest -----" <> show goHomeDriverIdsToDest
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsNotToDest -----" <> show goHomeDriverIdsNotToDest
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
+  logDebug $ "MetroWarriorDebugging goHomeDriverPoolWithActualDist -----" <> show goHomeDriverPoolWithActualDist
   return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
@@ -723,6 +733,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
+  logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
   pure driverPoolResult
   where
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
@@ -867,7 +878,11 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
   DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
+  DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
+  DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
   DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
+  DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
+  DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,

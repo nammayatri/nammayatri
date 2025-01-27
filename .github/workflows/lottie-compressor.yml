@@ -1,13 +1,20 @@
 name: Compress Lottie Files
 on:
-  push:
-  #   paths:
-  #     - 'raw/**/*.json'  # Trigger on changes to raw/*.json files
+  pull_request:
+    paths:
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.webp'
 
 jobs:
   compress-lottie:
     name: Compress Lottie JSON Files
     runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: Frontend
 
     steps:
       - name: Checkout Repo
@@ -20,13 +27,16 @@ jobs:
       - name: Run pwd
         run: pwd
 
-      # Compress Lottie JSON files directly in YAML using shell commands
-      - name: Compress Lottie JSON Files
+      # Extract commit range from the pull request
+      - name: Set Commit Range
+        id: commit-range
+        run: echo "range=$(echo "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")" >> $GITHUB_ENV
+
+      # Run the compression script for files in the commit range
+      - name: Compress Changed Lottie Files
         run: |
-          while read -r json_file; do
-            jq -c . "$json_file" > tmp.json && mv tmp.json "$json_file"
-            echo "Compressed: $json_file"
-          done
+          chmod +x ./compress_lottie.sh
+          ./compress_lottie.sh "$range"
 
       # Commit and push the compressed files if there are any changes
       - name: Commit Changes

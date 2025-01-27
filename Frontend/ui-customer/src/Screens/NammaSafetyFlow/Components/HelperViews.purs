@@ -36,6 +36,7 @@ recommendContactsToInstallView appName visible =
     $ [ text "You can also share manually with anybody using the share button"
       , color Color.black700
       , visibility $ boolToVisibility visible
+      , width MATCH_PARENT
       , background Color.blue600
       , padding $ Padding 16 12 16 12
       , margin $ Margin 16 16 16 16

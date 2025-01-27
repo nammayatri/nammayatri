@@ -49,6 +49,22 @@ cacheAllModulesByMerchantOpCityId merchantOperatingCityId modules = do
 makeAllModuleKeyByMerchantOpCityId :: Id DMOC.MerchantOperatingCity -> Text
 makeAllModuleKeyByMerchantOpCityId merchantOperatingCityId = "CachedQueries:AllModules:MerchantOperatingCityId-" <> merchantOperatingCityId.getId
 
+-- get all lms modules with merchantOperatingCity and modulesection
+
+getAllModulesWithModuleSection :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe LmsModule.ModuleSection -> m [LmsModule.LmsModule]
+getAllModulesWithModuleSection mbLimit mbOffset merchantOperatingCityId mbModuleSection =
+  Hedis.safeGet (makeAllModuleKeyByMerchantOpCityIdAndModuleSection merchantOperatingCityId mbModuleSection) >>= \case
+    Just a -> return a
+    Nothing -> cacheAllModulesByMerchantOpCityIdAndModuleSection merchantOperatingCityId mbModuleSection /=<< SQLM.getAllModulesWithModuleSection mbLimit mbOffset merchantOperatingCityId mbModuleSection
+
+cacheAllModulesByMerchantOpCityIdAndModuleSection :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe LmsModule.ModuleSection -> [LmsModule.LmsModule] -> m ()
+cacheAllModulesByMerchantOpCityIdAndModuleSection merchantOperatingCityId mbmoduleSection modules = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeAllModuleKeyByMerchantOpCityIdAndModuleSection merchantOperatingCityId mbmoduleSection) modules expTime
+
+makeAllModuleKeyByMerchantOpCityIdAndModuleSection :: Id DMOC.MerchantOperatingCity -> Maybe LmsModule.ModuleSection -> Text
+makeAllModuleKeyByMerchantOpCityIdAndModuleSection merchantOperatingCityId mbModuleSection = "CachedQueries:AllModules:MerchantOperatingCityId-" <> merchantOperatingCityId.getId <> ":ModuleSection-" <> (show mbModuleSection)
+
 --- get all lms module translations
 
 getAllModuleTranslations :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id LmsModule.LmsModule -> m [DTLMT.LmsModuleTranslation]

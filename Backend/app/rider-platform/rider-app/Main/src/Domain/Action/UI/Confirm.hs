@@ -40,6 +40,7 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
@@ -62,9 +63,12 @@ confirm ::
   Id DP.Person ->
   Id DQuote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe Bool ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId = do
+confirm personId quoteId paymentMethodId isAdvanceBookingEnabled = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
+    QSR.updateAdvancedBookingEnabled (Just isAdvanceBookingEnabled') quote.requestId
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
@@ -96,6 +100,7 @@ cancelBooking booking = do
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            riderId = Just booking.riderId,
             createdAt = now,
             updatedAt = now
           }

@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverStatsExtra where
 
 import Control.Applicative (liftA2)
@@ -9,21 +6,18 @@ import Domain.Types.DriverStats as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
-import Domain.Types.Person (Driver)
 import Domain.Types.Vehicle
-import GHC.Float (double2Int, int2Double)
+import GHC.Float (int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
 import qualified Storage.Beam.DriverStats as BeamDS
-import Storage.Queries.OrphanInstances.DriverStats
+import Storage.Queries.OrphanInstances.DriverStats ()
 import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
 import Tools.Error
 

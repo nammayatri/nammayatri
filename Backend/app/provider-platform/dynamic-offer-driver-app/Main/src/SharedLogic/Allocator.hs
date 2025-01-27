@@ -18,6 +18,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
@@ -37,10 +38,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Tools.Notifications as Notify
 
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | UnblockSoftBlockedDriver
+  | SoftBlockNotifyDriver
   | SupplyDemand
   | SendPDNNotificationToDriver
   | MandateExecution
@@ -62,15 +66,20 @@ data AllocatorJobType
   | WeeklyUpdateTag
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
+  | FleetAlert
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType
 
 instance JobProcessor AllocatorJobType where
+  type MerchantType AllocatorJobType = DM.Merchant
+  type MerchantOperatingCityType AllocatorJobType = DMOC.MerchantOperatingCity
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
+  restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
@@ -92,6 +101,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWeeklyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SWeeklyUpdateTag jobData
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
+  restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -143,6 +153,37 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data FleetAlertJobData = FleetAlertJobData
+  { fleetOwnerId :: Id DP.Driver,
+    entityId :: Id DTR.ApprovalRequest,
+    appletId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FleetAlert
+
+type instance JobContent 'FleetAlert = FleetAlertJobData
+
+newtype UnblockSoftBlockedDriverRequestJobData = UnblockSoftBlockedDriverRequestJobData
+  { driverId :: Id DP.Driver
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnblockSoftBlockedDriver
+
+type instance JobContent 'UnblockSoftBlockedDriver = UnblockSoftBlockedDriverRequestJobData
+
+data SoftBlockNotifyDriverRequestJobData = SoftBlockNotifyDriverRequestJobData
+  { driverId :: Id DP.Driver,
+    pendingNotificationRedisKey :: Text,
+    entityData :: Notify.IssueBreachEntityData
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SoftBlockNotifyDriver
+
+type instance JobContent 'SoftBlockNotifyDriver = SoftBlockNotifyDriverRequestJobData
 
 data SupplyDemandRequestJobData = SupplyDemandRequestJobData
   { scheduleTimeIntervalInMin :: Int,

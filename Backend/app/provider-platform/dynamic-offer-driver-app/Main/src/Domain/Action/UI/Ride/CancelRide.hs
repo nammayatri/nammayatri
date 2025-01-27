@@ -260,6 +260,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = ride.distanceUnit,
+            merchantOperatingCityId = Just ride.merchantOperatingCityId,
             ..
           }
 

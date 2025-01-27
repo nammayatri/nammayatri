@@ -1,19 +1,14 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PurchaseHistoryExtra where
 
 import qualified Domain.Types.Person as SP
 import Domain.Types.PurchaseHistory
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchaseHistory as BeamDC
-import Storage.Queries.OrphanInstances.PurchaseHistory
+import Storage.Queries.OrphanInstances.PurchaseHistory ()
 
 -- Extra code goes here --
 

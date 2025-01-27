@@ -20,6 +20,7 @@ module API.UI.Search
     DSearch.RentalSearchReq (..),
     DSearch.SearchReqLocation (..),
     API,
+    search',
     search,
     handler,
   )
@@ -31,8 +32,13 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.SearchRequest as SearchRequest
 import Environment
+import Kernel.External.Maps.Google.MapsClient.Types
+import qualified Kernel.External.MultiModal.Interface as MultiModal
+import Kernel.External.MultiModal.Interface.Types
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -46,11 +52,18 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
+import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.Types as JMTypes
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.RiderConfig as QRiderConfig
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
+import Tools.Error
+import qualified Tools.MultiModal as TMultiModal
 
 -------- Search Flow --------
 
@@ -61,6 +74,7 @@ type API =
     :> Header "x-bundle-version" Version
     :> Header "x-client-version" Version
     :> Header "x-config-version" Version
+    :> Header "x-rn-version" Text
     :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Header "is-dashboard-request" Bool
@@ -69,17 +83,62 @@ type API =
 handler :: FlowServer API
 handler = search
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice
+
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
-  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
+  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  return $ DSearch.SearchResp dSearchRes.searchId dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  fork "Multimodal Search" $ do
+    let merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId
+    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+    when riderConfig.makeMultiModalSearch $
+      case req of
+        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
+        _ -> pure ()
+  return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+
+multiModalSearch ::
+  OneWaySearchReq ->
+  SearchRequest.SearchRequest ->
+  Id DMOC.MerchantOperatingCity ->
+  Meters ->
+  Flow ()
+multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance = do
+  let transitRoutesReq =
+        GetTransitRoutesReq
+          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.origin.gps.lat, longitude = searchReq.origin.gps.lon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.destination.gps.lat, longitude = searchReq.destination.gps.lon}}},
+            arrivalTime = Nothing,
+            departureTime = searchReq.startTime,
+            mode = Nothing,
+            transitPreferences = Nothing,
+            transportModes = Nothing
+          }
+  transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
+  otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  forM_ otpResponse.routes $ \r -> do
+    let initReq =
+          JMTypes.JourneyInitData
+            { parentSearchId = searchRequest.id,
+              merchantId = searchRequest.merchantId,
+              merchantOperatingCityId,
+              legs = r.legs,
+              estimatedDistance = r.distance,
+              estimatedDuration = r.duration,
+              startTime = r.startTime,
+              endTime = r.endTime,
+              maximumWalkDistance
+            }
+    QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
+    JM.init initReq
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
@@ -102,8 +161,8 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m ()
-updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+updateVersions :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Id Person.Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
+updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   deploymentVersion <- asks (.version)
-  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion

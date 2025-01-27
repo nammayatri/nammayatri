@@ -25,10 +25,13 @@ import Types.App (GlobalState(..), FlowBT)
 import Presto.Core.Types.Language.Flow
 import Engineering.Helpers.Commons
 import JBridge as JB
+import Engineering.Helpers.Events as EHE
+import Helpers.PrestoUtils
 
 splashScreen :: FlowBT String Unit
 splashScreen = do
   (GlobalState globalState) <- getState
-  void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" Nothing
+  void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" (getFragmentView "")
+  let _ = EHE.addEvent (EHE.defaultEventObject "splash_usp_screen_loaded") { module = "onboarding"}
   void $ lift $ lift $ runScreen $ SplashScreen.screen globalState.splashScreen
   liftFlowBT $ JB.hideLoader ""

@@ -6,9 +6,14 @@ imports:
   UTCTime: Kernel.Prelude
   LatLong: Kernel.External.Maps
   DriverMode: Domain.Types.Common
+  TripCategory: Domain.Types.Common
   BlockReasonFlag: Tools.Error
   SpecialLocationWarrior: Lib.Queries.SpecialLocation
   SpecialLocation: Lib.Types.SpecialLocation
+  IssueBreachCooldownTime: SharedLogic.BehaviourManagement.IssueBreach
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+  VehicleCategory: Domain.Types.VehicleCategory
 
 DriverInformation:
   tableName: driver_information
@@ -39,7 +44,7 @@ DriverInformation:
       badgeCount: Int
     DriverBadges:
       recordType: NewType
-      driverBadges: '[Badges]'
+      driverBadges: "[Badges]"
 
   fields:
     driverId: Id Person
@@ -53,8 +58,9 @@ DriverInformation:
     subscribed: Bool
     paymentPending: Bool
     isSpecialLocWarrior: Bool
-    preferredPrimarySpecialLoc: Maybe SpecialLocationWarrior
-    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
+    specialLocWarriorEnabledAt: Maybe UTCTime
+    preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
     totalReferred: Maybe Int
@@ -81,18 +87,28 @@ DriverInformation:
     lastACStatusCheckedAt: Maybe UTCTime
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
+    extraFareMitigationFlag: Maybe Bool
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
     isInteroperable: Bool
     payoutRegistrationOrderId: Maybe Text
     latestScheduledPickup: Maybe LatLong
-    latestScheduledBooking : Maybe UTCTime
+    latestScheduledBooking: Maybe UTCTime
     payoutVpaStatus: Maybe PayoutVpaStatus
     payoutVpaBankAccount: Maybe Text
     dailyCancellationRateBlockingCooldown: Maybe UTCTime
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
     payoutRegAmountRefunded: Maybe HighPrecMoney
+    driverTripEndLocation: Maybe LatLong
+    onRideTripCategory: Maybe TripCategory
+    hasRideStarted: Maybe Bool
+    issueBreachCooldownTimes: Maybe [IssueBreachCooldownTime]
+    softBlockStiers: "Maybe [ServiceTierType]"
+    softBlockExpiryTime: Maybe UTCTime
+    softBlockReasonFlag: Maybe Text
+    isBlockedForReferralPayout: Maybe Bool
+    onboardingVehicleCategory: Maybe VehicleCategory
 
   default:
     active: "false"
@@ -112,7 +128,7 @@ DriverInformation:
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
-    isInteroperable : "false"
+    isInteroperable: "false"
   constraints:
     driverId: PrimaryKey
 
@@ -122,7 +138,9 @@ DriverInformation:
       latestScheduledPickupLon: Maybe Double
     preferredPrimarySpecialLoc:
       preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
-
+    driverTripEndLocation:
+      driverTripEndLocationLat: Maybe Double
+      driverTripEndLocationLon: Maybe Double
 
   beamType:
     canSwitchToRental: Maybe Bool
@@ -132,10 +150,13 @@ DriverInformation:
     forwardBatchingEnabled: Maybe Bool
     isInteroperable: Maybe Bool
     isSpecialLocWarrior: Maybe Bool
-    preferredSecondarySpecialLocIds : "Maybe [Text]"
+    preferredSecondarySpecialLocIds: "Maybe [Text]"
+    issueBreachCooldownTimes: Maybe Value
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
+    issueBreachCooldownTimes: "json"
+    softBlockStiers: "text[]"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -146,8 +167,10 @@ DriverInformation:
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
-    preferredPrimarySpecialLoc : Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
+    driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
+    issueBreachCooldownTimes: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -159,8 +182,10 @@ DriverInformation:
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
-    preferredPrimarySpecialLocId: (Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc|E
-    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
+    preferredSecondarySpecialLocIds: Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
+    driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
+    driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
+    issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -192,7 +217,15 @@ DriverInformation:
       where: driverId
     updateDriverInformation: #check
       kvFunction: updateOneWithKV
-      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps]
+      params:
+        [
+          canDowngradeToSedan,
+          canDowngradeToHatchback,
+          canDowngradeToTaxi,
+          canSwitchToRental,
+          canSwitchToInterCity,
+          availableUpiApps,
+        ]
       where: driverId
     updateRentalAndInterCitySwitch:
       kvFunction: updateOneWithKV
@@ -208,7 +241,8 @@ DriverInformation:
       where: driverId
     removeAcUsageRestriction:
       kvFunction: updateOneWithKV
-      params: [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
+      params:
+        [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
       where: driverId
     updateOnRide:
       kvFunction: updateOneWithKV
@@ -232,7 +266,11 @@ DriverInformation:
       where: driverId
     updateTollRelatedIssueCount:
       kvFunction: updateOneWithKV
-      params : [tollRelatedIssueCount]
+      params: [tollRelatedIssueCount]
+      where: driverId
+    updateExtraFareMitigation:
+      kvFunction: updateOneWithKV
+      params: [extraFareMitigationFlag]
       where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
@@ -272,7 +310,11 @@ DriverInformation:
       where: driverId
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
-      params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
+      params:
+        [
+          dailyCancellationRateBlockingCooldown,
+          weeklyCancellationRateBlockingCooldown,
+        ]
       where: driverId
     updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
@@ -280,6 +322,23 @@ DriverInformation:
       where: driverId
     updateSpecialLocWarriorInfo:
       kvFunction: updateOneWithKV
-      params: [isSpecialLocWarrior, preferredPrimarySpecialLoc, preferredSecondarySpecialLocIds]
+      params:
+        [
+          isSpecialLocWarrior,
+          preferredPrimarySpecialLocId,
+          preferredSecondarySpecialLocIds,
+          specialLocWarriorEnabledAt,
+        ]
       where: driverId
-
+    updateTripEndLocation:
+      kvFunction: updateOneWithKV
+      params: [driverTripEndLocation]
+      where: driverId
+    updateIssueBreachCooldownTimes:
+      kvFunction: updateOneWithKV
+      params: [issueBreachCooldownTimes]
+      where: driverId
+    updateSoftBlock:
+      kvFunction: updateOneWithKV
+      params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
+      where: driverId

@@ -23,7 +23,6 @@ import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.PartnerOrganizationFRFS as DPOFRFS
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import qualified Domain.Types.PartnerOrgStation as DPOS
 import Domain.Types.PartnerOrganization
 import Environment
 import EulerHS.Prelude
@@ -35,9 +34,10 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import qualified Lib.JourneyPlannerTypes as JPT
+import qualified Lib.JourneyLeg.Types as JPT
 import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Station as CQS
 import qualified Storage.Queries.Route as QRoute
@@ -53,9 +53,9 @@ type API =
                   :> Post '[JSON] DPOFRFS.GetFareResp
                   :<|> "getConfig"
                     :> ( "fromStation"
-                           :> Capture "fromGMMStationId" (Id DPOS.PartnerOrgStation)
+                           :> Capture "fromGMMStationId" Text
                            :> "toStation"
-                           :> Capture "toGMMStationId" (Id DPOS.PartnerOrgStation)
+                           :> Capture "toGMMStationId" Text
                            :> Get '[JSON] DPOFRFS.GetConfigResp
                        )
               )
@@ -77,14 +77,12 @@ upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandl
 upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
 
-  fromStation <- B.runInReplica $ CQS.findByStationCode req.fromStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "")
-  let fromStationOpCityId = fromStation.merchantOperatingCityId
-      merchantId = fromStation.merchantId
-
+  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  toStation <- B.runInReplica $ CQS.findByStationCode req.toStationCode >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "")
   route <-
     maybe
       (pure Nothing)
@@ -97,12 +95,13 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
 
   let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
-  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStationOpCityId merchantId mbRegCoordinates req
+  (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.cityId merchantId mbRegCoordinates req
+  merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
 
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
     let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
         frfsVehicleType = fromStation.vehicleType
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId)
+    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId) Nothing Nothing Nothing
 
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where
@@ -119,7 +118,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
     buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
 
-getConfigByStationIds :: PartnerOrganization -> Id DPOS.PartnerOrgStation -> Id DPOS.PartnerOrgStation -> FlowHandler DPOFRFS.GetConfigResp
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do
   void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
 

@@ -16,6 +16,8 @@
 module Domain.Types.FareParameters where
 
 import qualified Domain.Types.FarePolicy as FP
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -47,7 +49,9 @@ data FareParameters = FareParameters
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: FP.PlatformFeeMethods,
     currency :: Currency,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
@@ -102,6 +106,7 @@ data FParamsInterCityDetails = FParamsInterCityDetails
     pickupCharge :: HighPrecMoney,
     currency :: Currency,
     extraDistanceFare :: HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     extraTimeFare :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)

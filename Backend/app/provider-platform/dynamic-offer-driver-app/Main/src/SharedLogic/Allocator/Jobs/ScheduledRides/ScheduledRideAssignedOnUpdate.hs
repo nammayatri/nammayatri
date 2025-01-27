@@ -24,6 +24,7 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps.HasCoordinates (HasCoordinates (..))
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.Maps.Types (LatLong (..))
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -146,8 +147,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           return $ Terminate "Job is Terminated and Ride is Reallocated because driver can't reach pickup of its scheduled booking on time."
                         else do
                           void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
+                          whenJust (booking.toLocation) $ \toLoc -> do
+                            QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW
-                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+                          void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
                           void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
                           return Complete
                 _ -> do

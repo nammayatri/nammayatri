@@ -155,7 +155,7 @@ rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
       unless (rideOldStatus == rideNewStatus) $ do
         QRide.updateMultiple ride.id ride
     RenewedRide renewedRide -> do
-      QRide.create renewedRide
+      QRide.createRide renewedRide
 
 isStatusChanged :: DB.BookingStatus -> DB.BookingStatus -> RideEntity -> Bool
 isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
@@ -346,6 +346,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       tipAmount = Nothing
       hasStops = booking.hasStops
       wasRideSafe = Nothing
+      feedbackSkipped = False
+      pickupRouteCallCount = Just 0
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
@@ -368,6 +370,7 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
         createdAt = now,
         updatedAt = now
       }

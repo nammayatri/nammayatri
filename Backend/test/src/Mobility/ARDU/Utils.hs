@@ -140,7 +140,7 @@ resetDriver driver = runARDUFlow "" $ do
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
-search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing <&> (.searchId)
+search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing Nothing <&> (.searchId)
 
 getOnSearchTaxiEstimatesByTransporterName ::
   Text ->
@@ -151,7 +151,7 @@ getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
   pollFilteredList
     "get on_search estimates"
     (\p -> p.agencyName == transporterName)
-    $ callBAP (getQuotes searchId appToken)
+    $ callBAP (getQuotes searchId appToken Nothing)
       <&> (.estimates)
 
 select :: Text -> Id AppEstimate.Estimate -> ClientsM ()
@@ -165,7 +165,8 @@ select bapToken quoteId =
         autoAssignEnabledV2 = Nothing,
         isAdvancedBookingEnabled = Nothing,
         paymentMethodId = Nothing,
-        deliveryDetails = Nothing
+        deliveryDetails = Nothing,
+        disabilityDisable = Nothing
       }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty DSRD.SearchRequestForDriverAPIEntity)
@@ -203,7 +204,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing Nothing
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId
@@ -287,7 +288,8 @@ cancelRideByApp appToken driver bapBookingId = do
         { reasonCode = AppCR.CancellationReasonCode "",
           reasonStage = AppCR.OnAssign,
           additionalInfo = Nothing,
-          reallocate = Nothing
+          reallocate = Nothing,
+          blockOnCancellationRate = Nothing
         }
   cancellationChecks bapBookingId driver
 

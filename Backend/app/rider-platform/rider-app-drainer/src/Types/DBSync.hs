@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -52,7 +51,8 @@ data Env = Env
     -- _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],
-    _connectionPool :: Pool Connection
+    _connectionPool :: Pool Connection,
+    _esqDBCfg :: EsqDBConfig
   }
 
 data AppCfg = AppCfg

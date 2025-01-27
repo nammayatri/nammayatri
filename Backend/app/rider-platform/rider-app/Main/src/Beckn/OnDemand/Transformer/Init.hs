@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Common
@@ -8,7 +5,6 @@ import qualified Beckn.OnDemand.Utils.Init
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context
 import BecknV2.Utils (maskNumber)
@@ -18,15 +14,11 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Encryption
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
-import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
 buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig initTtl = do
@@ -143,7 +135,35 @@ tfCustomer res =
 mkItemTags :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
 mkItemTags res =
   let itemTags = if maybe False Trip.isDeliveryTrip res.booking.tripCategory then mkDeliveryTagGroup res else []
-   in itemTags
+      itemTags' = mkAdvancedBookingEnabledTagGroup res : itemTags
+   in itemTags'
+
+mkAdvancedBookingEnabledTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
+mkAdvancedBookingEnabledTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
+              descriptorName = Just "Forward Batch Enabled",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.IS_FORWARD_BATCH_ENABLED,
+                        descriptorName = Just "Forward Batch Enabled",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.isAdvanceBookingEnabled
+              }
+          ]
+    }
 
 mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
 mkDeliveryTagGroup res =

@@ -1,12 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Extra.Location where
 
 import Data.Aeson
-import Data.Time
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters (..))

@@ -51,7 +51,7 @@ findGeometriesContaining gps regions = do
 
 someGeometriesContain :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
-  geometries <- findGeometriesContaining gps regions
+  geometries <- runInReplica $ findGeometriesContaining gps regions
   pure $ not $ null geometries
 
 findGeometriesContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Geometry]

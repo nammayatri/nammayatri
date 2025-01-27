@@ -16,8 +16,32 @@ newtype Languages= Languages{
 , tamil :: Keymap
 , kannada :: Keymap
 , telugu :: Keymap
+, odia :: Keymap
 }
 
+bengali :: Proxy "bengali"
+bengali = a
+
+hindi :: Proxy "hindi"
+hindi = a
+
+kannada :: Proxy "kannada"
+kannada = a
+
+malayalam :: Proxy "malayalam"
+malayalam = a
+
+tamil :: Proxy "tamil"
+tamil = a
+
+telugu :: Proxy "telugu"
+telugu = a
+
+english :: Proxy "english"
+english = a
+
+odia :: Proxy "odia"
+odia = a
 
 newtype Keymap = Keymap {
   about :: String
@@ -355,6 +379,7 @@ newtype Keymap = Keymap {
 , select_on_map :: String
 , select_your_drop :: String
 , select_your_gender :: String
+, complete_profile :: String
 , send_email :: String
 , service_charges :: String
 , set_location_on_map :: String
@@ -1135,6 +1160,7 @@ newtype Keymap = Keymap {
 , applicable_toll_charges :: String
 , update_tip_str :: String
 , book :: String -> String
+, book_for_ :: String -> String
 , fare_for :: String -> String
 , waiting_charge_limit :: String -> String
 , time_taken :: String
@@ -1307,6 +1333,8 @@ newtype Keymap = Keymap {
 , was_toll_exp_smooth :: String
 , was_toll_exp_smooth_desc :: String
 , was_driver_helpful :: String
+, driver_demand_extra :: String
+, demand_extra_toll_amount :: String
 , was_ride_safe_desc :: String
 , was_ride_safe :: String
 , was_driver_helpful_desc :: String
@@ -1378,6 +1406,7 @@ newtype Keymap = Keymap {
 , booking :: String
 , by :: String
 , customers :: String
+, customer :: String
 , rating :: String
 , cancellation :: String
 , trips :: String
@@ -1695,6 +1724,39 @@ newtype Keymap = Keymap {
 , confirm_contacts :: String
 , tickets_for_delhi_metro :: String
 , max_parcel_size :: String -> String -> String -> String
+, metro_tickets :: String
+, offers :: String
+, boost_search_instantly :: String
+, add_a_tip :: String
+, updated_fare_str :: String
+, book_any_details :: String
+, boost_search :: String
+, bus__ :: String 
+, tickets_for_chennai_bus :: String
+, buy_bus_tickets :: String
+, book_and_pay :: String
+, bus_ticket :: String
+, check_spelling_and_try_again :: String
+, book_bus_ticket :: String
+, book_a_one_way_instant_bus_ticket :: String
+, recent_ticket :: String
+, experience_hassle_free_bus_bookings_with :: String
+, enter_bus_number_or_destination :: String
+, destination_stop :: String
+, route_bus_number :: String
+, pickup_stop :: String
+, tickets_for_kolkata_bus :: String
+, ticket_validity_30_minutes :: String
+, fare_commission_free_wbtc :: String
+, select_route_number :: String
+, pickup_and_destination_stop :: String
+, bus_boarded_confirmation :: String
+, towards_station :: String -> String
+, bus_no :: String -> String
+, verified :: String
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: String -> String
+, note_your_ticket_is_only_valid_for :: String -> String
+, here_is_bus_ticket :: String
 }
 
 
@@ -5051,6 +5113,9 @@ update_tip_str = a
 book :: Proxy "book"
 book = a
 
+book_for_ :: Proxy "book_for_"
+book_for_ = a
+
 fare_for :: Proxy "fare_for"
 fare_for = a
 
@@ -5567,6 +5632,12 @@ was_toll_exp_smooth_desc = a
 was_driver_helpful :: Proxy "was_driver_helpful"
 was_driver_helpful = a
 
+driver_demand_extra :: Proxy "driver_demand_extra"
+driver_demand_extra = a
+
+demand_extra_toll_amount :: Proxy "demand_extra_toll_amount"
+demand_extra_toll_amount = a
+
 was_ride_safe_desc :: Proxy "was_ride_safe_desc"
 was_ride_safe_desc = a
 
@@ -5779,6 +5850,9 @@ by = a
 
 customers :: Proxy "customers"
 customers = a
+
+customer :: Proxy "customer"
+customer = a
 
 rating :: Proxy "rating"
 rating = a
@@ -6710,27 +6784,6 @@ explore = a
 delivered_in_just :: Proxy "delivered_in_just"
 delivered_in_just = a
 
-bengali :: Proxy "bengali"
-bengali = a
-
-hindi :: Proxy "hindi"
-hindi = a
-
-kannada :: Proxy "kannada"
-kannada = a
-
-malayalam :: Proxy "malayalam"
-malayalam = a
-
-tamil :: Proxy "tamil"
-tamil = a
-
-telugu :: Proxy "telugu"
-telugu = a
-
-english :: Proxy "english"
-english = a
-
 odisha :: Proxy "odisha"
 odisha = a
 
@@ -6751,3 +6804,105 @@ tickets_for_delhi_metro = a
 
 max_parcel_size :: Proxy "max_parcel_size"
 max_parcel_size = a
+
+complete_profile :: Proxy "complete_profile"
+complete_profile = a
+
+metro_tickets :: Proxy "metro_tickets"
+metro_tickets = a
+
+offers :: Proxy "offers"
+offers = a
+
+boost_search_instantly :: Proxy "boost_search_instantly"
+boost_search_instantly = a  
+
+add_a_tip :: Proxy "add_a_tip"
+add_a_tip = a  
+
+updated_fare_str :: Proxy "updated_fare_str"
+updated_fare_str = a  
+
+book_any_details :: Proxy "book_any_details"
+book_any_details = a  
+
+boost_search :: Proxy "boost_search"
+boost_search = a 
+
+bus__ :: Proxy "bus__"
+bus__ = a
+
+tickets_for_chennai_bus :: Proxy "tickets_for_chennai_bus"
+tickets_for_chennai_bus = a
+
+buy_bus_tickets :: Proxy "buy_bus_tickets"
+buy_bus_tickets = a
+
+book_and_pay :: Proxy "book_and_pay"
+book_and_pay = a
+
+bus_ticket :: Proxy "bus_ticket"
+bus_ticket = a
+
+check_spelling_and_try_again :: Proxy "check_spelling_and_try_again"
+check_spelling_and_try_again = a
+
+book_bus_ticket :: Proxy "book_bus_ticket"
+book_bus_ticket = a
+
+book_a_one_way_instant_bus_ticket :: Proxy "book_a_one_way_instant_bus_ticket"
+book_a_one_way_instant_bus_ticket = a
+
+recent_ticket :: Proxy "recent_ticket"
+recent_ticket = a
+
+experience_hassle_free_bus_bookings_with :: Proxy "experience_hassle_free_bus_bookings_with"
+experience_hassle_free_bus_bookings_with = a
+
+enter_bus_number_or_destination :: Proxy "enter_bus_number_or_destination"
+enter_bus_number_or_destination = a
+
+destination_stop :: Proxy "destination_stop"
+destination_stop = a
+
+route_bus_number :: Proxy "route_bus_number"
+route_bus_number = a
+
+pickup_stop :: Proxy "pickup_stop"
+pickup_stop = a
+
+tickets_for_kolkata_bus :: Proxy "tickets_for_kolkata_bus"
+tickets_for_kolkata_bus = a
+
+ticket_validity_30_minutes :: Proxy "ticket_validity_30_minutes"
+ticket_validity_30_minutes = a
+
+fare_commission_free_wbtc :: Proxy "fare_commission_free_wbtc"
+fare_commission_free_wbtc = a
+
+select_route_number :: Proxy "select_route_number"
+select_route_number = a
+
+pickup_and_destination_stop :: Proxy "pickup_and_destination_stop"
+pickup_and_destination_stop = a
+
+bus_boarded_confirmation :: Proxy "bus_boarded_confirmation"
+bus_boarded_confirmation = a
+
+towards_station :: Proxy "towards_station"
+towards_station = a
+
+bus_no :: Proxy "bus_no"
+bus_no = a
+
+verified :: Proxy "verified"
+verified = a
+
+experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: Proxy "experience_our_pilot_launch_for_bus_ticketing_in_prime_routes"
+experience_our_pilot_launch_for_bus_ticketing_in_prime_routes = a
+
+note_your_ticket_is_only_valid_for :: Proxy "note_your_ticket_is_only_valid_for"
+note_your_ticket_is_only_valid_for = a
+
+here_is_bus_ticket :: Proxy "here_is_bus_ticket"
+here_is_bus_ticket = a

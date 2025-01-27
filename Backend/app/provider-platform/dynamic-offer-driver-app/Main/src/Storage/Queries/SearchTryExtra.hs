@@ -1,25 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.SearchTryExtra where
 
 import qualified Database.Beam.Query ()
-import Domain.Types.Common
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.OrphanInstances.SearchTry
-import qualified Storage.Queries.SearchRequest as QR
+import Storage.Queries.OrphanInstances.SearchTry ()
 
 -- Extra code goes here --
 

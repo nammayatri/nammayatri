@@ -49,13 +49,20 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 updateCustomerStatsConsumer flowRt appEnv kafkaConsumer = do
   readMesssageWithWaitAndTimeRange kafkaConsumer appEnv
+    & S.chunksOf appEnv.kafkaReadBatchSize addToList
     & S.mapM updateCustomerStatsWithFlow
+    & S.delay (fromIntegral $ appEnv.kafkaReadBatchDelay.getSeconds)
     & S.drain
   where
-    updateCustomerStatsWithFlow (eventPayload, personId, _) =
-      runFlowR flowRt appEnv . withLogTag ("updating-person-stats-personId:" <> personId) $
+    addToList = SF.mkFold step start extract
+      where
+        step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
+        start = SF.Partial []
+        extract = reverse
+    updateCustomerStatsWithFlow events = do
+      runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (PSProcessor.updateCustomerStats eventPayload personId)
+          >>= flip withLogTag (mapM (\(eventPayload, personId) -> withLogTag ("updating-person-stats-personId:" <> personId) $ PSProcessor.updateCustomerStats eventPayload personId) events)
 
 broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 broadcastMessageConsumer flowRt appEnv kafkaConsumer =
@@ -166,28 +173,22 @@ readMesssageWithWaitAndTimeRange ::
   AppEnv ->
   SerialT IO (message, messageKey, ConsumerRecordD)
 readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
-  S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
+  let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
+  let records = S.mapMaybe hush eitherRecords
+  S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
   where
-    pollMessageR kc = S.concat $ S.repeat pollRecords
-      where
-        pollRecords = do
-          currentHour <- liftIO getCurrentHour
-          let shouldPoll = maybe True (\(start, end) -> start <= currentHour && end > currentHour) timeRange
-          if shouldPoll
-            then do
-              threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
-              let eitherRecords = S.replicateM appEnv.kafkaReadBatchSize (Consumer.pollMessage kc (Consumer.Timeout 500))
-              let records = S.mapMaybe hush eitherRecords
-              S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
-            else do
-              -- Wait without reading messages
-              threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
-              S.nil -- Produce no records
-        timeRange = (,) <$> appEnv.consumerStartTime <*> appEnv.consumerEndTime
-        getCurrentHour = do
-          (T.UTCTime _date secTillNow) <- T.getCurrentTime
-          return $ div (T.diffTimeToPicoseconds secTillNow) 3600000000000000
-        batchDelayInMicroseconds delay = fromIntegral $ delay * 1000000
+    pollMessageR kc = S.repeatM $ do
+      currentHour <- liftIO getCurrentHour
+      let shouldPoll = maybe True (\(start, end) -> start <= currentHour && end > currentHour) timeRange
+      if shouldPoll
+        then Consumer.pollMessage kc (Consumer.Timeout 500)
+        else pure (Left $ Consumer.KafkaError "TIME CAME TO AN END FOR ME!!")
+
+    timeRange = (,) <$> appEnv.consumerStartTime <*> appEnv.consumerEndTime
+
+    getCurrentHour = do
+      (T.UTCTime _date secTillNow) <- T.getCurrentTime
+      return $ div (T.diffTimeToPicoseconds secTillNow) 3600000000000000
 
     -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
     decodeRecord =

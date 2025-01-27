@@ -21,15 +21,16 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, CalendarMonth)
+import Common.Types.App (Version(..),GlobalPayload(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, CalendarMonth)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (Fn2, Fn3)
+import Data.Function.Uncurried (Fn2, Fn3, runFn3)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
 import Data.Int (fromString, toNumber)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
+import DecodeUtil
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, attempt, launchAff)
 import Effect.Aff.AVar (new)
@@ -202,6 +203,11 @@ standardRunTime =
 
 readFromRef :: forall st. Ref st → FlowBT String st st
 readFromRef ref = lift $ lift $ doAff $ liftEffect $ read ref
+
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 writeToRef :: forall st. st → Ref st → FlowBT String st Unit
 writeToRef d ref = lift $ lift $ doAff $ liftEffect $ write d ref

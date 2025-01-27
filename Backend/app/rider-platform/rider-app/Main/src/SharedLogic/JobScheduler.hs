@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.JobScheduler where
 
@@ -62,6 +61,8 @@ genSingletons [''RiderJobType]
 showSingInstance ''RiderJobType
 
 instance JobProcessor RiderJobType where
+  type MerchantType RiderJobType = DM.Merchant
+  type MerchantOperatingCityType RiderJobType = DMOC.MerchantOperatingCity
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData

@@ -66,7 +66,7 @@ getLatestEndByEntityId entityId =
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    (Just (Se.Desc BeamLM.createdAt))
+    (Just (Se.Desc BeamLM.order))
     <&> listToMaybe
 
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]

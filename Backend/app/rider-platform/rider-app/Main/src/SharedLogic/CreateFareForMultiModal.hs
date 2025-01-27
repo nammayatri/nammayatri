@@ -14,32 +14,14 @@
 
 module SharedLogic.CreateFareForMultiModal where
 
-import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Id
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
-import qualified Lib.JourneyPlannerTypes as JPT
-import qualified Storage.Queries.Journey as QJourney
-import Tools.Error
+import qualified Lib.JourneyLeg.Types as JPT
 
 fareProcessingLockKey :: Text -> Text
 fareProcessingLockKey journeyId = "Fare:Processing:JourneyId" <> journeyId
 
-createFares :: Maybe JPT.JourneySearchData -> Price -> Flow () -> Flow ()
-createFares journeyLegInfo requiredPrice updateInSearchReqFunc = do
-  case journeyLegInfo of
-    Just journeySearchData -> do
-      Redis.withWaitOnLockRedisWithExpiry (fareProcessingLockKey journeySearchData.journeyId) 10 10 $ do
-        let journeyId = journeySearchData.journeyId
-        journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest $ "Journey not found")
-        case journey.estimatedFare of
-          Just initialEstimatedFare -> do
-            updatedEstimatedFare <- initialEstimatedFare `addPrice` requiredPrice
-            QJourney.updateEstimatedFare (Just updatedEstimatedFare) (Id journeyId)
-          Nothing -> do
-            QJourney.updateEstimatedFare (Just requiredPrice) (Id journeyId)
-        let legsDoneInitially = journey.legsDone
-        QJourney.updateNumberOfLegs (legsDoneInitially + 1) (Id journeyId)
-        updateInSearchReqFunc
-    Nothing -> pure ()
+createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Maybe JPT.JourneySearchData -> m () -> m ()
+createFares journeyLegInfo updateInSearchReqFunc = do
+  whenJust journeyLegInfo $ \_ -> updateInSearchReqFunc

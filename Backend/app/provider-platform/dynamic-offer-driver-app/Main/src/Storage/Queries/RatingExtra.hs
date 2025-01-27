@@ -1,30 +1,21 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.RatingExtra where
 
-import qualified Data.Text
 -- Extra code goes here --
 
 import qualified Database.Beam as B
 import Domain.Types.Person (Person)
-import qualified Domain.Types.Person
 import qualified Domain.Types.Rating
 import qualified Domain.Types.Ride
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Rating as Beam
 import qualified Storage.Beam.Rating as BeamR
-import Storage.Queries.OrphanInstances.Rating
+import Storage.Queries.OrphanInstances.Rating ()
 
 findAllRatingUsersCountByPerson :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = do

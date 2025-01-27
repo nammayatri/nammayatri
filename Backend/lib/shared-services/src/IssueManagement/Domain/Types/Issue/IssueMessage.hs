@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module IssueManagement.Domain.Types.Issue.IssueMessage where
 
 import Data.OpenApi (ToSchema)

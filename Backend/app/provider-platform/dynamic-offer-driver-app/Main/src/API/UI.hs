@@ -33,6 +33,7 @@ import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
+import qualified API.Action.UI.WMB as WMB
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -113,6 +114,7 @@ type API =
            :<|> FareCalculator.API
            :<|> ReferralPayout.API
            :<|> SpecialLocationWarrior.API
+           :<|> WMB.API
        )
 
 handler :: FlowServer API
@@ -161,3 +163,4 @@ handler =
     :<|> FareCalculator.handler
     :<|> ReferralPayout.handler
     :<|> SpecialLocationWarrior.handler
+    :<|> WMB.handler

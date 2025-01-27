@@ -14,20 +14,11 @@
 
 module API.Dashboard where
 
-import qualified API.Action.Dashboard.Management.Booking as BookingDSL
-import qualified API.Action.Dashboard.Management.FRFSTicket as FRFSTicketDSL
-import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
-import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
-import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
-import qualified API.Action.Dashboard.Management.System as SystemDSL
-import qualified API.Dashboard.Customer as Customer
+import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
+import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
+import qualified API.Action.Dashboard.Management as ManagementDSL
+import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
-import qualified API.Dashboard.HotSpot as HotSpot
-import qualified API.Dashboard.Issue as Issue
-import qualified API.Dashboard.IssueList as IssueList
-import qualified API.Dashboard.Ride as Ride
-import qualified API.Dashboard.RideBooking as RideBookings
-import qualified API.Dashboard.Tickets as Tickets
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context
@@ -35,87 +26,47 @@ import Kernel.Types.Id
 import Servant hiding (throwError)
 import Tools.Auth (DashboardTokenAuth)
 
--- TODO :: Deprecated, Remove after successful deployment
-type API =
-  "dashboard"
-    :> ( Capture "merchantId" (ShortId DM.Merchant)
-           :> ( OperationsAPI
-                  :<|> RideBookingAPI
-              )
-       )
-    :<|> ExotelAPI
-
 type APIV2 =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
            :> Capture "city" Context.City
-           :> ( OperationsAPI
-                  :<|> RideBookingAPI
+           :> ( ManagementDSLAPI
+                  :<|> AppManagementDSLAPI
+                  :<|> IssueManagementDSLAPI
+                  :<|> RideBookingDSLAPI
               )
        )
     :<|> ExotelAPI
 
-type OperationsAPI =
-  DashboardTokenAuth
-    :> ( Customer.API
-           :<|> Ride.API
-           :<|> IssueList.API
-           :<|> Issue.API
-           :<|> Tickets.API
-           :<|> HotSpot.API
-           :<|> BookingDSL.API
-           :<|> MerchantDSL.API
-           :<|> InvoiceDSL.API
-           :<|> FRFSTicketDSL.API
-           :<|> NammaTagDSL.API
-           :<|> SystemDSL.API
-       )
+type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
 
-type RideBookingAPI =
-  DashboardTokenAuth
-    :> RideBookings.API
+type AppManagementDSLAPI = DashboardTokenAuth :> AppManagementDSL.API
 
--- TODO :: Deprecated, Remove after successful deployment
-handler :: FlowServer API
-handler =
-  ( \merchantId -> do
-      let city = getCity merchantId.getShortId
-      operationHandler merchantId city
-        :<|> rideBookingHandler merchantId city
-  )
-    :<|> exotelHandler
-  where
-    getCity = \case
-      "NAMMA_YATRI" -> Context.Bangalore
-      "YATRI" -> Context.Kochi
-      "JATRI_SAATHI" -> Context.Kolkata
-      _ -> Context.AnyCity
+type IssueManagementDSLAPI = DashboardTokenAuth :> IssueManagementDSL.API
+
+type RideBookingDSLAPI = DashboardTokenAuth :> "rideBooking" :> RideBookingDSL.API
 
 handlerV2 :: FlowServer APIV2
 handlerV2 =
   ( \merchantId city ->
-      operationHandler merchantId city
-        :<|> rideBookingHandler merchantId city
+      managementDSLHandler merchantId city
+        :<|> appManagementDSLHandler merchantId city
+        :<|> issueManagementDSLHandler merchantId city
+        :<|> rideBookingDSLHandler merchantId city
   )
     :<|> exotelHandler
 
-operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
-operationHandler merchantId city _ = do
-  Customer.handler merchantId city
-    :<|> Ride.handler merchantId
-    :<|> IssueList.handler merchantId
-    :<|> Issue.handler merchantId city
-    :<|> Tickets.handler merchantId
-    :<|> HotSpot.handler merchantId
-    :<|> BookingDSL.handler merchantId city
-    :<|> MerchantDSL.handler merchantId city
-    :<|> InvoiceDSL.handler merchantId city
-    :<|> FRFSTicketDSL.handler merchantId city
-    :<|> NammaTagDSL.handler merchantId city
-    :<|> SystemDSL.handler merchantId city
+managementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ManagementDSLAPI
+managementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city
 
-rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
-rideBookingHandler merchantId _ _ = RideBookings.handler merchantId
+appManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer AppManagementDSLAPI
+appManagementDSLHandler merchantId city _auth = AppManagementDSL.handler merchantId city
+
+issueManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IssueManagementDSLAPI
+issueManagementDSLHandler merchantId city _auth = IssueManagementDSL.handler merchantId city
+
+rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
+rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city
 
 type ExotelAPI =
   DashboardTokenAuth

@@ -6,7 +6,8 @@ import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, 
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2)
+import Engineering.Helpers.Utils (compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
@@ -25,6 +26,7 @@ import Domain.Payments as PP
 import Screens.TicketBookingFlow.TicketList.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
@@ -104,7 +106,7 @@ eval (OpenGoogleMap lat long) state = do
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text
-    void $ pure $ JB.toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 

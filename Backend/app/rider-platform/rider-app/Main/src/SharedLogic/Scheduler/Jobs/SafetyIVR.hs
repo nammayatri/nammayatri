@@ -28,7 +28,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QRB
@@ -91,7 +90,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       logDebug $ "Triggering IVR for ride with unexpected condition: " <> show ride.id
       triggerIVR person ride riderConfig
-      createSafetyCSAlertJob person ride riderConfig
+    -- createSafetyCSAlertJob person ride riderConfig
 
     triggerIVR ::
       ( EncFlow m r,
@@ -144,22 +143,3 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             updatedAt = now,
             customerIvrResponse = Nothing
           }
-
-    createSafetyCSAlertJob ::
-      ( EncFlow m r,
-        CacheFlow m r,
-        MonadFlow m,
-        EsqDBFlow m r,
-        SchedulerFlow r
-      ) =>
-      DP.Person ->
-      DRide.Ride ->
-      RiderConfig ->
-      m ()
-    createSafetyCSAlertJob person ride riderConfig = do
-      maxShards <- asks (.maxShards)
-      let scheduleAfter = riderConfig.csAlertTriggerDelay
-          safetyCSAlertJobData = SafetyCSAlertJobData {rideId = ride.id, personId = person.id}
-      logDebug $ "CS Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyCSAlert scheduleAfter maxShards (safetyCSAlertJobData :: SafetyCSAlertJobData)
-      pure ()

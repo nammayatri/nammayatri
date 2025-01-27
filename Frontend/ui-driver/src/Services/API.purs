@@ -20,6 +20,7 @@ import PaymentPage
 
 import Common.Types.App as CTA
 import Common.Types.App as Common
+import Data.Either
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -32,7 +33,7 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign, Foreign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
@@ -219,6 +220,17 @@ instance standardEncodeDriverActiveInactiveResp :: StandardEncode DriverActiveIn
 instance showDriverActiveInactiveResp :: Show DriverActiveInactiveResp where show = genericShow
 instance decodeDriverActiveInactiveResp :: Decode DriverActiveInactiveResp where decode = defaultDecode
 instance encodeDriverActiveInactiveResp :: Encode DriverActiveInactiveResp where encode = defaultEncode
+
+newtype ErrorResponseDriverActivity = ErrorResponseDriverActivity { 
+    blockExpiryTime :: String, 
+    blockReason :: String
+}
+
+derive instance genericErrorResponseDriverActivity :: Generic ErrorResponseDriverActivity _
+derive instance newtypeErrorResponseDriverActivity :: Newtype ErrorResponseDriverActivity _
+instance encodeErrorResponseDriverActivity :: Encode ErrorResponseDriverActivity where encode = defaultEncode
+instance decodeErrorResponseDriverActivity :: Decode ErrorResponseDriverActivity where decode = defaultDecode
+instance eqErrorResponseDriverActivity :: Eq ErrorResponseDriverActivity where eq = genericEq
 ----------------------------------------------------------------------------------------------------------------------------START RIDE----------------------------------------------------------------------------------------------------------------------------------------------
 -- StartRide API request, response types
 data StartRideRequest = StartRideRequest String StartRideReq
@@ -355,7 +367,8 @@ newtype DriverCancelRideResponse = DriverCancelRideResponse {
 newtype DriverCancelRideReq = DriverCancelRideReq
     {
       additionalInfo :: String,
-      reasonCode :: String
+      reasonCode :: String,
+      doCancellationRateBasedBlocking :: Boolean
     }
 
 data DriverCancelRideRequest = DriverCancelRideRequest String DriverCancelRideReq
@@ -435,6 +448,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , bundleVersion         :: Maybe CTA.Version
     , gender                :: Maybe String
     , blocked               :: Maybe Boolean
+    , blockExpiryTime       :: Maybe String
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
@@ -472,6 +486,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , totalRidesTaken :: Maybe Int
     , subscriptionEnabledForVehicleCategory :: Maybe Boolean
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
+    , isSpecialLocWarrior :: Maybe Boolean
     }
 
 
@@ -830,7 +845,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -849,7 +864,9 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_AC_OXY = standardEncode {}
  standardEncode AMBULANCE_VENTILATOR = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
-
+ standardEncode DELIVERY_LIGHT_GOODS_VEHICLE = standardEncode {}
+ standardEncode BUS_NON_AC = standardEncode {}
+ standardEncode BUS_AC = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -942,7 +959,10 @@ instance encodeOfferRideReq :: Encode OfferRideReq where encode = defaultEncode
 data UpdateDriverInfoRequest = UpdateDriverInfoRequest UpdateDriverInfoReq
 
 newtype UpdateDriverInfoReq
-  = UpdateDriverInfoReq
+  = UpdateDriverInfoReq UpdateDriverInfoReqEntity
+  
+
+type UpdateDriverInfoReqEntity = 
   { middleName :: Maybe String
   , firstName :: Maybe String
   , lastName :: Maybe String
@@ -960,6 +980,7 @@ newtype UpdateDriverInfoReq
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
+  , isSpecialLocWarrior :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -2406,7 +2427,8 @@ newtype CreateOrderRes = CreateOrderRes
     sdk_payload :: PaymentPagePayload,
     id :: String,
     order_id :: String,
-    payment_links :: PaymentLinks
+    payment_links :: PaymentLinks,
+    sdk_payload_json :: Maybe Foreign
   }
 
 
@@ -2437,7 +2459,9 @@ instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance showCreateOrderRes :: Show CreateOrderRes where 
+  show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
+    show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
 
@@ -3463,7 +3487,12 @@ data DriverCoinsFunctionType
   | BulkUploadFunction
   | BulkUploadFunctionV2
   | RidesCompleted Int
-  | MetroRideCompleted
+  | MetroRideCompleted MetroRideType (Maybe Int)
+
+data MetroRideType
+  = ToMetro
+  | FromMetro
+  | None
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequestWithoutLogs GET (EP.getCoinTransactions date) headers reqBody Nothing
@@ -3495,6 +3524,12 @@ instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = gene
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
   where
     standardEncode _ = standardEncode {}
+
+derive instance genericMetroRideType :: Generic MetroRideType _
+instance showMetroRideType :: Show MetroRideType where show = genericShow
+instance decodeMetroRideType :: Decode MetroRideType where decode = defaultEnumDecode
+instance encodeMetroRideType :: Encode MetroRideType where encode = defaultEnumEncode
+instance eqMetroRideType :: Eq MetroRideType where eq = genericEq
 
 derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
 derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _
@@ -4321,7 +4356,9 @@ newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
   bikes :: Maybe (Array OnboardingDoc),
-  ambulances :: Maybe (Array OnboardingDoc)
+  ambulances :: Maybe (Array OnboardingDoc),
+  trucks :: Maybe (Array OnboardingDoc),
+  bus :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {
@@ -4966,6 +5003,46 @@ instance showCoinInfo :: Show CoinInfo where show = genericShow
 instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
 instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
 instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
+
+--------------------------------------------------------------- Demand Hotspots API response -------------------------------------------------------------
+
+data DemandHotspotsReq = DemandHotspotsReq String
+
+newtype DemandHotspotsResp = DemandHotspotsResp 
+  { createdAt :: String,
+    expiryAt :: String,
+    hotspotsDetails :: Array HotspotsDetails
+  }
+
+newtype HotspotsDetails = HotspotsDetails {
+  frequency :: Int, 
+  location :: LatLong
+}
+
+instance makeDemandHotspotsReq :: RestEndpoint DemandHotspotsReq where
+    makeRequest reqBody@(DemandHotspotsReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.demandHotspots dummy) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericDemandHotspotsReq :: Generic DemandHotspotsReq _
+instance showDemandHotspotsReq :: Show DemandHotspotsReq where show = genericShow
+instance standardEncodeDemandHotspotsReq :: StandardEncode DemandHotspotsReq where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsReq :: Decode DemandHotspotsReq where decode = defaultDecode
+instance encodeDemandHotspotsReq :: Encode DemandHotspotsReq where encode = defaultEncode
+
+derive instance genericDemandHotspotsResp :: Generic DemandHotspotsResp _
+derive instance newtypeDemandHotspotsResp :: Newtype DemandHotspotsResp _
+instance showDemandHotspotsResp :: Show DemandHotspotsResp where show = genericShow
+instance standardEncodeDemandHotspotsResp :: StandardEncode DemandHotspotsResp where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsResp :: Decode DemandHotspotsResp where decode = defaultDecode
+instance encodeDemandHotspotsResp :: Encode DemandHotspotsResp where encode = defaultEncode
+
+derive instance genericHotspotsDetails :: Generic HotspotsDetails _
+derive instance newtypeHotspotsDetails :: Newtype HotspotsDetails _
+instance standardEncodeHotspotsDetails :: StandardEncode HotspotsDetails where standardEncode _ = standardEncode {}
+instance showHotspotsDetails :: Show HotspotsDetails where show = genericShow
+instance decodeHotspotsDetails :: Decode HotspotsDetails where decode = defaultDecode
+instance encodeHotspotsDetails :: Encode HotspotsDetails where encode = defaultEncode
+
 data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String String String
 
 instance makeScheduledBookingListRequest :: RestEndpoint ScheduledBookingListRequest where
@@ -5236,3 +5313,127 @@ instance standardEncodeScheduleBookingAcceptRes :: StandardEncode ScheduleBookin
 instance showScheduleBookingAcceptRes :: Show ScheduleBookingAcceptRes where show = genericShow
 instance decodeScheduleBookingAcceptRes :: Decode ScheduleBookingAcceptRes where decode = defaultDecode
 instance encodeScheduleBookingAcceptRes :: Encode ScheduleBookingAcceptRes where encode = defaultEncode
+
+
+
+------------------------------------------------------ HyperVerge Sdk Calls logging -----------------------------------------------------------------------------
+
+newtype HVSdkCallLogReq = HVSdkCallLogReq
+  { callbackResponse :: Maybe String,
+    docType :: Maybe String,
+    failureReason :: Maybe String,
+    hvFlowId :: Maybe String,
+    status :: Maybe String,
+    txnId :: String
+  }
+
+newtype HVSdkCallLogResp = HVSdkCallLogResp ApiSuccessResult
+
+instance makeHVSdkCallLogReq :: RestEndpoint HVSdkCallLogReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateHVSdkCallLog "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericHVSdkCallLogReq :: Generic HVSdkCallLogReq _
+instance showHVSdkCallLogReq :: Show HVSdkCallLogReq where show = genericShow
+instance standardHVSdkCallLogReq :: StandardEncode HVSdkCallLogReq where standardEncode (HVSdkCallLogReq req) = standardEncode req
+instance decodeHVSdkCallLogReq :: Decode HVSdkCallLogReq where decode = defaultDecode
+instance encodeHVSdkCallLogReq :: Encode HVSdkCallLogReq where encode = defaultEncode
+
+derive instance genericHVSdkCallLogResp :: Generic HVSdkCallLogResp _
+derive instance newtypeHVSdkCallLogResp :: Newtype HVSdkCallLogResp _
+instance standardEncodeHVSdkCallLogResp :: StandardEncode HVSdkCallLogResp where standardEncode (HVSdkCallLogResp body) = standardEncode body
+instance showHVSdkCallLogResp :: Show HVSdkCallLogResp where show = genericShow
+instance decodeHVSdkCallLogResp:: Decode HVSdkCallLogResp where decode = defaultDecode
+instance encodeHVSdkCallLogResp  :: Encode HVSdkCallLogResp where encode = defaultEncode
+
+-------------- METRO WARRIOR 
+
+newtype UpdateSpecialLocWarriorInfoReq = UpdateSpecialLocWarriorInfoReq {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLocId :: Maybe String,
+  preferredSecondarySpecialLocIds :: Array String,
+  driverId :: String
+}
+
+newtype SpecialLocWarriorInfoRes = SpecialLocWarriorInfoRes {
+  isSpecialLocWarrior :: Boolean,
+  preferredPrimarySpecialLoc :: Maybe SpecialLocationWarrior,
+  preferredSecondarySpecialLocIds :: Array String
+}
+
+newtype SpecialLocationWarrior = SpecialLocationWarrior
+  { id :: String,
+    locationName :: String,
+    category :: String,
+    linkedLocations :: Array SpecialLocation
+  }
+
+newtype SpecialLocation = SpecialLocation
+  { id :: String,
+    locationName :: String,
+    category :: String
+  }
+
+derive instance genericUpdateSpecialLocWarriorInfoReq :: Generic UpdateSpecialLocWarriorInfoReq _
+derive instance newtypeUpdateSpecialLocWarriorInfoReq :: Newtype UpdateSpecialLocWarriorInfoReq _
+instance standardEncodeUpdateSpecialLocWarriorInfoReq :: StandardEncode UpdateSpecialLocWarriorInfoReq where standardEncode (UpdateSpecialLocWarriorInfoReq req) = standardEncode req
+instance showUpdateSpecialLocWarriorInfoReq :: Show UpdateSpecialLocWarriorInfoReq where show = genericShow
+instance decodeUpdateSpecialLocWarriorInfoReq :: Decode UpdateSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeUpdateSpecialLocWarriorInfoReq :: Encode UpdateSpecialLocWarriorInfoReq where encode = defaultEncode
+
+derive instance genericSpecialLocWarriorInfoRes :: Generic SpecialLocWarriorInfoRes _
+derive instance newtypeSpecialLocWarriorInfoRes :: Newtype SpecialLocWarriorInfoRes _
+instance standardEncodeSpecialLocWarriorInfoRes :: StandardEncode SpecialLocWarriorInfoRes where standardEncode (SpecialLocWarriorInfoRes req) = standardEncode req
+instance showSpecialLocWarriorInfoRes :: Show SpecialLocWarriorInfoRes where show = genericShow
+instance decodeSpecialLocWarriorInfoRes :: Decode SpecialLocWarriorInfoRes where decode = defaultDecode
+instance encodeSpecialLocWarriorInfoRes :: Encode SpecialLocWarriorInfoRes where encode = defaultEncode
+
+derive instance genericSpecialLocationWarrior :: Generic SpecialLocationWarrior _
+derive instance newtypeSpecialLocationWarrior :: Newtype SpecialLocationWarrior _
+instance standardEncodeSpecialLocationWarrior :: StandardEncode SpecialLocationWarrior where standardEncode (SpecialLocationWarrior req) = standardEncode req
+instance showSpecialLocationWarrior :: Show SpecialLocationWarrior where show = genericShow
+instance decodeSpecialLocationWarrior :: Decode SpecialLocationWarrior where decode = defaultDecode
+instance encodeSpecialLocationWarrior :: Encode SpecialLocationWarrior where encode = defaultEncode
+
+derive instance genericSpecialLocation :: Generic SpecialLocation _
+derive instance newtypeSpecialLocation :: Newtype SpecialLocation _
+instance standardEncodeSpecialLocation :: StandardEncode SpecialLocation where standardEncode (SpecialLocation res) = standardEncode res
+instance showSpecialLocation :: Show SpecialLocation where show = genericShow
+instance decodeSpecialLocation :: Decode SpecialLocation where decode = defaultDecode
+instance encodeSpecialLocation :: Encode SpecialLocation where encode = defaultEncode
+
+instance makeUpdateSpecialLocWarriorInfoReq  :: RestEndpoint UpdateSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(UpdateSpecialLocWarriorInfoReq req) headers = defaultMakeRequestWithoutLogs POST (EP.updateMetroWarriorInfo req.driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+instance makeGetSpecialLocWarriorInfoReq  :: RestEndpoint GetSpecialLocWarriorInfoReq where
+    makeRequest reqBody@(GetSpecialLocWarriorInfoReq driverId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroWarriorInfo driverId) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+data GetSpecialLocWarriorInfoReq = GetSpecialLocWarriorInfoReq String
+
+derive instance genericGetSpecialLocWarriorInfoReq :: Generic GetSpecialLocWarriorInfoReq _
+instance standardEncodeGetSpecialLocWarriorInfoReq :: StandardEncode GetSpecialLocWarriorInfoReq where standardEncode _ = standardEncode {}
+instance showGetSpecialLocWarriorInfoReq :: Show GetSpecialLocWarriorInfoReq where show = genericShow
+instance decodeGetSpecialLocWarriorInfoReq :: Decode GetSpecialLocWarriorInfoReq where decode = defaultDecode
+instance encodeGetSpecialLocWarriorInfoReq :: Encode GetSpecialLocWarriorInfoReq where encode = defaultEncode
+
+data SpecialLocationListCategoryReq = SpecialLocationListCategoryReq String
+instance makeSpecialLocationListCategoryReq :: RestEndpoint SpecialLocationListCategoryReq where
+  makeRequest reqBody@(SpecialLocationListCategoryReq category) headers = defaultMakeRequestWithoutLogs GET (EP.specialLocationListCategory category) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericSpecialLocationListCategoryReq :: Generic SpecialLocationListCategoryReq _
+instance standardEncodeSpecialLocationListCategoryReq :: StandardEncode SpecialLocationListCategoryReq where standardEncode _ = standardEncode {}
+instance showSpecialLocationListCategoryReq :: Show SpecialLocationListCategoryReq where show = genericShow
+instance decodeSpecialLocationListCategoryReq :: Decode SpecialLocationListCategoryReq where decode = defaultDecode
+instance encodeSpecialLocationListCategoryReq  :: Encode SpecialLocationListCategoryReq where encode = defaultEncode
+
+newtype SpecialLocationListRes = SpecialLocationListRes (Array SpecialLocation)
+
+derive instance genericSpecialLocationListRes :: Generic SpecialLocationListRes _
+derive instance newtypeSpecialLocationListRes :: Newtype SpecialLocationListRes _
+instance standardEncodeSpecialLocationListRes :: StandardEncode SpecialLocationListRes where standardEncode (SpecialLocationListRes res) = standardEncode res
+instance showSpecialLocationListRes :: Show SpecialLocationListRes where show = genericShow
+instance decodeSpecialLocationListRes :: Decode SpecialLocationListRes where decode = defaultDecode
+instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where encode = defaultEncode

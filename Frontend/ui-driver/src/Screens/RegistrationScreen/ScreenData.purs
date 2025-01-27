@@ -43,6 +43,8 @@ initData = {
         registerationStepsAuto : [],
         registerationStepsBike : [],
         registerationStepsAmbulance : [],
+        registerationStepsTruck : [],
+        registerationStepsBus : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
@@ -60,7 +62,9 @@ initData = {
         enteredRC : "",
         vehicleCategory : Nothing,
         linkedRc : Nothing,
-        accessToken : ""
+        accessToken : "",
+        hvTxnId : Nothing,
+        hvFlowId : Nothing
       },
       props: {
         limitReachedFor : Nothing,

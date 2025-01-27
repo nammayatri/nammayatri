@@ -56,4 +56,13 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_city_ba
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_vendor_split_enabled boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_clearance_message_key text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_down boolean DEFAULT false;

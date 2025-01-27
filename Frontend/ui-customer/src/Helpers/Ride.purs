@@ -66,6 +66,8 @@ import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
 import ConfigProvider (getCurrency)
 import Constants (appConfig)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
 customerFeedbackPillData (RideBookingRes state) vehicleVariant = if ((state.bookingDetails) ^. _fareProductType) == "DELIVERY" then parcelFeedbackPillData else normalRideFeedbackPillData (RideBookingRes state) vehicleVariant
@@ -213,7 +215,7 @@ checkRideStatus rideAssigned prioritizeRating = do
             bookingStatus = resp.status
             fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
-            rideStatus = if state.data.sourceFromFCM == "TRUSTED_CONTACT" then ChatWithDriver else if status == "NEW" || ((bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED") && (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
+            rideStatus = if state.data.sourceFromFCM == "TRUSTED_CONTACT" then ChatWithDriver else if status == "NEW" || (((bookingStatus == "CONFIRMED") || (bookingStatus == "TRIP_ASSIGNED" && not state.props.isOtpRideFlow ))  &&  (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             rideScheduledAt = if bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
@@ -346,223 +348,136 @@ checkRideStatus rideAssigned prioritizeRating = do
                 setValueToLocalStore TRACKING_ENABLED "True"
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true, isOtpRideFlow = true }}) else
                 pure unit
-      else if ((getValueToLocalStore RATING_SKIPPED) == "false" ) then do
+      else if (DA.notElem (getValueToLocalStore RATING_SKIPPED) ["__failed", "null", "true"]) then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
-            let _ = setKeyInWindow "forceAppToNoInternetScreen" false
-            let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
-                (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                (RideBookingDetails contents) = bookingDetails.contents
-                (RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
-                differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
-                lastRideDate = (case currRideListItem.rideStartTime of
-                                Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
-                                Nothing        -> "")
-                currentDate =  getCurrentDate ""
-                fareBreakup = resp.fareBreakup
-            setValueToLocalStore IS_SOS_ACTIVE $ show false
-            if(lastRideDate /= currentDate) then do
-              setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
-              setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
-              setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
-              setValueToLocalStore TEST_POLLING_COUNT "22"
-              setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
-              pure unit
-              else pure unit
-            when (isNothing currRideListItem.rideRating) $ do
-              when (length listResp.list > 0) $ do
-                let 
-                  fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
-                  (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                  (RideBookingDetails contents) = bookingDetails.contents
-                  (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-                  (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
-                  isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
-                  hasAccessibilityIssue' =  resp.hasDisability == Just true 
-                  postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
-                  hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds settings.enablePostRideSafetyCheck && not isBlindPerson) postRideCheckCache
-                  hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
-                  waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") ((RideBookingRes resp) ^._fareBreakup)
-                  isRecentRide = EHC.getExpiryTime (fromMaybe "" ((RideBookingRes resp) ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-                  finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
-                  estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
-                  parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
-
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
-                    props { currentStage = RideCompleted
-                          , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag
-                          }
-                  , data { rideRatingState
-                          { driverName = currRideListItem.driverName
-                          , rideId = currRideListItem.id
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
-                          , source = decodeAddress (Booking resp.fromLocation)
-                          , destination = (decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._toLocation))))
-                          , vehicleNumber = (currRideListItem.vehicleNumber)
-                          , status = (currRideListItem.status)
-                          , shortRideId = currRideListItem.shortRideId
-                          , rideEndTimeUTC = ""
-                          , offeredFare = resp.estimatedTotalFare
-                          , distanceDifference = differenceOfDistance
-                          , bookingId = resp.id
-                          , feedback = ""
-                          , rideStartTime = case currRideListItem.rideStartTime of
-                                              Just startTime -> (convertUTCtoISC startTime "h:mm A")
-                                              Nothing        -> ""
-                          , rideEndTime   = case currRideListItem.rideEndTime of
-                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                              Nothing        -> ""
-                          , rideStartDate = case currRideListItem.rideStartTime of
-                                              Just startTime ->( (fromMaybe "" (head (split (Pattern ",") (convertUTCtoISC startTime "llll")) )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
-                                              Nothing        -> ""
-                          , dateDDMMYY =  case currRideListItem.rideStartTime of
-                                            Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
-                                            Nothing        -> ""
-                          }
-                          , driverInfoCardState {
-                            price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id,
-                            spLocationName = resp.specialLocationName,
-                            addressWard = bookingLocationAPIEntity.ward,
-                            providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) resp.isValueAddNP,
-                            rentalData 
-                                { finalDuration = (fromMaybe 0 resp.duration) / (60)
-                                , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
-                                , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
-                                , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
-                                , rideStartedAt = case currRideListItem.rideStartTime of
-                                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
-                                                    Nothing        -> ""
-                                , rideEndedAt = case currRideListItem.rideEndTime of
-                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                              Nothing        -> ""
-                                , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
-                                , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
-                                }
-                          }
-                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
-                          , vehicleVariant = currRideListItem.vehicleVariant
-                          , fareProductType = fareProductType
-                          , rideCompletedData { 
-                              issueReportData { 
-                                hasAccessibilityIssue = hasAccessibilityIssue'
-                              , hasSafetyIssue = hasSafetyIssue'
-                              , hasTollIssue = hasTollIssue'
-                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
-                              }
-                            }
-                          , toll {
-                            confidence = ride.tollConfidence
-                          , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
-                          }
-                          , requestorPartyRoles = contents.requestorPartyRoles
-                        }
-                      }
-                    )
-
-                modifyScreenState
-                  $ RiderRideCompletedScreenStateType
-                      ( \riderRideCompletedScreen ->
-                          riderRideCompletedScreen
-                            {
-                              topCard {
-                                title = getString LT.RIDE_COMPLETED,
-                                finalAmount = (fromMaybe 0 currRideListItem.computedPrice),
-                                initialAmount = resp.estimatedTotalFare,
-                                fareUpdatedVisiblity = (fromMaybe 0 currRideListItem.computedPrice) /= resp.estimatedTotalFare && contents.estimatedDistance /= Nothing,
-                                infoPill {
-                                  text = getFareUpdatedStr differenceOfDistance waitingChargesApplied,
-                                  imageVis = VISIBLE,
-                                  visible = if (fromMaybe 0 currRideListItem.computedPrice) == resp.estimatedTotalFare || contents.estimatedDistance == Nothing then GONE else VISIBLE
-                                }
-                              }
-                            , driverInfoCardState
-                                {
-                                  driverName =  currRideListItem.driverName,
-                                  isAlreadyFav = fromMaybe false resp.isAlreadyFav,
-                                  fareProductType = fareProductType,
-                                  favCount = fromMaybe 0 resp.favCount
-                                }
-                            , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
-                            , rideDuration = resp.duration
-                            , rentalRowDetails
-                              { rideTime = getString LT.RIDE_TIME
-                              , rideDistance = getString LT.RIDE_DISTANCE
-                              , rideDistanceInfo = "( " <> getString LT.CHARGEABLE <> " / " <> getString LT.BOOKED <> " )"
-                              , rideStartedAt = getString LT.RIDE_STARTED_AT
-                              , rideEndedAt = getString LT.RIDE_ENDED_AT
-                              , estimatedFare = getString LT.ESTIMATED_FARE
-                              , extraTimeFare = getString LT.EXTRA_TIME_FARE
-                              , extraDistanceFare = getString LT.EXTRA_DISTANCE_FARE
-                              , totalFare = getString LT.TOTAL_FARE
-                              , rideDetailsTitle = getString LT.RIDE_DETAILS
-                              , fareUpdateTitle = getString LT.FARE_UPDATE
-                              , surcharges = getString LT.SURCHARGES
-                              }
-                            , rentalBookingData
-                              { baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
-                              , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
-                              , finalDuration = (fromMaybe 0 resp.duration) / (60)
-                              , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
-                              , rideStartedAt = case currRideListItem.rideStartTime of
-                                                  Just startTime -> (convertUTCtoISC startTime "h:mm A")
-                                                  Nothing        -> ""
-                              , rideEndedAt = case currRideListItem.rideEndTime of
-                                                Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                                Nothing        -> ""
-                              , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
-                              , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
-                              }
-                            , showRentalRideDetails = fareProductType == FPT.RENTAL
-                            , ratingCard
-                              {
-                                feedbackPillData = customerFeedbackPillData (RideBookingRes resp) ride.vehicleVariant
-                              }
-                            , rideRatingState
-                                { driverName = currRideListItem.driverName
-                                , rideId = currRideListItem.id
-                                , distanceDifference = differenceOfDistance
-                                , rideStartTime = case currRideListItem.rideStartTime of
-                                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
-                                                    Nothing        -> ""
-                                , rideEndTime = case currRideListItem.rideEndTime of
-                                                  Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                                  Nothing        -> ""
-                                }
-                            , ratingViewState
-                                { rideBookingRes = (RideBookingRes resp)
-                                }
-                            , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled 
-                            , bookingId = resp.id
-                            , additionalCharges = [
-                                {
-                                  text :  getString if ride.tollConfidence == (Just CTA.Unsure) then  TOLL_ROAD_CHANGED else if finalFareHasToll then  TOLL_CHARGES_INCLUDED else TOLL_ROAD_CHANGED 
-                                , visibility : boolToVisibility $ finalFareHasToll || estimateFareHasToll
-                                , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-                                , textColor : Color.black700
-                                },
-                                {
-                                  text : maybe "" (\parking ->  getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ INT.ceil $ parking ^. _amount)) parkingCharges
-                                , visibility : boolToVisibility $ isJust parkingCharges 
-                                , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
-                                , textColor : Color.black700
-                                }
-                              ]
-                            , customerIssue = riderRideCompletedScreen.customerIssue
-                                { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
-                                , hasAccessibilityIssue = hasAccessibilityIssue'
-                                , hasSafetyIssue = hasSafetyIssue'
-                                , hasTollIssue = hasTollIssue'
-                                }
-                          }
-                      )
-                updateLocalStage RideCompleted
-              when (length listResp.list == 0 && not state.props.isSharedLocationFlow) $ do 
+            let (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
+                (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+            if not (null listResp.list) then do
+              if (getValueToLocalStore RATING_SKIPPED == ride.id) then do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
                 updateLocalStage HomeScreen
+              else do
+                let _ = setKeyInWindow "forceAppToNoInternetScreen" false
+                let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                    (RideBookingDetails contents) = bookingDetails.contents
+                    (RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
+                    differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
+                    lastRideDate = (case currRideListItem.rideStartTime of
+                                    Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                    Nothing        -> "")
+                    currentDate =  getCurrentDate ""
+                    fareBreakup = resp.fareBreakup
+                setValueToLocalStore IS_SOS_ACTIVE $ show false
+                if(lastRideDate /= currentDate) then do
+                  setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+                  setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
+                  setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
+                  setValueToLocalStore TEST_POLLING_COUNT "22"
+                  setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
+                  pure unit
+                  else pure unit
+                when (isNothing currRideListItem.rideRating) $ do
+                  when (length listResp.list > 0) $ do
+                    let 
+                      fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+                      (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                      (RideBookingDetails contents) = bookingDetails.contents
+                      (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                      (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
+                      isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+                      hasAccessibilityIssue' =  resp.hasDisability == Just true 
+                      postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
+                      hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds settings.enablePostRideSafetyCheck && not isBlindPerson) postRideCheckCache
+                      hasTollIssue' = finalFareHasToll && not isBlindPerson
+                      waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") ((RideBookingRes resp) ^._fareBreakup)
+                      isRecentRide = EHC.getExpiryTime (fromMaybe "" ((RideBookingRes resp) ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
+                      finalFareHasToll = DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+                      estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
+                      demandExtraTollAmountIssue' = estimateFareHasToll && (not finalFareHasToll)
+
+                    modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
+                        props { currentStage = RideCompleted
+                              , estimatedDistance = contents.estimatedDistance
+                              , zoneType = getSpecialTag resp.specialLocationTag
+                              }
+                      , data { rideRatingState
+                              { driverName = currRideListItem.driverName
+                              , rideId = currRideListItem.id
+                              , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                              , source = decodeAddress (Booking resp.fromLocation)
+                              , destination = (decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._toLocation))))
+                              , vehicleNumber = (currRideListItem.vehicleNumber)
+                              , status = (currRideListItem.status)
+                              , shortRideId = currRideListItem.shortRideId
+                              , rideEndTimeUTC = ""
+                              , offeredFare = resp.estimatedTotalFare
+                              , distanceDifference = differenceOfDistance
+                              , bookingId = resp.id
+                              , feedback = ""
+                              , rideStartTime = case currRideListItem.rideStartTime of
+                                                  Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                  Nothing        -> ""
+                              , rideEndTime   = case currRideListItem.rideEndTime of
+                                                  Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                  Nothing        -> ""
+                              , rideStartDate = case currRideListItem.rideStartTime of
+                                                  Just startTime ->( (fromMaybe "" (head (split (Pattern ",") (convertUTCtoISC startTime "llll")) )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
+                                                  Nothing        -> ""
+                              , dateDDMMYY =  case currRideListItem.rideStartTime of
+                                                Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                                Nothing        -> ""
+                              }
+                              , driverInfoCardState {
+                                price = resp.estimatedTotalFare,
+                                rideId = currRideListItem.id,
+                                spLocationName = resp.specialLocationName,
+                                addressWard = bookingLocationAPIEntity.ward,
+                                providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) resp.isValueAddNP,
+                                rentalData 
+                                    { finalDuration = (fromMaybe 0 resp.duration) / (60)
+                                    , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                                    , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
+                                    , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                                    , rideStartedAt = case currRideListItem.rideStartTime of
+                                                        Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                        Nothing        -> ""
+                                    , rideEndedAt = case currRideListItem.rideEndTime of
+                                                  Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                  Nothing        -> ""
+                                    , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
+                                    , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
+                                    }
+                              }
+                              , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                              , vehicleVariant = currRideListItem.vehicleVariant
+                              , fareProductType = fareProductType
+                              , rideCompletedData { 
+                                  issueReportData { 
+                                    hasAccessibilityIssue = hasAccessibilityIssue'
+                                  , hasSafetyIssue = hasSafetyIssue'
+                                  , hasTollIssue = hasTollIssue'
+                                  , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                                  }
+                                }
+                              , toll {
+                                confidence = ride.tollConfidence
+                              , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
+                              }
+                              , requestorPartyRoles = contents.requestorPartyRoles
+                            }
+                          }
+                        )
+                    changeRideCompletedState state (RideAPIEntity currRideListItem) (RideBookingRes resp) (RideBookingDetails contents) differenceOfDistance waitingChargesApplied fareProductType isRecentRide fareBreakup finalFareHasToll estimateFareHasToll demandExtraTollAmountIssue' hasAccessibilityIssue' hasSafetyIssue' (RideAPIEntity ride)
+                    updateLocalStage RideCompleted
+                  when (length listResp.list == 0 && not state.props.isSharedLocationFlow) $ do 
+                    modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+                    updateLocalStage HomeScreen
+            else do
+              modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+              updateLocalStage HomeScreen
           Left err -> do 
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
             updateLocalStage HomeScreen
@@ -579,6 +494,102 @@ checkRideStatus rideAssigned prioritizeRating = do
                                                                                                 , sourceGeoJson = flowStatusData.sourceGeoJson
                                                                                                 , sourceGates = flowStatusData.sourceGates } }})
         
+changeRideCompletedState :: HomeScreenState -> RideAPIEntity -> RideBookingRes -> RideBookingDetails -> Int -> Boolean -> FPT.FareProductType -> Boolean -> Array FareBreakupAPIEntity -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> RideAPIEntity -> FlowBT String Unit
+changeRideCompletedState state (RideAPIEntity currRideListItem) (RideBookingRes resp) (RideBookingDetails contents) differenceOfDistance waitingChargesApplied fareProductType isRecentRide fareBreakup finalFareHasToll estimateFareHasToll demandExtraTollAmountIssue' hasAccessibilityIssue' hasSafetyIssue' (RideAPIEntity ride) = do
+  let parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
+  modifyScreenState
+    $ RiderRideCompletedScreenStateType
+        ( \riderRideCompletedScreen ->
+            riderRideCompletedScreen
+              {
+                topCard {
+                  title = getString LT.RIDE_COMPLETED,
+                  finalAmount = (fromMaybe 0 currRideListItem.computedPrice),
+                  initialAmount = resp.estimatedTotalFare,
+                  fareUpdatedVisiblity = (fromMaybe 0 currRideListItem.computedPrice) /= resp.estimatedTotalFare && contents.estimatedDistance /= Nothing,
+                  infoPill {
+                    text = getFareUpdatedStr differenceOfDistance waitingChargesApplied,
+                    imageVis = VISIBLE,
+                    visible = if (fromMaybe 0 currRideListItem.computedPrice) == resp.estimatedTotalFare || contents.estimatedDistance == Nothing then GONE else VISIBLE
+                  }
+                }
+              , driverInfoCardState
+                  {
+                    driverName =  currRideListItem.driverName,
+                    isAlreadyFav = fromMaybe false resp.isAlreadyFav,
+                    fareProductType = fareProductType,
+                    favCount = fromMaybe 0 resp.favCount
+                  }
+              , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
+              , rideDuration = resp.duration
+              , rideId = currRideListItem.id
+              , rentalRowDetails
+                { rideTime = getStringV2 ride_time
+                , rideDistance = getString LT.RIDE_DISTANCE
+                , rideDistanceInfo = "( " <> getString LT.CHARGEABLE <> " / " <> getString LT.BOOKED <> " )"
+                , rideStartedAt = getString LT.RIDE_STARTED_AT
+                , rideEndedAt = getString LT.RIDE_ENDED_AT
+                , estimatedFare = getString LT.ESTIMATED_FARE
+                , extraTimeFare = getString LT.EXTRA_TIME_FARE
+                , extraDistanceFare = getString LT.EXTRA_DISTANCE_FARE
+                , totalFare = getString LT.TOTAL_FARE
+                , rideDetailsTitle = getString LT.RIDE_DETAILS
+                , fareUpdateTitle = getString LT.FARE_UPDATE
+                , surcharges = getString LT.SURCHARGES
+                }
+              , rentalBookingData
+                { baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
+                , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                , finalDuration = (fromMaybe 0 resp.duration) / (60)
+                , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                , rideStartedAt = case currRideListItem.rideStartTime of
+                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                    Nothing        -> ""
+                , rideEndedAt = case currRideListItem.rideEndTime of
+                                  Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                  Nothing        -> ""
+                , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
+                , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
+                }
+              , showRentalRideDetails = fareProductType == FPT.RENTAL
+              , ratingCard
+                {
+                  feedbackPillData = customerFeedbackPillData (RideBookingRes resp) ride.vehicleVariant
+                }
+              , rideRatingState
+                  { driverName = currRideListItem.driverName
+                  , rideId = currRideListItem.id
+                  , distanceDifference = differenceOfDistance
+                  , rideStartTime = maybe "" (\startTime -> convertUTCtoISC startTime "h:mm A") currRideListItem.rideStartTime
+                  , rideEndTime = maybe "" (\endTime -> convertUTCtoISC endTime "h:mm A") currRideListItem.rideEndTime
+                  }
+              , ratingViewState
+                  { rideBookingRes = (RideBookingRes resp)
+                  }
+              , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled 
+              , bookingId = resp.id
+              , additionalCharges = [
+                  {
+                    text :  getString if ride.tollConfidence == (Just CTA.Unsure) then  TOLL_ROAD_CHANGED else if finalFareHasToll then  TOLL_CHARGES_INCLUDED else TOLL_ROAD_CHANGED 
+                  , visibility : boolToVisibility $ finalFareHasToll || estimateFareHasToll
+                  , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
+                  , textColor : Color.black700
+                  },
+                  {
+                    text : maybe "" (\parking ->  getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ INT.ceil $ parking ^. _amount)) parkingCharges
+                  , visibility : boolToVisibility $ isJust parkingCharges 
+                  , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
+                  , textColor : Color.black700
+                  }
+                ]
+              , customerIssue = riderRideCompletedScreen.customerIssue
+                  { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || demandExtraTollAmountIssue'
+                  , hasAccessibilityIssue = hasAccessibilityIssue'
+                  , hasSafetyIssue = hasSafetyIssue'
+                  , demandExtraTollAmountIssue = demandExtraTollAmountIssue'
+                  }
+            }
+        )
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do

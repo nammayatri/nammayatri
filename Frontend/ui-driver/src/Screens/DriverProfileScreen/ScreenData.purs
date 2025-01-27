@@ -100,29 +100,10 @@ initData =
     cancellationWindow : Nothing,
     missedEarnings : 0,
     driverInfoResponse : Nothing,
-    completingProfileRes : {
-      completed : 0
-    , pledge : []
-    , vehicalOffer : []
-    , languages : []
-    , aspirations : [] 
-    , homeTown : Nothing
-    , calendarState:
-      { calendarPopup: false
-      , endDate: Nothing
-      , selectedTimeSpan: dummyDateItem
-      , startDate: Just dummyDateItem
-      , weeks: []
-      }
-    , drivingSince : Nothing
-    , addImagesState: addImagesState'
-    , viewImageState: { image : "", imageName : Nothing}
-    , uploadedImagesIds: []
-    , addedImages: []
-    , datePickerState : datePickerState'
-    , inputTextState : inputTextState'
-      }
-    , favCount : Nothing
+    profileCompletedModules : 0,
+    driverBlocked : false,
+    blockedExpiryTime : "",
+    favCount : Nothing
     },
 
   props: {
@@ -161,7 +142,8 @@ initData =
     enableGoto : false,
     isRideActive : false,
     canSwitchToRental : Nothing,
-    canSwitchToInterCity : Nothing
+    canSwitchToInterCity : Nothing,
+    showDriverBlockedPopup : false
    }
 }
 
@@ -188,9 +170,6 @@ addImagesState' = {
   isLoading: false,
   imageMediaIds: []
 }
-
-dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
-
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
@@ -253,6 +232,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , bundleVersion         :  Nothing
     , gender                :  Nothing
     , blocked               :  Nothing
+    , blockExpiryTime       :  Nothing
     , numberOfRides         :  Nothing
     , paymentPending        :  false
     , subscribed            :  false
@@ -290,6 +270,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , totalRidesTaken : Nothing
     , subscriptionEnabledForVehicleCategory : Nothing
     , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , isSpecialLocWarrior : Nothing
 }
 
 organizationInfo :: OrganizationInfo

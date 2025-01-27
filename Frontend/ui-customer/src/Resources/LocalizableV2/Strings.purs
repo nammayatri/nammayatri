@@ -16,6 +16,7 @@ import Resources.LocalizableV2.TA
 import Resources.LocalizableV2.TE
 import Resources.LocalizableV2.BN
 import Resources.LocalizableV2.EN
+import Resources.LocalizableV2.OD
 import Locale.Utils
 
 stringsMap :: Languages
@@ -28,6 +29,7 @@ stringsMap =
     , tamil: getTa
     , kannada: getKn
     , telugu: getTe
+    , odia: getOd
     }
 
 infixl 1 readFromNT as @~
@@ -59,6 +61,7 @@ getStringV2 key =
       "ML_IN" -> stringsMap @~ malayalam @~ key
       "TA_IN" -> stringsMap @~ tamil @~ key
       "TE_IN" -> stringsMap @~ telugu @~ key
+      "OD_IN" -> stringsMap @~ odia @~ key
       _ -> stringsMap @~ english @~ key
 
 getString :: String -> STR -> String
@@ -73,6 +76,7 @@ getString language str =
       "ML_IN" -> stringsMap @~ malayalam
       "TA_IN" -> stringsMap @~ tamil
       "TE_IN" -> stringsMap @~ telugu
+      "OD_IN" -> stringsMap @~ odia
       _ -> stringsMap @~ english
   in
     proxy $ langMap
@@ -97,6 +101,9 @@ getTE = getString "TE_IN"
 
 getBN :: STR -> String
 getBN = getString "BN_IN"
+
+getOD :: STR -> String
+getOD = getString "OD_IN"
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str =
@@ -1216,6 +1223,7 @@ getProxy str =
     APPLICABLE_TOLL_CHARGES -> \a -> a @~ applicable_toll_charges
     UPDATE_TIP_STR -> \a -> a @~ update_tip_str
     BOOK arg1 -> \a -> (a @~ book) arg1
+    BOOK_FOR_ arg1 -> \a -> (a @~ book_for_) arg1
     FARE_FOR arg1 -> \a -> (a @~ fare_for) arg1
     WAITING_CHARGE_LIMIT arg1 -> \a -> (a @~ waiting_charge_limit) arg1
     TIME_TAKEN -> \a -> a @~ time_taken
@@ -1388,6 +1396,8 @@ getProxy str =
     WAS_TOLL_EXP_SMOOTH -> \a -> a @~ was_toll_exp_smooth
     WAS_TOLL_EXP_SMOOTH_DESC -> \a -> a @~ was_toll_exp_smooth_desc
     WAS_DRIVER_HELPFUL -> \a -> a @~ was_driver_helpful
+    Demand_Extra_Toll_Amount -> \a -> a @~ demand_extra_toll_amount
+    Driver_Demand_Extra -> \a -> a @~ driver_demand_extra
     WAS_RIDE_SAFE_DESC -> \a -> a @~ was_ride_safe_desc
     WAS_RIDE_SAFE -> \a -> a @~ was_ride_safe
     WAS_DRIVER_HELPFUL_DESC -> \a -> a @~ was_driver_helpful_desc
@@ -1459,6 +1469,7 @@ getProxy str =
     BOOKING -> \a -> a @~ booking
     BY -> \a -> a @~ by
     CUSTOMERS -> \a -> a @~ customers
+    CUSTOMER -> \a -> a @~ customer
     RATING -> \a -> a @~ rating
     CANCELLATION -> \a -> a @~ cancellation
     TRIPS -> \a -> a @~ trips
@@ -1776,3 +1787,34 @@ getProxy str =
     CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
     TICKETS_FOR_DELHI_METRO -> \a -> a @~ tickets_for_delhi_metro
     MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3
+    COMPLETE_PROFILE -> \a -> a @~ complete_profile
+    METRO_TICKETS -> \a -> a @~ metro_tickets
+    OFFERS -> \a -> a @~ offers
+    TICKETS_FOR_CHENNAI_BUS -> \a -> a @~ tickets_for_chennai_bus
+    BUS__ -> \a -> a @~ bus__
+    BUY_BUS_TICKETS -> \a -> a @~ buy_bus_tickets
+    BOOK_AND_PAY -> \a -> a @~ book_and_pay
+    BUS_TICKET -> \a -> a @~ bus_ticket
+    CHECK_SPELLING_AND_TRY_AGAIN -> \a -> a @~ check_spelling_and_try_again
+    BOOK_BUS_TICKET -> \a -> a @~ book_bus_ticket
+    BOOK_A_ONE_WAY_INSTANT_BUS_TICKET -> \a -> a @~ book_a_one_way_instant_bus_ticket
+    RECENT_TICKETS -> \a -> a @~ recent_ticket
+    EXPERIENCE_HASSLE_FREE_BUS_BOOKINGS_WITH -> \a -> a @~ experience_hassle_free_bus_bookings_with
+    ENTER_BUS_NUMBER_OR_DESTINATION -> \a -> a @~ enter_bus_number_or_destination
+    DESTINATION_STOPS -> \a -> a @~ destination_stop
+    ROUTE_BUS_NO -> \a -> a @~ route_bus_number
+    PICKUP_STOP -> \a -> a @~ pickup_stop
+    TICKETS_FOR_KOLKATA_BUS -> \a -> a @~ tickets_for_kolkata_bus
+    TICKET_VALIDITY_30_MINUTES -> \a -> a @~ ticket_validity_30_minutes
+    FARE_COMMISSION_FREE_WBTC -> \a -> a @~ fare_commission_free_wbtc
+    SELECT_ROUTE_NUMBER -> \a -> a @~ select_route_number
+    PICKUP_AND_DESTINATION_STOP -> \a -> a @~ pickup_and_destination_stop
+    BUS__ -> \a -> a @~ bus__
+    BUS_BOARDED_CONFIRMATION -> \a -> a @~ bus_boarded_confirmation
+    TOWARDS_STATION arg1 -> \a -> (a @~ towards_station) arg1
+    BUS_NO arg1 -> \a -> (a @~ bus_no) arg1
+    VERIFIED -> \a -> a @~ verified
+    EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES arg1 -> \a -> (a @~ experience_our_pilot_launch_for_bus_ticketing_in_prime_routes) arg1
+    NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
+    HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
+

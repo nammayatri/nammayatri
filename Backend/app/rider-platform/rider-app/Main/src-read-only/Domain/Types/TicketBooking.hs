@@ -1,12 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketBooking (module Domain.Types.TicketBooking, module ReExport) where
 
 import Data.Aeson
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import Domain.Types.Extra.TicketBooking as ReExport
 import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.Merchant
@@ -30,7 +29,7 @@ data TicketBooking = TicketBooking
     status :: Domain.Types.Extra.TicketBooking.BookingStatus,
     ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     updatedAt :: Kernel.Prelude.UTCTime,
-    visitDate :: Data.Time.Calendar.Day,
+    visitDate :: Data.Time.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)

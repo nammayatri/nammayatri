@@ -1,10 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverGoHomeRequest where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
@@ -18,6 +19,8 @@ data DriverGoHomeRequest = DriverGoHomeRequest
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     mbReachedHome :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     numCancellation :: Kernel.Prelude.Int,
     status :: Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus,
     updatedAt :: Kernel.Prelude.UTCTime

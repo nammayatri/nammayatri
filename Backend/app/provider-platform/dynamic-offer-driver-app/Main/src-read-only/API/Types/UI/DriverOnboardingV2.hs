@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.DriverOnboardingV2 where
@@ -27,7 +26,7 @@ data AadhaarCardReq = AadhaarCardReq
     maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Text,
-    validationStatus :: API.Types.UI.DriverOnboardingV2.ValidationStatus
+    validationStatus :: ValidationStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -66,11 +65,12 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigList = DocumentVerificationConfigList
-  { ambulances :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    autos :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    bikes :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    cabs :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity],
-    trucks :: Kernel.Prelude.Maybe [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
+  { ambulances :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    autos :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    bikes :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -85,7 +85,7 @@ data DriverPanReq = DriverPanReq
     nameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    validationStatus :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.ValidationStatus,
+    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
   }
   deriving stock (Generic)
@@ -110,10 +110,10 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
-  { airConditioned :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.AirConditionedTier,
+  { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    tiers :: [API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier]
+    tiers :: [DriverVehicleServiceTier]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -145,10 +145,10 @@ data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithC
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RateCardResp = RateCardResp
-  { farePolicyHour :: API.Types.UI.DriverOnboardingV2.FarePolicyHour,
+  { farePolicyHour :: FarePolicyHour,
     perKmRate :: Kernel.Types.Common.PriceAPIEntity,
     perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    rateCardItems :: [API.Types.UI.DriverOnboardingV2.RateCardItem],
+    rateCardItems :: [RateCardItem],
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     totalFare :: Kernel.Types.Common.PriceAPIEntity,
     tripCategory :: Domain.Types.Common.TripCategory

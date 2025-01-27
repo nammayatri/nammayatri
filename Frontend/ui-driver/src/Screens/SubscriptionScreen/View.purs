@@ -132,7 +132,14 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVe
           if cityOrVehicleChangedCondition resp' then do
             void $ fork $ onCityOrVehicleChange push onCityOrVehicleChangeAC
           else pure unit
-          doAff do liftEffect $ push $ loadMyPlans resp
+          case resp'.currentPlanDetails of
+            Nothing -> do
+              uiPlans <- Remote.getUiPlans "null"
+              case uiPlans of
+                Right plansResp -> do
+                  doAff do liftEffect $ push $ loadPlans plansResp
+                Left err -> doAff do liftEffect $ push $ errorAction err
+            Just _ -> do doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     else do
       currentPlan <- Remote.getCurrentPlan ""
@@ -1865,28 +1872,27 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFre
 
 lottieJsonAccordingToLang :: Boolean -> Boolean -> String
 lottieJsonAccordingToLang isOnFreeTrial isIntroductory = 
-  (HU.getAssetsBaseUrl FunctionCall) <> case getLanguageLocale languageKey of 
-    "HI_IN" -> if isIntroductory then "lottie/ny_sub_intro_hindi_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" 
-               else "lottie/ny_ic_subscription_info_hindi_02.json"
-    "KN_IN" -> if isIntroductory then "lottie/ny_sub_intro_kannada_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" 
-               else "lottie/ny_ic_subscription_info_kannada_02.json"
-    "TA_IN" -> if isIntroductory then "lottie/ny_sub_intro_tamil_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" 
-               else "lottie/ny_ic_subscription_info_tamil_02.json"
-    "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_03_2.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" 
-               else "lottie/ny_ic_subscription_info_bengali_02.json"
-    "TE_IN" -> if isIntroductory then "lottie/ny_sub_intro_telugu_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
-               else "lottie/ny_ic_subscription_info_02.json"
-    "ML_IN" -> if isIntroductory then "lottie/ny_sub_intro_malayalam_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_malayalam_01.json" 
-               else "lottie/ny_ic_subscription_info_malayalam_02.json"
-    _       -> if isIntroductory then "lottie/ny_sub_intro_english_jan1.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
-               else "lottie/ny_ic_subscription_info_02.json"
+  let lang = getLanguageLocale languageKey
+      driverCity = getValueToLocalStore DRIVER_LOCATION
+      driverVehicle = getValueToLocalStore VEHICLE_VARIANT
+      vehicleAndCityConfig = RemoteConfig.subscriptionsConfigVariantLevel driverCity "default"
+      lottieSubscriptionInfo = fromMaybe RemoteConfig.defaultLottieSubscriptionInfo vehicleAndCityConfig.lottieSubscriptionInfo
+      getLottieByLang lottieConfig = case lang of
+        "HI_IN" -> lottieConfig.hindi
+        "KN_IN" -> lottieConfig.kannada
+        "TA_IN" -> lottieConfig.tamil
+        "BN_IN" -> lottieConfig.bengali
+        "TE_IN" -> lottieConfig.telugu
+        "ML_IN" -> lottieConfig.malayalam
+        _       -> lottieConfig.english
+      lottieUrl = if isOnFreeTrial then
+            getLottieByLang lottieSubscriptionInfo.freeTrialLottie
+          else if isIntroductory then
+            getLottieByLang lottieSubscriptionInfo.introductoryLottie
+          else
+            getLottieByLang lottieSubscriptionInfo.subscriptionPlanLottie
+  in (HU.getAssetsBaseUrl FunctionCall) <> lottieUrl
+
 
 isPaymentPending :: SubscriptionScreenState -> Boolean
 isPaymentPending state = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)

@@ -13,20 +13,21 @@
 -}
 
 module Domain.Action.Dashboard.Customer
-  ( deleteCustomer,
-    blockCustomer,
-    unblockCustomer,
-    listCustomers,
-    customerInfo,
-    customerCancellationDuesSync,
-    getCancellationDuesDetails,
-    updateSafetyCenterBlocking,
-    getCustomerPersonNumbers,
-    getCustomerPersonId,
+  ( deleteCustomerDelete,
+    postCustomerBlock,
+    postCustomerUnblock,
+    getCustomerList,
+    getCustomerInfo,
+    postCustomerCancellationDuesSync,
+    getCustomerCancellationDuesDetails,
+    postCustomerUpdateSafetyCenterBlocking,
+    postCustomerPersonNumbers,
+    postCustomerPersonId,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -60,12 +61,12 @@ import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
-deleteCustomer ::
+deleteCustomerDelete ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   Flow APISuccess
-deleteCustomer merchantShortId opCity customerId = do
+deleteCustomerDelete merchantShortId opCity customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
@@ -79,8 +80,8 @@ deleteCustomer merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-blockCustomer :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
-blockCustomer merchantShortId opCity customerId = do
+postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+postCustomerBlock merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -98,8 +99,8 @@ blockCustomer merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-unblockCustomer :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
-unblockCustomer merchantShortId opCity customerId = do
+postCustomerUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+postCustomerUnblock merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -123,8 +124,8 @@ unblockCustomer merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-customerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow Common.CustomerInfoRes
-customerInfo merchantShortId opCity customerId = do
+getCustomerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow Common.CustomerInfoRes
+getCustomerInfo merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -149,8 +150,8 @@ customerInfo merchantShortId opCity customerId = do
       }
 
 ---------------------------------------------------------------------
-listCustomers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
-listCustomers merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbPersonId = do
+getCustomerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
+getCustomerList merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbPersonId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -180,12 +181,13 @@ buildCustomerListItem person = do
       }
 
 ---------------------------------------------------------------------
-customerCancellationDuesSync ::
+postCustomerCancellationDuesSync ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Common.CustomerCancellationDuesSyncReq ->
   Flow APISuccess
-customerCancellationDuesSync merchantShortId customerId req = do
+postCustomerCancellationDuesSync merchantShortId _ customerId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let personId = cast @Common.Customer @DP.Person customerId
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -193,11 +195,12 @@ customerCancellationDuesSync merchantShortId customerId req = do
   void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.cancellationChargesWithCurrency req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
   return Success
 
-getCancellationDuesDetails ::
+getCustomerCancellationDuesDetails ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Flow Common.CancellationDuesDetailsRes
-getCancellationDuesDetails merchantShortId personId = do
+getCustomerCancellationDuesDetails merchantShortId _ personId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   res <- DCancel.getCancellationDuesDetails Nothing (cast personId, merchant.id)
   return $
@@ -207,11 +210,13 @@ getCancellationDuesDetails merchantShortId personId = do
         canBlockCustomer = res.canBlockCustomer
       }
 
-updateSafetyCenterBlocking ::
+postCustomerUpdateSafetyCenterBlocking ::
+  ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Common.UpdateSafetyCenterBlockingReq ->
   Flow APISuccess
-updateSafetyCenterBlocking personId req = do
+postCustomerUpdateSafetyCenterBlocking _ _ personId req = do
   let personId' = cast @Common.Customer @DP.Person personId
   safetySettings <- QSafety.findSafetySettingsWithFallback personId' Nothing
   case req.resetCount of
@@ -227,8 +232,8 @@ updateSafetyCenterBlocking personId req = do
   where
     blockingDate now count = if (count + 1) == 3 || count + 1 >= 6 then Just now else Nothing
 
-getCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
-getCustomerPersonNumbers _ _ req = do
+postCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
+postCustomerPersonNumbers _ _ req = do
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
   decryptedNumbers <- forM chunks processChunk
@@ -249,8 +254,8 @@ getCustomerPersonNumbers _ _ req = do
         return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
       return decryptedPersons
 
-getCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
-getCustomerPersonId _ _ req = do
+postCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
+postCustomerPersonId _ _ req = do
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
   decryptedNumbers <- forM chunks processChunk

@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Scheduler.Types (module Reexport, module Lib.Scheduler.Types) where
 
@@ -69,6 +68,9 @@ class (Show t, Read t, Demote t ~ t, SingKind t, Eq t) => JobProcessor t where
 
   restoreAnyJobInfo :: Sing (e :: t) -> Text -> Maybe (AnyJobInfo t)
 
+  type MerchantType t
+  type MerchantOperatingCityType t
+
 type family JobContent (e :: t) :: Type
 
 class (JobProcessor t) => JobInfoProcessor (e :: t) where
@@ -105,6 +107,8 @@ instance (JobProcessor t) => FromJSON (AnyJob t) where
     currErrors <- obj .: "currErrors"
     status <- obj .: "status"
     parentJobId <- obj .: "parentJobId"
+    merchantId <- obj .:? "merchantId"
+    merchantOperatingCityId <- obj .:? "merchantOperatingCityId"
     return (AnyJob (Job {..}))
   parseJSON wrongVal = typeMismatch "Object AnyJob" wrongVal
 
@@ -121,7 +125,9 @@ instance (JobProcessor t) => ToJSON (AnyJob t) where
         "maxErrors" .= maxErrors,
         "currErrors" .= currErrors,
         "status" .= status,
-        "parentJobId" .= parentJobId
+        "parentJobId" .= parentJobId,
+        "merchantId" .= merchantId,
+        "merchantOperatingCityId" .= merchantOperatingCityId
       ]
 
 data Job (e :: t) = JobFlow t e =>
@@ -135,7 +141,9 @@ data Job (e :: t) = JobFlow t e =>
     maxErrors :: Int,
     currErrors :: Int,
     status :: JobStatus,
-    parentJobId :: Id AnyJob
+    parentJobId :: Id AnyJob,
+    merchantId :: Maybe (Id (MerchantType t)),
+    merchantOperatingCityId :: Maybe (Id (MerchantOperatingCityType t))
   }
 
 data JobStatus = Pending | Completed | Failed | Revived

@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Feedback where
@@ -17,7 +15,9 @@ data FeedbackT f = FeedbackT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
-    rideId :: B.C f Kernel.Prelude.Text
+    rideId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

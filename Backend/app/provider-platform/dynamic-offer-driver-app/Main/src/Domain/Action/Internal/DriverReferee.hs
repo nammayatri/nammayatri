@@ -87,7 +87,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   unless alreadyReferred_ $ do
     updateReferralStats driverReferralLinkage.driverId driverStats transporterConfig merchOpCityId
     numberHash <- getDbHash customerMobileNumber
-    updateRefereeInfoAndNotify transporterConfig isMultipleDeviceIdExist_ numberHash driverReferralLinkage currency driver
+    updateRefereeInfoAndNotify transporterConfig isMultipleDeviceIdExist_ numberHash driverReferralLinkage currency driver merchOpCityId
   let shareDriverInfo = fromMaybe False shareReferrerInfo
   res <-
     if not shareDriverInfo
@@ -114,7 +114,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
         pure $ Right info
   pure $ DRL.LinkRefereeRes res
   where
-    mkRiderDetailsObj driverId currency flagReason = do
+    mkRiderDetailsObj driverId currency flagReason merchOpCityId = do
       id <- generateGUID
       now <- getCurrentTime
       otp <- generateOTPCode
@@ -140,10 +140,11 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             payoutFlagReason = flagReason,
             currency,
             isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist,
-            isFlagConfirmed = Nothing
+            isFlagConfirmed = Nothing,
+            merchantOperatingCityId = Just merchOpCityId
           }
 
-    updateRefereeInfoAndNotify transporterConfig isMultipleDeviceIdExist_ numberHash driverReferralLinkage currency driver = do
+    updateRefereeInfoAndNotify transporterConfig isMultipleDeviceIdExist_ numberHash driverReferralLinkage currency driver merchOpCityId = do
       let isDeviceIdChecksRequired = fromMaybe False transporterConfig.isDeviceIdChecksRequired
           flagReason
             | isDeviceIdChecksRequired = Nothing
@@ -155,7 +156,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
           QRD.updateReferralInfo numberHash merchantId referralCode driverReferralLinkage.driverId
           QRD.updateIsDeviceIdExists (Just $ isJust isMultipleDeviceIdExist) rd.id
         Nothing -> do
-          riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason
+          riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason merchOpCityId
           QRD.create riderDetails
       mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "REFERRAL_FLOW" Nothing Nothing driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
@@ -189,13 +190,15 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                     activatedValidRides = 0,
                     referralEarnings = 0.0,
                     referralCounts = 1,
-                    payoutStatus = DDS.Verifying,
+                    payoutStatus = DDS.Initialized,
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
                     createdAt = now,
                     updatedAt = now,
                     cancellationCharges = 0.0,
                     tipAmount = 0.0,
-                    totalRideTime = 0
+                    totalRideTime = 0,
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOperatingCity.id
                   }
           QDailyStats.create dailyStatsOfDriver

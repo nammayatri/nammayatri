@@ -159,7 +159,7 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
-  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QRide.updateRideEndedBy ride.id rideEndedBy
   QBCR.upsert bookingCReason
@@ -197,6 +197,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
             ..
           }
   nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+  logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)

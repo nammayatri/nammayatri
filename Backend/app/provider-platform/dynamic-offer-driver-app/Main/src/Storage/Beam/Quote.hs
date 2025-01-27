@@ -11,7 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Storage.Beam.Quote where
 
@@ -44,7 +43,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     isBlockedRoute :: B.C f (Maybe Bool),
     tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    updatedAt :: B.C f LocalTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -12,9 +12,12 @@ import Data.Maybe
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCard
 import CarouselHolder as CarouselHolder
 import Components.RideCompletedCard.Controller (IssueReportBannerProps(..), CustomerIssueCard(..), CustomerIssue(..), issueReportBannersTransformer)
-import Screens.RideBookingFlow.RiderRideCompletedCard.Controller (Action(..))
+import Screens.RideBookingFlow.RiderRideCompletedCard.Controller (Action(..), issueReportBannerConfigs)
 import PrestoDOM.List (ListItem)
 import Engineering.Helpers.Commons
+import Debug(spy)
+import Data.Array as DA
+import Common.Types.App as CTP
 
 primaryButtonConfig :: RiderRideCompletedScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config
@@ -25,7 +28,7 @@ primaryButtonConfig state = PrimaryButton.config
         }
     , alpha = if state.ratingCard.recordAudioState.isRecording == true then 0.5 else 1.0
     , background = Color.black900
-    , margin = (Margin 0 0 0 0)
+    , margin = MarginBottom $ if state.isKeyBoardOpen then 5 else 15
     , id = "RateYourDriverButton"
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
     , enableRipple = true
@@ -40,14 +43,20 @@ primaryButtonConfigForCarousel state = PrimaryButton.config
         , color = Color.yellow900
         , accessibilityHint = "Done with Carousel" 
         }
-    , alpha = if state.customerIssue.buttonActive then 1.0 else 0.5
+    , alpha = if (state.customerIssue.buttonActive || isOnlyDemandExtraTollIssue state) then 1.0 else 0.5
     , background = Color.black900
     , margin = (Margin 0 0 0 0)
     , id = "DoneWithCarousel"
     , enableRipple = true
     , rippleColor = Color.rippleShade
-    , isClickable = state.customerIssue.buttonActive
+    , isClickable = state.customerIssue.buttonActive || isOnlyDemandExtraTollIssue state
     }
+
+isOnlyDemandExtraTollIssue :: RiderRideCompletedScreenState -> Boolean
+isOnlyDemandExtraTollIssue state = do
+    let bannerConfigs = issueReportBannerConfigs state
+    if (DA.length bannerConfigs) == 1 then maybe false (\customerIssue -> customerIssue.issueType == CTP.DemandExtraTollAmount) (bannerConfigs DA.!! 0)
+    else false
 
 primaryBtnConfigForRentalTripDetails :: RiderRideCompletedScreenState -> PrimaryButton.Config
 primaryBtnConfigForRentalTripDetails state = PrimaryButton.config

@@ -1,94 +1,144 @@
 imports:
-  TravelMode: Domain.Types.Common
-  Estimate: Domain.Types.Estimate
-  Booking: Domain.Types.Booking
-  PriceAPIEntity: Kernel.Types.Common
-  LatLong: Kernel.External.Maps
-  LocationAPIEntity: Domain.Types.Location
+  Journey: Domain.Types.Journey
   SearchRequest: Domain.Types.SearchRequest
+  Estimate: Domain.Types.Estimate
+  LocationAddress: Domain.Types.LocationAddress
+  PriceAPIEntity : Kernel.Types.Common
+  FRFSStationAPI : API.Types.UI.FRFSTicketService
+  MultimodalTravelMode : Domain.Types.Trip
+  Location : Domain.Types.Location
+  LegInfo: Lib.JourneyModule.Types
+  JourneyLeg: Domain.Types.JourneyLeg
+  LatLong: Kernel.External.Maps.Types
+  Price: Kernel.Types.Common
+  JourneyLegStatus : Lib.JourneyLeg.Types
+  FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types
 
-module: MultiModal
+module: MultimodalConfirm
+
 types:
-  MultiModalEstimate:
-    id: Id Estimate
-    serviceTierName: Text
-    serviceTierShortDesc: Text
-    travelModes: "[TravelMode]"
-    estimatedFare: PriceAPIEntity
-    isValueAddNP: Bool
-    validTill: UTCTime
-    derive: "Eq, Show"
+  JourneyInfoResp:
+    estimatedDuration: Maybe Seconds
+    estimatedMinFare: PriceAPIEntity
+    estimatedMaxFare: PriceAPIEntity
+    estimatedDistance: Distance
+    legs: [LegInfo]
 
-  MultiModalRouteDetails:
-    estimatedFare: PriceAPIEntity
-    totalDistance: Distance
-    totalDuration: Seconds
-    automaticBooking: Bool
-    routeLegs: "[MultiModalRouteLeg]"
-    derive: "Eq, Show"
+  LegStatus:
+    legOrder: Int
+    status: JourneyLegStatus
 
-  MultiModalRouteLeg:
-    distance: Distance
-    duration: Seconds
-    status: MultiModalRouteLegStatus
-    legInfo: MultiModalRouteLegInfo
-    derive: "Eq, Show"
+  JourneyStatus:
+    recordType: NewType
+    legs: "[LegStatus]"
 
-  MultiModalRouteLegInfo:
-    enum: "WalkLeg WalkLegInfo, MetroLeg MetroLegInfo, TaxiLeg TaxiLegInfo"
-    derive: "Eq, Show"
+  ExtendLegReq:
+    legId: Id JourneyLeg
+    endLeg: Id JourneyLeg
+    endLocation: Maybe LatLong                          # if some other dest outside of journey
 
-  MultiModalRouteLegStatus:
-    enum: "Pending, Completed"
+  RiderLocationReq:
+    latLong: LatLong
+    currTime: UTCTime
 
-  WalkLegInfo:
-    startLocation: LocationAPIEntity
-    endLocation: LocationAPIEntity
-    derive: "Eq, Show"
+  SwitchLegReq:
+    newMode: MultimodalTravelMode
+    currLocation: LatLong
 
-  MetroLegInfo:
-    metroLines: "[MetroLineInfo]"
-    derive: "Eq, Show"
+  SwitchTaxiReq:
+    estimateId: Id Estimate
 
-  MetroLineInfo:
-    lineName: Text
-    lineColor: Text
-    lineTimings: MetroLineTiming
-    estimatedFare: PriceAPIEntity
-    startStation: MetroStationInfo
-    endStation: MetroStationInfo
-    lineStations: "[MetroStationInfo]"
-    derive: "Eq, Show"
+  JourneyBookingPaymentStatus:
+    journeyId: Id Journey
+    paymentOrder: Maybe PaymentOrder
 
-  MetroStationInfo:
-    stationName: Text
-    stationCode: Text
-    stationLocation: LatLong
-    platform: Maybe Text
-    exit: Maybe Text
-    derive: "Eq, Show"
-
-  MetroLineTiming:
-    startTime: TimeOfDay
-    endTime: TimeOfDay
-    frequency: Seconds
-    derive: "Eq, Show"
-
-  TaxiLegInfo:
-    startLocation: LocationAPIEntity
-    endLocation: LocationAPIEntity
-    legStage: TaxiLegStage
-    derive: "Eq, Show"
-
-  TaxiLegStage:
-    enum: "SearchStage (Id SearchRequest) (Maybe (Id Estimate)), SearchingForDriverStage (Id Estimate), PickupStage (Id Booking), OngoingStage (Id Booking), CompletedStage"
-    derive: "Eq, Show"
+  PaymentOrder:
+    sdkPayload: Maybe CreateOrderResp
+    status: FRFSBookingPaymentStatusAPI
 
 apis:
-  # add multiModalEstimates object in search/{searchId}/results api response
   - POST:
-      endpoint: /multiModal/{estimateId}/routeDetails
+      endpoint: /multimodal/{journeyId}/initiate
       params:
-        estimateId: Id Estimate
+        journeyId: Id Journey
       response:
-        type: MultiModalRouteDetails
+        type: JourneyInfoResp
+  - POST:
+      endpoint: /multimodal/{journeyId}/confirm
+      params:
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /multimodal/{journeyId}/booking/info
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyInfoResp
+  - GET:
+      endpoint: /multimodal/{journeyId}/booking/paymentStatus
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyBookingPaymentStatus
+
+  - POST:
+      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
+      params:
+        legId: Text
+      request:
+        type: SwitchLegReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess                    # send new leg
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/leg/{legId}/skip
+      params:
+        journeyId: Id Journey
+        legId: Id JourneyLeg
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/extend/{journeyId}/leg                    # only applicable for current leg
+      request:
+        type: ExtendLegReq
+      params:
+        legId: Text
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /multimodal/journey/{journeyId}/status
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyStatus
+
+  - POST:
+      endpoint: multimodal/journey/{journeyId}/cancel
+      params:
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: multimodal/{journeyId}/rider/location
+      params:
+        journeyId: Id Journey
+      request:
+        type: RiderLocationReq
+      response:
+        type: JourneyStatus
+
+  - POST:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/switchTaxi
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: SwitchTaxiReq
+      response:
+        type: JourneyInfoResp

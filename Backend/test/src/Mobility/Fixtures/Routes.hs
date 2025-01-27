@@ -35,7 +35,8 @@ defaultSearchReq =
         quotesUnifiedFlow = Nothing,
         sessionToken = Nothing,
         placeNameSource = Nothing,
-        driverIdentifier = Nothing
+        driverIdentifier = Nothing,
+        fareParametersInRateCard = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -52,6 +53,7 @@ defaultSearchReqAddress =
       ward = Nothing,
       placeId = Nothing,
       instructions = Nothing,
+      title = Nothing,
       extras = Nothing
     }
 
@@ -100,7 +102,8 @@ searchReqFromUpdatesList updList =
               quotesUnifiedFlow = Nothing,
               sessionToken = Nothing,
               placeNameSource = Nothing,
-              driverIdentifier = Nothing
+              driverIdentifier = Nothing,
+              fareParametersInRateCard = Nothing
             }
    in (origin, destination, req)
 
@@ -120,7 +123,8 @@ mkSearchReqFromLocations origin destination =
               quotesUnifiedFlow = Nothing,
               sessionToken = Nothing,
               placeNameSource = Nothing,
-              driverIdentifier = Nothing
+              driverIdentifier = Nothing,
+              fareParametersInRateCard = Nothing
             }
    in (origin, destination, req)
 

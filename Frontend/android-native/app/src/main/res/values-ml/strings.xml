@@ -50,5 +50,6 @@
     <string name="call_support">സഹായം അഴകുക</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"അതിരിക്കുകയുമില്ല. ടിപ്സുകളുമില്ല. കാത്തിരിക്കൽ ചാർജും ഇല്ല."</string>
     <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
-
+    <string name="tip_included"> നുറുങ്ങ് ഉൾപ്പെടുത്തിയിട്ടുണ്ട്!</string>
+    <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
 </resources>

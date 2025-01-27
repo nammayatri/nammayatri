@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.VehicleServiceTier where
@@ -38,6 +36,8 @@ data VehicleServiceTierT f = VehicleServiceTierT
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     serviceTierType :: B.C f Domain.Types.Common.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stopFcmSuppressCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    stopFcmThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverModuleCompletion where
@@ -19,6 +17,7 @@ data DriverModuleCompletionT f = DriverModuleCompletionT
     completionId :: B.C f Kernel.Prelude.Text,
     driverId :: B.C f Kernel.Prelude.Text,
     entitiesCompleted :: B.C f [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity],
+    expiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     moduleId :: B.C f Kernel.Prelude.Text,

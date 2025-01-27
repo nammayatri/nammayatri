@@ -14,3 +14,9 @@ ALTER TABLE atlas_app.rating ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rating ADD COLUMN media_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rating ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_app.rating ADD COLUMN merchant_id character varying(36) ;

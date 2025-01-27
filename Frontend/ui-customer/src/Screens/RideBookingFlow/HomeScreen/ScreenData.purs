@@ -21,10 +21,11 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType)
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
+import Services.API as API
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
@@ -206,6 +207,7 @@ initData = let
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
+    , boostSearchEstimate : CV.config
     },
     props: {
       rideRequestFlow : false
@@ -418,7 +420,10 @@ initData = let
     , isConfirmSourceCurrentLocation : true
     , showDeliveryImageAndOtpModal : false
     , loadingDeliveryImage : false
-    , fromDeliveryScreen : false
+    , showBookAnyOptions : false
+    , showBoostSearch : false
+    , busClicked : false
+    , ticketServiceType : API.METRO
   }
 }
 
@@ -593,17 +598,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-
-dummyDriverOfferAPIEntity :: QuoteAPIContents
-dummyDriverOfferAPIEntity =
-  DRIVER_OFFER
-    $ DriverOfferAPIEntity
-        { rating: Nothing
-        , validTill: ""
-        , driverName: ""
-        , distanceToPickup: Nothing
-        , durationToPickup: Nothing
-        }
 
 dummyLocationName :: PlaceName
 dummyLocationName = PlaceName {

@@ -28,7 +28,7 @@ import Data.Array ((!!), singleton, null)
 import Data.Maybe as MB 
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage,calculateBookingEndTime,formatDateInHHMM,fetchAddressDetails,calculateBookingEndTime,fetchAddressDetails)
+import Helpers.Utils (FetchImageFrom(..), fetchImage,calculateBookingEndTime,formatDateInHHMM,fetchAddressDetails,calculateBookingEndTime,fetchAddressDetails,getCityConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
@@ -45,6 +45,7 @@ import ConfigProvider
 import Services.API as API
 import Screens.RentalBookingFlow.RentalScreen.ScreenData(dummyBookingDetails)
 import Data.String as DS
+import Storage (getValueToLocalStore,KeyStore(..))
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
   let
@@ -131,6 +132,7 @@ incrementDecrementConfig state = let
 mapInputViewConfig :: RentalScreenState -> InputView.InputViewConfig
 mapInputViewConfig state = 
   let config = InputView.config 
+      currentCityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
       isSelectPackageStage = state.data.currentStage == RENTAL_SELECT_PACKAGE
       suffixButtonText = if state.data.startTimeUTC == ""
                           then getString NOW
@@ -146,7 +148,7 @@ mapInputViewConfig state =
           , gravity = CENTER_VERTICAL
           , accessibilityHint = if suffixButtonText == (getString NOW) then "Select to Schedule Ride" else "Selected Date : " <> suffixButtonText 
           }
-        , suffixButtonVisibility = VISIBLE 
+        , suffixButtonVisibility = boolToVisibility currentCityConfig.enableScheduling
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
         , inputLayoutPading = if isSelectPackageStage then PaddingLeft 8 else PaddingLeft 0
         , inputView = map 
@@ -181,6 +183,7 @@ mapInputViewConfig state =
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
       , gravity : if isSelectPackageStage then LEFT else CENTER_HORIZONTAL
       , inputTextConfig : item
+      , alpha : 1.0
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)

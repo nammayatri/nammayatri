@@ -24,7 +24,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripParty: Domain.Types.Trip
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
   DriverIdentifierType: Domain.Types.RefereeLink
   DriverIdentifier: Domain.Types.RefereeLink
 
@@ -64,6 +64,7 @@ SearchRequest:
     clientBundleVersion: Maybe Version
     clientSdkVersion: Maybe Version
     clientConfigVersion: Maybe Version
+    clientReactNativeVersion: Maybe Text
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
@@ -75,6 +76,10 @@ SearchRequest:
     initiatedBy: Maybe TripParty
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
+    hasMultimodalSearch: Maybe Bool
+
+  default:
+    hasMultimodalSearch: "false"
 
   types:
     SearchRequestStatus:
@@ -203,6 +208,11 @@ SearchRequest:
       where: id
       params: [isAdvanceBookingEnabled]
 
+    updateRiderPreferredOption:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [riderPreferredOption]
+
     updateTotalRidesCount:
       kvFunction: updateOneWithKV
       params: [id, totalRidesCount]
@@ -212,6 +222,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       params: [initiatedBy]
       where: id
+
+    updateHasMultimodalSearch:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [hasMultimodalSearch]
 
   constraints:
     id: PrimaryKey

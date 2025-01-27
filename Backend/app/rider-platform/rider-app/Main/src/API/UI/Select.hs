@@ -20,11 +20,10 @@ module API.UI.Select
     DSelect.QuotesResultResponse (..),
     DSelect.CancelAPIResponse (..),
     API,
-    select,
-    select2,
-    selectList,
-    selectResult,
-    cancelSearch,
+    select2',
+    selectList',
+    selectResult',
+    cancelSearch',
     handler,
   )
 where
@@ -120,7 +119,10 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
-select2 (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+select2 (personId, merchantId) estimateId = withFlowHandlerAPI . select2' (personId, merchantId) estimateId
+
+select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m APISuccess
+select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
@@ -128,13 +130,22 @@ select2 (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonI
   pure Success
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-selectList (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
+selectList (personId, merchantId) = withFlowHandlerAPI . selectList' (personId, merchantId)
+
+selectList' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.SelectListRes
+selectList' (personId, _) = withPersonIdLogTag personId . DSelect.selectList
 
 selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
+selectResult (personId, merchantId) = withFlowHandlerAPI . selectResult' (personId, merchantId)
+
+selectResult' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.QuotesResultResponse
+selectResult' (personId, _) = withPersonIdLogTag personId . DSelect.selectResult
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ cancelSearchUtil (personId, merchantId) estimateId
+cancelSearch (personId, merchantId) = withFlowHandlerAPI . cancelSearch' (personId, merchantId)
+
+cancelSearch' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.CancelAPIResponse
+cancelSearch' (personId, merchantId) estimateId = withPersonIdLogTag personId $ cancelSearchUtil (personId, merchantId) estimateId
 
 rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -145,8 +156,8 @@ rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPerso
 
 cancelSearchUtil :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.CancelAPIResponse
 cancelSearchUtil (personId, merchantId) estimateId = do
-  activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
-  -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  activeBooking <- B.runInReplica $ QRB.findByTransactionIdAndStatus estimate.requestId.getId activeBookingStatus
   if isJust activeBooking
     then do
       logTagInfo "Booking already created while cancelling estimate." estimateId.getId

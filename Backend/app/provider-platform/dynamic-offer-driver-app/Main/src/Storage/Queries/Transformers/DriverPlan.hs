@@ -1,15 +1,9 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.Transformers.DriverPlan where
 
 import qualified Data.Aeson as A
-import Domain.Types.DriverInformation (DriverAutoPayStatus)
 import Domain.Types.DriverPlan as Domain
 import qualified Domain.Types.Extra.DriverPlan
-import Domain.Types.Mandate
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
@@ -17,15 +11,11 @@ import qualified Domain.Types.Plan
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPlan as BeamDF
 import qualified Storage.CachedQueries.Plan as CQP

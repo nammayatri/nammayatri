@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -11,6 +10,7 @@ import Domain.Types.Extra.MerchantMessage as ReExport
 import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -25,7 +25,8 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show)
 
@@ -64,6 +65,7 @@ data MessageKey
   | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
   | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
   | WHATSAPP_MANUAL_PAYMENT_LINK
+  | FLEET_CONSENT_DEEPLINK_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

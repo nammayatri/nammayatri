@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.StationExtra where
 
 import BecknV2.FRFS.Enums
@@ -11,14 +8,12 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Station
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Station as BeamS
-import Storage.Queries.OrphanInstances.Station
+import Storage.Queries.OrphanInstances.Station ()
 
 findAllMatchingStations :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Station]
 findAllMatchingStations mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do

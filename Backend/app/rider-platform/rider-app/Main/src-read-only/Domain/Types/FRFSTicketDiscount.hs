@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketDiscount where
@@ -31,4 +30,4 @@ data FRFSTicketDiscount = FRFSTicketDiscount
 
 data DiscountValue = FixedAmount Kernel.Types.Common.HighPrecMoney | Percentage Kernel.Prelude.Double deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DiscountValue))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DiscountValue)

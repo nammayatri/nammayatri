@@ -1,21 +1,15 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PlanExtra where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as BeamP
-import Storage.Queries.OrphanInstances.Plan
+import Storage.Queries.OrphanInstances.Plan ()
 
 -- Extra code goes here --
 

@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverPanCardExtra where
 
 import Domain.Types.DriverPanCard
@@ -9,12 +6,11 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents as Documents
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPanCard as Beam
-import Storage.Queries.OrphanInstances.DriverPanCard
+import Storage.Queries.OrphanInstances.DriverPanCard ()
 
 -- Extra code goes here --
 

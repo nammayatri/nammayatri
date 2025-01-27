@@ -34,6 +34,8 @@ type RemoteConfig a
     , kolkata :: Maybe a
     , chennai :: Maybe a
     , tumakuru :: Maybe a
+    , paris :: Maybe a
+    , odisha :: Maybe a
     , mysore :: Maybe a
     , kochi :: Maybe a
     , delhi :: Maybe a
@@ -61,8 +63,41 @@ type RemoteConfig a
     , gulbarga :: Maybe a
     , udupi :: Maybe a
     , ysCities :: Maybe a
+    , bhubaneshwar :: Maybe a
+    , bhubaneswar :: Maybe a
+    , cuttack :: Maybe a
+    , bidar :: Maybe a
+    , puri :: Maybe a
+    , pudukkottai :: Maybe a
     , config :: Maybe Config
     }
+    
+type AppConfigRC a =
+  { nammaYatri :: Maybe a
+  , nammaYatriPartner :: Maybe a
+  , odishaYatri :: Maybe a
+  , odishaYatriPartner :: Maybe a
+  , yatri :: Maybe a
+  , yatriPartner :: Maybe a
+  , manaYatri :: Maybe a
+  , manaYatriPartner :: Maybe a
+  , yatriSathi :: Maybe a
+  , yatriSathiPartner :: Maybe a
+  , default :: a
+  }
+
+type VariantLevelRemoteConfig a = 
+    { autoRickshaw :: a,
+      suv :: a,
+      sedan :: a,
+      hatchback :: a,
+      bookAny :: a,
+      taxi :: a,
+      taxiPlus :: a,
+      default :: a,
+      deliveryBike :: a
+    }
+
 
 newtype RCCarousel
   = RCCarousel
@@ -146,17 +181,14 @@ type TipsConfig
     }
 
 type SubscriptionConfigVariantLevel 
-  = { autoRickshaw :: Maybe SubscriptionConfigVariantLevelEntity,
-      suv :: Maybe SubscriptionConfigVariantLevelEntity,
-      sedan :: Maybe SubscriptionConfigVariantLevelEntity,
-      hatchback :: Maybe SubscriptionConfigVariantLevelEntity,
-      bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxi :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
-      default :: Maybe SubscriptionConfigVariantLevelEntity,
-      deliveryBike :: Maybe SubscriptionConfigVariantLevelEntity
-    }
+  = VariantLevelRemoteConfig (Maybe SubscriptionConfigVariantLevelEntity)
 
+type AppLanguage
+  = {
+    name :: String,
+    value :: String,
+    subtitle :: String
+  }
 
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,
@@ -169,7 +201,25 @@ type SubscriptionConfigVariantLevelEntity = {
    enableSubsV2 :: Maybe Boolean,
    duesConfig :: Maybe RCSubscriptionDues,
    freeTrialPopupDaysList :: Maybe (Array Int),
-   freeTrialPopupOnRidesList :: Maybe (Array Int)
+   freeTrialPopupOnRidesList :: Maybe (Array Int),
+   lottieSubscriptionInfo :: Maybe LottieSubscriptionInfo
+}
+
+type LottieSubscriptionInfo = {
+  freeTrialLottie :: LanguageKeyValue,
+  introductoryLottie :: LanguageKeyValue,
+  subscriptionPlanLottie :: LanguageKeyValue
+}
+
+type LanguageKeyValue = {
+  english :: String,
+  hindi :: String,
+  kannada :: String,
+  tamil :: String,
+  bengali :: String,
+  telugu :: String,
+  malayalam :: String,
+  default :: String
 }
 
 type OfferBanner = {
@@ -229,7 +279,8 @@ instance decodeJsonWebLinkParams :: DecodeJson WebLinkParams where decodeJson = 
 
 type GullakConfig = {
   image :: String,
-  enabled :: Boolean
+  enabled :: Boolean,
+  videoUrl :: Maybe String
 }
 type StuckRideFilterConfig = {
   estimatedDurationFallback :: Int,
@@ -241,3 +292,9 @@ type BundleLottieConfig = {
   lottieUrl :: String
 , enable :: Boolean
 }
+
+type InvoiceConfig = {
+  isEnabled :: Maybe Boolean
+}
+
+type DriverInvoiceConfigVariantLevel = VariantLevelRemoteConfig (Maybe InvoiceConfig)

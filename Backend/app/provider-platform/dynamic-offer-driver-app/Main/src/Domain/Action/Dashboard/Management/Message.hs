@@ -15,9 +15,9 @@
 module Domain.Action.Dashboard.Management.Message where
 
 import API.Types.ProviderPlatform.Management.Message (InputType (..))
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -155,6 +155,14 @@ postMessageAdd merchantShortId opCity Common.AddMessageRequest {..} = do
             messageTranslations = translationToDomainType now <$> translations,
             createdAt = now
           }
+
+postMessageEdit :: ShortId DM.Merchant -> Context.City -> Common.EditMessageRequest -> Flow APISuccess
+postMessageEdit _ _ req@Common.EditMessageRequest {messageId} = do
+  _ <- B.runInReplica $ MQuery.findById (cast messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  result <- MQuery.updateMessage req
+  case result of
+    Left err -> throwError $ InvalidRequest err
+    Right _ -> return Success
 
 newtype CSVRow = CSVRow {driverId :: String}
 

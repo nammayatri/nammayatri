@@ -201,6 +201,8 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
+      | UnblockSoftBlockedDriver
+      | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
       | CheckExotelCallStatusAndNotifyBAP
       | MandateExecution
@@ -222,11 +224,14 @@ let AllocatorJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
+      | FleetAlert
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
@@ -260,6 +265,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.MonthlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -384,4 +390,10 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
     , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , urlShortnerConfig = common.urlShortnerConfig
     }

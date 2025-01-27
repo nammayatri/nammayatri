@@ -43,6 +43,11 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (FlowBT, GlobalState(..),defaultGlobalState)
 import Helpers.Utils as HU
+import Foreign.Class (encode)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON, setAnyInWindow, stringifyJSON, getFromWindowString)
+import Common.Types.App as CTA
+import Data.Array (mapWithIndex , (!!), length, null)
+import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 
 
 screen :: RideRequestScreenState -> ListItem -> Screen Action RideRequestScreenState ScreenOutput
@@ -54,7 +59,7 @@ screen initialState listItem =
     , globalEvents:
         [ globalOnScroll "RideRequestScreen"
         , ( \push -> do
-                void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRideList PastRideApiAC push initialState 
+                void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRideList push initialState 
                 _ <- HU.storeCallBackForNotification push Notification
                 _ <- JB.getCurrentPosition push UpdateCurrentLocation
                 pure $ pure unit
@@ -64,7 +69,6 @@ screen initialState listItem =
         ( \action state -> do
             let
               _ = spy "RideRequestScreen state -----" state
-            let
               _ = spy "RideRequestScreen action --------" action
             eval action state
         )
@@ -132,7 +136,7 @@ listLayout push state listItm =
           , gravity CENTER_HORIZONTAL
           , background Color.grey700
           , orientation VERTICAL
-          , visibility  $ boolToVisibility $ (DA.null state.data.filteredArr )
+          , visibility  $ boolToVisibility $ (DA.null state.data.filteredArr ) && (state.props.noLocationFlag == false )
         ][
           imageView [
             width $ V 140
@@ -145,6 +149,34 @@ listLayout push state listItm =
           , height $ V 20
           , gravity CENTER
           , text $ getString CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE
+          , textSize FontSize.a_14
+
+          ] <> FontStyle.h3 TypoGraphy
+          ,textView $[
+            width $ V 290
+          , height $ V 20
+          , gravity CENTER
+          , text $ getString  PLEASE_TRY_AGAIN
+          , textSize FontSize.a_14
+
+          ] <> FontStyle.h3 TypoGraphy
+
+        ] 
+        , Tuple "NoLocation"
+        $ linearLayout[
+          height $ WRAP_CONTENT
+          , width $ MATCH_PARENT
+          , gravity CENTER
+          , background Color.grey700
+          , orientation VERTICAL
+          , visibility  $ boolToVisibility $ (state.props.noLocationFlag ) && (DA.null state.data.filteredArr )
+        ][
+          
+          textView $[
+            width $ V 290
+          , height $ V 20
+          , gravity CENTER
+          , text $ getString WE_ARE_NOT_ABLE_TO_FETCH_YOUR_CURRENT_LOCATION
           , textSize FontSize.a_14
 
           ] <> FontStyle.h3 TypoGraphy
@@ -260,6 +292,7 @@ navpillView state config push idx =
     , onClick push $ const $ RideTypeSelected config.rideType idx
     , background if idx == state.data.activeRideIndex then config.activeColor else Color.white900
     , rippleColor Color.rippleShade
+    , clickable $ idx /= state.data.activeRideIndex  
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -283,6 +316,7 @@ daypillView state config push idx =
     , background if idx == state.data.activeDayIndex then config.activeColor else Color.white900
     , onClick push $ const $ SelectDay idx
     , rippleColor Color.rippleShade
+    , clickable $ idx /= state.data.activeDayIndex  
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -372,17 +406,22 @@ loadButtonView state push =
         ]
     ]
 
-getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
-getRideList action push state = do
+getRideList :: (Action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
+getRideList push state = do
       when state.props.shouldCall $ do 
-        (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
+        let rideType  =   getRideType state
+            tripCategory =  if  rideType == "InterCity" then  rideType<>"_OneWayOnDemandStaticOffer" else if rideType == "Rental" then rideType<>"_OnDemandStaticOffer" else ""
+        (scheduledBookingListResponse) <- Remote.rideBooking "10" (show state.data.offset) (state.data.date) (state.data.date) (tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
         case scheduledBookingListResponse of
           Right (ScheduledBookingListResponse listResp) -> do
-            doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"
-            void $ pure $  listResp
+            doAff do liftEffect $ push $ PastRideApiAC (ScheduledBookingListResponse listResp) "success"
             pure unit
           Left (err) -> do
-            doAff do liftEffect $ push $ action (ScheduledBookingListResponse dummyListResp) if err.code == 500 then "listCompleted" else "failure"
+            let errResp = err.response
+                codeMessage = decodeErrorCode errResp.errorMessage
+                noLocationError = err.code == 400 && codeMessage == "LOCATION_NOT_FOUND"
+            if noLocationError then doAff do liftEffect $ push UpdateNoLocationFlag
+              else doAff do liftEffect $ push $ PastRideApiAC (ScheduledBookingListResponse dummyListResp) if err.code == 500 then "listCompleted" else "failure"
             pure unit
 
 dummyListResp :: forall a. { bookings :: Array a }
@@ -416,3 +455,10 @@ shimmerData i =   {
     imageType : toPropValue "",
     estimatedDuration : toPropValue ""
 }
+
+getRideType :: RideRequestScreenState -> String
+getRideType state = do
+  let activeRideIndex =  state.data.activeRideIndex
+  case state.data.pillViewArray !! activeRideIndex of
+      Just pill -> maybe "" show pill.rideType
+      Nothing -> ""

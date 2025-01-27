@@ -20,11 +20,11 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
-import Helpers.Utils (getStatus, contactSupportNumber, getLatestAndroidVersion)
+import Helpers.Utils (getStatus, contactSupportNumber, getLatestAndroidVersion, getHvErrorMsg)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>),(<), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||))
+import Prelude (class Show, class Eq, bind, discard, pure, show, unit, ($), void, (>),(<), (+), (<>), (>=), (-), not, min, (==), (&&), (/=), when, (||), Unit (..), otherwise, (<$>))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -33,6 +33,7 @@ import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Data.String as DS
+import Data.String.Pattern as DSP
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
@@ -56,11 +57,11 @@ import Data.Either(Either(..))
 import Debug
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons as EHC
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (doAff, Flow)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Monad.Except (runExcept)
 import Services.API as API
@@ -71,6 +72,8 @@ import RemoteConfig
 import DecodeUtil (decodeForeignObject)
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
+import Data.Tuple
+import Control.Bind (join)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -153,7 +156,10 @@ data Action = BackPressed
             | CallHV String String
             | OnActivityResult String
             | CallWorkFlow String
-            | UpdateApkAction 
+            | UpdateApkAction
+            | StoreDataAction String String
+            | CallHVFlowAction ST.HyperVergeKycResult
+            | InitFlowTxnIdAction
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -177,7 +183,7 @@ eval BackPressed state = do
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
-           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs $ JB.getAppName unit)
            _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
@@ -204,8 +210,8 @@ eval (CallHV workFLowId inputJson) state =
             if versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) 
               then pure UpdateApkAction
             else do
-              void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId true (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
-              pure NoAction
+              void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId false (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
+              pure $ StoreDataAction transactionId workFLowId
         else pure NoAction
     ]
 
@@ -352,28 +358,86 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
-eval (OnActivityResult bundle) state = do
+eval (OnActivityResult bundle) state = continueWithCmd state {props {dontAllowHvRelaunch = false}} [do
+  push <- getPushFn Mb.Nothing "RegistrationScreen"
+  void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
   -- bundle is the data returned from the activity
-  case runExcept (decodeJSON bundle :: _ ST.HyperVergeKycResult) of
-    Left _ -> do
-      case runExcept (decodeJSON bundle :: _ ST.HvErrorCode) of 
-        Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-        Right (ST.HvErrorCode errorCode) -> if errorCode.errorCode == 106 then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-      continue state {props {dontAllowHvRelaunch = false}}
-    Right (ST.HyperVergeKycResult result) -> do
-      if result.status == (Mb.Just "auto_approved") || result.status == (Mb.Just "auto_declined") || result.status == (Mb.Just "needs_review")
-        then exit $ GoToAadhaarPANSelfieUpload (state {props {dontAllowHvRelaunch = false}}) (ST.HyperVergeKycResult result)
-      else do
-        case result.status of
-          Mb.Just "user_cancelled" -> void $ pure unit
-          _ -> if result.errorCode == (Mb.Just 106) then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-        continue state {props {dontAllowHvRelaunch = false}} 
-    _ -> continue state {props {dontAllowHvRelaunch = false}}
+    case runExcept (decodeJSON bundle :: _ ST.HyperVergeKycResult) of
+      Left _ -> do
+        case runExcept (decodeJSON bundle :: _ ST.HvErrorCode) of 
+          Left _ -> do
+            callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "decode_failed") (Mb.Just "Failed to decode Hyperverge callback payload") state.data.hvFlowId (Mb.Just bundle)
+            void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          Right (ST.HvErrorCode errorCode) -> if errorCode.errorCode == 106
+            then do
+              void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION
+              callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "location_permission_error") (Mb.Just "Location Access Not provided") state.data.hvFlowId (Mb.Just bundle)
+            else do
+              void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              callHvLoggerForDecodeFailure state.data.hvTxnId (Mb.Just "decode_failed") (Mb.Just "Failed to decode Hyperverge callback payload") state.data.hvFlowId (Mb.Just bundle)
+        liftFlow $ push InitFlowTxnIdAction
+      Right (ST.HyperVergeKycResult result) -> do
+        let (Tuple failureReason docType) = getFailureReasonAndDoctype (HyperVergeKycResult result)
+        case result.transactionId, state.data.hvTxnId of
+          Mb.Just tId, _ ->  void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId result.status state.data.hvFlowId failureReason docType (Mb.Just $ show result)
+          _, Mb.Just tId ->  void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId result.status state.data.hvFlowId failureReason docType (Mb.Just $ show result)
+          _, _ -> void $ pure $ spy "Error: " "TxnId of Hyperverge sdk call not found so could not log to backend !!!!!!!"
+        if result.status == (Mb.Just "auto_approved") || result.status == (Mb.Just "auto_declined") || result.status == (Mb.Just "needs_review")
+          then liftFlow $ push $ CallHVFlowAction (ST.HyperVergeKycResult result)
+        else
+          case result.status of
+            Mb.Just "user_cancelled" -> liftFlow $ push InitFlowTxnIdAction
+            _ -> do
+              if result.errorCode == (Mb.Just 106) then void $ pure $ JB.toast $ getString WE_NEED_ACCESS_TO_YOUR_LOCATION else void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              liftFlow $ push InitFlowTxnIdAction 
+      _ -> liftFlow $ push InitFlowTxnIdAction
+    pure unit
+  pure NoAction
+]
 
 eval UpdateApkAction state = exit $ GoToAppUpdatePopUpScreen state {props {dontAllowHvRelaunch = false}}
 
+eval (StoreDataAction txnId flowId) state = continue state { data { hvFlowId = Mb.Just flowId, hvTxnId = Mb.Just txnId}}
+
+eval InitFlowTxnIdAction state = continue state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}
+
+eval (CallHVFlowAction result) state = exit $ GoToAadhaarPANSelfieUpload (state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}) result
+
 eval _ state = update state
 
+
+callHvLoggerForDecodeFailure :: Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Mb.Maybe String -> Flow GlobalState Unit
+callHvLoggerForDecodeFailure txnId status mbFailureReason fId result = do
+  let docType = join $ getDocTypeFromWorkFlowId <$> fId
+  case txnId of
+    Mb.Just tId -> void $ Remote.updateHVSdkCallLog $ Remote.makeupdateHVSdkCallLogReq tId status fId mbFailureReason docType result
+    Mb.Nothing -> void $ pure $ spy "Error:" "Decode Failure of callback happened and TxnId of Hyperverge sdk call not found so could not log to backend !!!!!!!"
+  where
+    getDocTypeFromWorkFlowId :: String -> Mb.Maybe String
+    getDocTypeFromWorkFlowId flowId 
+       | DS.contains (DSP.Pattern "pan") flowId = Mb.Just "PanCard"
+       | DS.contains (DSP.Pattern "aadhaar") flowId = Mb.Just "AadhaarCard"
+       | DS.contains (DSP.Pattern "selfie") flowId = Mb.Just "ProfilePhoto"
+       | otherwise = Mb.Nothing
+
+
+getFailureReasonAndDoctype :: HyperVergeKycResult -> Tuple (Mb.Maybe String) (Mb.Maybe String)
+getFailureReasonAndDoctype (HyperVergeKycResult result) = do
+  case result.details of 
+    Mb.Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "ProfilePhoto")
+    Mb.Just (ST.PAN_DETAILS (ST.PanDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "PanCard")
+    Mb.Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "AadhaarCard")
+    _ -> Tuple Mb.Nothing Mb.Nothing
+  where
+    getErrMsgForHV errCode = case result.status of
+      Mb.Just "auto_declined" -> Mb.Just $ getHvErrorMsg errCode
+      Mb.Just "auto_approved" -> Mb.Nothing
+      Mb.Just "needs_review" -> Mb.Nothing
+      Mb.Just "user_cancelled" -> Mb.Just "User cancelled"
+      Mb.Just "error" -> result.errorMessage
+      Mb.Just _ -> Mb.Just "Unknown Status received in OnActivity callback"
+      Mb.Nothing -> Mb.Just "Null Status received in OnActivity callback"
+    
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of
   "VALID" -> COMPLETED

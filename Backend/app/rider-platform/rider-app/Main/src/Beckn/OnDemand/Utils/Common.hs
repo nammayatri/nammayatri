@@ -23,7 +23,6 @@ import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
@@ -41,6 +40,7 @@ import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.VehicleConfig as CQVC
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
@@ -49,7 +49,7 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: DSearch.SearchReqLocation -> [DSearch.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
+mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
 mkStops origin stops startTime =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
@@ -213,7 +213,11 @@ castVehicleVariant = \case
   VehVar.AMBULANCE_AC_OXY -> (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
   VehVar.AMBULANCE_VENTILATOR -> (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
   VehVar.SUV_PLUS -> (show Enums.CAB, "SUV_PLUS")
+  VehVar.HERITAGE_CAB -> (show Enums.CAB, "HERITAGE_CAB")
+  VehVar.EV_AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
   VehVar.DELIVERY_LIGHT_GOODS_VEHICLE -> (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
+  VehVar.BUS_NON_AC -> (show Enums.BUS, "BUS_NON_AC")
+  VehVar.BUS_AC -> (show Enums.BUS, "BUS_AC")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -221,7 +225,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
     (Just "CAB", Just "SUV") -> Just VehVar.SUV
     (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
-    (Just "AUTO_RICKSHAW", _) -> Just VehVar.AUTO_RICKSHAW
+    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
     (Just "CAB", Just "BLACK") -> Just VehVar.BLACK
@@ -236,6 +240,8 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
     (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
     (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
+    (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
+    (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -385,7 +391,7 @@ mkIntermediateStop stop id parentStopId =
           stopParentStopId = Just $ show parentStopId
         }
 
-mkIntermediateStopSearch :: DSearch.SearchReqLocation -> Int -> Int -> Spec.Stop
+mkIntermediateStopSearch :: SLS.SearchReqLocation -> Int -> Int -> Spec.Stop
 mkIntermediateStopSearch stop id parentStopId =
   let gps = Gps.Gps {lat = stop.gps.lat, lon = stop.gps.lon}
    in Spec.Stop
@@ -416,6 +422,7 @@ mapTextToVehicle = \case
   "MOTORCYCLE" -> Just Enums.MOTORCYCLE
   "AMBULANCE" -> Just Enums.AMBULANCE
   "TRUCK" -> Just Enums.TRUCK
+  "BUS" -> Just Enums.BUS
   _ -> Nothing
 
 getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType

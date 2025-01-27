@@ -1,14 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module IssueManagement.Storage.Beam.Issue.IGMIssue where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified IGM.Enums as Spec
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 

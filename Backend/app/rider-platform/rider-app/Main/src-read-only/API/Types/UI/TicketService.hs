@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.TicketService where
@@ -25,9 +24,10 @@ import Servant
 import Tools.Auth
 
 data BusinessHourResp = BusinessHourResp
-  { categories :: [API.Types.UI.TicketService.CategoriesResp],
+  { categories :: [CategoriesResp],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
+    operationalDate :: Kernel.Prelude.Maybe Domain.Types.TicketService.OperationalDate,
     operationalDays :: [Data.Text.Text],
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     specialDayDescription :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -44,7 +44,7 @@ data CategoriesResp = CategoriesResp
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     isClosed :: Kernel.Prelude.Bool,
     name :: Data.Text.Text,
-    peopleCategories :: [API.Types.UI.TicketService.PeopleCategoriesResp]
+    peopleCategories :: [PeopleCategoriesResp]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -82,7 +82,7 @@ data TicketBookingAPIEntity = TicketBookingAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketBookingCancelReq = TicketBookingCancelReq {ticketBookingServices :: [API.Types.UI.TicketService.TicketBookingServiceCancelReq], ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking}
+data TicketBookingCancelReq = TicketBookingCancelReq {ticketBookingServices :: [TicketBookingServiceCancelReq], ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -94,13 +94,13 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
     cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Data.Text.Text,
-    peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails],
+    peopleCategories :: [TicketBookingPeopleCategoryDetails],
     serviceCategoryId :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryReq]}
+data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, peopleCategories :: [TicketBookingPeopleCategoryReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -109,7 +109,7 @@ data TicketBookingDetails = TicketBookingDetails
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     personId :: Data.Text.Text,
     refundDetails :: [Lib.Payment.Domain.Types.Refunds.Refunds],
-    services :: [API.Types.UI.TicketService.TicketBookingServiceDetails],
+    services :: [TicketBookingServiceDetails],
     status :: Domain.Types.TicketBooking.BookingStatus,
     ticketPlaceId :: Data.Text.Text,
     ticketPlaceName :: Data.Text.Text,
@@ -136,13 +136,13 @@ data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq {numberOfUn
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketBookingReq = TicketBookingReq {services :: [API.Types.UI.TicketService.TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day}
+data TicketBookingReq = TicketBookingReq {services :: [TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServiceCancelReq = TicketBookingServiceCancelReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
-    serviceCategory :: [API.Types.UI.TicketService.TicketBookingServiceCategoryCancelReq],
+    serviceCategory :: [TicketBookingServiceCategoryCancelReq],
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService
   }
   deriving stock (Generic)
@@ -150,7 +150,7 @@ data TicketBookingServiceCancelReq = TicketBookingServiceCancelReq
 
 data TicketBookingServiceCategoryCancelReq = TicketBookingServiceCategoryCancelReq
   { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
-    peopleCategory :: [API.Types.UI.TicketService.TicketBookingServicePeopleCategoryCancelReq],
+    peopleCategory :: [TicketBookingServicePeopleCategoryCancelReq],
     serviceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     visitDate :: Data.Time.Calendar.Day
   }
@@ -162,7 +162,7 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
     amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     businessHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
-    categories :: [API.Types.UI.TicketService.TicketBookingCategoryDetails],
+    categories :: [TicketBookingCategoryDetails],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     status :: Domain.Types.TicketBookingService.ServiceStatus,
@@ -179,7 +179,7 @@ data TicketBookingServicePeopleCategoryCancelReq = TicketBookingServicePeopleCat
 
 data TicketBookingServicesReq = TicketBookingServicesReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
-    categories :: [API.Types.UI.TicketService.TicketBookingCategoryReq],
+    categories :: [TicketBookingCategoryReq],
     serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
   }
   deriving stock (Generic)
@@ -208,7 +208,7 @@ data TicketServiceCancelReq = TicketServiceCancelReq
 data TicketServiceResp = TicketServiceResp
   { allowCancellation :: Kernel.Prelude.Bool,
     allowFutureBooking :: Kernel.Prelude.Bool,
-    businessHours :: [API.Types.UI.TicketService.BusinessHourResp],
+    businessHours :: [BusinessHourResp],
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
@@ -222,11 +222,11 @@ data TicketServiceResp = TicketServiceResp
 data TicketServiceVerificationResp = TicketServiceVerificationResp
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    categories :: [API.Types.UI.TicketService.TicketBookingCategoryDetails],
+    categories :: [TicketBookingCategoryDetails],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     message :: Data.Text.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
-    status :: API.Types.UI.TicketService.TicketVerificationStatus,
+    status :: TicketVerificationStatus,
     ticketServiceName :: Kernel.Prelude.Maybe Data.Text.Text,
     ticketServiceShortId :: Kernel.Prelude.Maybe Data.Text.Text,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

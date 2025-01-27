@@ -5,19 +5,33 @@ imports:
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
+  TripTransaction: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
   RegisterRCReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
+  EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+  LatLong: Kernel.External.Maps.Types
+  TimeBound: Kernel.Types.TimeBound
 
 module: Driver
 
 apis:
+  - POST: # BulkUploadVehiclesForFleetAPI
+      endpoint: /fleet/addVehicles
+      auth: ApiAuthV2
+      multipart:
+        type: CreateVehiclesReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
+
   - POST: # AddVehicleForFleetAPI
       endpoint: /{mobileNo}/fleet/addVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLE_FLEET
+      auth: ApiAuthV2
       params:
         mobileNo: Text
       query:
@@ -26,11 +40,13 @@ apis:
         type: AddVehicleReq
       response:
         type: APISuccess
-      validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLE_FLEET
+      validation: API.Types.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
       helperApi:
         - POST:
             endpoint: /{mobileNo}/{fleetOwnerId}/fleet/addVehicle
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLE_FLEET
+            auth: ApiAuthV2
             params:
               mobileNo: Text
               fleetOwnerId: Text
@@ -40,124 +56,199 @@ apis:
               type: AddVehicleReq
             response:
               type: APISuccess
-            validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+            validation: API.Types.ProviderPlatform.validateAddVehicleReq
+
+  - GET: # GetAllDriverRequestsAPI
+      endpoint: /fleet/getDriverRequests
+      auth: ApiAuthV2
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbStatus: RequestStatus
+        - mbLimit: Int
+        - mbOffset: Int
+      response:
+        type: DriverRequestResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS
+      helperApi:
+        - GET:
+            endpoint: /fleet/driverRequests/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - from: UTCTime
+              - to: UTCTime
+              - status: RequestStatus
+              - limit: Int
+              - offset: Int
+            response:
+              type: DriverRequestResp
+
+  - POST: # RespondDriverRequestsAPI
+      endpoint: /fleet/respond/driverRequest
+      auth: ApiAuthV2
+      request:
+        type: RequestRespondReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET RESPOND_DRIVER_REQUEST
+      helperApi:
+        - POST:
+            endpoint: /fleet/{fleetOwnerId}/driverRequest/respond
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: RequestRespondReq
+            response:
+              type: APISuccess
+
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
+      auth: ApiAuthV2
       request:
         type: RegisterRCReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/addRC/withoutDriver
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             request:
               type: RegisterRCReq
             response:
               type: APISuccess
+
   - GET: # GetAllVehicleForFleetAPI
       endpoint: /fleet/getAllVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
+      auth: ApiAuthV2
       query:
         - mblimit: Int
         - mboffset: Int
+        - mbRegNumberString: Text
       response:
         type: ListVehicleRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getAllVehicle
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
               - limit: Int
               - offset: Int
+              - mbRegNumberString: Text
             response:
               type: ListVehicleRes
+
   - GET: # GetAllDriverForFleetAPI
       endpoint: /fleet/getAllDriver
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
+      auth: ApiAuthV2
       query:
         - mblimit: Int
         - mboffset: Int
+        - mbMobileNumberString: Text
+        - mbNameString: Text
       response:
         type: FleetListDriverRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getAllDriver
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
               - limit: Int
               - offset: Int
+              - mobileNumberString: Text
+              - nameString: Text
             response:
               type: FleetListDriverRes
+
   - POST: # FleetUnlinkVehicleAPI
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
         vehicleNo: Text
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/{driverId}/{vehicleNo}/fleet/unlink
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               vehicleNo: Text
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - POST: # FleetRemoveVehicleAPI
       endpoint: /{vehicleNo}/fleet/remove/vehicle
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_VEHICLE
+      auth: ApiAuthV2
       params:
         vehicleNo: Text
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_VEHICLE
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/{vehicleNo}/fleet/remove/vehicle
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_VEHICLE
+            auth: ApiAuthV2
             params:
               vehicleNo: Text
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/{driverId}/fleet/remove/driver
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               fleetOwnerId: Text
             response:
               type: APISuccess
+
   - GET: # FleetTotalEarningAPI
       endpoint: /fleet/totalEarning
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_TOTAL_EARNING
+      auth: ApiAuthV2
       query:
         - from: UTCTime
         - to: UTCTime
       response:
         type: FleetTotalEarningResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_TOTAL_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/totalEarning
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_TOTAL_EARNING
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -165,9 +256,10 @@ apis:
               - to: UTCTime
             response:
               type: FleetTotalEarningResponse
+
   - GET: # FleetVehicleEarningAPI
       endpoint: /fleet/vehicleEarning
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_VEHICLE_EARNING
+      auth: ApiAuthV2
       query:
         - vehicleNo: Text
         - limit: Int
@@ -176,10 +268,12 @@ apis:
         - to: UTCTime
       response:
         type: FleetEarningListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_VEHICLE_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/vehicleEarning
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_VEHICLE_EARNING
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -190,9 +284,10 @@ apis:
               - to: UTCTime
             response:
               type: FleetEarningListRes
+
   - GET: # FleetDriverEarningAPI
       endpoint: /fleet/driverEarning
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_DRIVER_EARNING
+      auth: ApiAuthV2
       query:
         - mobileCountryCode: Text
         - mobileNo: Text
@@ -204,10 +299,12 @@ apis:
         - sortOn: SortOn
       response:
         type: FleetEarningListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_DRIVER_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/driverEarning
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_DRIVER_EARNING
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -221,9 +318,10 @@ apis:
               - SortOn: SortOn
             response:
               type: FleetEarningListRes
+
   - GET: # GetFleetDriverVehicleAssociationAPI
       endpoint: /fleet/driverVehicleAssociation
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_VEHICLE_ASSOCIATION
+      auth: ApiAuthV2
       query:
         - Limit: Int
         - Offset: Int
@@ -235,10 +333,12 @@ apis:
         - to: UTCTime
       response:
         type: DrivertoVehicleAssociationRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_VEHICLE_ASSOCIATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getFleetDriverVehicleAssociation
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_VEHICLE_ASSOCIATION
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -252,9 +352,10 @@ apis:
               - to: UTCTime
             response:
               type: DrivertoVehicleAssociationRes
+
   - GET: # GetFleetDriverAssociationAPI
       endpoint: /fleet/driverAssociation
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
+      auth: ApiAuthV2
       query:
         - isActive: Bool
         - Limit: Int
@@ -267,10 +368,12 @@ apis:
         - status: DriverMode
       response:
         type: DrivertoVehicleAssociationRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getFleetDriverAssociation
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -285,9 +388,10 @@ apis:
               - status: DriverMode
             response:
               type: DrivertoVehicleAssociationRes
+
   - GET: # GetFleetVehicleAssociationAPI
       endpoint: /fleet/vehicleAssociation
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
+      auth: ApiAuthV2
       query:
         - Limit: Int
         - Offset: Int
@@ -298,10 +402,12 @@ apis:
         - status: FleetVehicleStatus
       response:
         type: DrivertoVehicleAssociationRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getFleetVehicleAssociation
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -314,10 +420,11 @@ apis:
               - status: FleetVehicleStatus
             response:
               type: DrivertoVehicleAssociationRes
+
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       name: PostDriverFleetVehicleDriverRcStatus
-      auth:  ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -327,7 +434,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/{fleetOwnerId}/fleet/vehicleDriverRCstatus
-            auth:  ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
+            auth: ApiAuthV2
             params:
               driverId: Id Driver
               fleetOwnerId: Text
@@ -338,9 +445,11 @@ apis:
       migrate:
         endpoint: DriverAPI SetVehicleDriverRcStatusForFleetEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
+
   - POST: # UpdateFleetOwnerInfoAPI
       endpoint: /{driverId}/updateFleetOwnerInfo
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -350,43 +459,53 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateFleetOwnerEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
+
   - GET: # GetFleetOwnerInfoAPI
       endpoint: /{driverId}/fleetOwnerInfo
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: FleetOwnerInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
+
   - POST: # SendFleetJoiningOtpAPI
       endpoint: /fleet/sendJoiningOtp
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
+      auth: ApiAuthV2
       request:
         type: AuthReq
       response:
         type: AuthRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/driver/sendJoiningOtp
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             request:
               type: AuthReq
             response:
               type: AuthRes
+
   - POST: # VerifyFleetJoiningOtpAPI
       endpoint: /fleet/verifyJoiningOtp
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET VERIFY_FLEET_JOINING_OTP
+      auth: ApiAuthV2
       query:
         - authId: Text
       request:
         type: VerifyFleetJoiningOtpReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET VERIFY_FLEET_JOINING_OTP
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/driver/verifyJoiningOtp
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET VERIFY_FLEET_JOINING_OTP
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             query:
@@ -395,24 +514,233 @@ apis:
               type: VerifyFleetJoiningOtpReq
             response:
               type: APISuccess
+
+  - GET:
+      endpoint: /fleet/routes
+      auth: ApiAuthV2
+      query:
+        - mbCurrentLocation: LatLong
+        - mbSearchString: Text
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/routes
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - mbCurrentLocation: LatLong
+              - mbSearchString: Text
+            mandatoryQuery:
+              - limit: Int
+              - offset: Int
+            response:
+              type: RouteAPIResp
+
+  - GET:
+      endpoint: /fleet/possibleRoutes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        startStopCode: Text
+      response:
+        type: RouteAPIResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_POSSIBLE_ROUTES_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/possibleRoutes
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              startStopCode: Text
+            response:
+              type: RouteAPIResp
+
+  - POST:
+      endpoint: /fleet/tripPlanner
+      auth: ApiAuthV2
+      request:
+        type: TripPlannerReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_PLANNER_API
+      helperApi:
+        - POST:
+            endpoint: /{fleetOwnerId}/fleet/tripPlanner
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: TripPlannerReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /fleet/trip/transactions/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbVehicleNumber: Text
+      response:
+        type: TripTransactionResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              driverId: Id Driver
+            mandatoryQuery:
+              - limit: Int
+              - offset: Int
+            query:
+              - mbFrom: UTCTime
+              - mbTo: UTCTime
+              - mbVehicleNumber: Text
+            response:
+              type: TripTransactionResp
+
+  - POST: # BulkUploadDriversForFleetAPI
+      endpoint: /fleet/addDrivers
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriversReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
+
+  - POST: # Add Driver Bus Route Bulk Mapping
+      endpoint: /fleet/addDriverBusRouteMapping
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriverBusRouteMappingReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
+
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LINK_RC_WITH_DRIVER
+      auth: ApiAuthV2
       request:
         type: LinkRCWithDriverForFleetReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LINK_RC_WITH_DRIVER
       helperApi:
         - POST:
             endpoint: /fleet/linkRCWithDriver/{fleetOwnerId}
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LINK_RC_WITH_DRIVER
+            auth: ApiAuthV2
             params:
               fleetOwnerId: Text
             request:
               type: LinkRCWithDriverForFleetReq
             response:
               type: APISuccess
+
+  - POST:
+      endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/end
+      auth: ApiAuthV2
+      params:
+        tripTransactionId: Id TripTransaction
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/{fleetOwnerId}/end
+            auth: ApiAuthV2
+            params:
+              tripTransactionId: Id TripTransaction
+              fleetOwnerId: Text
+            response:
+              type: APISuccess
+
+  - GET: # Retrieve the route details
+      endpoint: /fleet/wmb/route/{routeCode}/details
+      auth: ApiAuthV2
+      params:
+        routeCode: Text
+      response:
+        type: RouteDetails
+      helperApi:
+        - GET:
+            endpoint: /fleet/{fleetOwnerId}/wmb/route/{routeCode}/details
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              routeCode: Text
+            response:
+              type: RouteDetails
+
+  - POST:
+      endpoint: /dashboard/fleet/track/driver
+      auth: ApiAuthV2
+      request:
+        type: TrackDriverLocationsReq
+      response:
+        type: TrackDriverLocationsRes
+      helperApi:
+        - POST:
+            endpoint: /dashboard/fleet/track/driver/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: TrackDriverLocationsReq
+            response:
+              type: TrackDriverLocationsRes
 types:
+  TrackDriverLocationsReq:
+    - recordType: NewType
+    - driverIds: [Id Driver]
+  TrackDriverLocation:
+    - driverId: Id Driver
+    - point: LatLong
+    - lastUpdatedAt: UTCTime
+  TrackDriverLocationsRes:
+    - recordType: NewType
+    - driverLocations: [TrackDriverLocation]
+  TripStatus:
+    - enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+  RoundTripDetail:
+    - frequency: Int
+  TripDetails:
+    - routeCode: Text
+    - roundTrip: Maybe RoundTripDetail
+  TripPlannerReq:
+    - driverId: Id Driver
+    - vehicleNumber: Text
+    - trips: [TripDetails]
+    - summary: Summary
+    - derive: "'HideSecrets"
+  TripTransactionDetail:
+    - routeCode: Text
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
+    - tripStatus: TripStatus
+  TripTransactionResp:
+    - trips: [TripTransactionDetail]
+    - totalTrips: Int
+    - summary: Summary
   AddVehicleReq:
     - registrationNo: Text
     - vehicleClass: Text
@@ -462,7 +790,7 @@ types:
     - summary: Summary
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   FleetEarningRes:
     - totalRides: Int
     - totalEarning: Int
@@ -480,7 +808,7 @@ types:
     - minutes: Int
   FleetVehicleStatus:
     - enum: "Active, InActive, Pending, Invalid"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItem]
@@ -511,13 +839,21 @@ types:
     - driverLicense: Maybe VerificationStatus
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   UpdateFleetOwnerInfoReq:
     - firstName: Maybe Text
     - lastName: Maybe Text
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
+    - derive: "'HideSecrets"
+  CreateDriversReq:
+    - file: FilePath
+    - fleetOwnerId: Maybe Text
+    - derive: "'HideSecrets"
+  CreateVehiclesReq:
+    - file: FilePath
+    - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
     - blocked: Bool
@@ -539,3 +875,75 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
+  RequestStatus:
+    - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
+  RequestType:
+    - enum: "END_RIDE, CHANGE_ROUTE"
+  ApprovalRequestData:
+    - enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
+  EndRideData:
+    - lat: Double
+    - lon: Double
+    - tripTransactionId: Id TripTransaction
+    - tripCode: Maybe Text
+    - driverName: Text
+    - driverMobileNumber: Maybe Text
+    - vehicleRegistrationNumber: Text
+    - derive: "Eq,Ord,Read"
+  DriverRequestDetails:
+    - requestData: ApprovalRequestData
+    - title: Text
+    - body: Text
+    - raisedAt: UTCTime
+    - status: Maybe RequestStatus
+    - approvalRequestId: Text
+  RequestRespondReq:
+    - status: RequestStatus
+    - approvalRequestId: Text
+    - reason: Text
+    - derive: "'HideSecrets"
+  DriverRequestResp:
+    - recordType: NewType
+    - requests: [DriverRequestDetails]
+  RouteAPIResp:
+    - listItem: [RouteRespItem]
+    - summary: Summary
+    - derive: "'HideSecrets"
+  RouteRespItem:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - distance: Maybe Meters
+    - totalStops: Maybe Int
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+  CreateDriverBusRouteMappingReq:
+    - file: FilePath
+    - fleetOwnerId: Maybe Text
+    - derive: "'HideSecrets"
+  APISuccessWithUnprocessedEntities:
+    - recordType: NewType
+    - unprocessedEntities: [Text]
+  StopInfo:
+    name: Text
+    code: Text
+    point: LatLong
+    derive: "'HideSecrets"
+  RouteDetails:
+    - code: Text
+    - shortName: Text
+    - longName: Text
+    - startPoint: LatLong
+    - endPoint: LatLong
+    - stops: [StopInfo]
+    - waypoints: Maybe [LatLong]
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

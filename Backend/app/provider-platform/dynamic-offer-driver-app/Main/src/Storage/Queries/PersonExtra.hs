@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.PersonExtra
   ( module Storage.Queries.PersonExtra,
     module Reexport,
@@ -10,10 +7,7 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (or)
-import Data.Maybe (catMaybes)
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -31,8 +25,6 @@ import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -111,8 +103,9 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
@@ -124,6 +117,9 @@ findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified m
                   person.merchantId B.==?. B.val_ (getId merchant.id)
                     B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.like_ person.firstName (B.val_ ("%" <> name <> "%")))) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\middleName -> B.sqlBool_ (B.like_ middleName (B.val_ ("%" <> name <> "%")))) person.middleName) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\lastName -> B.sqlBool_ (B.like_ lastName (B.val_ ("%" <> name <> "%")))) person.lastName) mbNameSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked

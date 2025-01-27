@@ -55,6 +55,8 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - aeson
@@ -85,6 +87,9 @@ dependencies:
   - beckn-services
   - utf8-string
   - yudhishthira
+  - shared-services
+  - beam-core
+  - sequelize
 
 ghc-options:
   - -Wall
@@ -156,3 +161,4 @@ executables:
       - beckn-spec
       - special-zone
       - special-zone-a
+      - shared-services

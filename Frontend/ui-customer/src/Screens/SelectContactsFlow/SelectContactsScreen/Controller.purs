@@ -23,7 +23,8 @@ import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.NewContact.Controller as NewContactController
-import JBridge (toast, hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation)
+import Engineering.Helpers.Utils as EHU
 import Screens.Types (Contacts, NewContacts, NewContactsProp)
 import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!), mapMaybe, deleteBy, unionBy)
 import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText)
@@ -112,10 +113,10 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
     Just (contact :: NewContacts) -> do
       let item = (getValidContact contact){ isSelected = not contact.isSelected }
       if (length state.data.selectedContacts) >= state.data.contactSelectionLimit && not contact.isSelected then do
-        _ <- pure $ toast $ getString LIMIT_REACHED
+        _ <- pure $ EHU.showToast $ getString LIMIT_REACHED
         continue state
       else if DS.length item.number /= 10 then do
-        _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
+        _ <- pure $ EHU.showToast (getString INVALID_CONTACT_FORMAT)
         continue state
       else do
         let contactToUpdate = contact { isSelected = not contact.isSelected }
@@ -137,7 +138,7 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
                       state.data.contacts
                 continue state { data { selectedContacts = updatedSelectedContacts, contacts = contactList, searchResult = updatedArray, prestoListContacts = list } } 
     Nothing -> do
-      _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
+      _ <- pure $ EHU.showToast (getString INVALID_CONTACT_FORMAT)
       continue state
 
 eval (ContactsCallback allContacts) state = do
@@ -150,10 +151,10 @@ eval (ContactsCallback allContacts) state = do
       Just contact -> if (contact.name == "beckn_contacts_flag") then dropEnd 1 allContacts else allContacts -- TODO :: Need to refactor @Chakradhar
       Nothing -> allContacts
   if flag == "false" then do
-    _ <- pure $ toast (getString PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED)
+    _ <- pure $ EHU.showToast (getString PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED)
     goBack state
   else if (null updatedContactList) then do
-    _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_THE_DEVICE_TO_BE_ADDED)
+    _ <- pure $ EHU.showToast (getString NO_CONTACTS_FOUND_ON_THE_DEVICE_TO_BE_ADDED)
     goBack state
   else do
     let
@@ -178,7 +179,7 @@ eval (ContactsCallback allContacts) state = do
 
       bufferCardDataPrestoList = contactListTransformerProp updateWithSelected
     if null updateWithSelected then do
-      _ <- pure $ toast (getString NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD)
+      _ <- pure $ EHU.showToast (getString NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD)
       goBack state
     else do
       let

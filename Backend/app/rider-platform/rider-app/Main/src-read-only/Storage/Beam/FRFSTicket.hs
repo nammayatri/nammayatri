@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSTicket where
@@ -14,7 +12,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketT f = FRFSTicketT
-  { frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
+  { description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isTicketFree :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -22,6 +21,7 @@ data FRFSTicketT f = FRFSTicketT
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     qrData :: B.C f Kernel.Prelude.Text,
+    qrRefreshAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: B.C f Kernel.Prelude.Text,

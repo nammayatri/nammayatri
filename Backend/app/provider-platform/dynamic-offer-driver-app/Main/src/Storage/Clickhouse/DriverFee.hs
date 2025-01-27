@@ -14,7 +14,7 @@
 
 module Storage.Clickhouse.DriverFee where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
+import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified Data.Time.Calendar as Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -28,17 +28,19 @@ import Kernel.Types.Id
 -- see module Dashboard.ProviderPlatform.Revenue
 
 data DriverFeeT f = DriverFeeT
-  { merchantId :: C f (Id DM.Merchant),
+  { id :: C f (Id DriverFee),
+    merchantId :: C f (Id DM.Merchant),
     driverId :: C f (Maybe (Id DP.Driver)),
     status :: C f (Maybe Common.DriverFeeStatus),
     numRides :: C f (Maybe Int),
-    platformFee :: C f (Maybe Centesimal), -- is it correct?
-    cgst :: C f (Maybe Centesimal), -- is it correct?
-    sgst :: C f (Maybe Centesimal), -- is it correct?
+    platformFee :: C f (Maybe Centesimal),
+    cgst :: C f (Maybe Centesimal),
+    sgst :: C f (Maybe Centesimal),
     specialZoneAmount :: C f (Maybe Centesimal),
     govtCharges :: C f (Maybe Int),
     collectedAt :: C f CH.DateTime, -- DateTime on clickhouse side
-    collectedBy :: C f (Maybe (Id DVolunteer.Volunteer))
+    collectedBy :: C f (Maybe (Id DVolunteer.Volunteer)),
+    updatedAt :: C f UTCTime
   }
   deriving (Generic)
 
@@ -48,7 +50,8 @@ deriving instance Show DriverFee
 driverFeeTTable :: DriverFeeT (FieldModification DriverFeeT)
 driverFeeTTable =
   DriverFeeT
-    { merchantId = "merchant_id",
+    { id = "id",
+      merchantId = "merchant_id",
       driverId = "driver_id",
       status = "status",
       numRides = "num_rides",
@@ -58,12 +61,13 @@ driverFeeTTable =
       specialZoneAmount = "special_zone_amount",
       govtCharges = "govt_charges",
       collectedAt = "collected_at",
-      collectedBy = "collected_by"
+      collectedBy = "collected_by",
+      updatedAt = "updated_at"
     }
 
 type DriverFee = DriverFeeT Identity
 
-$(TH.mkClickhouseInstances ''DriverFeeT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''DriverFeeT 'NO_SELECT_MODIFIER)
 
 data DriverFeeAggregated = DriverFeeAggregated
   { statusAgg :: Maybe Common.DriverFeeStatus,
@@ -76,7 +80,7 @@ data DriverFeeAggregated = DriverFeeAggregated
   }
   deriving (Show)
 
--- up to 5 columns supported now
+-- up to 6 columns supported now
 findAllByStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DM.Merchant ->
@@ -111,9 +115,10 @@ findAllByStatus merchantId statuses mbFrom mbTo = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable)
   pure $ mkDriverFeeByStatus <$> driverFeeTuple
 
--- up to 5 columns supported now
+-- up to 6 columns supported now
 -- mbCollBy = Just [] ---> condition = False
 -- mbCollBy = Nothing ---> condition = True
+
 findAllByDate ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DM.Merchant ->
@@ -152,6 +157,103 @@ findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
                   CH.&&. CH.whenJust_ mbCollBy (\collBy -> driverFee.collectedBy `in_` (Just <$> collBy))
             )
             $ CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable
+  pure $ mkDriverFeeByDate <$> driverFeeTuple
+
+findAllByStatusSubSelect ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DM.Merchant ->
+  [Common.DriverFeeStatus] ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  m [DriverFeeAggregated]
+findAllByStatusSubSelect merchantId statuses mbFrom mbTo = do
+  driverFeeTuple <-
+    CH.findAll $
+      CH.select_
+        ( \(status, numRides, driverId, totalAmount, specialZoneAmount) -> do
+            CH.groupBy status $ \statusAgg -> do
+              let totalAmountAgg = CH.sum_ totalAmount
+                  numRidesAgg = CH.sum_ numRides
+                  numDriversAgg = CH.count_ (CH.distinct driverId)
+                  specialZoneAmountAgg = CH.sum_ specialZoneAmount
+              (statusAgg, numRidesAgg, numDriversAgg, totalAmountAgg, specialZoneAmountAgg)
+        )
+        $ CH.emptyFilter $
+          CH.subSelect_ $
+            CH.select_
+              ( \driverFee -> do
+                  CH.groupBy driverFee.id $ \_idAgg -> do
+                    let totalAmountAgg =
+                          flip CH.argMax driverFee.updatedAt $
+                            driverFee.platformFee
+                              CH.+. driverFee.cgst
+                              CH.+. driverFee.sgst
+                              CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
+                        numRidesAgg = flip CH.argMax driverFee.updatedAt driverFee.numRides
+                        driverIdAgg = flip CH.argMax driverFee.updatedAt driverFee.driverId
+                        specialZoneAmountAgg = flip CH.argMax driverFee.updatedAt driverFee.specialZoneAmount
+                        statusAgg = flip CH.argMax driverFee.updatedAt driverFee.status
+                    (statusAgg, numRidesAgg, driverIdAgg, totalAmountAgg, specialZoneAmountAgg)
+              )
+              $ CH.filter_
+                ( \driverFee _ ->
+                    driverFee.merchantId CH.==. merchantId
+                      CH.&&. driverFee.status `in_` (Just <$> statuses)
+                      CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
+                      CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
+                )
+                (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable)
+  pure $ mkDriverFeeByStatus <$> driverFeeTuple
+
+findAllByDateSubSelect ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DM.Merchant ->
+  [Common.DriverFeeStatus] ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Bool ->
+  Maybe [Id DVolunteer.Volunteer] ->
+  m [DriverFeeAggregated]
+findAllByDateSubSelect merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
+  driverFeeTuple <-
+    CH.findAll $
+      CH.select_
+        ( \(totalAmount, specialZoneAmount, numRides, driverId, date, hour) -> do
+            CH.groupBy (date, hour) $ \(dateAgg, hourAgg) -> do
+              let totalAmountAgg = CH.sum_ totalAmount
+                  numRidesAgg = CH.sum_ numRides
+                  numDriversAgg = CH.count_ (CH.distinct driverId)
+                  specialZoneAmountAgg = CH.sum_ specialZoneAmount
+              (totalAmountAgg, specialZoneAmountAgg, numRidesAgg, numDriversAgg, dateAgg, hourAgg)
+        )
+        $ CH.orderBy_ (\_ (_, _, _, _, date, hour) -> CH.asc (date, hour)) $
+          CH.emptyFilter $
+            CH.subSelect_ $
+              CH.select_
+                ( \driverFee -> do
+                    CH.groupBy driverFee.id $ \_idAgg -> do
+                      let totalAmountAgg =
+                            flip CH.argMax driverFee.updatedAt $
+                              driverFee.platformFee
+                                CH.+. driverFee.cgst
+                                CH.+. driverFee.sgst
+                                CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
+                          specialZoneAmountAgg = flip CH.argMax driverFee.updatedAt driverFee.specialZoneAmount
+                          numRidesAgg = flip CH.argMax driverFee.updatedAt driverFee.numRides
+                          driverIdAgg = flip CH.argMax driverFee.updatedAt driverFee.driverId
+                          dateAgg = flip CH.argMax driverFee.updatedAt $ CH.toDate driverFee.collectedAt
+                          hourAgg = flip CH.argMax driverFee.updatedAt $ if dayBasis then CH.valColumn 0 else CH.toHour driverFee.collectedAt
+                      (totalAmountAgg, specialZoneAmountAgg, numRidesAgg, driverIdAgg, dateAgg, hourAgg)
+                )
+                $ CH.filter_
+                  ( \driverFee _ ->
+                      driverFee.merchantId CH.==. merchantId
+                        CH.&&. driverFee.status `in_` (Just <$> statuses)
+                        CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
+                        CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
+                        CH.&&. CH.whenJust_ mbCollBy (\collBy -> driverFee.collectedBy `in_` (Just <$> collBy))
+                  )
+                  $ CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable
   pure $ mkDriverFeeByDate <$> driverFeeTuple
 
 mkDriverFeeByStatus :: (Maybe Common.DriverFeeStatus, Maybe Int, Int, Maybe Centesimal, Maybe Centesimal) -> DriverFeeAggregated

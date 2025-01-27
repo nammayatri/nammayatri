@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SubscriptionConfig where
@@ -31,6 +30,7 @@ data SubscriptionConfig = SubscriptionConfig
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
     isSubscriptionEnabledAtCategoryLevel :: Kernel.Prelude.Bool,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
+    isVendorSplitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     numberOfFreeTrialRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     partialDueClearanceMessageKey :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey,
@@ -42,6 +42,7 @@ data SubscriptionConfig = SubscriptionConfig
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

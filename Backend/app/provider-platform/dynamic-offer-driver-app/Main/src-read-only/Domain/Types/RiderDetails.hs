@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.RiderDetails where
@@ -7,6 +6,7 @@ module Domain.Types.RiderDetails where
 import Data.Aeson
 import qualified Domain.Types.DriverReferral
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -26,6 +26,7 @@ data RiderDetailsE e = RiderDetails
     isDeviceIdExists :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFlagConfirmed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     nightSafetyChecks :: Kernel.Prelude.Bool,
@@ -59,6 +60,7 @@ instance EncryptedItem RiderDetails where
           isDeviceIdExists = isDeviceIdExists entity,
           isFlagConfirmed = isFlagConfirmed entity,
           merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
           mobileCountryCode = mobileCountryCode entity,
           mobileNumber = mobileNumber_,
           nightSafetyChecks = nightSafetyChecks entity,
@@ -84,6 +86,7 @@ instance EncryptedItem RiderDetails where
             isDeviceIdExists = isDeviceIdExists entity,
             isFlagConfirmed = isFlagConfirmed entity,
             merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
             mobileCountryCode = mobileCountryCode entity,
             mobileNumber = mobileNumber_,
             nightSafetyChecks = nightSafetyChecks entity,

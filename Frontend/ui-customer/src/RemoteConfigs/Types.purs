@@ -10,6 +10,7 @@ import Data.Maybe (Maybe)
 import Language.Types(STR(..))
 import Data.Show.Generic (genericShow)
 import Common.RemoteConfig.Types as CRT
+import Common.Types.App
 
 type TipsConfigRC = {
   sedan :: Array Int,
@@ -81,10 +82,12 @@ type Service = {
   name :: STR,
   image :: String,
   backgroundColor :: String,
-  preferredEstimateOrder :: Array String
+  preferredEstimateOrder :: Array String,
+  hasSecondaryPill :: Boolean,
+  secondaryPillColor :: String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq
@@ -102,5 +105,50 @@ type SafetyConfig = {
 }
 
 type MetroConfig = {
-  tnc :: String
+  tnc :: String,
+  logoImage :: String,
+  mapImage :: String,
+  bannerImage :: String,
+  bannerBackgroundColor :: String,
+  bannerTextColor :: String,
+  showCancelButton :: Boolean
+}
+
+type BoostSearchConfig = {
+  selectedEstimates :: Array String,
+  selectedTip :: Int
+}
+
+type VariantBasedBoostSearchConfig = {
+  sedan :: BoostSearchConfig,
+  suv :: BoostSearchConfig,
+  hatchback :: BoostSearchConfig,
+  autoRickshaw :: BoostSearchConfig,
+  taxi :: BoostSearchConfig,
+  taxiPlus :: BoostSearchConfig,
+  bike :: BoostSearchConfig,
+  suvPlus :: BoostSearchConfig,
+  default :: BoostSearchConfig,
+  bookAny :: BoostSearchConfig
+}
+
+type RemoteCancellationReason = {
+    cancellationReasons :: Array OptionButtonList
+}
+
+type EventsConfig = {
+  enabled :: Boolean,
+  pushEventChunkSize :: Int,
+  loggingIntervalInMs :: Number
+}
+
+type BusFlowConfig = {
+  showBusTracking :: Boolean,
+  showPostBookingTracking :: Boolean,
+  liveRoutes :: Int,
+  ticketValidity :: String
+}
+
+type AppInfoConfig = {
+  website :: String
 }

@@ -21,11 +21,13 @@ SubscriptionConfig:
     genericJobRescheduleTime: Data.Time.NominalDiffTime
     maxRetryCount: Int
     sendInAppFcmNotifications: Bool
+    subscriptionDown: Maybe Bool
     paymentServiceName: Domain.Types.MerchantServiceConfig.ServiceName
     allowDueAddition: Bool
     serviceName: Domain.Types.Plan.ServiceNames
     sendDeepLink: Bool
     deepLinkExpiryTimeInMinutes: Maybe Int
+    isVendorSplitEnabled: Maybe Bool
     sgstPercentageOneTimeSecurityDeposit: Maybe  Kernel.Types.Common.HighPrecMoney
     cgstPercentageOneTimeSecurityDeposit: Maybe Kernel.Types.Common.HighPrecMoney
     payoutServiceName: Maybe Domain.Types.MerchantServiceConfig.ServiceName
@@ -78,6 +80,7 @@ SubscriptionConfig:
     allowManualPaymentLinks: "false"
     sendDeepLink: "false"
     sendInAppFcmNotifications: "false"
+    subscriptionDown: "false"
     allowDueAddition: "false"
     paymentServiceName: "'Payment_Juspay'"
     isTriggeredAtEndRide: "true"

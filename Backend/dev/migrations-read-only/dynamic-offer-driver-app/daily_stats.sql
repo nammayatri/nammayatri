@@ -59,3 +59,9 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN total_ride_time intege
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN bonus_earnings double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN merchant_id character varying(36) ;

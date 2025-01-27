@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.DriverInformationExtra where
 
 import qualified Data.Either as Either
@@ -16,11 +13,10 @@ import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
-import Kernel.Beam.Functions as BF
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -29,9 +25,8 @@ import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
-import Storage.Queries.OrphanInstances.DriverInformation
-import qualified Storage.Queries.Person as QPerson
-import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
+import Storage.Queries.OrphanInstances.DriverInformation ()
+import Storage.Queries.PersonExtra ()
 import Tools.Error
 
 -- Extra code goes here --
@@ -85,17 +80,6 @@ findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverId
           Se.Is BeamDI.driverId $ Se.In (getId <$> driverIds)
         ]
     ]
-
-fetchAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Driver] -> m [DriverInformation]
-fetchAllByIds merchantId driversIds = do
-  dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
-  persons <- findAllPersonWithDriverInfos dInfos merchantId
-  pure $ foldl' (getDriverInfoWithPerson persons) [] dInfos
-  where
-    getDriverInfoWithPerson persons acc dInfo' =
-      case find (\person -> person.id == dInfo'.driverId) persons of
-        Just _person -> dInfo' : acc
-        Nothing -> acc
 
 fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
 fetchAllDriversWithPaymentPending merchantOpCityId = do
@@ -154,6 +138,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             requestorId = Just dashboardUserName,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             blockReasonFlag = Just blockReasonFlag
           }
 
@@ -198,6 +183,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
+            actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
             requestorId = Nothing
           }
 
@@ -334,6 +320,48 @@ updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
   updateWithKV
     [ Se.Set BeamDI.payoutVpaStatus payoutVpaStatus,
       Se.Set BeamDI.payoutVpa payoutVpa,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+
+updateTripCategoryAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Common.TripCategory -> Maybe Maps.LatLong -> m ()
+updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRideTripCategory tripCategory | isJust tripCategory]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
+updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRide onRide]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasRideStarted driverId hasRideStarted = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.hasRideStarted (Just hasRideStarted),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateIsBlockedForReferralPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> Bool -> m ()
+updateIsBlockedForReferralPayout driverIds isBlocked = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.isBlockedForReferralPayout (Just isBlocked),
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]

@@ -2,6 +2,7 @@ module Storage.CachedQueries.Merchant.PayoutConfig where
 
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
+import Domain.Types.VehicleCategory (VehicleCategory)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -25,6 +26,21 @@ cachePayoutConfigForCityByEnabled id isPayoutEnabled payoutEntity cfg = do
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> PayoutEntity -> Text
 makeMerchantOpCityIdKey id isPayoutEnabled payoutEntity = "CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> "-isPayoutEnabled:" <> show isPayoutEnabled <> "-payoutEntity:" <> show payoutEntity
+
+findByCityIdAndVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m (Maybe PayoutConfig)
+findByCityIdAndVehicleCategory id vehicleCategory =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdAndCategoryKey id vehicleCategory) >>= \case
+    Just a -> return a
+    Nothing -> cachePayoutConfigForCityAndVehicleCategory id vehicleCategory /=<< Queries.findByCityIdAndVehicleCategory id (Just vehicleCategory)
+
+cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> VehicleCategory -> Maybe PayoutConfig -> m ()
+cachePayoutConfigForCityAndVehicleCategory id vehicleCategory cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let idKey = makeMerchantOpCityIdAndCategoryKey id vehicleCategory
+  Hedis.setExp idKey cfg expTime
+
+makeMerchantOpCityIdAndCategoryKey :: Id MerchantOperatingCity -> VehicleCategory -> Text
+makeMerchantOpCityIdAndCategoryKey id vehicleCategory = "CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId <> "-vehicleCategory:" <> show vehicleCategory
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> PayoutEntity -> m ()

@@ -47,6 +47,7 @@ baseAppStorage = do
     versionName <- lift $ lift $ liftFlow $ getVersionName
     setValueToLocalStore VERSION_NAME $ joinWith "." $ take 3 $ split (Pattern ".") versionName
     setValueToLocalStore BUNDLE_VERSION bundle
+    setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
     setValueToLocalStore CONFIG_VERSION config
     setValueToLocalNativeStore BUNDLE_VERSION bundle
     setValueToLocalStore TRACKING_ENABLED "True"
@@ -56,7 +57,6 @@ baseAppStorage = do
     setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
     setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
     setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-    setValueToLocalStore RATING_SKIPPED $ if (getValueToLocalStore RATING_SKIPPED == "true") then "true" else "false"
     setValueToLocalStore POINTS_FACTOR "3"
     setValueToLocalStore TRACKING_DRIVER "False"
     setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
@@ -64,7 +64,7 @@ baseAppStorage = do
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"
     setValueToLocalStore REALLOCATE_PRODUCT_ENABLED (show appConfig.feature.enableReAllocation)
-    let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE 
+    let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE
         firstRideEvent = if getFirstRide == "__failed" then "false" else getFirstRide
     setValueToLocalStore CUSTOMER_FIRST_RIDE firstRideEvent
     when (sessionId `elem` ["__failed", "(null)"]) do

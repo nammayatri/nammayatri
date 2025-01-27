@@ -109,6 +109,14 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Debug (spy)
+import Data.Int
+import Components.CommonComponentConfig as CommonComponentConfig
+import RemoteConfig as RemoteConfig
+import MerchantConfig.Types
+import Data.Tuple as DT
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Components.MessagingView.Controller as CMC
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -160,7 +168,6 @@ cancelAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelAppConfig state =
   let
     config' = PopUpModal.config
-
     popUpConfig' =
       config'
         { gravity = BOTTOM
@@ -1010,7 +1017,7 @@ intercityRateCardConfig state =
     driverMaxAllowanceVal = case driverMaxAllowance of 
                               (Just driverMaxAllowance') -> driverMaxAllowance'.val
                               _ -> ""
-    nightShiftCharges = ((DA.head $ DA.filter (\item -> (item.key == "NIGHT_SHIFT_CHARGES")) state.data.rateCard.extraFare))
+    nightShiftCharges = ((DA.head $ DA.filter (\item -> (item.key == "Night Shift Charges*")) state.data.rateCard.extraFare))
     nightShiftChargesVal = case nightShiftCharges of 
                               (Just nightShiftCharges') -> nightShiftCharges'.val
                               _ -> ""
@@ -1028,7 +1035,7 @@ intercityRateCardConfig state =
     intercityBaseFareLimit = "30"
     expectedFareList = 
                       (if baseFareVal /= "0.0" then[{key : (getString FIXED_CHARGES), val : (getCurrency appConfig) <> (baseFareVal)},{key:(getString DISTANCE_FARE),val :(getCurrency appConfig) <> (plannedPerKmChargesVal) <> " /km"}] else [{key : getString DISTANCE_FARE,val : ((getCurrency appConfig) <> plannedPerKmChargesVal <> " /km")}])<>
-                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "NIGHT_SHIFT_CHARGES", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
+                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "Night Shift Charges*", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
     intercityRateCardConfig' = 
       config'
       {
@@ -1392,8 +1399,9 @@ quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelSt
 quoteListModelViewState state =
   let
     vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
-
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+    tipProps = if state.props.showBoostSearch then getTipViewProps state.props.tipViewProps state.data.boostSearchEstimate.vehicleVariant Nothing Nothing
+                  else getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     { source: state.data.source
     , destination: state.data.destination
@@ -1402,14 +1410,14 @@ quoteListModelViewState state =
     , autoSelecting: state.props.autoSelecting
     , searchExpire: state.props.searchExpire
     , showProgress: isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-    , tipViewProps: getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+    , tipViewProps: tipProps
     , findingRidesAgain: state.props.findingRidesAgain
     , progress: state.props.findingQuotesProgress
     , appConfig: state.data.config
     , vehicleVariant: vehicleVariant
     , city: state.props.city
-    , customerTipArray: tipConfig.customerTipArray
-    , customerTipArrayWithValues: tipConfig.customerTipArrayWithValues
+    , customerTipArray: tipProps.customerTipArray
+    , customerTipArrayWithValues: tipProps.customerTipArrayWithValues
     , providerSelectionStage: state.data.iopState.providerSelectionStage
     , quoteList: state.data.specialZoneQuoteList
     , selectProviderTimer: state.data.iopState.timerVal
@@ -1418,6 +1426,10 @@ quoteListModelViewState state =
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
     , hasToll : state.data.selectedEstimatesObject.hasTollCharges
+    , showBookAnyOptions : state.props.showBookAnyOptions
+    , showBoostSearch : state.props.showBoostSearch
+    , boostSearchEstimate : state.data.boostSearchEstimate
+    , fareProductType : state.data.fareProductType
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1601,6 +1613,7 @@ chooseYourRideConfig state =
     startTimeUTC = if state.data.startTimeUTC == "" then Nothing else Just state.data.startTimeUTC
     returnTimeUTC = if state.data.returnTimeUTC == "" || state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then Nothing else Just state.data.returnTimeUTC
     roundTrip = isJust returnTimeUTC
+    tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
@@ -1614,10 +1627,10 @@ chooseYourRideConfig state =
       , intercity = isIntercity
       , selectedEstimateHeight = state.props.selectedEstimateHeight
       , zoneType = state.props.zoneType.sourceTag
-      , tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+      , tipViewProps = tipProps
       , tipForDriver = state.props.customerTip.tipForDriver
-      , customerTipArray = tipConfig.customerTipArray
-      , customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      , customerTipArray = tipProps.customerTipArray
+      , customerTipArrayWithValues = tipProps.customerTipArrayWithValues
       , enableTips = not isIntercity && state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
       , currentEstimateHeight = state.props.currentEstimateHeight
       , fareProductType = state.data.fareProductType
@@ -1992,6 +2005,7 @@ locationTagBarConfig state =
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
             <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
             <> if state.data.currentCityConfig.enableIntercityBus then [ { image: "ny_ic_intercity_bus", text: getString INTERCITY_BUS, id: "INTERCITY_BUS", background: Color.blue600', showBanner: GONE } ] else []
+            <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2413,8 +2427,9 @@ scheduledRideExistsPopUpConfig state =
 
 getMarkerActionImageConifg :: ST.HomeScreenState -> Boolean -> JB.ActionImageConfig 
 getMarkerActionImageConifg state driverWithinPickupThreshold = do
-  let conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold
-      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY])
+  let isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
+      conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold && not isHybridFlowParcel
+      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) && not isHybridFlowParcel
       imageName = if conditionForPickupImage then "ic_edit_pencil_white" else if conditionForDestinationImage then "ic_pencil_blue" else ""
       bgForPickupMarker = if EHC.os == "IOS" then Color.blue800 else "ic_blue_bg"
       bgForDestMarker = if EHC.os == "IOS" then Color.blue600 else "ic_blue600_bg"
@@ -2435,7 +2450,9 @@ getMarkerActionImageConifg state driverWithinPickupThreshold = do
 nammaServices :: LazyCheck -> Array RemoteConfig.Service
 nammaServices dummy = 
   let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      _ = spy "enabledServices" enabledServices
       allServices = getAllServices FunctionCall
+      _ = spy "allServices" allServices
   in DA.foldl (\acc x -> do 
                           let mbService = DA.find(\service -> (show service.type == x)) allServices
                           case mbService of 
@@ -2445,14 +2462,19 @@ nammaServices dummy =
 
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
-  [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [] }
-  , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : []}
-  , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : []}
-  , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : []}
-  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : []}
-  , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : []}
-  , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
-  ]
+  let config = getAppConfig appConfig
+      enableBusBooking = config.feature.enableBusBooking -- For backward Compatibility
+  in
+    [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [], secondaryPillColor : "#f2f9f3", hasSecondaryPill: false}
+    , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : [], secondaryPillColor : "#faeeee", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
+    , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : [], secondaryPillColor : "#fdf3ec", hasSecondaryPill: false}
+    , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"], secondaryPillColor : "#F0FAF0", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO_OFFER, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: true}
+    ] <> (if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
+      <> (if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
 getChatDetails state contacts = 
@@ -2646,7 +2668,7 @@ fetchRideDetails state =
       isScheduled : isScheduled,
       returnTime : Just returnTime,
       roundTrip : Just (state.props.searchLocationModelProps.tripType == ROUND_TRIP),
-      isAirConditioned: Just false,
+      isAirConditioned: selectedEstimatesObject.airConditioned,
       startTime : startTime,
       toLocation : Just (ST.LocationInformation {
         address : state.data.destinationAddress,

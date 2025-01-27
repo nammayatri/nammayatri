@@ -161,12 +161,7 @@ function callInitiateResult () {
     , errorMessage: ""
     , errorCode: ""
   }
-  const jpConsumingBackpress = {
-    event: "jp_consuming_backpress",
-    payload: { jp_consuming_backpress: true }
-  }
   console.log("APP_PERF INDEX_BUNDLE_INITIATE_RESULT : ", new Date().getTime());
-  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
@@ -239,6 +234,11 @@ window.onMerchantEvent = function (_event, globalPayload) {
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
+    const jpConsumingBackpress = {
+      event: "jp_consuming_backpress",
+      payload: { jp_consuming_backpress: true }
+    }
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
     try {
       const clientPaylod = window.__payload.payload;
       if (

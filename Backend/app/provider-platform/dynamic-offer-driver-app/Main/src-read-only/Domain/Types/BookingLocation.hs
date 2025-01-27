@@ -1,11 +1,12 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BookingLocation where
 
 import Data.Aeson
 import qualified Data.OpenApi
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,7 +18,9 @@ data BookingLocation = BookingLocation
     id :: Kernel.Types.Id.Id Domain.Types.BookingLocation.BookingLocation,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates)
 

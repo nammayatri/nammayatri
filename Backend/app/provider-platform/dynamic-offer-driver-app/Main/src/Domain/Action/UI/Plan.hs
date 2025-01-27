@@ -65,6 +65,7 @@ import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -353,7 +354,7 @@ planList (driverId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
             then do convertPlanToPlanEntity driverId mandateSetupDate False plan'
             else do convertPlanToPlanEntity driverId now False plan'
       )
-      plans
+      $ sortOn (.listingPriority) plans
   return $
     PlanListAPIRes
       { list = plansList,
@@ -581,13 +582,12 @@ createMandateInvoiceAndOrder ::
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName else return []
+  driverManualDuesFees <- if allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName else return []
   let currentDues = calculateDues driverManualDuesFees
   now <- getCurrentTime
   (driverRegisterationFee, invoice) <- getLatestMandateRegistrationFeeAndCheckIfEligible currentDues now
@@ -598,16 +598,16 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       if inv.maxMandateAmount == Just maxMandateAmount && isReusableInvoice
         then do
           let invoiceReuseForOrderCreation = Just (inv.id, inv.invoiceShortId)
-          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity invoiceReuseForOrderCreation paymentServiceName
+          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity invoiceReuseForOrderCreation paymentServiceName subscriptionConfig
         else do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
-          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+          createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
     (Just registerFee, Nothing) -> do
-      createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+      createOrderForDriverFee driverManualDuesFees registerFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
     (Nothing, _) -> do
       driverFee <- mkDriverFee currentDues currency
       QDF.create driverFee
-      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName
+      createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
   where
     mandateOrder currentDues now mandateValidity =
       SPayment.MandateOrder
@@ -647,12 +647,15 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
               return (Nothing, Nothing)
             _ -> return (registerFee', mbInvoiceToReuse)
         Nothing -> return (Nothing, Nothing)
-    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity mbInvoiceIdTuple paymentServiceName = do
+    createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity mbInvoiceIdTuple paymentServiceName subscriptionConfig = do
       let mbMandateOrder = Just $ mandateOrder currentDues now mandateValidity
+          splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
       if not (null driverManualDuesFees)
-        then SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
+        then do
+          vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DF.id) driverManualDuesFees else pure []
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled
         else do
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple mbDeepLinkData
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled
     mkDriverFee currentDues currency = do
       let (fee, cgst, sgst) = if currentDues > 0 then (0.0, 0.0, 0.0) else calculatePlatformFeeAttr plan.registrationAmount plan
       id <- generateGUID
@@ -804,7 +807,9 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
               then (0.0, baseAmount)
               else do
                 let bestOffer = DL.minimumBy (comparing (.finalOrderAmount)) offers
-                (bestOffer.discountAmount, bestOffer.finalOrderAmount)
+                if plan.allowStrikeOff
+                  then (bestOffer.discountAmount, bestOffer.finalOrderAmount)
+                  else (0.0, baseAmount)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
         PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount, amountWithCurrency = PriceAPIEntity plan.registrationAmount currency},
         PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount, amountWithCurrency = PriceAPIEntity plan.maxAmount currency},

@@ -29,31 +29,6 @@ deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel
 findAllDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetDriverAssociation.FleetDriverAssociation])
 findAllDriverByFleetOwnerId fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 
-findByDriverIdAndFleetOwnerId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetDriverAssociation.FleetDriverAssociation))
-findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
-          Se.Is Beam.isActive $ Se.Eq isActive
-        ]
-    ]
-
-updateFleetDriverActiveStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> m ())
-updateFleetDriverActiveStatus isActive associatedTill driverId fleetOwnerId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.isActive isActive, Se.Set Beam.associatedTill associatedTill, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId
-        ]
-    ]
-
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation -> m (Maybe Domain.Types.FleetDriverAssociation.FleetDriverAssociation))

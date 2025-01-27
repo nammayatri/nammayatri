@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantPushNotification where
@@ -24,6 +22,7 @@ data MerchantPushNotificationT f = MerchantPushNotificationT
     language :: B.C f Kernel.External.Types.Language,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    shouldTrigger :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     title :: B.C f Kernel.Prelude.Text,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

@@ -46,6 +46,7 @@ type API =
            :> Header "x-bundle-version" Version
            :> Header "x-client-version" Version
            :> Header "x-config-version" Version
+           :> Header "x-rn-version" Text
            :> Header "x-device" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> "signature"
@@ -53,6 +54,7 @@ type API =
              :> Header "x-bundle-version" Version
              :> Header "x-client-version" Version
              :> Header "x-config-version" Version
+             :> Header "x-rn-version" Text
              :> Header "x-device" Text
              :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
@@ -76,13 +78,13 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion mbClientVersion mbClientConfigVersion =
-  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion =
+  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion
 
-signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DRegistration.AuthRes
-signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion =
-  withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion
+signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion =
+  withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

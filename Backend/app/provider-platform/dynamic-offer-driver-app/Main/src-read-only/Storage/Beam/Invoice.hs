@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Invoice where
@@ -27,6 +25,7 @@ data InvoiceT f = InvoiceT
     invoiceStatus :: B.C f Domain.Types.Invoice.InvoiceStatus,
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     maxMandateAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMode :: B.C f Domain.Types.Invoice.InvoicePaymentMode,
     serviceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames),

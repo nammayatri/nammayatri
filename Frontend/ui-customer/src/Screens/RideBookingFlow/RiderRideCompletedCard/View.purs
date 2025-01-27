@@ -29,7 +29,7 @@ import JBridge as JB
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude
 import ConfigProvider
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, layoutWithWeight)
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe
 import JBridge(renderBase64Image)
@@ -71,15 +71,24 @@ screen initialState =
     , view: view
     , name: "RiderRideCompletedScreen"
     , globalEvents: [(\push ->  globalEvents' push initialState)]
-    , eval:
-        ( \state action -> do
-            eval (spy "RiderRideCompletedCard state -> " state) (spy "RiderRideCompletedCard action -> " action)
+    , eval:( \action state -> do
+          let
+            _ = spy "RiderRideCompletedScreen action" action
+            _ = spy "RiderRideCompletedScreen state" state
+          void $ case action of 
+            FeedbackChanged _ _ -> pure unit
+            KeyboardCallback _ -> pure unit
+            _ -> do 
+                when(state.isKeyBoardOpen) $ void $ pure $ JB.hideKeyboardOnNavigation true
+                pure unit
+          eval action state
         ) 
     }
     where
     globalEvents' :: (Action -> Effect Unit) -> RiderRideCompletedScreenState -> Effect (Effect Unit)
     globalEvents' push state = do 
       void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+      void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
       when (isNothing state.customerIssue.bannerComputedView) $ void $ launchAff $ flowRunner defaultGlobalState $ computeIssueReportBanners push
       pure $ pure unit
 
@@ -89,12 +98,14 @@ computeIssueReportBanners push = do
   void $ liftFlow $ push $ SetIssueReportBannerItems bannerItem
 
 view :: forall w.  (Action -> Effect Unit) -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
-view push state  =
+view push state =
+  let pading = Padding 0 EHC.safeMarginTop 0 (if (state.isKeyBoardOpen) then 0 else EHC.safeMarginBottom)
+  in
   screenAnimation 
     $ relativeLayout[
           width MATCH_PARENT
         , height MATCH_PARENT
-        , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+        , padding $ pading
         , background Color.white900
         ]$[
       scrollView
@@ -196,25 +207,15 @@ priceAndDistanceUpdateView state push =
           , orientation HORIZONTAL
           , gravity CENTER
           ][
-            linearLayout[ 
-              height WRAP_CONTENT
-            , width MATCH_PARENT
-            , weight 1.0
-            , gravity CENTER
-            ][ imageView
+              layoutWithWeight
+            , imageView
                 [ width $ V 55
                 , height $ V 47
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick" 
-                , margin $ MarginLeft 70
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
+                , margin $ MarginLeft $ if state.showSafetyCenter then 80 else 0
                 ]
-            ]
-          , linearLayout[
-              width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , visibility $ boolToVisibility $ state.showSafetyCenter
-            ][
-              sosButtonView state push  
-            ]
+            , layoutWithWeight
+            , sosButtonView state push 
           ]
         , textView $
           [ width MATCH_PARENT
@@ -777,7 +778,7 @@ stickyButtonView state push =
       , height WRAP_CONTENT
       , cornerRadii $ Corners 16.0 true true false false
       , background Color.white900
-      , padding $ Padding 16 16 16 16
+      , padding $ Padding 16 0 16 0
       , adjustViewWithKeyboard "true"
       ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
 
@@ -849,8 +850,9 @@ sosButtonView config push =
   , cornerRadius if os == "IOS" then 18.0 else 25.0
   , background Color.blue900
   , padding $ Padding 8 8 8 8
-  , margin $ Margin 0 0 18 25
+  , margin $ MarginRight 18
   , onClick push $ const GoToSOS
+  , visibility $ boolToVisibility $ config.showSafetyCenter
   ]
   [ imageView
       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_shield_blue"
@@ -870,6 +872,7 @@ rideRatingView state push =
         , clickable true
         , background Color.white900
         , fillViewport true
+        , id (getNewIDWithTag "RideCompletedScrollView")
         ] $ [  
             linearLayout
               [ height MATCH_PARENT
@@ -982,7 +985,7 @@ profile state push =
           , textView $
               [ 
                 accessibilityHint $ "liked by customers"
-              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> getString CUSTOMERS
+              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> if state.driverInfoCardState.favCount > 1 then getString CUSTOMERS else getString CUSTOMER
               , color Color.blue800
               , maxLines 1
               , gravity CENTER
@@ -1077,7 +1080,7 @@ bottomPartView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin $ Margin 19 25 16 16
+    , margin $ Margin 19 25 16 50
     ]
     [
       feedbackPills state push
@@ -1203,7 +1206,6 @@ riderFeedback state push =
           , color Color.black700
           , maxLines 2
           , margin $ MarginTop 3
-          , weight 1.0
           ] <> FontStyle.body3 LanguageStyle
       ]
     , linearLayout[
@@ -1227,7 +1229,7 @@ title state =
     text $ getString WRITE_REVIEW
     , color Color.black
     , maxLines 1
-    , margin $ Margin 0 20 0 0
+    , margin $ MarginTop 20
     , visibility $ boolToVisibility $ not state.ratingCard.favDriver && not state.recordedView && (state.driverInfoCardState.isAlreadyFav || state.ratingCard.rating < 4)
     ] <> FontStyle.subHeading1 LanguageStyle
 
@@ -1258,7 +1260,8 @@ editTextView state push =
       , pattern "[^\n]*,255"
       , singleLine true 
       , margin $ MarginTop 20
-      , onChange push FeedbackChanged 
+      , id $ getNewIDWithTag "review-editText"
+      , onChange push (FeedbackChanged ( EHC.getNewIDWithTag "reviewBox-editText")) 
       ]  <> FontStyle.body1 TypoGraphy
   , linearLayout[
       height MATCH_PARENT

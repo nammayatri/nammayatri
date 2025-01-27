@@ -15,3 +15,8 @@ ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN ride_id character v
 ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN source character varying(255) NOT NULL;
 ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.booking_cancellation_reason ADD PRIMARY KEY ( booking_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_cancellation_reason ADD COLUMN rider_id character varying(36) ;

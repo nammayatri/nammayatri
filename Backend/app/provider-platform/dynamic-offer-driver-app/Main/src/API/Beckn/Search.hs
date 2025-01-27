@@ -78,7 +78,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       validatedSReq <- DSearch.validateRequest merchant dSearchReq
       fork "search received pushing ondc logs" do
-        void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId
+        void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId "MOBILITY"
       let bppId = validatedSReq.merchant.subscriberId.getShortId
       bppUri <- Utils.mkBppUri transporterId.getId
       fork "search request processing" $

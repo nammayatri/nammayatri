@@ -155,6 +155,19 @@ export const decodeErrorMessage = function (a) {
   }
 };
 
+export const decodeErrorPayload = function (a) {
+  try {
+    const errorPayload = JSON.parse(a).errorPayload;
+    if (errorPayload === null) {
+      return {};
+    }
+    return errorPayload;
+  } catch (e) {
+    console.log(e);
+    return {};
+  }
+};
+
 export const convertKmToM = function (dist) {
   try {
     const distance = parseInt(dist);
@@ -186,21 +199,30 @@ export const differenceBetweenTwoUTC = function (str1) {
 export const storeCallBackForNotification = function (cb) {
   return function (action) {
     return function () {
-      try {
-        const callback = callbackMapper.map(function (notificationType) {
-          if (window.whitelistedNotification.has(notificationType)) {
-            cb(action(notificationType))();
-          }
-        });
-        window.onResumeListeners = [];
-        JBridge.storeCallBackForNotification(callback);
-      }
-      catch (error) {
-        console.log("Error occurred in storeCallBackForNotification ------", error);
+        try {
+         const callback = callbackMapper.map(function (notificationType, notificationBody) {
+            if (window.whitelistedNotification.has(notificationType)) {
+              window.notificationType = notificationType;
+              let parsedBody;
+              try {
+                parsedBody = JSON.parse(notificationBody);
+              } catch (error) {
+                console.error("Failed to parse notificationBody:", error);
+                return;
+              }
+              const { title, msg } = parsedBody;
+              cb(action(notificationType)({title : title, message : msg}))();
+            }
+          });
+          window.onResumeListeners = [];
+          JBridge.storeCallBackForNotification(callback);
+        }
+        catch (error) {
+          console.log("Error occurred in storeCallBackForNotification ------", error);
+        }
       }
     }
   }
-}
 
 export const storeCallBackForAddRideStop = function (cb) {
   return function (action) {
@@ -275,8 +297,8 @@ export const storeCallBackTime = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (time, lat, lng) {
-          cb(action(time)(lat)(lng))();
+        const callback = callbackMapper.map(function (time, lat, lng, errorCode) {
+          cb(action(time)(lat)(lng)(errorCode))();
         });
         JBridge.storeCallBackTime(callback);
       }

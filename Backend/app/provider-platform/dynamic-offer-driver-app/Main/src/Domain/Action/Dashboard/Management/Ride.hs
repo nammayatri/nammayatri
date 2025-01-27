@@ -21,10 +21,11 @@ module Domain.Action.Dashboard.Management.Ride
     postRideSyncMultiple,
     postRideRoute,
     getRideKaptureList,
+    getRideFareBreakUp,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
@@ -50,7 +51,6 @@ getRideList ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
-  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
@@ -116,3 +116,6 @@ postRideRoute = DRide.rideRoute
 
 getRideKaptureList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
 getRideKaptureList = DRide.ticketRideList
+
+getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
+getRideFareBreakUp = DRide.fareBreakUp

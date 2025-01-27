@@ -2,8 +2,6 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
-let mockRegistryUrl = "http://localhost:8020/"
-
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
@@ -48,6 +46,17 @@ let SchedulerType = < RedisBased | DbBased >
 let urlShortnerConfig =
       { url = "http://localhost:9023/", apiKey = sec.urlShortnerApiKey }
 
+let ondcRegistryUrl = "http://localhost:8020/"
+
+let ondcGatewayUrl = "http://localhost:8015/v1"
+
+let nyRegistryUrl = "http://localhost:8020/"
+
+let nyGatewayUrl = "http://localhost:8015/v1"
+
+let nammayatriRegistryConfig =
+      { apiKey = sec.nammayatriRegistryApiKey, url = nyRegistryUrl }
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
@@ -72,11 +81,15 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
-    , registryUrl = mockRegistryUrl
+    , nammayatriRegistryConfig
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap
     , urlShortnerConfig
     , sosAlertsTopicARN
+    , ondcRegistryUrl
+    , ondcGatewayUrl
+    , nyRegistryUrl
+    , nyGatewayUrl
     }

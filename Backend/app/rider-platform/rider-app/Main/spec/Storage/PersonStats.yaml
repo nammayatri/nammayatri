@@ -6,6 +6,11 @@ imports:
 PersonStats:
   tableName: person_stats
 
+  types:
+    PayoutStatus:
+      enum: "Processing,Success,Failed,ManualReview"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
   fields:
     personId : Id Person
     userCancelledRides : Int
@@ -19,8 +24,19 @@ PersonStats:
     weekendPeakRides : Int
     referralCount : Int
     ticketsBookedInEvent: Maybe Int
+    referralEarnings : HighPrecMoney
+    referredByEarnings : HighPrecMoney
+    referredByEarningsPayoutStatus: Maybe PayoutStatus
+    validActivations : Int
+    referralAmountPaid : HighPrecMoney
+    backlogPayoutStatus: Maybe PayoutStatus
+    backlogPayoutAmount: HighPrecMoney
     createdAt : UTCTime
     updatedAt : UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PayoutStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PayoutStatus>
 
   constraints:
     personId: PrimaryKey
@@ -31,12 +47,27 @@ PersonStats:
 
   beamType:
     createdAt: Maybe UTCTime
+    referralEarnings : Maybe HighPrecMoney
+    referredByEarnings : Maybe HighPrecMoney
+    validActivations : Maybe Int
+    referralAmountPaid : Maybe HighPrecMoney
+    backlogPayoutAmount: Maybe HighPrecMoney
 
   fromTType:
     createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+    referralEarnings : Kernel.Prelude.fromMaybe 0|I
+    referredByEarnings : Kernel.Prelude.fromMaybe 0|I
+    validActivations : Kernel.Prelude.fromMaybe 0|I
+    referralAmountPaid : Kernel.Prelude.fromMaybe 0|I
+    backlogPayoutAmount: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     createdAt: Kernel.Prelude.Just|I
+    referralEarnings : Kernel.Prelude.Just|I
+    referredByEarnings : Kernel.Prelude.Just|I
+    validActivations : Kernel.Prelude.Just|I
+    referralAmountPaid : Kernel.Prelude.Just|I
+    backlogPayoutAmount: Kernel.Prelude.Just|I
 
   queries:
     findByPersonId:
@@ -45,6 +76,34 @@ PersonStats:
     updateReferralCount:
       kvFunction: updateOneWithKV
       params: [referralCount]
+      where: personId
+    updateReferralEarningsAndValidActivations:
+      kvFunction: updateOneWithKV
+      params: [referralEarnings,validActivations]
+      where: personId
+    updateReferralAmountPaid:
+      kvFunction: updateOneWithKV
+      params: [referralAmountPaid]
+      where: personId
+    updateReferredByEarning:
+      kvFunction: updateOneWithKV
+      params: [referredByEarnings]
+      where: personId
+    updateReferredByEarningsPayoutStatus:
+      kvFunction: updateOneWithKV
+      params: [referredByEarningsPayoutStatus]
+      where: personId
+    updateBacklogPayoutAmountAndActivations:
+      kvFunction: updateOneWithKV
+      params: [backlogPayoutAmount,validActivations]
+      where: personId
+    updateBacklogPayoutStatus:
+      kvFunction: updateOneWithKV
+      params: [backlogPayoutStatus]
+      where: personId
+    updateBacklogAndReferredByPayoutStatus:
+      kvFunction: updateOneWithKV
+      params: [backlogPayoutStatus,referredByEarningsPayoutStatus]
       where: personId
 
   extraOperations:

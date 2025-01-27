@@ -37,15 +37,13 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Control.Monad.Trans.Class (lift)
-import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Function.Uncurried (runFn5)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
-import Data.Maybe (Maybe(..),fromMaybe)
 import JBridge 
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
@@ -57,13 +55,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, noView)
 import Engineering.Helpers.Utils(splitIntoEqualParts)
 import Animation as Anim
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Prim.Boolean (True)
@@ -284,7 +281,6 @@ view push state =
                     ][]
                   ]
                 ]
-         
         , linearLayout[
             height WRAP_CONTENT
           , width MATCH_PARENT
@@ -303,21 +299,29 @@ view push state =
             , onAnimationEnd (\_-> void $ pure $ startLottieProcess state.coverLottie.config )(const NoAction)
             ]
           ]
+        , maybe noView (\layout -> layout) state.completeProfileLayout
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             ]
-            [ textView $
+            [ imageView [
+               width state.primaryText.prefixImage.width
+               , height state.primaryText.prefixImage.height
+               , imageWithFallback state.primaryText.prefixImage.imageUrl
+               , visibility state.primaryText.prefixImage.visibility
+               , margin state.primaryText.prefixImage.margin
+                ]
+            , textView $
                 [ text $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
-                , margin $ state.primaryText.margin
-                , gravity $ state.primaryText.gravity
                 , width if state.dismissPopupConfig.visibility == VISIBLE || state.headerInfo.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
                 , height WRAP_CONTENT
                 , visibility $ state.primaryText.visibility
+                , margin $ state.primaryText.margin
+                , gravity $ state.primaryText.gravity
                 ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT

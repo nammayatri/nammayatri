@@ -297,6 +297,7 @@ getEn =
     , vehicle_issue: "Vehicle issue"
     , fare_updated: "Fare updated"
     , frequent_cancellations_will_lead_to_less_rides: "Frequent cancellations will lead to less rides and lower rating"
+    , frequent_cancellations_will_lead_to_blocking: "Frequent cancellations will lead to blocking and lower rating"
     , continue: "Continue"
     , confirm_password: "Confirm Password"
     , demo_mode: "Demo Mode"
@@ -1193,6 +1194,18 @@ getEn =
     , yatri_points_faqs_ques2_ans1: (\days -> "All Yatri Points earned should be converted into Discount Points within " <> days <> " days from the date of earning.")
     , yatri_points_faqs_ques2_ans2: (\_ -> "The Discount Points must be utilized within the same period.")
     , yatri_points_faqs_ques2_ans3: "If the conversion or utilization does not occur within this timeframe, the points will be forfeited."
+    , hotspots: "Hotspots"
+    , very_high: "Very High"
+    , high: "High"
+    , very_high_demand_area: "Very High Demand Area"
+    , high_demand_area: "High Demand Area"
+    , moderate: "Moderate"
+    , average_demand_area: "Average Demand Area"
+    , this_area_is_experiencing_average_searches: "This area is experiencing average number of searches from customers"
+    , this_area_is_experiencing_very_high_searches: "This area is experiencing a very high number of searches from customers"
+    , this_area_is_experiencing_high_searches: "This area is experiencing a high number of searches from customers"
+    , navigate: "Navigate"
+    , hotspots_not_available_currently: "Hotspots not available currently, Please try again later!"
     , yatri_points_faqs_ques3: (\_ -> "How can I earn Yatri Points?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "Yatri Points are earned through regular activities on the app, such as taking rides and referring customers. There's no need to do anything different.")
     , yatri_points_faqs_ques3_ans2: (\_ -> "You can earn additional points by exhibiting good behavior, such as low cancellations and receiving good ratings from customers.")
@@ -1533,6 +1546,7 @@ getEn =
     , refresh_payment: "Refresh"
     , by: "By"
     , customers: "customers"
+    , customer: "customer"
     , rating: "Rating"
     , cancellation: "Cancellation"
     , i_speak: "I Speak"
@@ -1545,6 +1559,7 @@ getEn =
     , i_pledge: "✋🏼  I Pledge"
     , only_5_more_rides_for_n_points: (\n -> "Only 5 more rides for " <> n <> " points")
     , only_3_more_rides_for_n_points: (\n -> "Only 3 more rides for " <> n <> " points")
+    , only_4_more_rides_for_n_points: (\n -> "Only 4 more rides for " <> n <> " points")
     , you_got_n_points: (\points -> "You got " <> points <> " points")
     , discounted: "Discounted"
     , gst_with_percentage: (\per -> "GST (" <> per <> "%)")
@@ -1574,6 +1589,7 @@ getEn =
     , remove_eyewere: "Please remove eyewear or sunglasses if any"
     , image_validation_exceed_limit: "Image validation limit exceeded."
     , parking_charges_included: (\amount -> amount <> " Parking Charges included")
+    , invoice_generated_from_driver_to_rider: "Invoice generated from driver to rider"
     , included: "included"
     , complete_your_profile: "Complete Your Profile"
     , add_photos: "Add your Photos"
@@ -1601,6 +1617,7 @@ getEn =
     , add_your_photos: "Add Your Photos"
     , add_photo_caption: "You can add your photos along with your family to show it to our customers! Be mindful of what you add."
     , complete_profile: "Complete Profile"
+    , complete_profile_msg: "Complete your profile so customers can learn more about you!"
     , edit_profile: "Edit Profile"
     , save: "Save"
     , additional_charges_will_be_applicable: "Additional charges may be applicable when driver is near pickup location.        "
@@ -1661,13 +1678,16 @@ getEn =
     , favourites: "Favourites"
     , rental_ride_accepted: "Rental Ride Accepted"
     , points_earned_: (\points -> points <> " Points Earned ✨")
-    , for_metro_ride: "For Metro Ride"
+    , for_metro_pickup_ride: "for metro pickup ride"
+    , for_metro_drop_ride: "for metro drop ride"
     , continue_with: (\text -> "Continue with " <> text)
     , contact_support_for_help: "Contact support for help"
     , you_have_switched_city_or_vehicle: "You have switched your vehicle or city. Please select a plan to get rides"
     , xl_plus: "XL Plus"
     , sort_by: "Sort By"
     , currently_there_are_no_rides_available: "Currently, there are no rides available."
+    , due_to_higher_cancellation_rate_you_are_blocked: "Due to a higher cancellation rate, you are blocked from going online"
+    , blocked_till: (\time date -> "Blocked till " <> time <> ", " <> date <> " ⚠️")
     , ride_requests: "Ride Requests"
     , scheduled_ride_accepted: "Scheduled Ride Accepted!"
     , you_can_access_scheduled_rides: "You can access scheduled rides"
@@ -1697,6 +1717,7 @@ getEn =
     , upcoming_ride: "Upcoming"
     , all: "All"
     , tomorrow: "Tomorrow"
+    , we_are_not_able_to_fetch_your_current_location : "We are not able to fetch your current location."
     , you_have_an_upcoming: "You have an upcoming"
     , booking: "Booking"
     , intercity_ride_accepted: "Intercity Ride accepted"
@@ -1738,11 +1759,29 @@ getEn =
     , ensure_adequate_light_parcel_desc : "Ensure that the lighting is adequate and all necessary information on parcel are clearly visible."
     , fit_parcel_correctly : "Fit the entire parcel in the marked area correctly as shown below."
     , correct_positioning : "Correct Positioning"
-    , incorrect_positioning : "Incorrect Positioning"
+    , incorrect_positioning: "Incorrect Positioning"
     , upload_parcel_image : "Upload Parcel Image"
     , pickup_instruction : "Pickup Instruction"
     , drop_instruction : "Drop Instruction"
     , parcel_is_inappropriate : "Parcel is inappropriate"
     , sender_asking_different_location : "Sender asking to come to different location"
     , sender_unavailable_unreachable : "Sender unavailable / unreachable"
+    , truck : "Truck"
+    , register_your_truck : "Register your Truck"
+    , no_plan_selected : "No Plan Selected"
+    , a_new_way_to_earn_parcel: "A New way to earn - Parcel 2W"
+    , seamless_earning_experience_click_below: "For a seamless earning experience, click below"
+    , metro_warrior_mode : "Metro Warrior Mode"
+    , choose_metro_station : "Choose a metro station to get priority ride requests from and to it"
+    , primary_metro_station : "Primary Metro Station"
+    , primary_station_info : "You can set your preferred metro station here"
+    , nearby_stations : "Nearby Stations"
+    , nearby_station_info : "4 closest stations to your primary station. You can turn each on or off as you wish"
+    , change : "Change"
+    , disable_metro_warriors_info : "Enabling Go To mode will disable Metro Warriors mode."
+    , choose_preferred_metro : "Choose preferred metro"
+    , metro_warriors : "Metro Warriors"
+    , search : "Search"
+    , bus__ : "Bus"
+    , driver_unsubscribed : "Driver has been unsubscribed from platform. Pay pending amount to subscribe back"
     }

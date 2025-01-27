@@ -1,6 +1,4 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.InterCityTravelCities where
 
@@ -10,12 +8,9 @@ import qualified Domain.Types.InterCityTravelCities
 import qualified Domain.Types.Merchant
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se

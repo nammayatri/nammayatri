@@ -11,18 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Management.Merchant
   ( module Dashboard.ProviderPlatform.Management.Merchant,
-    module Reexport,
+    module ReExport,
   )
 where
 
-import API.Types.ProviderPlatform.Management.Merchant as Reexport
-import Dashboard.Common.Merchant as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.Merchant
+import Dashboard.Common as ReExport
+import Dashboard.Common.Merchant
 import Data.Aeson
 import Data.Text as T
 import Kernel.Prelude
@@ -31,7 +30,6 @@ import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 
 ---------------------------------------------------------
@@ -197,8 +195,6 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
-
-$(mkHttpInstancesForEnum ''DocumentType)
 
 --- Upsert fare policy using csv file ----
 

@@ -16,8 +16,10 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
   (Just "CAB", Just "SUV") -> Just VehVar.SUV
   (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
+  (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
   (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
+  (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
@@ -30,6 +32,8 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
   (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
   (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
+  (Just "BUS", Just "BUS_NON_AC") -> Just VehVar.BUS_NON_AC
+  (Just "BUS", Just "BUS_AC") -> Just VehVar.BUS_AC
   _ -> Nothing
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector

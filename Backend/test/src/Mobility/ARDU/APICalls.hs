@@ -15,9 +15,9 @@
 module Mobility.ARDU.APICalls where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Dashboard
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Dashboard
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.Client as DC
@@ -121,8 +121,8 @@ dashboard merchantId _ token = do
   where
     helperAPIClient :<|> _exotelAPIClient = client (Proxy :: Proxy DashboardAPI.API)
 
-    managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
-    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideClientDSL :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ = managementAPIClient token
+    _ :<|> _ :<|> managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
+    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideClientDSL :<|> _ = managementAPIClient token
 
     _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClientDSL
 

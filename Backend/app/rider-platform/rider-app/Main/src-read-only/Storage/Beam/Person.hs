@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Person where
@@ -34,6 +32,7 @@ data PersonT f = PersonT
     clientModelName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
@@ -51,6 +50,7 @@ data PersonT f = PersonT
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     firstName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     followsRide :: B.C f Kernel.Prelude.Bool,
+    frequentLocGeohashes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     gender :: B.C f Domain.Types.Person.Gender,
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
@@ -73,6 +73,7 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

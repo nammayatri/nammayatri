@@ -56,6 +56,8 @@ Plan:
     serviceName : ServiceNames
     vehicleVariant : Maybe VehicleVariant|NoRelation
     vehicleCategory : VehicleCategory|NoRelation
+    listingPriority : Maybe  Int
+    allowStrikeOff: Bool
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -140,11 +142,13 @@ Plan:
 
   fromTType:
     vehicleCategory: Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName|EM
+    allowStrikeOff: Kernel.Prelude.fromMaybe True | I
   toTType:
     vehicleCategory: Kernel.Prelude.Just|I
-
+    allowStrikeOff: Kernel.Prelude.Just|I
   beamType:
     vehicleCategory: Maybe VehicleCategory
+    allowStrikeOff : Maybe Bool
 
   extraOperations:
     - EXTRA_QUERY_FILE

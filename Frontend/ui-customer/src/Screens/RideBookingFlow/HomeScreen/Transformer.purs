@@ -68,7 +68,7 @@ import RemoteConfig as RC
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..), PersonDeliveryDetails(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
 import Services.Backend as Remote
 import Services.API as API
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
@@ -87,8 +87,8 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, Stage(..))
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
-import Services.API (QuoteAPIDetails(..), QuoteAPIContents(..), IntercityQuoteAPIDetails(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
+import Services.API (QuoteAPIDetails(..), IntercityQuoteAPIDetails(..))
 import Services.Backend as Remote
 import Storage (isLocalStageOn)
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -144,13 +144,14 @@ getQuoteList quotesEntity city = (map (\x -> (getQuote x city)) quotesEntity)
 
 getQuote :: QuoteAPIEntity -> City -> QuoteListItemState
 getQuote (QuoteAPIEntity quoteEntity) city = do
-  case (quoteEntity.quoteDetails)^._contents of
+  case (quoteEntity.quoteDetails) of
     (ONE_WAY contents) -> QLI.config
-    (SPECIAL_ZONE contents) -> QLI.config
+    (OneWaySpecialZoneAPIDetails contents) -> QLI.config
     (DELIVERY contents) -> getQuoteFromContents contents city
     (DRIVER_OFFER contents) -> getQuoteFromContents contents city
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config
+    (AMBULANCE contents) -> QLI.config
   where
     getQuoteFromContents contents city =
       let 
@@ -446,19 +447,19 @@ transformQuote quote index tripType = do
     , pickUpCharges = 0.0
     , serviceTierName = quoteEntity.serviceTierName
     , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
-    , airConditioned = Nothing
+    , airConditioned = quoteEntity.isAirConditioned
     , extraFare = getQuotesFareList quoteEntity.quoteDetails tripType
     , nightChargeTill = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeTill")
     , nightChargeFrom = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeFrom")
+    , smartTipReason = Nothing
   }
 
 getFareFromQuotes :: QuoteAPIDetails -> String -> Maybe String
 getFareFromQuotes quoteDetails fareType = 
   let 
     currency = getCurrency appConfig
-    (QuoteAPIDetails quoteDetails) = quoteDetails
     allowance' = 
-      case quoteDetails.contents of 
+      case quoteDetails of 
         INTER_CITY (IntercityQuoteAPIDetails interCityObj) ->
           case fareType of 
             "perHourCharge" ->  (maybe Nothing  (\perHourCharge -> (Just $ show $ perHourCharge ^. _amount)) interCityObj.perHourCharge)
@@ -473,12 +474,11 @@ getQuotesFareList :: QuoteAPIDetails -> Maybe TicketType -> Array FareList
 getQuotesFareList quoteDetails tripType = 
   let 
     currency = getCurrency appConfig
-    (QuoteAPIDetails quoteDetails) = quoteDetails
     isRoundTrip = case tripType of   
                 Just ROUND_TRIP -> true
                 _ -> false
     fareList' = 
-      case quoteDetails.contents of 
+      case quoteDetails of 
         INTER_CITY (IntercityQuoteAPIDetails interCityObj) ->
           (maybe []  ( \perHourCharge -> (if (perHourCharge ^. _amount > 0.0) then [ { key: ((getString TIME_FARE) <> "*"), val: (currency <> (show  $  perHourCharge ^. _amount) <> " / hr")}]else [])) interCityObj.perHourCharge) <>
           (maybe []  (\deadKmFare -> [{key : (getString PICKUP_CHARGES), val : (currency <> (show $  (deadKmFare ^. _amount )))}]) interCityObj.deadKmFare) <> 
@@ -533,10 +533,7 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
     preferedVariant =  if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
     preferredEstimatesOrder = maybe [] (\service -> service.preferredEstimateOrder) state.data.selectedService
     finalList =  DA.nub $ [preferedVariant] <> preferredEstimatesOrder <> estimatesOrder
-    filteredEstimate = 
-      case (getMerchant FunctionCall) of
-        YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-        _ -> estimates
+    filteredEstimate =  estimates
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
    sortEstimateWithVariantOrder sortWithFare finalList
@@ -593,13 +590,13 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                 let
                   (QuoteAPIEntity quoteEntity) = body.onDemandCab
 
-                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
                 in
                   { item: Just quote, order: orderNumber }
               RentalQuotes body -> 
                 let (QuoteAPIEntity quoteEntity) = body.onRentalCab
 
-                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex  (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
+                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex  quoteEntity.vehicleVariant orderList)
 
                 in {item : Just quote, order : orderNumber}
               _ -> { item: Nothing, order: orderListLength }
@@ -621,11 +618,11 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                   Quotes body -> do
                     let
                       (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
+                    DA.any (_ == quoteEntity.vehicleVariant) variant
                   RentalQuotes body -> do
                     let 
                       (QuoteAPIEntity quoteEntity) = body.onRentalCab
-                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
+                    DA.any (_ == quoteEntity.vehicleVariant) variant
                   _ -> false
               )
               quotes
@@ -639,7 +636,7 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       preferredServiceTier = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
       userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
       isPreferredBookAny  = RC.getPreferredOrderInBookAny userCity
-      allSelectedServices =     if preferredServiceTier /= "Auto" && isPreferredBookAny  then (getServiceNames estimates preferredServiceTier) else  RC.getBookAnySelectedServices userCity 
+      allSelectedServices =     if isPreferredBookAny  then (getServiceNames estimates preferredServiceTier) else  RC.getBookAnySelectedServices userCity 
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig userCity
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -698,6 +695,8 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , hasTollCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
       , hasParkingCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
       , specialLocationTag = estimate.specialLocationTag
+      , smartTipReason = estimate.smartTipReason
+      , smartTipSuggestion = estimate.smartTipSuggestion
       }
     
     where 
@@ -896,6 +895,8 @@ dummyEstimateEntity =
     , providerId : Nothing
     , isValueAddNP : Nothing
     , validTill : ""
+    , smartTipReason : Nothing
+    , smartTipSuggestion : Nothing
     }
 
 createEstimateForBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
@@ -929,6 +930,8 @@ createEstimateForBookAny estimates =
                 , airConditioned: Nothing
                 , isValueAddNP: Just true
                 , validTill : ""
+                , smartTipReason : Nothing
+                , smartTipSuggestion : Nothing
                 }
         in DA.singleton bookAnyEstimate
       else []
@@ -1008,12 +1011,14 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , showInfo = false
       , searchResultType = if isIntercity then ChooseVehicle.QUOTES ChooseVehicle.INTER_CITY else ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
       , pickUpCharges = 0.0
+      , airConditioned = quoteEntity.isAirConditioned
       , serviceTierName = quoteEntity.serviceTierName
       , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       , specialLocationTag = quoteEntity.specialLocationTag
       , extraFare = getQuotesFareList quoteEntity.quoteDetails tripType
       , nightChargeTill = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeTill")
       , nightChargeFrom = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeFrom")
+      , smartTipReason = Nothing
       }
     RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
       in ChooseVehicle.config {
@@ -1031,6 +1036,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , serviceTierName = quoteEntity.serviceTierName
       , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       , specialLocationTag = quoteEntity.specialLocationTag
+      , smartTipReason = Nothing
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -1038,20 +1044,23 @@ getSpecialZoneQuote quote index isIntercity tripType=
 filterSpecialZoneAndInterCityQuotes :: Array OfferRes -> Array OfferRes
 filterSpecialZoneAndInterCityQuotes quotes = 
   filter 
-  (\quote -> let fareProductType = getFareProductType $ extractFareProductType quote
-             in DA.any ( _ == fareProductType ) [ FPT.ONE_WAY_SPECIAL_ZONE , FPT.INTER_CITY ])
-  quotes
+  (\quote -> 
+    case extractFareProductType quote of 
+      Just (OneWaySpecialZoneAPIDetails _) -> true
+      Just (INTER_CITY _) -> true
+      _ -> false
+  ) quotes
 
-extractFareProductType :: OfferRes -> String
+extractFareProductType :: OfferRes -> Maybe QuoteAPIDetails
 extractFareProductType quote = 
   case quote of 
     Quotes body ->
       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-      in quoteEntity.quoteDetails^._fareProductType
+      in Just quoteEntity.quoteDetails
     RentalQuotes body ->
       let (QuoteAPIEntity quoteEntity) = body.onRentalCab
-      in quoteEntity.quoteDetails^._fareProductType
-    _ -> ""
+      in Just quoteEntity.quoteDetails
+    _ -> Nothing
 
 ------------------------- fareProductType API transformer -------------------------
 
@@ -1068,6 +1077,6 @@ getFareProductType fareProductType =
 
 getServiceNames :: Array EstimateAPIEntity -> String -> Array String
 getServiceNames estimate  prefervariant =
-  let filter = if prefervariant == "Auto" then  ["Auto" , "Non-AC Mini"] else ["Sedan", "Non-AC Mini", "AC Mini"]
+  let filter = if prefervariant == "Auto" then  ["Auto" , "Non-AC Mini", "AC Mini"] else ["Sedan", "Non-AC Mini", "AC Mini"]
       array  =  foldl (\acc (EstimateAPIEntity  estimate) -> if  DA.elem (fromMaybe "" estimate.serviceTierName) filter then acc <> [fromMaybe "" estimate.serviceTierName] else acc ) [] estimate 
   in array

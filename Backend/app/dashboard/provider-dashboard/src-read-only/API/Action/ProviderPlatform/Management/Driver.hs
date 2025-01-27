@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.Driver
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
@@ -28,97 +29,307 @@ type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getDriverDocumentsInfo merchantId city :<|> postDriverPersonNumbers merchantId city :<|> postDriverDriverDataDecryption merchantId city :<|> postDriverPersonId merchantId city :<|> getDriverAadhaarInfo merchantId city :<|> getDriverAadhaarInfobyMobileNumber merchantId city :<|> getDriverList merchantId city :<|> getDriverActivity merchantId city :<|> postDriverDisable merchantId city :<|> postDriverAcRestrictionUpdate merchantId city :<|> postDriverBlockWithReason merchantId city :<|> postDriverBlock merchantId city :<|> getDriverBlockReasonList merchantId city :<|> postDriverUnblock merchantId city :<|> getDriverLocation merchantId city :<|> deleteDriverPermanentlyDelete merchantId city :<|> postDriverUnlinkDL merchantId city :<|> postDriverUnlinkAadhaar merchantId city :<|> postDriverUpdatePhoneNumber merchantId city :<|> postDriverUpdateByPhoneNumber merchantId city :<|> postDriverUpdateName merchantId city :<|> postDriverDeleteRC merchantId city :<|> getDriverClearStuckOnRide merchantId city :<|> postDriverSendDummyNotification merchantId city :<|> postDriverChangeOperatingCity merchantId city :<|> getDriverGetOperatingCity merchantId city :<|> postDriverPauseOrResumeServiceCharges merchantId city :<|> postDriverUpdateRCInvalidStatus merchantId city :<|> postDriverUpdateVehicleVariant merchantId city :<|> postDriverBulkReviewRCVariant merchantId city :<|> postDriverUpdateDriverTag merchantId city :<|> postDriverClearFee merchantId city :<|> getDriverPanAadharSelfieDetails merchantId city :<|> postDriverSyncDocAadharPan merchantId city :<|> postDriverUpdateVehicleManufacturing merchantId city :<|> postDriverRefundByPayout merchantId city :<|> getDriverSecurityDepositStatus merchantId city :<|> getDriverPanAadharSelfieDetailsList merchantId city
 
-type GetDriverDocumentsInfo = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DOCUMENTS_INFO :> API.Types.ProviderPlatform.Management.Driver.GetDriverDocumentsInfo)
+type GetDriverDocumentsInfo =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_DOCUMENTS_INFO)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverDocumentsInfo
+  )
 
-type PostDriverPersonNumbers = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PERSON_NUMBERS :> API.Types.ProviderPlatform.Management.Driver.PostDriverPersonNumbers)
+type PostDriverPersonNumbers =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_PERSON_NUMBERS)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverPersonNumbers
+  )
 
-type PostDriverDriverDataDecryption = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_DECRYPTION :> API.Types.ProviderPlatform.Management.Driver.PostDriverDriverDataDecryption)
+type PostDriverDriverDataDecryption =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_DRIVER_DATA_DECRYPTION)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverDriverDataDecryption
+  )
 
-type PostDriverPersonId = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'FETCH_PERSON_ID :> API.Types.ProviderPlatform.Management.Driver.PostDriverPersonId)
+type PostDriverPersonId =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_PERSON_ID)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverPersonId
+  )
 
-type GetDriverAadhaarInfo = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'AADHAAR_INFO :> API.Types.ProviderPlatform.Management.Driver.GetDriverAadhaarInfo)
+type GetDriverAadhaarInfo =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_AADHAAR_INFO)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverAadhaarInfo
+  )
 
-type GetDriverAadhaarInfobyMobileNumber = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'AADHAAR_INFO_PHONE :> API.Types.ProviderPlatform.Management.Driver.GetDriverAadhaarInfobyMobileNumber)
+type GetDriverAadhaarInfobyMobileNumber =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_AADHAAR_INFOBY_MOBILE_NUMBER)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverAadhaarInfobyMobileNumber
+  )
 
-type GetDriverList = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'LIST :> API.Types.ProviderPlatform.Management.Driver.GetDriverList)
+type GetDriverList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_LIST)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverList
+  )
 
-type GetDriverActivity = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'ACTIVITY :> API.Types.ProviderPlatform.Management.Driver.GetDriverActivity)
+type GetDriverActivity =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_ACTIVITY)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverActivity
+  )
 
-type PostDriverDisable = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DISABLE :> API.Types.ProviderPlatform.Management.Driver.PostDriverDisable)
+type PostDriverDisable =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_DISABLE)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverDisable
+  )
 
-type PostDriverAcRestrictionUpdate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REMOVE_AC_USAGE_RESTRICTION :> API.Types.ProviderPlatform.Management.Driver.PostDriverAcRestrictionUpdate)
+type PostDriverAcRestrictionUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_AC_RESTRICTION_UPDATE)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverAcRestrictionUpdate
+  )
 
-type PostDriverBlockWithReason = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK_WITH_REASON :> API.Types.ProviderPlatform.Management.Driver.PostDriverBlockWithReason)
+type PostDriverBlockWithReason =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_BLOCK_WITH_REASON)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverBlockWithReason
+  )
 
-type PostDriverBlock = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK :> API.Types.ProviderPlatform.Management.Driver.PostDriverBlock)
+type PostDriverBlock =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_BLOCK)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverBlock
+  )
 
-type GetDriverBlockReasonList = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BLOCK_REASON_LIST :> API.Types.ProviderPlatform.Management.Driver.GetDriverBlockReasonList)
+type GetDriverBlockReasonList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_BLOCK_REASON_LIST)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverBlockReasonList
+  )
 
-type PostDriverUnblock = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UNBLOCK :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnblock)
+type PostDriverUnblock =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UNBLOCK)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnblock
+  )
 
-type GetDriverLocation = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'LOCATION :> API.Types.ProviderPlatform.Management.Driver.GetDriverLocation)
+type GetDriverLocation =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_LOCATION)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverLocation
+  )
 
-type DeleteDriverPermanentlyDelete = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DELETE_DRIVER :> API.Types.ProviderPlatform.Management.Driver.DeleteDriverPermanentlyDelete)
+type DeleteDriverPermanentlyDelete =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.DELETE_DRIVER_PERMANENTLY_DELETE)
+      :> API.Types.ProviderPlatform.Management.Driver.DeleteDriverPermanentlyDelete
+  )
 
-type PostDriverUnlinkDL = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UNLINK_DL :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnlinkDL)
+type PostDriverUnlinkDL =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UNLINK_DL)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnlinkDL
+  )
 
-type PostDriverUnlinkAadhaar = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UNLINK_AADHAAR :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnlinkAadhaar)
+type PostDriverUnlinkAadhaar =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UNLINK_AADHAAR)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUnlinkAadhaar
+  )
 
-type PostDriverUpdatePhoneNumber = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_PHONE_NUMBER :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdatePhoneNumber)
+type PostDriverUpdatePhoneNumber =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_PHONE_NUMBER)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdatePhoneNumber
+  )
 
-type PostDriverUpdateByPhoneNumber = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'AADHAAR_UPDATE :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateByPhoneNumber)
+type PostDriverUpdateByPhoneNumber =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_BY_PHONE_NUMBER)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateByPhoneNumber
+  )
 
-type PostDriverUpdateName = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_DRIVER_NAME :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateName)
+type PostDriverUpdateName =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_NAME)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateName
+  )
 
-type PostDriverDeleteRC = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DELETE_RC :> API.Types.ProviderPlatform.Management.Driver.PostDriverDeleteRC)
+type PostDriverDeleteRC =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_DELETE_RC)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverDeleteRC
+  )
 
-type GetDriverClearStuckOnRide = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS :> API.Types.ProviderPlatform.Management.Driver.GetDriverClearStuckOnRide)
+type GetDriverClearStuckOnRide =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_CLEAR_STUCK_ON_RIDE)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverClearStuckOnRide
+  )
 
-type PostDriverSendDummyNotification = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'SEND_DUMMY_NOTIFICATION :> API.Types.ProviderPlatform.Management.Driver.PostDriverSendDummyNotification)
+type PostDriverSendDummyNotification =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_SEND_DUMMY_NOTIFICATION)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverSendDummyNotification
+  )
 
-type PostDriverChangeOperatingCity = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'CHANGE_OPERATING_CITY :> API.Types.ProviderPlatform.Management.Driver.PostDriverChangeOperatingCity)
+type PostDriverChangeOperatingCity =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_CHANGE_OPERATING_CITY)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverChangeOperatingCity
+  )
 
-type GetDriverGetOperatingCity = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_OPERATING_CITY :> API.Types.ProviderPlatform.Management.Driver.GetDriverGetOperatingCity)
+type GetDriverGetOperatingCity =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_GET_OPERATING_CITY)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverGetOperatingCity
+  )
 
 type PostDriverPauseOrResumeServiceCharges =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'TOGGLE_SERVICE_USAGE_CHARGE
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES)
       :> API.Types.ProviderPlatform.Management.Driver.PostDriverPauseOrResumeServiceCharges
   )
 
-type PostDriverUpdateRCInvalidStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_RC_INVALID_STATUS :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateRCInvalidStatus)
+type PostDriverUpdateRCInvalidStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_RC_INVALID_STATUS)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateRCInvalidStatus
+  )
 
-type PostDriverUpdateVehicleVariant = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_VEHICLE_VARIANT :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateVehicleVariant)
+type PostDriverUpdateVehicleVariant =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_VEHICLE_VARIANT)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateVehicleVariant
+  )
 
-type PostDriverBulkReviewRCVariant = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BULK_REVIEW_RC_VARIANT :> API.Types.ProviderPlatform.Management.Driver.PostDriverBulkReviewRCVariant)
+type PostDriverBulkReviewRCVariant =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_BULK_REVIEW_RC_VARIANT)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverBulkReviewRCVariant
+  )
 
-type PostDriverUpdateDriverTag = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_DRIVER_TAG :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateDriverTag)
+type PostDriverUpdateDriverTag =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_DRIVER_TAG)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateDriverTag
+  )
 
-type PostDriverClearFee = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'CLEAR_FEE :> API.Types.ProviderPlatform.Management.Driver.PostDriverClearFee)
+type PostDriverClearFee =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_CLEAR_FEE)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverClearFee
+  )
 
-type GetDriverPanAadharSelfieDetails = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAN_AADHAAR_SELFIE_DETAILS :> API.Types.ProviderPlatform.Management.Driver.GetDriverPanAadharSelfieDetails)
+type GetDriverPanAadharSelfieDetails =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverPanAadharSelfieDetails
+  )
 
-type PostDriverSyncDocAadharPan = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'SYNC_DOC_AADHAR_PAN :> API.Types.ProviderPlatform.Management.Driver.PostDriverSyncDocAadharPan)
+type PostDriverSyncDocAadharPan =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_SYNC_DOC_AADHAR_PAN)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverSyncDocAadharPan
+  )
 
 type PostDriverUpdateVehicleManufacturing =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'UPDATE_VEHICLE_MANUFACTURING
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_UPDATE_VEHICLE_MANUFACTURING)
       :> API.Types.ProviderPlatform.Management.Driver.PostDriverUpdateVehicleManufacturing
   )
 
-type PostDriverRefundByPayout = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REFUND_BY_PAYOUT :> API.Types.ProviderPlatform.Management.Driver.PostDriverRefundByPayout)
+type PostDriverRefundByPayout =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.POST_DRIVER_REFUND_BY_PAYOUT)
+      :> API.Types.ProviderPlatform.Management.Driver.PostDriverRefundByPayout
+  )
 
-type GetDriverSecurityDepositStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'SECURITY_DEPOSIT_STATUS :> API.Types.ProviderPlatform.Management.Driver.GetDriverSecurityDepositStatus)
+type GetDriverSecurityDepositStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_SECURITY_DEPOSIT_STATUS)
+      :> API.Types.ProviderPlatform.Management.Driver.GetDriverSecurityDepositStatus
+  )
 
 type GetDriverPanAadharSelfieDetailsList =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'PAN_AADHAAR_SELFIE_DETAILS_LIST
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER / 'API.Types.ProviderPlatform.Management.Driver.GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS_LIST)
       :> API.Types.ProviderPlatform.Management.Driver.GetDriverPanAadharSelfieDetailsList
   )
 
@@ -140,8 +351,8 @@ getDriverAadhaarInfo merchantShortId opCity apiTokenInfo driverId = withFlowHand
 getDriverAadhaarInfobyMobileNumber :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverAadhaarInfoByPhoneReq)
 getDriverAadhaarInfobyMobileNumber merchantShortId opCity apiTokenInfo mobileNo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Driver.getDriverAadhaarInfobyMobileNumber merchantShortId opCity apiTokenInfo mobileNo
 
-getDriverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverListRes)
-getDriverList merchantShortId opCity apiTokenInfo limit offset verified enabled blocked subscribed phone vehicleNumberSearchString = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Driver.getDriverList merchantShortId opCity apiTokenInfo limit offset verified enabled blocked subscribed phone vehicleNumberSearchString
+getDriverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverListRes)
+getDriverList merchantShortId opCity apiTokenInfo limit offset verified enabled blocked subscribed phone vehicleNumberSearchString mbNameSearchString = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Driver.getDriverList merchantShortId opCity apiTokenInfo limit offset verified enabled blocked subscribed phone vehicleNumberSearchString mbNameSearchString
 
 getDriverActivity :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler Dashboard.Common.Driver.DriverActivityRes)
 getDriverActivity merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Driver.getDriverActivity merchantShortId opCity apiTokenInfo

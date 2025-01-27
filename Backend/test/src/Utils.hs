@@ -11,10 +11,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Utils where
 
+import Control.Exception (throwIO)
 import Data.Aeson (decode)
 import Data.String.Conversions
 import qualified "rider-app" Domain.Types.Booking as BDB
@@ -56,8 +56,7 @@ runClient' :: (HasCallStack, MonadIO m, Show a) => ClientEnv -> ClientM a -> m a
 runClient' clientEnv x = do
   res <- runClient clientEnv x
   res `shouldSatisfy` isRight
-  let Right r = res
-  return r
+  either (\_err -> liftIO $ throwIO $ InternalError "Should never happen") pure res
 
 -- | Invoke an action until getting 'Just'.
 --

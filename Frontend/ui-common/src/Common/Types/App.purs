@@ -162,6 +162,7 @@ newtype Payload = Payload
   , deepLinkJSON :: Maybe QueryParam
   , chatMessageData :: Maybe ChatFCMData
   , fragmentViewGroups :: Maybe FragmentViewGroup
+  , appToken :: Maybe String
   }
 
 newtype QueryParam = QueryParam {
@@ -634,7 +635,7 @@ type RentalBookingConfig = {
 
 
 
-data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
+data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues | DemandExtraTollAmount
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
 instance eqCustomerIssueTypes :: Eq CustomerIssueTypes where eq = genericEq
 instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where 
@@ -642,6 +643,7 @@ instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where
     TollCharge -> 1
     NightSafety -> 0
     Accessibility -> 2
+    DemandExtraTollAmount -> 3
     NoIssue -> 10
     MoreIssues -> 20
 

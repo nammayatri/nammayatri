@@ -1,15 +1,15 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Common
   ( module Domain.Types.Common,
     module Domain.Types,
+    module Data.Time.Calendar,
   )
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
+import Data.Time.Calendar
 import Domain.Types
 import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
@@ -33,3 +33,4 @@ instance CH.ClickhouseValue DriverMode
 $(mkHttpInstancesForEnum ''DriverMode)
 
 $(mkBeamInstancesForEnumAndList ''DriverMode)
+$(mkBeamInstancesForEnum ''DayOfWeek)

@@ -1,32 +1,20 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.ExophoneExtra where
 
-import qualified Data.Text
 -- Extra code goes here --
 
 import qualified Database.Beam as B
-import Domain.Types.Exophone as DE (Exophone (..), ExophoneType (..))
-import qualified Domain.Types.Exophone
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
+import Domain.Types.Exophone as DE (Exophone (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import qualified Kernel.External.Call.Types
-import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as Beam
 import qualified Storage.Beam.Exophone as BeamE
-import Storage.Queries.OrphanInstances.Exophone
+import Storage.Queries.OrphanInstances.Exophone ()
 
 updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do

@@ -1,20 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.TransporterConfigExtra where
 
-import qualified Data.Aeson as A
-import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.TransporterConfig as BeamTC
-import Storage.Queries.OrphanInstances.TransporterConfig
+import Storage.Queries.OrphanInstances.TransporterConfig ()
 
 updateFCMConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Journey where
@@ -16,14 +15,13 @@ import qualified Tools.Beam.UtilsTH
 
 data Journey = Journey
   { convenienceCost :: Kernel.Prelude.Int,
+    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    estimatedFare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
-    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
-    legsDone :: Kernel.Prelude.Int,
-    modes :: [Domain.Types.Common.TravelMode],
+    modes :: [Domain.Types.Common.MultimodalTravelMode],
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     totalLegs :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

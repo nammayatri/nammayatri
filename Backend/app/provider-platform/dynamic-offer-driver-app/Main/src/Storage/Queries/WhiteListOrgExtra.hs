@@ -1,22 +1,17 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.WhiteListOrgExtra where
 
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
-import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as Beam
-import Storage.Queries.OrphanInstances.WhiteListOrg
+import Storage.Queries.OrphanInstances.WhiteListOrg ()
 
 -- Extra code goes here --
 

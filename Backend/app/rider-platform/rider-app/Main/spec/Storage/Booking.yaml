@@ -58,6 +58,7 @@ BookingLocation:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   beamFields:
@@ -73,6 +74,7 @@ BookingLocation:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   toTType:
@@ -87,10 +89,11 @@ BookingLocation:
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
     instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
     extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,extras}|E
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -149,6 +152,7 @@ Booking:
     InterCityBookingDetails:
       toLocation: Location
       distance: Distance
+      stops: "[Location]"
       otpCode: Maybe Text
       derive': Show
     AmbulanceBookingDetails:
@@ -194,6 +198,7 @@ Booking:
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
+    vehicleIconUrl: Maybe BaseUrl
     isAirConditioned: Maybe Bool
     isDashboardRequest: Maybe Bool
     bookingDetails: BookingDetails
@@ -216,6 +221,8 @@ Booking:
     tripCategory: Maybe TripCategory
     initiatedBy: Maybe TripParty
     isReferredRide: Maybe Bool
+    disabilityTag: Maybe Text
+    journeyLegOrder: Maybe Int
 
   beamFields:
     estimatedDistance:
@@ -267,6 +274,7 @@ Booking:
     backendConfigVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
 
   sqlType:
     id: character(36)
@@ -315,6 +323,7 @@ Booking:
     distanceUnit: character varying(255)
     distanceValue: double precision
     estimatedDistanceValue: double precision
+    vehicleIconUrl: character varying(255)
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -353,6 +362,7 @@ Booking:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     bppEstimateId: itemId|E
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   intermediateTransformers:
     toTType:
@@ -380,6 +390,7 @@ Booking:
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     itemId: bppEstimateId|E
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -402,6 +413,9 @@ Booking:
       params:
         - isBookingUpdated
       where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
 
 BookingPartiesLink:
   fields:

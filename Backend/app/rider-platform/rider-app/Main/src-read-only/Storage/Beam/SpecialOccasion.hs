@@ -1,11 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SpecialOccasion where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.SpecialOccasion
@@ -16,7 +14,7 @@ import Tools.Beam.UtilsTH
 
 data SpecialOccasionT f = SpecialOccasionT
   { businessHours :: B.C f [Kernel.Prelude.Text],
-    date :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    date :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     dayOfWeek :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityId :: B.C f Kernel.Prelude.Text,

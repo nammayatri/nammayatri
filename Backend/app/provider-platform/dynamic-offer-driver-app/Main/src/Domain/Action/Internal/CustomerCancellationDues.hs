@@ -195,14 +195,16 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                       activatedValidRides = 0,
                       referralEarnings = 0.0,
                       referralCounts = 0,
-                      payoutStatus = DDS.Verifying,
+                      payoutStatus = DDS.Initialized,
                       payoutOrderId = Nothing,
                       payoutOrderStatus = Nothing,
                       createdAt = now,
                       updatedAt = now,
                       cancellationCharges = amountPaid,
                       tipAmount = 0.0,
-                      totalRideTime = 0
+                      totalRideTime = 0,
+                      merchantId = Just merchantId,
+                      merchantOperatingCityId = Just merchantOperatingCity.id
                     }
             QDailyStats.create dailyStatsOfDriver'
 

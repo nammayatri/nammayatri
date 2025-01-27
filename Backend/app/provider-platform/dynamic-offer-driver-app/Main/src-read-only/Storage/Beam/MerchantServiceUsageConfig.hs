@@ -1,10 +1,9 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.MerchantServiceUsageConfig where
 
+import qualified ChatCompletion.Types
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.UtilsTH
@@ -44,6 +43,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     initiateCall :: B.C f Kernel.External.Call.CallService,
     issueTicketService :: B.C f Kernel.External.Ticket.Types.IssueTicketService,
+    llmChatCompletion :: B.C f (Kernel.Prelude.Maybe ChatCompletion.Types.LLMChatCompletionService),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     rectifyDistantPointsFailure :: B.C f Kernel.External.Maps.Types.MapsService,

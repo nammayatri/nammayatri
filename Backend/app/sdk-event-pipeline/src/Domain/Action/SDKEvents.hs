@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.SDKEvents where
 
@@ -9,9 +8,6 @@ import Environment
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer
 import Kernel.Types.APISuccess
-import Kernel.Types.Id
-import Kernel.Utils.SlidingWindowLimiter
-import Servant
 import Tools.Auth
 
 postSdkEvents :: SDKEventsReq -> Flow APISuccess

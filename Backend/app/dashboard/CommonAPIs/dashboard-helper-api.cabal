@@ -29,7 +29,7 @@ library
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.Driver
-      Dashboard.Common.DriverCoinsExtra
+      Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
@@ -37,21 +37,19 @@ library
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
       Dashboard.ProviderPlatform.Management.Driver
-      Dashboard.ProviderPlatform.Management.DriverCoin
+      Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral
       Dashboard.ProviderPlatform.Management.DriverRegistration
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
-      Dashboard.ProviderPlatform.RideBooking.Driver
-      Dashboard.ProviderPlatform.Volunteer
-      Dashboard.RiderPlatform.Customer
-      Dashboard.RiderPlatform.FRFSTicket
-      Dashboard.RiderPlatform.Merchant
-      Dashboard.RiderPlatform.Ride
+      Dashboard.RiderPlatform.Management.FRFSTicket
+      Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Driver
       API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.Driver
@@ -59,6 +57,21 @@ library
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Booking
+      API.Types.ProviderPlatform.Management.Endpoints.Driver
+      API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
+      API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
+      API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
+      API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Media
+      API.Types.ProviderPlatform.Management.Endpoints.Merchant
+      API.Types.ProviderPlatform.Management.Endpoints.Message
+      API.Types.ProviderPlatform.Management.Endpoints.NammaTag
+      API.Types.ProviderPlatform.Management.Endpoints.Payout
+      API.Types.ProviderPlatform.Management.Endpoints.Revenue
+      API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag
@@ -66,14 +79,22 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
-      API.Types.ProviderPlatform.RideBooking
-      API.Types.ProviderPlatform.RideBooking.Driver
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
+      API.Types.RiderPlatform.Management.Customer
+      API.Types.RiderPlatform.Management.Endpoints.Booking
+      API.Types.RiderPlatform.Management.Endpoints.Customer
+      API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
+      API.Types.RiderPlatform.Management.Endpoints.Invoice
+      API.Types.RiderPlatform.Management.Endpoints.Merchant
+      API.Types.RiderPlatform.Management.Endpoints.NammaTag
+      API.Types.RiderPlatform.Management.Endpoints.Ride
+      API.Types.RiderPlatform.Management.Endpoints.System
       API.Types.RiderPlatform.Management.FRFSTicket
       API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
+      API.Types.RiderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.System
   other-modules:
       Paths_dashboard_helper_api
@@ -115,6 +136,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      TemplateHaskell
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
@@ -138,7 +160,9 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
+    , singletons-th
     , special-zone-a
     , template-haskell
     , text

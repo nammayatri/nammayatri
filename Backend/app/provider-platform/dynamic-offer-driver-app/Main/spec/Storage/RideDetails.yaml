@@ -26,6 +26,8 @@ RideDetails:
     fleetOwnerId : Maybe Text
     defaultServiceTierName : Maybe Text
     createdAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
 
 
   constraints:
@@ -63,4 +65,4 @@ RideDetails:
     vehicleAge: int
     fleetOwnerId: character varying(36)
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [createdAt, updatedAt]

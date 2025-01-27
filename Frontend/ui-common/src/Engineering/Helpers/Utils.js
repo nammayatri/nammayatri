@@ -10,6 +10,10 @@ export const saveToLocalStoreImpl = function(key) {
   };
 }
 
+export const compareDate = function (date1, date2) {
+  return date1 >= date2;
+}
+
 export const fetchFromLocalStoreImpl = function(key) {
   return function (just) {
     return function (nothing) {

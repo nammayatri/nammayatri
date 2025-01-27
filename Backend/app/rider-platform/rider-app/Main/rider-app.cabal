@@ -45,28 +45,12 @@ library
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
       API.Dashboard
-      API.Dashboard.Customer
       API.Dashboard.Exotel
-      API.Dashboard.HotSpot
-      API.Dashboard.Issue
-      API.Dashboard.IssueList
-      API.Dashboard.Ride
-      API.Dashboard.RideBooking
-      API.Dashboard.RideBooking.Booking
-      API.Dashboard.RideBooking.Cancel
-      API.Dashboard.RideBooking.Confirm
-      API.Dashboard.RideBooking.Frontend
-      API.Dashboard.RideBooking.Maps
-      API.Dashboard.RideBooking.Profile
-      API.Dashboard.RideBooking.Quote
-      API.Dashboard.RideBooking.Registration
-      API.Dashboard.RideBooking.Search
-      API.Dashboard.RideBooking.Select
-      API.Dashboard.Tickets
       API.FRFS
       API.IGM
       API.Internal
       API.Internal.Cac
+      API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.Rating
       API.Internal.StopEvents
@@ -146,6 +130,7 @@ library
       Beckn.OnDemand.Utils.OnSearch
       Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.GWLink
       Domain.Action.Beckn.FRFS.OnCancel
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
@@ -160,25 +145,40 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.FRFSTicket
       Domain.Action.Dashboard.Invoice
-      Domain.Action.Dashboard.IssueList
+      Domain.Action.Dashboard.IssueManagement.Issue
+      Domain.Action.Dashboard.IssueManagement.IssueList
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.NammaTag.Handle
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.Booking
+      Domain.Action.Dashboard.RideBooking.Cancel
+      Domain.Action.Dashboard.RideBooking.Confirm
+      Domain.Action.Dashboard.RideBooking.Frontend
+      Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.NotifyRideInfo
+      Domain.Action.Dashboard.RideBooking.Profile
+      Domain.Action.Dashboard.RideBooking.Quote
+      Domain.Action.Dashboard.RideBooking.Registration
+      Domain.Action.Dashboard.RideBooking.Search
+      Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
+      Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
       Domain.Action.Internal.StopEvents
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
+      Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
@@ -206,7 +206,6 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
-      Domain.Action.UI.MultiModal
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
@@ -260,12 +259,14 @@ library
       Environment
       ExternalBPP.Bus.ExternalAPI.CallAPI
       ExternalBPP.Bus.ExternalAPI.CUMTA.Order
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Verification
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Status
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Verify
       ExternalBPP.Bus.ExternalAPI.EBIX.Auth
       ExternalBPP.Bus.ExternalAPI.EBIX.Order
       ExternalBPP.Bus.ExternalAPI.EBIX.Payment
       ExternalBPP.Bus.ExternalAPI.EBIX.Status
-      ExternalBPP.Bus.ExternalAPI.EBIX.Verification
+      ExternalBPP.Bus.ExternalAPI.Types
       ExternalBPP.Bus.Flow
       ExternalBPP.CallAPI
       ExternalBPP.Metro.ExternalAPI.CallAPI
@@ -279,8 +280,23 @@ library
       ExternalBPP.Metro.ExternalAPI.CMRL.StationList
       ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
-      Lib.JourneyPlannerTypes
-      Lib.Mesh
+      Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Common.FRFS
+      Lib.JourneyLeg.Interface
+      Lib.JourneyLeg.Metro
+      Lib.JourneyLeg.Subway
+      Lib.JourneyLeg.Taxi
+      Lib.JourneyLeg.Types
+      Lib.JourneyLeg.Types.Bus
+      Lib.JourneyLeg.Types.Metro
+      Lib.JourneyLeg.Types.Subway
+      Lib.JourneyLeg.Types.Taxi
+      Lib.JourneyLeg.Types.Walk
+      Lib.JourneyLeg.Walk
+      Lib.JourneyModule.Base
+      Lib.JourneyModule.Location
+      Lib.JourneyModule.Types
+      Lib.JourneyModule.Utils
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
@@ -288,9 +304,14 @@ library
       SharedLogic.CallIGMBPP
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
+      SharedLogic.External.BbpsService.Flow
+      SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
+      SharedLogic.External.LocationTrackingService.Flow
+      SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
+      SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -313,6 +334,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Search
       SharedLogic.Serviceability
       Storage.Beam.BecknRequest
       Storage.Beam.Common
@@ -368,10 +390,12 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
       Storage.Queries.AppInstallsExtra
+      Storage.Queries.BBPSExtra
       Storage.Queries.BecknConfigExtra
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
       Storage.Queries.BookingPartiesLinkExtra
+      Storage.Queries.BusinessHourExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
@@ -405,6 +429,7 @@ library
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
+      Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.StationExtra
       Storage.Queries.TicketBookingExtra
@@ -436,6 +461,7 @@ library
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -459,12 +485,33 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.Tickets
+      API.Action.Dashboard.IssueManagement
+      API.Action.Dashboard.IssueManagement.Issue
+      API.Action.Dashboard.IssueManagement.IssueList
+      API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.Booking
+      API.Action.Dashboard.RideBooking.Cancel
+      API.Action.Dashboard.RideBooking.Confirm
+      API.Action.Dashboard.RideBooking.Frontend
+      API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.NotifyRideInfo
+      API.Action.Dashboard.RideBooking.Profile
+      API.Action.Dashboard.RideBooking.Quote
+      API.Action.Dashboard.RideBooking.Registration
+      API.Action.Dashboard.RideBooking.Search
+      API.Action.Dashboard.RideBooking.Select
+      API.Action.UI.BBPS
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
@@ -473,7 +520,6 @@ library
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
-      API.Action.UI.MultiModal
       API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -482,6 +528,33 @@ library
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
+      API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.Tickets
+      API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.Booking
+      API.Types.Dashboard.RideBooking.Cancel
+      API.Types.Dashboard.RideBooking.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Booking
+      API.Types.Dashboard.RideBooking.Endpoints.Cancel
+      API.Types.Dashboard.RideBooking.Endpoints.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Frontend
+      API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.NotifyRideInfo
+      API.Types.Dashboard.RideBooking.Endpoints.Profile
+      API.Types.Dashboard.RideBooking.Endpoints.Quote
+      API.Types.Dashboard.RideBooking.Endpoints.Registration
+      API.Types.Dashboard.RideBooking.Endpoints.Search
+      API.Types.Dashboard.RideBooking.Endpoints.Select
+      API.Types.Dashboard.RideBooking.Frontend
+      API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.NotifyRideInfo
+      API.Types.Dashboard.RideBooking.Profile
+      API.Types.Dashboard.RideBooking.Quote
+      API.Types.Dashboard.RideBooking.Registration
+      API.Types.Dashboard.RideBooking.Search
+      API.Types.Dashboard.RideBooking.Select
+      API.Types.UI.BBPS
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
@@ -489,7 +562,6 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
-      API.Types.UI.MultiModal
       API.Types.UI.MultimodalConfirm
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
@@ -502,6 +574,8 @@ library
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
       Domain.Types.AppInstalls
+      Domain.Types.BBPS
+      Domain.Types.BBPSConfig
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
       Domain.Types.Booking
@@ -542,6 +616,7 @@ library
       Domain.Types.Issue
       Domain.Types.Journey
       Domain.Types.JourneyBooking
+      Domain.Types.JourneyLeg
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -578,6 +653,7 @@ library
       Domain.Types.Route
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
+      Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
@@ -607,6 +683,8 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
+      Storage.Beam.BBPS
+      Storage.Beam.BBPSConfig
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
@@ -647,6 +725,7 @@ library
       Storage.Beam.Issue
       Storage.Beam.Journey
       Storage.Beam.JourneyBooking
+      Storage.Beam.JourneyLeg
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -682,6 +761,7 @@ library
       Storage.Beam.Route
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
+      Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
@@ -713,6 +793,8 @@ library
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
       Storage.Queries.AppInstalls
+      Storage.Queries.BBPS
+      Storage.Queries.BBPSConfig
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
@@ -753,6 +835,7 @@ library
       Storage.Queries.Issue
       Storage.Queries.Journey
       Storage.Queries.JourneyBooking
+      Storage.Queries.JourneyLeg
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -767,10 +850,12 @@ library
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BookingPartiesLink
+      Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability
@@ -799,6 +884,7 @@ library
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
+      Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.TicketBooking
@@ -806,6 +892,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingService
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
@@ -829,6 +916,7 @@ library
       Storage.Queries.Route
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
+      Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
@@ -866,6 +954,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -929,11 +1018,14 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
     , json-logic-hs
+    , jwt
     , lens
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , payment
@@ -999,6 +1091,7 @@ executable rider-app-exe
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -1059,11 +1152,14 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
     , json-logic-hs
+    , jwt
     , lens
     , lens-aeson
     , memory
     , mobility-core
+    , mtl
     , openapi3
     , passetto-client
     , persistent

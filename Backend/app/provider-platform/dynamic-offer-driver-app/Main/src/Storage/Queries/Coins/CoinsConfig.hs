@@ -49,16 +49,31 @@ fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehi
         ]
     ]
 
+fetchConfigOnEventAndFunctionBasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> DCT.DriverCoinsFunctionType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m (Maybe CoinsConfig)
+fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
+  let dbEventName = show eventType
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.eventFunction $ Se.Eq eventFunction,
+          Se.Is BeamDC.eventName $ Se.Eq dbEventName,
+          Se.Is BeamDC.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
+          Se.Is BeamDC.active $ Se.Eq True,
+          Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 getCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [CoinsConfig]
 getCoinInfo (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
-getConfigBasedOnMerchantAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
-getConfigBasedOnMerchantAndCity (Id merchantId) (Id merchantOptCityId) = do
+getActiveCoinConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
+getActiveCoinConfigs (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDC.merchantId $ Se.Eq merchantId,
           Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
-          Se.Is BeamDC.active $ Se.Eq True
+          Se.Is BeamDC.active $ Se.Eq True,
+          Se.Is BeamDC.vehicleCategory $ Se.Eq (Just vehicleCategory)
         ]
     ]
 

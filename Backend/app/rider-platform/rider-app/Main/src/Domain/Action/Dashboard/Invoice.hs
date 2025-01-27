@@ -1,12 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.Dashboard.Invoice where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Invoice as Common
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -15,15 +10,12 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.Location as CHL
 import qualified Storage.Clickhouse.Ride as CHR
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
 import Tools.Error
 
 getInvoiceInvoice :: ShortId DM.Merchant -> Context.City -> UTCTime -> Text -> UTCTime -> Flow [Common.InvoiceRes]

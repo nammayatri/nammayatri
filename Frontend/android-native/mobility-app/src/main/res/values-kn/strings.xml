@@ -13,6 +13,8 @@
     <string name="please_allow_permission_to_capture_the_image">ಚಿತ್ರವನ್ನು ಸೆರೆಹಿಡಿಯಲು ದಯವಿಟ್ಟು ಅನುಮತಿಯನ್ನು ಅನುಮತಿಸಿ -> "ಚಿತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ</string>
     <string name="we_have_updated_your_app_kindly_relaunch">ನಿಮ್ಮ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನಾವು ನವೀಕರಿಸಿದ್ದೇವೆ , ಅಪ್ಲಿಕೇಶನ್ ಈಗ ಮರು-ಲೋಡ್ ಆಗುತ್ತದೆ. </string>
     <string name="okay_got_it">ಸರಿ, ತಿಳಿಯಿತು</string>
+    <string name="okay_got_it_smallcase">ಸರಿ, ತಿಳಿಯಿತು</string>
+    <string name="sent">ಕಳುಹಿಸಲಾಗಿದೆ</string>
     <string name="upload_image">ಚಿತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ</string>
     <string name="not_interested">ಆಸಕ್ತಿಯಿಲ್ಲ</string>
     <string name="too_far">ತುಂಬಾ ದೂರ</string>
@@ -44,6 +46,9 @@
     <string name="and">ಮತ್ತು</string>
     <string name="tip_included">ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!</string>
     <string name="message_from_customer">ಗ್ರಾಹಕರಿಂದ ಸಂದೇಶ</string>
+    <string name="customer_is_waiting">ಗ್ರಾಹಕರು ಕಾಯುತ್ತಿದ್ದಾರೆ!</string>
+    <string name="please_start_moving_towards_the_pickup_location">ದಯವಿಟ್ಟು ಪಿಕಪ್ ಸ್ಥಳದ ಕಡೆಗೆ ಹೋಗಿ</string>
+    <string name="quick_chats">ತ್ವರಿತ ಚಾಟ್‌ಗಳು:</string>
     <string name="assistance_required">ನೆರವು ಅಗತ್ಯವಿದೆ</string>
     <string name="tip">ಟಿಪ್</string>
     <string name="qr_for_your_vpa_is_downloaded">ನಿಮ್ಮ vpa ಗಾಗಿ QR ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
@@ -77,4 +82,7 @@
     <string name="third_party_booking">"ತೃತೀಯ ಪಕ್ಷದ ಬುಕಿಂಗ್"</string>
     <string name="parking_charges">%1$.0f₹ ಪಾರ್ಕಿಂಗ್</string>
     <string name="includes">ಒಳಗೊಂಡಿದೆ</string>
+    <string name="stops_info">%1$d ನಿಲ್ದಾಣಗಳು (ನಿಲ್ದಾಣ ಶುಲ್ಕ ಸೇರಿದಂತೆ)</string>
+    <string name="stops">%1$d ನಿಲ್ದಾಣಗಳು</string>
+    <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
 </resources>

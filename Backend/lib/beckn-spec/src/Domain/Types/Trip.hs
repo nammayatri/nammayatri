@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,7 +14,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Trip where
 
@@ -35,7 +33,7 @@ import Kernel.Utils.GenericPretty
 import Servant
 import qualified Text.Show
 
-data TravelMode = Metro | Bus | Walk | Taxi
+data MultimodalTravelMode = Metro | Bus | Walk | Taxi | Subway
   deriving (Generic, FromJSON, ToJSON, Read, ToSchema, Show, Eq, Ord)
 
 data TripCategory

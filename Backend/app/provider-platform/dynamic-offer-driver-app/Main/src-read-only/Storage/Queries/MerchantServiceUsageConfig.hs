@@ -4,11 +4,16 @@
 
 module Storage.Queries.MerchantServiceUsageConfig where
 
+import qualified ChatCompletion.Types
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -43,6 +48,31 @@ updateMerchantServiceUsageConfig (Domain.Types.MerchantServiceUsageConfig.Mercha
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateSmsProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.SMS.Types.SmsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateSnapToRoadProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.Maps.Types.MapsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateSnapToRoadProvidersPriorityList snapToRoadProvidersList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.snapToRoadProvidersList snapToRoadProvidersList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateWhatsappProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.Whatsapp.Types.WhatsappService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.whatsappProvidersPriorityList whatsappProvidersPriorityList,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig where
   fromTType' (Beam.MerchantServiceUsageConfigT {..}) = do
     pure $
@@ -68,6 +98,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getTripRoutes = getTripRoutes,
             initiateCall = initiateCall,
             issueTicketService = issueTicketService,
+            llmChatCompletion = Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI llmChatCompletion,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             rectifyDistantPointsFailure = rectifyDistantPointsFailure,
@@ -106,6 +137,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getTripRoutes = getTripRoutes,
         Beam.initiateCall = initiateCall,
         Beam.issueTicketService = issueTicketService,
+        Beam.llmChatCompletion = Kernel.Prelude.Just llmChatCompletion,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.rectifyDistantPointsFailure = rectifyDistantPointsFailure,

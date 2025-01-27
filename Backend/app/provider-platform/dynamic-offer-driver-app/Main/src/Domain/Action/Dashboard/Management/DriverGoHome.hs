@@ -20,41 +20,88 @@ module Domain.Action.Dashboard.Management.DriverGoHome
   )
 where
 
-import qualified API.Types.ProviderPlatform.Management.DriverGoHome as Common
-import qualified Dashboard.ProviderPlatform.Fleet.Driver as Common
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
+import qualified Domain.Action.UI.Driver as DDriver
+import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
+import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverHomeLocation as QDHL
 
--- TODO move handlers from Domain.Action.Dashboard.Driver
 getDriverGoHomeGetHomeLocation ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
   Flow Common.GetHomeLocationsRes
-getDriverGoHomeGetHomeLocation = DDriver.getDriverHomeLocation
+getDriverGoHomeGetHomeLocation merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  dghLocs <- DDriver.getHomeLocations (cast driverId, cast merchant.id, merchantOpCityId)
+  return (buildDriverHomeLocationAPIEntity <$> dghLocs.locations)
+  where
+    buildDriverHomeLocationAPIEntity dghLocs =
+      Common.DriverHomeLocationAPIEntity
+        { id = cast dghLocs.id,
+          address = dghLocs.address,
+          lat = dghLocs.lat,
+          lon = dghLocs.lon,
+          tag = dghLocs.tag
+        }
 
+---------------------------------------------------------------------
 postDriverGoHomeUpdateHomeLocation ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
   Common.UpdateDriverHomeLocationReq ->
   Flow APISuccess
-postDriverGoHomeUpdateHomeLocation = DDriver.updateDriverHomeLocation
+postDriverGoHomeUpdateHomeLocation _ _ _ req = do
+  QDHL.updateHomeLocationById (cast req.id) buildDriverHomeLocationEntity
+  return Success
+  where
+    buildDriverHomeLocationEntity =
+      DDHL.UpdateDriverHomeLocation
+        { address = req.address,
+          lat = req.lat,
+          lon = req.lon,
+          tag = req.tag
+        }
 
+---------------------------------------------------------------------
 postDriverGoHomeIncrementGoToCount ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
   Flow APISuccess
-postDriverGoHomeIncrementGoToCount = DDriver.incrementDriverGoToCount
+postDriverGoHomeIncrementGoToCount merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  CQDGR.increaseDriverGoHomeRequestCount merchantOpCityId (cast driverId)
+  return Success
 
+---------------------------------------------------------------------
 getDriverGoHomeGetGoHomeInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
   Flow Common.CachedGoHomeRequestInfoRes
-getDriverGoHomeGetGoHomeInfo = DDriver.getDriverGoHomeInfo
+getDriverGoHomeGetGoHomeInfo merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  ghInfo <- CQDGR.getDriverGoHomeRequestInfo (cast driverId) merchantOpCityId Nothing
+  return (buildCachedGoHomeRequestInfoRes ghInfo)
+  where
+    buildCachedGoHomeRequestInfoRes CachedGoHomeRequest {..} =
+      Common.CachedGoHomeRequestInfoRes
+        { status = show <$> status,
+          driverGoHomeRequestId = cast <$> driverGoHomeRequestId,
+          ..
+        }

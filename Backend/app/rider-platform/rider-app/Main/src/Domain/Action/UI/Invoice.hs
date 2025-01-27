@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.Invoice where
 
 import qualified API.Types.UI.Invoice as DTInvoice
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -12,12 +8,10 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.Location as CHL
 import qualified Storage.Clickhouse.Ride as CHR
-import Tools.Auth
 import Tools.Error
 
 getInvoice :: (Maybe (Id DP.Person), Id DM.Merchant) -> UTCTime -> UTCTime -> Flow [DTInvoice.InvoiceRes]

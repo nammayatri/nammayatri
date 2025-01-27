@@ -35,7 +35,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
@@ -265,14 +265,10 @@ data Action = BackPressed
             | PendingVehicle String ST.VehicleCategory
             | CompleteProfile 
             | OpenCancellationRateScreen
-            | ProfileDataAPIResponseAction DriverProfileDataRes
+            | ShowDrvierBlockedPopup
+            | DriverBLockedPopupAction PopUpModal.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
-
-eval (ProfileDataAPIResponseAction res) state = do 
-  let DriverProfileDataRes resp = res 
-  continue state{data{completingProfileRes{
-    completed = getValueBtwRange ((if resp.pledges == [] then 0 else 1) + (if resp.aspirations == [] then 0 else 1) + (if resp.drivingSince == Nothing then 0 else 1) + (if resp.hometown == Nothing then 0 else 1) + (if resp.vehicleTags == [] then 0 else 1) + (if resp.otherImageIds == [] then 0 else 1)) 0 6 0 4}}}
 
 eval AfterRender state = continue state
 
@@ -393,7 +389,9 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       assignedRides = fromMaybe 0 driverProfileResp.assignedRidesCountInWindow,
                                       cancelledRides = fromMaybe 0 driverProfileResp.cancelledRidesCountInWindow,
                                       cancellationWindow = driverProfileResp.windowSize,
-                                      favCount = driverProfileResp.favCount
+                                      favCount = driverProfileResp.favCount,
+                                      driverBlocked = fromMaybe false driverProfileResp.blocked,
+                                      blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 
@@ -432,6 +430,14 @@ eval (ChangeScreen screenType) state = do
   continue state{props{ screenType = screenType }}
 
 eval OpenSettings state = continue state{props{openSettings = true}}
+
+eval ShowDrvierBlockedPopup state = continue state {props { showDriverBlockedPopup = true }}
+
+eval (DriverBLockedPopupAction PopUpModal.OnButton2Click) state = continue state { props { showDriverBlockedPopup = false } }
+
+eval (DriverBLockedPopupAction PopUpModal.OnButton1Click) state = do 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state 
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   if state.props.updateLanguages then continue state{props{updateLanguages = false}}

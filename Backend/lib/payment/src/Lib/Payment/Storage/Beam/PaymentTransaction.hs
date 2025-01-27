@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lib.Payment.Storage.Beam.PaymentTransaction where
 
@@ -49,8 +47,10 @@ data PaymentTransactionT f = PaymentTransactionT
     mandateMaxAmount :: B.C f (Maybe HighPrecMoney), -- FIXME Kernel.Types.Common.Price
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
+    splitSettlementResponse :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

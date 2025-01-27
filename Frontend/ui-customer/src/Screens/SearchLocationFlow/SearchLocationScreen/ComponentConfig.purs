@@ -18,7 +18,7 @@ module Screens.SearchLocationScreen.ComponentConfig where
 import ConfigProvider
 import Helpers.TipConfig
 import Screens
-
+import Debug
 import Common.Types.App (LazyCheck(..), RateCardType(..))
 import Components.ChooseYourRide as ChooseYourRide
 import Components.InputView as InputView
@@ -264,7 +264,8 @@ mapInputViewConfig state isEditable =
           , width : V 15
           , padding : Padding 0 0 0 0 
           }
-      , stroke : if item.isFocussed then "1," <> Color.yellow900 else "0," <> Color.yellow900
+      , stroke : if item.isFocussed && DS.null state.props.routeSelected then "1," <> Color.yellow900 else "0," <> Color.yellow900
+      , alpha : item.alpha
       , imageSeparator : separatorConfig 
       , fontStyle : FontStyle.subHeading2 TypoGraphy
       , clearTextIcon : 
@@ -304,27 +305,31 @@ mapInputViewConfig state isEditable =
           , placeHolder : getInputView.srcPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
-          , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
-          } ,
-          { textValue : destLoc
+          , isEditable : (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
+          , alpha : 1.0
+          }] <> (if state.props.routeSearch then [] else 
+          [{ textValue : destLoc
           , isFocussed : dropLocFocussed
           , prefixImageName : getInputView.destPrefixImageName
           , margin : getInputView.inputViewMargin
           , placeHolder : getInputView.destPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
-          , isEditable : true
-          }
-        ]
+          , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.5
+          , isEditable : if (DS.null state.props.routeSelected && state.props.actionType == ST.BusStopSelectionAction) then false else true
+          }] )
       
     getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
     getInputViewConfigBasedOnActionType actionType =
       case actionType of 
             ST.AddingStopAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : (getString ENTER_PICKUP_LOC), destPlaceHolder : (getString ADD_STOP),  inputViewMargin : MarginTop 8,  headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
             ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : (getString START_), destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
-            ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
-
-   
+            ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : getString STARTING_FROM <>"?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusStationSelectionAction -> { srcPrefixImageName :"ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : getString ROUTE_BUS_NO , destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusSearchSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : getString ENTER_BUS_NUMBER_OR_DESTINATION , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusRouteSelectionAction ->  { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : getString DESTINATION_STOPS , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusStopSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : getString PICKUP_STOP, destPlaceHolder : getString DESTINATION_STOPS, inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.NoBusRouteSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : getString ROUTE_BUS_NO , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
 
 menuButtonConfig :: ST.SearchLocationScreenState -> JB.Location -> MenuButton.Config
 menuButtonConfig state item = let
@@ -488,7 +493,7 @@ chooseYourRideConfig state =
     customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
     enableTips = false, 
     rideTime = formatDate "D" <> " " <> formatDate "MMM" <> ", " <> formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A",
-    tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant ,
+    tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant MB.Nothing MB.Nothing,
     tipForDriver = state.props.customerTip.tipForDriver,
     fareProductType = state.props.fareProductType,
     activeIndex = quoteSelected.activeIndex ,
@@ -501,3 +506,41 @@ chooseYourRideConfig state =
     formatDate formatSTR = 
       let startTime = if state.data.rideDetails.rideScheduledTimeUTC == "" then EHC.getCurrentUTC "" else state.data.rideDetails.rideScheduledTimeUTC
       in EHC.convertUTCtoISC startTime formatSTR
+
+noStopRouteConfig :: ST.SearchLocationScreenState -> PopUpModal.Config
+noStopRouteConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = "Oops! No stops found nearby.", 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = "Try searching a different location",
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = "Search Different Location",
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_noroute_nobus"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'

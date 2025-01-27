@@ -24,7 +24,6 @@ import Domain.Types.PayoutConfig
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -85,7 +84,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   mapM_ (updateManualStatus transporterConfig) dailyStatsForEveryDriverList
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
-  let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= (Just DI.MANUALLY_ADDED)) statsWithVpaList
+  let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
   logDebug $ "DriverStatsWithVpaList: " <> show dailyStatsWithVpaList
   if null dailyStatsForEveryDriverList
     then do
@@ -93,8 +92,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         case reschuleTimeDiff of
           Just timeDiff' -> do
             logDebug $ "Rescheduling the Job for Next Day"
-            maxShards <- asks (.maxShards)
-            createJobIn @_ @'DriverReferralPayout timeDiff' maxShards $
+            createJobIn @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
               DriverReferralPayoutJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = merchantOpCityId,
@@ -114,14 +112,18 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     getStatsWithVpaList dStats = do
       dInfo <- QDI.findById dStats.driverId >>= fromMaybeM (PersonNotFound dStats.driverId.getId)
       when (isNothing dInfo.payoutVpa || dInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED) do
-        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
-          QDailyStats.updatePayoutStatusById DS.PendingForVpa dStats.id
+        updatePayoutStatus DS.PendingForVpa dStats
+      when (dInfo.isBlockedForReferralPayout == Just True) do
+        updatePayoutStatus DS.ManualReview dStats
       pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa, dInfo = dInfo}
 
     updateManualStatus transporterConfig dStats = do
       when (dStats.activatedValidRides > transporterConfig.maxPayoutReferralForADay) do
-        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
-          QDailyStats.updatePayoutStatusById DS.ManualReview dStats.id
+        updatePayoutStatus DS.ManualReview dStats
+
+    updatePayoutStatus status dStats = do
+      Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
+        QDailyStats.updatePayoutStatusById status dStats.id
 
 callPayout ::
   ( EncFlow m r,
@@ -167,24 +169,14 @@ callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRet
                   _ -> pure 0.0
               else pure 0.0
           let entityName = DLP.DRIVER_DAILY_STATS
-              createPayoutOrderReq =
-                Juspay.CreatePayoutOrderReq
-                  { orderId = uid,
-                    amount = referralEarnings + refundRegistrationAmt,
-                    customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-                    customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-                    customerId = driverId.getId,
-                    orderType = payoutConfig.orderType,
-                    remark = payoutConfig.remark,
-                    customerName = person.firstName,
-                    customerVpa = vpa
-                  }
+              amount = referralEarnings + refundRegistrationAmt
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
               let serviceName = DEMSC.PayoutService PT.Juspay
                   createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
-              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
               errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do

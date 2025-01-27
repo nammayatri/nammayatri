@@ -44,7 +44,7 @@ data DriverEdaKafkaT f = DriverEdaKafkaT
 
 deriving instance Show DriverEdaKafka
 
--- FIXME Status from Dashboard.ProviderPlatform.Management.Ride
+-- FIXME Status from API.Types.ProviderPlatform.Management.Ride
 data Status
   = ON_RIDE
   | ON_PICKUP

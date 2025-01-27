@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Ride
   ( DriverRideRes (..),
@@ -72,6 +71,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -94,6 +94,7 @@ import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
@@ -110,6 +111,7 @@ import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
 import Tools.Error
+import qualified Tools.Notifications as TN
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
@@ -251,7 +253,8 @@ data DriverRideRes = DriverRideRes
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    extraFareMitigationFlag :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -297,11 +300,12 @@ listDriverRides ::
   Maybe Int ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
-  rides <-
-    if mbOnlyActive == Just True
-      then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
-      else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  rides <- case (driverInfo.onRide, mbOnlyActive) of
+    (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
+    (False, Just True) -> return []
+    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
+
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
@@ -309,7 +313,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-    stopsInfo <- QSI.findAllByRideId ride.id
+    stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
     let goHomeReqId = ride.driverGoHomeRequestId
     mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo
   filteredRides <- case mbFleetOwnerId of
@@ -427,7 +431,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
-        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone)
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
+        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag)
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
@@ -465,10 +470,21 @@ arrivedAtPickup rideId req = do
     now <- getCurrentTime
     QRide.updateArrival rideId now
     BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
+    -- Extra Fare Mitigation warning --
+    driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
+    when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
 
   pure Success
   where
     isValidRideStatus status = status == DRide.NEW
+
+    notifyDriverOnExtraFareWarning driverId moCityId = do
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      mbVehicle <- QVeh.findById driverId
+      let mbVehicleCategory = mbVehicle >>= (.category)
+      overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
+      TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
+      QDI.updateExtraFareMitigation (Just False) driverId
 
 otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
 otpRideCreate driver otpCode booking clientId = do
@@ -483,13 +499,14 @@ otpRideCreate driver otpCode booking clientId = do
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+  when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
 
   driverNumber <- RD.getDriverNumber rideDetails
-  stopsInfo <- QSI.findAllByRideId ride.id
+  stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId

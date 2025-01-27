@@ -647,10 +647,10 @@ getTe = Keymap {
 , educational_pop_up_slide_4_title: "లోకోమోటర్ వైకల్యం ఉన్న వినియోగదారుల కోసం"
 , educational_pop_up_slide_5_title: "ఇతర ప్రత్యేక అవసరాలు ఉన్న వినియోగదారుల కోసం"
 , educational_pop_up_slide_1_subtitle: ""
-, educational_pop_up_slide_2_subtitle: "&#8226; బదులుగా కాల్ చేయమని డ్రైవర్లు ప్రాంప్ట్ చేయబడతారు <br> &ensp; టెక్స్టింగ్ యొక్క. <br> &#8226; డ్రైవర్లు హారన్ వినిపించమని ప్రాంప్ట్ చేయబడతారు <br> &ensp; ఒకసారి పికప్ వద్ద. <br> &#8226; డ్రైవర్లకు <br> &ensp; వారి అవసరాలు మరియు అభ్యర్థనలు."
-, educational_pop_up_slide_3_subtitle: "&#8226; బదులుగా <br> &ensp; కాల్ చేయడం. <br> &#8226; డ్రైవర్లు వారికి <br> &ensp; ఒకసారి పికప్ వద్ద. <br> &#8226; డ్రైవర్లకు <br> &ensp; వారి అవసరాలు మరియు అభ్యర్థనలు."
-, educational_pop_up_slide_4_subtitle: "&#8226; డ్రైవర్లు వారి <br> &ensp;కి రావాలని ప్రాంప్ట్ చేయబడతారు. పికప్ కోసం ఖచ్చితమైన స్థానం. <br> &#8226; డ్రైవర్లు వారికి సహాయం చేయమని ప్రాంప్ట్ చేయబడతారు <br> &ensp; వారి కదలిక సహాయంతో. <br>&#8226; డ్రైవర్లకు <br> &ensp; వారి అవసరాలు మరియు అభ్యర్థనలు."
-, educational_pop_up_slide_5_subtitle: "&#8226; మేము ఇతర రకాల <br> &ensp; వైకల్యాలు మరియు వాటిని <br> &ensp; అందుబాటులో ఉన్న వైకల్యాల జాబితాలో <br> &ensp; అవసరం మేరకు."
+, educational_pop_up_slide_2_subtitle: "• బదులుగా కాల్ చేయమని డ్రైవర్లు ప్రాంప్ట్ చేయబడతారు <br>   టెక్స్టింగ్ యొక్క. <br> • డ్రైవర్లు హారన్ వినిపించమని ప్రాంప్ట్ చేయబడతారు <br>   ఒకసారి పికప్ వద్ద. <br> • డ్రైవర్లకు <br>   వారి అవసరాలు మరియు అభ్యర్థనలు."
+, educational_pop_up_slide_3_subtitle: "• బదులుగా <br>   కాల్ చేయడం. <br> • డ్రైవర్లు వారికి <br>   ఒకసారి పికప్ వద్ద. <br> • డ్రైవర్లకు <br>   వారి అవసరాలు మరియు అభ్యర్థనలు."
+, educational_pop_up_slide_4_subtitle: "• డ్రైవర్లు వారి <br>  కి రావాలని ప్రాంప్ట్ చేయబడతారు. పికప్ కోసం ఖచ్చితమైన స్థానం. <br> • డ్రైవర్లు వారికి సహాయం చేయమని ప్రాంప్ట్ చేయబడతారు <br>   వారి కదలిక సహాయంతో. <br>• డ్రైవర్లకు <br>   వారి అవసరాలు మరియు అభ్యర్థనలు."
+, educational_pop_up_slide_5_subtitle: "• మేము ఇతర రకాల <br>   వైకల్యాలు మరియు వాటిని <br>   అందుబాటులో ఉన్న వైకల్యాల జాబితాలో <br>   అవసరం మేరకు."
 , inclusive_and_accessible: "అందరి కోసం కలుపుకొని మరియు ప్రాప్యత!"
 , my_tickets: "నా టిక్కెట్లు"
 , you_can_book_tickets_to_the_zoo_by_clicking_the_button: "బటన్‌ను క్లిక్ చేయడం ద్వారా మీరు జూకి టిక్కెట్‌లను బుక్ చేసుకోవచ్చు."
@@ -1121,6 +1121,7 @@ getTe = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "దయచేసి స్థిరంగా ఉండండి, "<> appName <>" భద్రత టీమ్‌కు అలర్ట్ అయినది!")
 , indication_to_emergency_contacts: (\appName -> appName <>" మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి మీ ఎత్తుచేయుటకు చెందిన మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి సూచనలు ఇవ్వించినది.")
 , book: (\name -> "బుక్ " <> name)
+, book_for_: (\name -> name <> " కి బుక్ చేయండి")
 , fare_for: (\limit -> limit <> " కోసం ధర")
 , waiting_charge_limit: (\timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)")
 , time_taken: "మొత్తం సమయం"
@@ -1297,6 +1298,8 @@ getTe = Keymap {
 , was_ride_safe: "మీకు సురక్షితమైన ప్రయాణం ఉందా?"
 , was_ride_safe_desc: "మీ రైడ్ సంతృప్తికరంగా సురక్షితంగా మరియు\nఆందోళన లేకుండా ఉందా?"
 , was_driver_helpful: "డ్రైవర్ సహాయం అందించారా?"
+, driver_demand_extra: "డ్రైవర్ టోల్ కోసం అదనంగా డిమాండ్ చేసారా?"
+, demand_extra_toll_amount: "ఫేర్‌లో టోల్ చెల్లించబడినప్పటికీ, మీ డ్రైవర్ టోల్ కోసం అదనపు చార్జీలు అడిగారా?"
 , was_driver_helpful_desc: "మీ డ్రైవర్ మీ అవసరాలను అర్థం చేసుకుని\nప్రయాణంలో వారికి వసతి కల్పించారా?"
 , collect_toll_sep: "దయచేసి <b>టోల్ దాటితే మాత్రమే</b> డ్రైవర్‌కి విడిగా చెల్లించండి"
 , final_fare_excludes_toll: "తుది ఛార్జీ టోల్ ఛార్జీలను మినహాయిస్తుంది"
@@ -1365,6 +1368,7 @@ getTe = Keymap {
 , booking: "బుకింగ్"
 , by: "ద్వారా"
 , customers: "వినియోగదారులు"
+, customer: "కస్టమర్"
 , rating: "రేటింగ్"
 , cancellation: "రద్దు"
 , trips: "ప్రయాణాలు"
@@ -1681,4 +1685,38 @@ getTe = Keymap {
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , tickets_for_delhi_metro : "దిల్లీ మెట్రో టికెట్లు"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, complete_profile: "ప్రొఫైల్ పూర్తి చేయండి"
+, metro_tickets : "మెట్రో టికెట్లు"
+, offers : "ఆఫ్స్"
+, boost_search_instantly : "మీ శోధనను తక్షణమే పెంచుకోండి!"
+, add_a_tip : "టిప్ ను జోడించండి"
+, updated_fare_str : "అప్‌డేట్ చేసిన ఛార్జీ"
+, book_any_details : "బుక్ ఏనీ వివరాలు"
+, boost_search : "శోధనను పెంచండి"
+, bus__ : "బస్"
+, tickets_for_chennai_bus : "చెన్నై బస్ టికెట్లు"
+, buy_bus_tickets : "బస్ టికెట్లు కొనుగోలు"
+, book_and_pay : "బుక్ చేసి చెల్లించండి"
+, bus_ticket : "బస్ టికెట్"
+, check_spelling_and_try_again : "అక్షరాలను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి"
+, book_bus_ticket : "బస్ టికెట్ బుక్ చేయండి"
+, book_a_one_way_instant_bus_ticket : "ఒక వేల బస్ టికెట్ బుక్ చేయండి"
+, recent_ticket : "ఇటీవల టికెట్"
+, experience_hassle_free_bus_bookings_with : "హాసల్ ఫ్రీ బస్ బుకింగ్లతో అనుభవం చేయండి"
+, enter_bus_number_or_destination : "బస్ నంబర్ లేదా గంతవ్యం నమోదు చేయండి"
+, destination_stop : "గంతవ్యం స్టాప్"
+, route_bus_number : "రూట్/బస్ నంబర్"
+, pickup_stop : "పికప్ స్టాప్"
+, tickets_for_kolkata_bus : "కోల్కాటా బస్ టికెట్లు"
+, ticket_validity_30_minutes : "టికెట్ బుకింగ్ సమయం నుండి 30 నిమిషాలపాటు మాత్రమే చెల్లుతుంది"
+, fare_commission_free_wbtc : "ఫేర్ మరియు కమిషన్ ఫ్రీ వెస్ట్ బెంగాల్ ట్రాన్స్పోర్ట్ కార్పొరేషన్ (WBTC)"
+, select_route_number : "రూట్ నంబర్ ఎంచుకోండి"
+, pickup_and_destination_stop : "పికప్ మరియు గంతవ్యం స్టాప్"
+, bus_boarded_confirmation : "మీరు బస్సులో ఉన్నారా అని దయచేసి నిర్ధారించండి?"
+, towards_station : (\s -> s <> " వైపు")
+, bus_no : (\s -> "బస్ నంబర్: " <> s)
+, verified : "ధృవీకరించబడింది"
+, experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> s <> " ప్రధాన మార్గాలలో మా బస్ టికెటింగ్ పైలట్ లాంచ్ అనుభవించండి. మరిన్ని మార్గాలు త్వరలో వస్తున్నాయి!")
+, note_your_ticket_is_only_valid_for : (\s -> "గమనిక: మీ టికెట్ బుకింగ్ చేసిన " <> s <> " మాత్రమే చెల్లుతుంది. స్థానిక పరిస్థితుల కారణంగా బస్సుల సమయం మారవచ్చు, కాబట్టి మీరు బుక్ చేసే సమయానికి స్టాప్ వద్ద సిద్ధంగా ఉండండి।")
+, here_is_bus_ticket : "ఇక్కడ మీ బస్ టికెట్"
 }

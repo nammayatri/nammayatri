@@ -27,12 +27,12 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import RemoteConfig.Types
 import Data.String (null, toLower)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
 import Debug(spy)
-import Common.RemoteConfig (BundleLottieConfig)
+import Common.RemoteConfig (BundleLottieConfig, VariantLevelRemoteConfig)
 import RemoteConfig.Types as Types
 
 foreign import getSubsRemoteConfig :: String -> Foreign
@@ -124,11 +124,11 @@ getReferralBonusVideo city =
       value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ""
   in getCityBasedConfig value city
 
-getMetroCoinsEvent ::  String -> MetroCoinsEvent 
+getMetroCoinsEvent ::  String -> MetroCoinsEvent
 getMetroCoinsEvent city = do
     let config = fetchRemoteConfigString "metro_coins_event"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultMetroCoinsEvent
-    getCityBasedConfig value $ toLower city 
+    getCityBasedConfig value $ toLower city
 
 defaultEnableOtpRideConfig :: EnableOtpRideConfig
 defaultEnableOtpRideConfig = {
@@ -149,6 +149,18 @@ defaultScheduledRideConfigData = {
   enableScheduledRides : false
 }
 
+defaultEnableHotspotsFeature :: EnableHotspotsFeature
+defaultEnableHotspotsFeature = {
+  enableHotspotsFeature : false
+}
+
+getHotspotsFeatureData :: String -> EnableHotspotsFeature
+getHotspotsFeatureData city = 
+  let 
+    config = fetchRemoteConfigString "enable_hotspots_feature"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEnableHotspotsFeature
+  in getCityBasedConfig value $ toLower city 
+
 getenableScheduledRideConfigData :: String -> EnableScheduledRides 
 getenableScheduledRideConfigData city = 
   let 
@@ -158,8 +170,19 @@ getenableScheduledRideConfigData city =
     
 defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
-  coins : 0,
-  minDistance : 0
+  coinsFromMetroRide : 0,
+  coinsToMetroRide : 0
+}
+
+getParcelConfig :: String -> ParcelConfig
+getParcelConfig city  = 
+  let config = fetchRemoteConfigString "parcel_config"
+      decodedConfg = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultParcelConfig
+  in getCityBasedConfig decodedConfg $ toLower city
+
+defaultParcelConfig :: ParcelConfig
+defaultParcelConfig = {
+  introductionVideo : "https://www.youtube.com/playlist?list=PLvMgI4c44A9bZPI3XouAG6MSjG85QXjS3"
 }
 
 getBundleSplashConfig :: String -> BundleLottieConfig
@@ -192,6 +215,7 @@ defaultCoinsConfig = {
   rideCompletedCoinEvent : false,
   twoRideCoinEvent : false,
   fiveRideCoinEvent : false,
+  sixRideCoinEvent : false,
   eightRideCoinEvent : false,
   tenRideCoinEvent : false,
   prupleRideCoinEvent : false,
@@ -240,3 +264,83 @@ defEventsConfig = {
   pushEventChunkSize : 10,
   loggingIntervalInMs : 10000.0
 }
+
+profileCompletionReminder :: ProfileCompletionReminder
+profileCompletionReminder = 
+  let 
+    config = fetchRemoteConfigString "profile_completion_reminder"
+    value = decodeForeignObject (parseJSON config) defaultProfileCompletionReminder
+  in 
+    value
+  
+  where 
+    defaultProfileCompletionReminder :: ProfileCompletionReminder
+    defaultProfileCompletionReminder = {
+        reminderDuration : 86400
+    }
+
+fetchRideAssignedAudioConfig :: String -> RideAssignedAudioConfig
+fetchRideAssignedAudioConfig city =
+  let 
+    config = fetchRemoteConfigString "ride_assigned_audio"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideAssignedAudioConfig
+  in 
+    getCityBasedConfig value $ toLower city
+  
+  where 
+    defaultRideAssignedAudioConfig :: RideAssignedAudioConfig
+    defaultRideAssignedAudioConfig = {
+      rideShare : Nothing
+    , intercity : Nothing
+    , roundTrip : Nothing
+    , oneWay : Nothing
+    , delivery : Nothing
+    , rental : Nothing
+    }
+
+    
+metroWarriorsConfig :: String -> String -> MetroWarriorConfigEntity
+metroWarriorsConfig city variant = do
+  let remoteConfig = fetchRemoteConfigString "metro_warrior_config"
+      decodedConfig = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultMetroWarriorConfig
+  getVariantLevelConfig variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    getVariantLevelConfig variant config = case getConfigForVariant variant config of
+       Nothing -> fromMaybe defaultMetroWarriorConfigEntity $ getConfigForVariant "default" config
+       Just variantConfig -> variantConfig
+
+defaultMetroWarriorConfig :: VariantLevelRemoteConfig (Maybe MetroWarriorConfigEntity)
+defaultMetroWarriorConfig = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , deliveryBike: Nothing
+  , default: Nothing
+  }
+
+
+defaultMetroWarriorConfigEntity :: MetroWarriorConfigEntity
+defaultMetroWarriorConfigEntity = 
+  { videoUrl : "",
+    isMetroWarriorEnabled : false,
+    cacheInvalidateCounter : 0,
+    defaultSecondaryStations : [],
+    defaultPrimaryStation : ""
+  }
+
+defaultRideEndAudioConfig :: RideEndAudioConfig
+defaultRideEndAudioConfig = {
+  enableRideEndAudio : false
+, rideEndAudioUrl : Nothing
+}
+
+getRideEndAudioConfig :: String -> RideEndAudioConfig
+getRideEndAudioConfig city = do
+    let config = fetchRemoteConfigString "ride_end_audio_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideEndAudioConfig
+        cityValue = getCityBasedConfig value $ toLower city
+    getCityBasedConfig value $ toLower city

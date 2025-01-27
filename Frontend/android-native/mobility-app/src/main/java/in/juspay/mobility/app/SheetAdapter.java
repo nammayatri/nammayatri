@@ -67,12 +67,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
         CardView locationDestinationPinTag;
         
         public SheetViewHolder(@NonNull View itemView) {
@@ -105,6 +105,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             destinationPinCode = itemView.findViewById(R.id.destinationPinCode);
             accessibilityTag = itemView.findViewById(R.id.accessibilityTag);
             customerTipTag = itemView.findViewById(R.id.customerTipTag);
+            isFavouriteTag = itemView.findViewById(R.id.isFavouriteTag);
             rideTypeTag = itemView.findViewById(R.id.rideTypeTag);
             rideTypeText = itemView.findViewById(R.id.rideTypeText);
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);
@@ -133,6 +134,10 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             acView = itemView.findViewById(R.id.acView);
             ventilator = itemView.findViewById(R.id.ventilator);
             nonAcView = itemView.findViewById(R.id.nonAcView);
+            stopsInfo = itemView.findViewById(R.id.stopsInfo);
+            stopsTag = itemView.findViewById(R.id.stopsTag);
+            stopsTagText = itemView.findViewById(R.id.stopsTagText);
+            roundTripRideTypeTag = itemView.findViewById(R.id.roundTripRideTypeTag);
         }
     }
 

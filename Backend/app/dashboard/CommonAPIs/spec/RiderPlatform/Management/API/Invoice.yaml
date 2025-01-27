@@ -30,11 +30,12 @@ apis:
   # GET /invoice
   - GET:
       endpoint: /invoice
-      auth:
-        ApiAuth APP_BACKEND CUSTOMERS INVOICE
+      auth: ApiAuthV2 # TODO changed from APP_BACKEND to APP_BACKEND_MANAGEMENT, test access and url
       mandatoryQuery:
         from: UTCTime
         to: UTCTime
         phoneNumber: Text
       response:
         type: "[InvoiceRes]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS INVOICE

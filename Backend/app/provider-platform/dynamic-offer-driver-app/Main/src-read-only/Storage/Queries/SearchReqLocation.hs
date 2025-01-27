@@ -42,6 +42,8 @@ updateByPrimaryKey (Domain.Types.SearchReqLocation.SearchReqLocation {..}) = do
       Se.Set Beam.instructions instructions,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.state state,
       Se.Set Beam.street street,
       Se.Set Beam.updatedAt _now
@@ -66,6 +68,8 @@ instance FromTType' Beam.SearchReqLocation Domain.Types.SearchReqLocation.Search
             instructions = instructions,
             lat = lat,
             lon = lon,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             state = state,
             street = street,
             updatedAt = updatedAt
@@ -87,6 +91,8 @@ instance ToTType' Beam.SearchReqLocation Domain.Types.SearchReqLocation.SearchRe
         Beam.instructions = instructions,
         Beam.lat = lat,
         Beam.lon = lon,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.state = state,
         Beam.street = street,
         Beam.updatedAt = updatedAt

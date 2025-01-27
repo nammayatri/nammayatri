@@ -89,8 +89,8 @@ mkPayment merchant bppConfig mbPaymentId = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
-mkItemTags :: DTC.TransporterConfig -> CUtils.Pricing -> Bool -> Maybe [Spec.TagGroup]
-mkItemTags transporterConfig pricing isValueAddNP = do
-  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy
+mkItemTags :: DTC.TransporterConfig -> CUtils.Pricing -> Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
+mkItemTags transporterConfig pricing isValueAddNP fareParametersInRateCard = do
+  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard pricing.fareParams
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
   vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP)

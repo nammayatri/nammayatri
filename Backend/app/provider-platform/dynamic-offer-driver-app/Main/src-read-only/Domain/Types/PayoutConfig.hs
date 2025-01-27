@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.PayoutConfig where
@@ -18,6 +17,7 @@ data PayoutConfig = PayoutConfig
   { batchLimit :: Kernel.Prelude.Int,
     expand :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand,
     isPayoutEnabled :: Kernel.Prelude.Bool,
+    maxPayoutReferralForADay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

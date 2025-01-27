@@ -1,14 +1,8 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.SocialLogin where
 
 import qualified API.Types.UI.SocialLogin
 import qualified API.Types.UI.SocialLogin as SL
-import Control.Monad (mzero)
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DR
 import qualified Domain.Types.Merchant
@@ -19,7 +13,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -27,11 +21,9 @@ import Kernel.Utils.Common
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
-import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as PQ
 import qualified Storage.Queries.RegistrationToken as QR
-import Tools.Auth
 import Tools.Error
 
 googleTokenInfoUrl :: Text -> String -- TODO: change this to local validation as mentioned in this doc: https://developers.google.com/identity/sign-in/web/backend-auth#verify-the-integrity-of-the-id-token

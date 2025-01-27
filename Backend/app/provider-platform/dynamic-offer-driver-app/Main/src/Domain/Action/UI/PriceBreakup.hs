@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.PriceBreakup (getPriceBreakup) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
-import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -17,14 +13,11 @@ import Kernel.Beam.Functions as B
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
 import SharedLogic.FarePolicy
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 
 getPriceBreakup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

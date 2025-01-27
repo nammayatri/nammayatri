@@ -6,6 +6,7 @@ import Domain.Action.UI.DriverGoHomeRequest
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.GoHomeConfig
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
@@ -88,8 +89,8 @@ templateGoHomeData stat count vTill ghrId isOnRde ghValidityTime currTime =
       goHomeReferenceTime = fromMaybe (incrementPeriod Days currTime) ghValidityTime
     }
 
-activateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDHL.DriverHomeLocation -> GoHomeConfig -> CachedGoHomeRequest -> m ()
-activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLoc goHomeConfig ghInfo = do
+activateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDHL.DriverHomeLocation -> GoHomeConfig -> CachedGoHomeRequest -> m ()
+activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLoc goHomeConfig ghInfo = do
   let ghKey = makeGoHomeReqKey driverId
   let activeTime = goHomeConfig.activeTime
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -111,6 +112,8 @@ activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLoc goHomeConfig
             mbReachedHome = Nothing,
             createdAt = now,
             updatedAt = now,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
             ..
           }
 

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketBookingPayment where
@@ -27,4 +26,4 @@ data FRFSTicketBookingPayment = FRFSTicketBookingPayment
 
 data FRFSTicketBookingPaymentStatus = PENDING | SUCCESS | FAILED | REFUND_PENDING | REFUNDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingPaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingPaymentStatus)

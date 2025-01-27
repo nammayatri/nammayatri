@@ -54,6 +54,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
+    tipOptions :: Maybe [Int],
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     providerName :: Text,

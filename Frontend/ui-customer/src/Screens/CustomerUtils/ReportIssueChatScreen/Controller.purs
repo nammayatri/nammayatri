@@ -37,12 +37,13 @@ import Data.TraversableWithIndex (forWithIndex)
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn1, runEffectFn4)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
-import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC, getGlobalPayload)
+import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, uploadFile, uploadMultiPartData, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable, Eval)
+import Engineering.Helpers.Utils (showToast)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Resources.Constants (maxImageUploadInIssueReporting)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
@@ -55,6 +56,11 @@ import Effect.Uncurried
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 import Components.ServiceTierCard.View as ServiceTierCard
 import Common.Types.App
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Constants as Constants
+import Data.Lens ((^.))
+import Engineering.Helpers.Accessor
+import Mobility.Prelude (startsWith)
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -174,21 +180,20 @@ eval (KeyboardCallback keyBoardState) state = do
   void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
   continue state {props {isKeyboardOpen = keyState}}
 
-eval BackPressed state =
-  continueWithCmd state [do
-    void $ runEffectFn1 removeMediaPlayer ""
-    void $ pure $ hideKeyboardOnNavigation true
-    pure $ Exit $ (case state.data.entryPoint of 
-                    TripDetailsScreenEntry -> GotoTripDetailsScreen 
-                    HelpAndSupportScreenEntry -> GoToHelpAndSupportScreen 
-                    RideSelectionScreenEntry -> GoToHelpAndSupportScreen 
-                    OldChatEntry -> GoToHelpAndSupportScreen
-                    SafetyScreen -> GoToSafetyScreen
-                    FaqEntry -> GoToFaqScreen
-                    RiderRideCompletedScreen -> RideEndScreen
-                    HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
-  ]
-
+eval BackPressed state = do 
+  if isParentView FunctionCall 
+    then do 
+      let mBPayload = getGlobalPayload Constants.globalPayload
+      case mBPayload of 
+        Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+          Just screen -> if startsWith "reportIssue" screen then do
+                            void $ pure $ emitTerminateApp Nothing true
+                            continue state
+                            else handleBackPress state
+          _ -> handleBackPress state
+        Nothing -> handleBackPress state
+    else handleBackPress state
+    
 eval AfterRender state =
   continue state
 
@@ -317,7 +322,7 @@ eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timerID timeInMinut
 eval (ImageUploadCallback image imageName imagePath) state = do
   let images' = if length state.data.addImagesState.imageMediaIds == maxImageUploadInIssueReporting
                 then do
-                  pure $ toast $ getString MAX_IMAGES
+                  void $ pure $ showToast $ getString MAX_IMAGES
                   state.data.addImagesState.images
                 else
                   snoc state.data.addImagesState.images { image, imageName }
@@ -447,7 +452,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
           pure NoAction
         ] $ SelectIssueOption (state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption } })
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -509,7 +514,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
       else
         exit $ CallSupport state'
     Nothing -> do
-      void $ pure $ toast $ getString CANT_FIND_OPTION
+      void $ pure $ showToast $ getString CANT_FIND_OPTION
       continue state
 
 eval (CancelCall (PrimaryButton.OnClick)) state =
@@ -527,3 +532,20 @@ data Result = Result Boolean
 
 downloadInvoicePDF :: ReportIssueChatScreenState -> Unit
 downloadInvoicePDF state = maybe unit (\ride -> generatePDF (IS.initData  {data {selectedItem = ride}}) "NEW") state.data.selectedRide
+
+
+handleBackPress :: ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
+handleBackPress state = 
+  continueWithCmd state [do
+    void $ runEffectFn1 removeMediaPlayer ""
+    void $ pure $ hideKeyboardOnNavigation true
+    pure $ Exit $ (case state.data.entryPoint of 
+                    TripDetailsScreenEntry -> GotoTripDetailsScreen 
+                    HelpAndSupportScreenEntry -> GoToHelpAndSupportScreen 
+                    RideSelectionScreenEntry -> GoToHelpAndSupportScreen 
+                    OldChatEntry -> GoToHelpAndSupportScreen
+                    SafetyScreen -> GoToSafetyScreen
+                    FaqEntry -> GoToFaqScreen
+                    RiderRideCompletedScreen -> RideEndScreen
+                    HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
+  ]

@@ -24,6 +24,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverModuleCompletion.DriverModuleCompletion] -> m ())
 createMany = traverse_ create
 
+findAllByDriverIdAndModuleId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
+findAllByDriverIdAndModuleId driverId moduleId = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]]
+
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
@@ -48,6 +53,13 @@ updateEntitiesCompleted completedAt entitiesCompleted completionId = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]
+
+updateExpiryTime ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ())
+updateExpiryTime expiry completionId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.expiry expiry, Se.Set Beam.updatedAt _now] [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]
 
 updatedCompletedAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -75,6 +87,7 @@ updateByPrimaryKey (Domain.Types.DriverModuleCompletion.DriverModuleCompletion {
     [ Se.Set Beam.completedAt completedAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.entitiesCompleted entitiesCompleted,
+      Se.Set Beam.expiry expiry,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.moduleId (Kernel.Types.Id.getId moduleId),
@@ -95,6 +108,7 @@ instance FromTType' Beam.DriverModuleCompletion Domain.Types.DriverModuleComplet
             completionId = Kernel.Types.Id.Id completionId,
             driverId = Kernel.Types.Id.Id driverId,
             entitiesCompleted = entitiesCompleted,
+            expiry = expiry,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             moduleId = Kernel.Types.Id.Id moduleId,
@@ -112,6 +126,7 @@ instance ToTType' Beam.DriverModuleCompletion Domain.Types.DriverModuleCompletio
         Beam.completionId = Kernel.Types.Id.getId completionId,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.entitiesCompleted = entitiesCompleted,
+        Beam.expiry = expiry,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.moduleId = Kernel.Types.Id.getId moduleId,

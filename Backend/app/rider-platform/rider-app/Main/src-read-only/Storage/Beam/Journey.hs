@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Journey where
@@ -16,16 +14,14 @@ import Tools.Beam.UtilsTH
 
 data JourneyT f = JourneyT
   { convenienceCost :: B.C f Kernel.Prelude.Int,
+    endTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
     estimatedDistance :: B.C f Kernel.Types.Common.HighPrecDistance,
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    estimatedFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     id :: B.C f Kernel.Prelude.Text,
-    legsDone :: B.C f Kernel.Prelude.Int,
-    modes :: B.C f [Domain.Types.Common.TravelMode],
+    modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
     searchRequestId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalLegs :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

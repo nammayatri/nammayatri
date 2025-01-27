@@ -55,6 +55,16 @@ updateEstimatedEndTimeRange estimatedEndTimeRange id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFeedbackSkipped :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateFeedbackSkipped feedbackSkipped id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.feedbackSkipped (Kernel.Prelude.Just feedbackSkipped), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePickupRouteCallCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updatePickupRouteCallCount pickupRouteCallCount id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.pickupRouteCallCount pickupRouteCallCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateTipByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateTipByRideId tipAmount id = do
   _now <- getCurrentTime

@@ -321,7 +321,7 @@ window.getMerchantConfig = function () {
       , "showNearByDrivers": true
       , "enableBookingPreference" : false
       , "showInfoIcon" : true
-      , "genericLoaderLottie" : "ic_vehicle_processing,https://assets.juspay.in//beckn/jatrisaathi/user/lottie/ic_vehicle_processing.json"
+      , "genericLoaderLottie" : "ic_vehicle_processing,https://assets.moving.tech/beckn/jatrisaathi/user/lottie/ny_ic_generic_loader.json"
       , "variantInfo" : {
           "hatchback" : {
             "name" : "Hatchback",
@@ -388,12 +388,14 @@ window.getMerchantConfig = function () {
       "enableEditPickupLocation" : true,
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : false,
-      "enableHelpAndSupport" : false,
-      "enableEditDestination" : true
+      "enableHelpAndSupport" : true,
+      "enableEditDestination" : true,
+      "enableBusBooking" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
       "minTripsToBeShown" : 1,
     }
+    , "enableDeliveryService" : true
   })
 }

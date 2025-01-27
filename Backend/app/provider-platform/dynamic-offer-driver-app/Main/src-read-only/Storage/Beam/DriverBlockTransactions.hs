@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverBlockTransactions where
@@ -15,7 +13,8 @@ import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
 data DriverBlockTransactionsT f = DriverBlockTransactionsT
-  { blockLiftTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+  { actionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverBlockTransactions.ActionType),
+    blockLiftTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     blockReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blockTimeInHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

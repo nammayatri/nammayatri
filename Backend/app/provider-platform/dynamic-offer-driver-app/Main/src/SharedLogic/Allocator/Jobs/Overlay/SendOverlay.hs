@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-
 module SharedLogic.Allocator.Jobs.Overlay.SendOverlay where
 
 import Data.List (nub)
@@ -46,7 +44,7 @@ sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
 
 sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
-  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing
+  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing Nothing
   whenJust mOverlay $ \overlay -> do
     TN.sendOverlay person.merchantOperatingCityId person $ TN.mkOverlayReq overlay
 
@@ -90,25 +88,25 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         Nothing -> return Complete
   where
     invoiceOverlayCondition condition = condition == DOverlay.InvoiceGenerated DPlan.MANUAL || condition == DOverlay.InvoiceGenerated DPlan.AUTOPAY
-    sendOverlayAccordingToCondition jobDataInfo serviceName _ driverId = do
+    sendOverlayAccordingToCondition jobDataInfo serviceName vehicleCategory driverId = do
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       case jobDataInfo.condition of
         DOverlay.PaymentOverdueGreaterThan limit -> do
           manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
-          when (manualDues > fromIntegral limit) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
+          when (manualDues > fromIntegral limit) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues (Just vehicleCategory)
         DOverlay.PaymentOverdueBetween rLimit lLimit -> do
           manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
-          when ((fromIntegral rLimit <= manualDues) && (manualDues <= fromIntegral lLimit)) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
+          when ((fromIntegral rLimit <= manualDues) && (manualDues <= fromIntegral lLimit)) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues (Just vehicleCategory)
         DOverlay.InvoiceGenerated _ -> do
           manualDues <- getAllManualDuesWithoutFilter driverId serviceName
-          sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
+          sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues (Just vehicleCategory)
         DOverlay.FreeTrialDaysLeft _ -> do
           driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
           currUdf1 <- getCurrentAutoPayStatusUDF driverInfo
-          when (currUdf1 == jobDataInfo.udf1) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 0
+          when (currUdf1 == jobDataInfo.udf1) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 0 (Just vehicleCategory)
         DOverlay.BlockedDrivers -> do
           manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
-          when (manualDues > 0) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
+          when (manualDues > 0) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues (Just vehicleCategory)
         _ -> pure ()
 
     getCurrentAutoPayStatusUDF driverInfo = do
@@ -143,9 +141,9 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-sendOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> m ()
-sendOverlay driver overlayKey udf1 amount = do
-  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) udf1
+sendOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> Maybe DVC.VehicleCategory -> m ()
+sendOverlay driver overlayKey udf1 amount mbVehicle = do
+  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) udf1 mbVehicle
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description

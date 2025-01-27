@@ -110,6 +110,7 @@ Estimate:
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
     tripCategory: Maybe TripCategory
+    tipOptions: Maybe [Int]
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime
@@ -248,6 +249,7 @@ Estimate:
     nightShiftCharge: integer
     currency: character varying(255)
     estimatedPickupDuration: integer
+    tipOptions: integer[]
 
   queries:
     findById:

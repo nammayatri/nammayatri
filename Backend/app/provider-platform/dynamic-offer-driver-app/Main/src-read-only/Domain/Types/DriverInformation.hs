@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverInformation where
@@ -9,13 +8,15 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.VehicleCategory
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
-import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Types.SpecialLocation
+import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 import qualified Tools.Error
 
@@ -42,12 +43,17 @@ data DriverInformation = DriverInformation
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
+    hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isBlockedForReferralPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
+    issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -55,6 +61,8 @@ data DriverInformation = DriverInformation
     mode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     numOfLocks :: Kernel.Prelude.Int,
     onRide :: Kernel.Prelude.Bool,
+    onRideTripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
+    onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentPending :: Kernel.Prelude.Bool,
     payoutRegAmountRefunded :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -62,10 +70,14 @@ data DriverInformation = DriverInformation
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
-    preferredPrimarySpecialLoc :: Kernel.Prelude.Maybe Lib.Queries.SpecialLocation.SpecialLocationWarrior,
+    preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
     preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    softBlockStiers :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
+    specialLocWarriorEnabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     subscribed :: Kernel.Prelude.Bool,
     tollRelatedIssueCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

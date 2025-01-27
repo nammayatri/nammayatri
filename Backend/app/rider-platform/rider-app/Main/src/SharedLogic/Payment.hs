@@ -45,7 +45,7 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
       capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
 
 cancelPaymentIntent ::
   ( MonadFlow m,
@@ -102,7 +102,8 @@ paymentErrorHandler booking exec = do
               { reasonCode = SCR.CancellationReasonCode (maybe "UNKOWN_ERROR" toErrorCode err),
                 reasonStage = SCR.OnAssign,
                 additionalInfo = err >>= toMessage,
-                reallocate = Nothing
+                reallocate = Nothing,
+                blockOnCancellationRate = Nothing
               }
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate

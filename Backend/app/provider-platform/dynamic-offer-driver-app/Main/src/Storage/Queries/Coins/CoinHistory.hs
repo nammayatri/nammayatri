@@ -15,7 +15,7 @@
 
 module Storage.Queries.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Person as SP
@@ -58,6 +58,16 @@ getTotalCoins (Id driverId) timeDiffFromUtc = do
             [ Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime),
               Se.Is BeamDC.expirationAt $ Se.Eq Nothing
             ]
+        ]
+    ]
+
+getCoinsByEventFunction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> DriverCoinsFunctionType -> Maybe Text -> m (Maybe CoinHistory)
+getCoinsByEventFunction (Id driverId) eventFunction entityId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.driverId $ Se.Eq $ driverId,
+          Se.Is BeamDC.eventFunction $ Se.Eq $ eventFunction,
+          Se.Is BeamDC.entityId $ Se.Eq entityId
         ]
     ]
 

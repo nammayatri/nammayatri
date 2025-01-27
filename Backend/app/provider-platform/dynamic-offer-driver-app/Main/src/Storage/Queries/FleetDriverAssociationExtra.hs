@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import qualified Database.Beam as B
@@ -8,42 +5,82 @@ import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
+import Domain.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
-import Storage.Queries.OrphanInstances.FleetDriverAssociation
+import qualified Storage.Beam.Person as BeamP
+import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 
 -- Extra code goes here --
 
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetDriverAssociation -> m ()
-upsert a@FleetDriverAssociation {..} = do
-  res <- findOneWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
-  if isJust res
-    then
-      updateOneWithKV
-        [ Se.Set BeamFDVA.isActive isActive,
-          Se.Set BeamFDVA.updatedAt updatedAt
-        ]
-        [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
-    else createWithKV a
+createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> Bool -> m ()
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId isActive = do
+  now <- getCurrentTime
+  mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
+  when (isNothing mbFleetDriverAssociation) $ do
+    id <- generateGUID
+    createWithKV $
+      FleetDriverAssociation
+        { associatedTill = convertTextToUTC (Just "2099-12-12"),
+          driverId = driverId,
+          fleetOwnerId = fleetOwnerId.getId,
+          associatedOn = Just now,
+          createdAt = now,
+          updatedAt = now,
+          ..
+        }
 
-findAllActiveDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
-findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
-  findAllWithOptionsKV
-    [Se.And [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq True]]
-    (Se.Desc BeamFDVA.updatedAt)
-    (Just limit)
-    (Just offset)
+findByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Id Person -> Bool -> m (Maybe FleetDriverAssociation))
+findByDriverId driverId isActive = do
+  now <- getCurrentTime
+  findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findByDriverIdAndFleetOwnerId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Id Person -> Text -> Bool -> m (Maybe FleetDriverAssociation))
+findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
+  now <- getCurrentTime
+  findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> m [FleetDriverAssociation]
+findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName = do
+  now <- getCurrentTime
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (toInteger limit) $
+            B.offset_ (toInteger offset) $
+              B.orderBy_ (\(fleetDriverAssociation', _) -> B.desc_ fleetDriverAssociation'.updatedAt) $
+                B.filter_'
+                  ( \(fleetDriverAssociation, driver) ->
+                      fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
+                        B.&&?. fleetDriverAssociation.isActive B.==?. B.val_ True
+                        B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
+                  )
+                  do
+                    fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+                    driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
+                    pure (fleetDriverAssociation, driver)
+  case res of
+    Right res' -> do
+      let fleetDriverList = fst <$> res'
+      catMaybes <$> mapM fromTType' fleetDriverList
+    Left _ -> pure []
 
 findAllDriverByFleetOwnerIdAndMbIsActive ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -53,9 +90,10 @@ findAllDriverByFleetOwnerIdAndMbIsActive ::
   Int ->
   m [FleetDriverAssociation]
 findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset = do
+  now <- getCurrentTime
   findAllWithOptionsKV
     [ Se.And $
-        [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId]
+        [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]
           <> [Se.Is BeamFDVA.isActive (Se.Eq isActive) | Just isActive <- [mbIsActive]]
     ]
     (Se.Desc BeamFDVA.updatedAt)
@@ -71,6 +109,7 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
+  now <- getCurrentTime
   dbConf <- getMasterBeamConfig
   res <-
     L.runDB dbConf $
@@ -83,6 +122,7 @@ findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetV
                   ( \(fleetDriverAssociation, driverInformation) ->
                       fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
                         B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
+                        B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                   )
                   do

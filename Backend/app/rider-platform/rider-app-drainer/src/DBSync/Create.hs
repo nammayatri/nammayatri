@@ -53,7 +53,7 @@ runCreateQuery createDataEntry dbCreateObject = do
   Env {..} <- ask
   let (entryId, byteString) = createDataEntry
       dbModel = dbCreateObject.dbModel
-  if shouldPushToKafkaOnly dbModel _dontEnableDbTables
+  if shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbCreateObject.forceDrainToDB
     then return $ Right entryId
     else do
       let insertQuery = generateInsertForTable dbCreateObject

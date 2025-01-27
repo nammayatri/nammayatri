@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.PriceBreakup (getPriceBreakup) where
 
 import qualified API.Types.UI.PriceBreakup
-import Data.OpenApi (ToSchema)
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as DQ
 import qualified Domain.Types.Booking
@@ -18,10 +14,8 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Common
-import Servant
 import qualified Storage.Clickhouse.QuoteBreakup as CHQ
 import qualified Storage.Queries.Booking as QRB
-import Tools.Auth
 
 getPriceBreakup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

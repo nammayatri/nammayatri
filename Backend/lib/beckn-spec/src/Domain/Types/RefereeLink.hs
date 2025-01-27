@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.RefereeLink where
 

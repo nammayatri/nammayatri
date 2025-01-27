@@ -47,6 +47,14 @@ getPickUpLocation req =
     >>= (.stopLocation)
     & fromMaybeM (InvalidRequest "Missing Pickup Location")
 
+getPickUp :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Stop
+getPickUp req =
+  req.searchReqMessageIntent
+    >>= (.intentFulfillment)
+    >>= (.fulfillmentStops)
+    >>= firstStop
+    & fromMaybeM (InvalidRequest "Missing Pickup")
+
 getDropOffLocation :: Spec.SearchReqMessage -> Maybe Spec.Location
 getDropOffLocation req = do
   req.searchReqMessageIntent
@@ -64,10 +72,11 @@ getIntermediateStops req = do
 
 getIntermediateStopLocations :: MonadFlow m => Spec.SearchReqMessage -> m [Spec.Location]
 getIntermediateStopLocations req = do
+  pickup <- getPickUp req
   case getIntermediateStops req of
     Nothing -> return []
     Just stops -> do
-      traverse getIntermediateStopLocation (sequenceStops stops)
+      traverse getIntermediateStopLocation (sequenceStops pickup.stopId stops)
   where
     getIntermediateStopLocation :: MonadFlow m => Spec.Stop -> m Spec.Location
     getIntermediateStopLocation stop = stop.stopLocation & fromMaybeM (InvalidRequest ("Missing Stop Location" <> show stop))
@@ -151,6 +160,12 @@ getIsReallocationEnabled req = do
       tagValue = Utils.getTagV2 Tag.REALLOCATION_INFO Tag.IS_REALLOCATION_ENABLED tagGroups
   readMaybe . T.unpack =<< tagValue
 
+fareParametersInRateCard :: Spec.SearchReqMessage -> Maybe Bool
+fareParametersInRateCard req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+      tagValue = Utils.getTagV2 Tag.FARE_PARAMETERS_IN_RATECARD_INFO Tag.FARE_PARAMETERS_IN_RATECARD tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 buildRoutePoints :: Spec.SearchReqMessage -> Maybe [Maps.LatLong]
 buildRoutePoints req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
@@ -175,23 +190,16 @@ lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
 intermediateStops :: [Spec.Stop] -> [Spec.Stop]
 intermediateStops = filter (\stop -> Spec.stopType stop == Just (show Enums.INTERMEDIATE_STOP))
 
-sequenceStops :: [Spec.Stop] -> [Spec.Stop]
-sequenceStops stops = go Nothing []
+sequenceStops :: Maybe String -> [Spec.Stop] -> [Spec.Stop]
+sequenceStops pickupStopId stops = go pickupStopId []
   where
-    go _ [] =
-      case firstStop stops of
-        Just firstStop' -> go (Just firstStop') [firstStop']
-        Nothing -> []
-    go mPrevStop acc =
-      case mPrevStop of
-        Nothing -> acc -- shouldn't happen
-        Just prevStop ->
-          case findNextStop prevStop of
-            Just nextStop -> go (Just nextStop) (acc ++ [nextStop])
+    go mbPreviousStopId acc = do
+      case mbPreviousStopId of
+        Nothing -> acc
+        Just previousStopId -> do
+          case findNextStop previousStopId of
+            Just nextStop -> go nextStop.stopId (acc ++ [nextStop])
             Nothing -> acc
 
-    -- findFirstStop :: Maybe Spec.Stop
-    -- findFirstStop = stops & find (\stop -> stop.stopParentStopId == Nothing)
-
-    findNextStop :: Spec.Stop -> Maybe Spec.Stop
-    findNextStop prevStop = stops & find (\stop -> stop.stopParentStopId == prevStop.stopId)
+    findNextStop :: String -> Maybe Spec.Stop
+    findNextStop prevStopId = stops & find (\stop -> stop.stopParentStopId == Just prevStopId)

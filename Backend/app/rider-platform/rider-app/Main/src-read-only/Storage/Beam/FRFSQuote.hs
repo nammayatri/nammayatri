@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSQuote where
@@ -16,41 +14,35 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSQuoteT f = FRFSQuoteT
-  { _type :: (B.C f Domain.Types.FRFSQuote.FRFSQuoteType),
-    bppDelayedInterest :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    bppItemId :: (B.C f Kernel.Prelude.Text),
-    bppSubscriberId :: (B.C f Kernel.Prelude.Text),
-    bppSubscriberUrl :: (B.C f Kernel.Prelude.Text),
-    discountedTickets :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    discountsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    eventDiscountAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    fromStationId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    partnerOrgId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    partnerOrgTransactionId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    price :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    providerDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    providerId :: (B.C f Kernel.Prelude.Text),
-    providerName :: (B.C f Kernel.Prelude.Text),
-    quantity :: (B.C f Kernel.Prelude.Int),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    routeId :: (B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes)),
-    routeStationsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    searchId :: (B.C f Kernel.Prelude.Text),
-    serviceTierDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceTierLongName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceTierProviderCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceTierShortName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceTierType :: (B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType)),
-    stationsJson :: (B.C f Kernel.Prelude.Text),
-    toStationId :: (B.C f Kernel.Prelude.Text),
-    validTill :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
+    bppDelayedInterest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    bppItemId :: B.C f Kernel.Prelude.Text,
+    bppSubscriberId :: B.C f Kernel.Prelude.Text,
+    bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
+    discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    discountsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    fromStationId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    price :: B.C f Kernel.Types.Common.HighPrecMoney,
+    providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    providerId :: B.C f Kernel.Prelude.Text,
+    providerName :: B.C f Kernel.Prelude.Text,
+    quantity :: B.C f Kernel.Prelude.Int,
+    riderId :: B.C f Kernel.Prelude.Text,
+    routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    searchId :: B.C f Kernel.Prelude.Text,
+    stationsJson :: B.C f Kernel.Prelude.Text,
+    toStationId :: B.C f Kernel.Prelude.Text,
+    validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -60,6 +52,6 @@ instance B.Table FRFSQuoteT where
 
 type FRFSQuote = FRFSQuoteT Identity
 
-$(enableKVPG (''FRFSQuoteT) [('id)] [[('searchId)]])
+$(enableKVPG ''FRFSQuoteT ['id] [['searchId]])
 
-$(mkTableInstances (''FRFSQuoteT) "frfs_quote")
+$(mkTableInstances ''FRFSQuoteT "frfs_quote")

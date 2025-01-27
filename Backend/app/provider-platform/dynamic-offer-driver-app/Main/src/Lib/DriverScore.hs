@@ -36,7 +36,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
-import qualified SharedLogic.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -50,14 +52,15 @@ import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails
 import qualified Storage.Queries.Ride as RQ
 import Tools.Constants
 import Tools.Error
+import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of
@@ -86,6 +89,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $
     SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
@@ -111,6 +115,8 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
   -- mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   updateDailyStats driverId merchantOpCityId ride fareParameter
   whenJust mbDriverStats $ \driverStats -> do
+    when (driverStats.totalRides == 0) $ do
+      TM.notifyMarketingEvents (TM.PersonId driverId) (TM.FIRST_RIDE_COMPLETED) Nothing (MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
     (incrementTotalEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <- do
       if isNotBackFilled driverStats
         then do
@@ -131,11 +137,22 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
         else do
           mbBooking <- B.runInReplica $ BQ.findById ride.bookingId
           -- mbBooking <- BQ.findById ride.bookingId
-          let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking -> Just $ fromMaybe 0.0 booking.fareParams.driverSelectedFare + fromMaybe 0.0 booking.fareParams.customerExtraFee) =<< mbBooking
+          let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking' -> Just $ fromMaybe 0.0 booking'.fareParams.driverSelectedFare + fromMaybe 0.0 booking'.fareParams.customerExtraFee) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide fareParameter
           pure (fromMaybe 0.0 ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
+
+    -- for extra fare mitigation --
+    mbMerchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+    whenJust mbMerchantConfig $ \merchantConfig -> do
+      let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION merchantConfig
+      let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
+      let isRideAllowedForCounting = maybe False (\allowedServiceTiers -> null allowedServiceTiers || booking.vehicleServiceTier `elem` allowedServiceTiers) allowedSTiers
+      when isRideAllowedForCounting $
+        whenJust ibConfig $ \config -> do
+          IBM.incrementCompletedBookingCounterForIssueBreach EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
+      IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   where
     isNotBackFilled :: DS.DriverStats -> Bool
     isNotBackFilled driverStats = driverStats.totalEarnings == 0.0 && driverStats.bonusEarned == 0.0 && driverStats.lateNightTrips == 0
@@ -175,7 +192,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 activatedValidRides = 0,
                 referralEarnings = 0.0,
                 referralCounts = 0,
-                payoutStatus = DDS.Verifying,
+                payoutStatus = DDS.Initialized,
                 payoutOrderId = Nothing,
                 payoutOrderStatus = Nothing,
                 tollCharges = fromMaybe 0.0 ride.tollCharges,
@@ -184,7 +201,9 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 updatedAt = now,
                 cancellationCharges = 0.0,
                 tipAmount = 0.0,
-                totalRideTime = rideDuration
+                totalRideTime = rideDuration,
+                merchantId = DR.merchantId ride,
+                merchantOperatingCityId = Just merchantOpCityId
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do

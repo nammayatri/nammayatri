@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Image where
@@ -7,6 +6,7 @@ module Domain.Types.Image where
 import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -21,6 +21,7 @@ data Image = Image
     id :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reviewerEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Lib.Yudhishthira.Types
   ( module Reexport,
     YudhishthiraDecideReq (..),
@@ -23,7 +25,6 @@ module Lib.Yudhishthira.Types
     mkKaalChakraJobData,
     mkKaalChakraJobDataFromUpdateTagData,
     UpdateKaalBasedTagsData (..),
-    mkUpdateKaalBasedTagsData,
     mkUpdateTagDataFromKaalChakraJobData,
     RunKaalChakraJobRes (..),
     RunKaalChakraJobResForUser (..),
@@ -45,6 +46,7 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicDomainResp,
     ChakraQueryResp,
     UpdateTagReq (..),
+    TagNameValue (..),
   )
 where
 
@@ -99,7 +101,8 @@ data UpdateNammaTagRequest = UpdateNammaTagRequest
     tagChakra :: Maybe Chakra,
     tagValidity :: Maybe Hours,
     tagStage :: Maybe ApplicationEvent,
-    tagRule :: Maybe TagRule
+    tagRule :: Maybe TagRule,
+    actionEngine :: Maybe Value
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -137,7 +140,8 @@ data YudhishthiraDecideReq = YudhishthiraDecideReq
 newtype YudhishthiraDecideResp = YudhishthiraDecideResp
   { tags :: [NammaTagResponse]
   }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LogicDomain
   = POOLING
@@ -354,9 +358,6 @@ data UpdateKaalBasedTagsData = UpdateKaalBasedTagsData
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-mkUpdateKaalBasedTagsData :: UpdateKaalBasedTagsJobReq -> UpdateKaalBasedTagsData
-mkUpdateKaalBasedTagsData UpdateKaalBasedTagsJobReq {..} = UpdateKaalBasedTagsData {..}
-
 mkKaalChakraJobDataFromUpdateTagData :: UpdateKaalBasedTagsJobReq -> Bool -> KaalChakraJobData
 mkKaalChakraJobDataFromUpdateTagData UpdateKaalBasedTagsJobReq {..} parseQueryResults = KaalChakraJobData {..}
 
@@ -403,7 +404,7 @@ data KaalChakraAction = RUN | SCHEDULE UTCTime
 data UsersSet = SINGLE_USER (Id User) | LIST_USERS [Id User] | ALL_USERS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ChakraBatchState = Continue Int | Completed
+data ChakraBatchState = Continue Int | Completed | Failed
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RunKaalChakraJobRes = RunKaalChakraJobRes
@@ -426,10 +427,13 @@ data TagAPIEntity = TagAPIEntity
 data RunKaalChakraJobResForUser = RunKaalChakraJobResForUser
   { userId :: Id User,
     userDataValue :: Value, -- final result with default values
-    userOldTags :: Maybe [Text], -- tagName#TAG_VALUE format
-    userUpdatedTags :: Maybe [Text] -- tagName#TAG_VALUE format
+    userOldTags :: Maybe [TagNameValue], -- tagName#TAG_VALUE format
+    userUpdatedTags :: Maybe [TagNameValue] -- tagName#TAG_VALUE format
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype TagNameValue = TagNameValue {getTagNameValue :: Text} -- tagName#tagValue format
+  deriving newtype (Show, Read, Eq, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets RunKaalChakraJobReq where
   hideSecrets = identity

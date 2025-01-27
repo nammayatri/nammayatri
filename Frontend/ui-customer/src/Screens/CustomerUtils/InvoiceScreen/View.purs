@@ -180,7 +180,7 @@ amountBreakupView state =
                   ]
               ]
         )
-        state.data.selectedItem.faresList
+        $ DA.filter (\item -> item.price /= "0.0") state.data.selectedItem.faresList
     )
 
 --------------------------- TotalAmountView --------------------

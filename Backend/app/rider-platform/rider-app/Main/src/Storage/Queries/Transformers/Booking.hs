@@ -9,6 +9,7 @@ import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Common
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -73,14 +74,19 @@ getStopLocationId = \case
   DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
-getToLocationId = \case
-  DRB.OneWayDetails details -> Just (getId details.toLocation.id)
+getToLocationId bookingDetails = do
+  toLocation <- getToLocation bookingDetails
+  return $ toLocation.id.getId
+
+getToLocation :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DL.Location
+getToLocation = \case
+  DRB.OneWayDetails details -> Just details.toLocation
   DRB.RentalDetails _ -> Nothing
-  DRB.DriverOfferDetails details -> Just (getId details.toLocation.id)
-  DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
-  DRB.InterCityDetails details -> Just (getId details.toLocation.id)
-  DRB.AmbulanceDetails details -> Just (getId details.toLocation.id)
-  DRB.DeliveryDetails details -> Just (getId details.toLocation.id)
+  DRB.DriverOfferDetails details -> Just details.toLocation
+  DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+  DRB.InterCityDetails details -> Just details.toLocation
+  DRB.AmbulanceDetails details -> Just details.toLocation
+  DRB.DeliveryDetails details -> Just details.toLocation
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case
@@ -135,7 +141,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
+            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
@@ -144,7 +150,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId []
             RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
-            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
+            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
       return (pickupLoc, bookingDetails)
@@ -175,7 +181,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
+            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
@@ -185,7 +191,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
             ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
-            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
+            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
       return (fl, bookingDetails)
   where
@@ -198,7 +204,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
           { distance = distance',
             ..
           }
-    buildInterCityDetails mbToLocid = do
+    buildInterCityDetails mbToLocid stops = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
@@ -247,18 +253,24 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
-buildLocation DBBL.BookingLocation {..} =
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  DBBL.BookingLocation ->
+  m DL.Location
+buildLocation merchantId merchantOperatingCityId DBBL.BookingLocation {..} = do
   return $
     DL.Location
       { id = cast id,
+        merchantId = Just merchantId,
         ..
       }
 
 upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
 upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantOperatingCityId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
+  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) (buildLocation (Id merchantId) (Id <$> merchantOperatingCityId)) loc
   fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create pickupLoc >> QLM.upsert fromLocationMapping
   return pickupLoc
@@ -266,6 +278,6 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
 upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
 upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantOperatingCityId = do
   toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
-  dropLoc <- buildLocation toLocation
+  dropLoc <- buildLocation (Id merchantId) (Id <$> merchantOperatingCityId) toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping

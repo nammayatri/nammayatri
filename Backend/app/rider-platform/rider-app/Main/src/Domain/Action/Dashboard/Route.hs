@@ -14,7 +14,7 @@
 
 module Domain.Action.Dashboard.Route where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified Dashboard.Common as Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM

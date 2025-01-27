@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.ServicePeopleCategory where
@@ -8,6 +6,7 @@ module Storage.Beam.ServicePeopleCategory where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.ServicePeopleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -22,6 +21,7 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
     name :: B.C f Kernel.Prelude.Text,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
+    pricingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServicePeopleCategory.PricingType),
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

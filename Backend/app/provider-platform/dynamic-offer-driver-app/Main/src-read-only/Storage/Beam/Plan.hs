@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Plan where
@@ -18,7 +16,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PlanT f = PlanT
-  { basedOnEntity :: B.C f Domain.Types.Plan.BasedOnEntity,
+  { allowStrikeOff :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    basedOnEntity :: B.C f Domain.Types.Plan.BasedOnEntity,
     cgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     description :: B.C f Kernel.Prelude.Text,
     eligibleForCoinDiscount :: B.C f Kernel.Prelude.Bool,
@@ -27,6 +26,7 @@ data PlanT f = PlanT
     id :: B.C f Kernel.Prelude.Text,
     isDeprecated :: B.C f Kernel.Prelude.Bool,
     isOfferApplicable :: B.C f Kernel.Prelude.Bool,
+    listingPriority :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: B.C f Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
