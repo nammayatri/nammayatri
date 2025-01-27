@@ -1277,26 +1277,25 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
-  Redis.whenWithLockRedis (WMB.tripTransactionKey (cast driverId) TRIP_ASSIGNED) 60 $ do
-    WMB.findNextActiveTripTransaction (cast driverId)
-      >>= \case
-        Nothing -> pure ()
-        Just tripTransaction -> do
-          vehicleNumber <- decrypt vehicleRC.certificateNumber
-          unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
-    allTransactions <-
-      foldM
-        ( \accTransactions trip -> do
-            transactions <- makeTripTransactions trip
-            return $ accTransactions <> transactions
-        )
-        []
-        trips
-    QTT.createMany allTransactions
-    whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
-      route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-      (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-      WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
+  WMB.findNextActiveTripTransaction (cast driverId)
+    >>= \case
+      Nothing -> pure ()
+      Just tripTransaction -> do
+        vehicleNumber <- decrypt vehicleRC.certificateNumber
+        unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
+  allTransactions <-
+    foldM
+      ( \accTransactions trip -> do
+          transactions <- makeTripTransactions trip
+          return $ accTransactions <> transactions
+      )
+      []
+      trips
+  QTT.createMany allTransactions
+  whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
+    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+    (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+    WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do

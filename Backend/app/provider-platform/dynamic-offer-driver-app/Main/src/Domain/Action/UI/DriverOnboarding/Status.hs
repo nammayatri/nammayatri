@@ -25,7 +25,6 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Control.Monad.Extra as Extra
-import Data.List (intersect)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
@@ -268,11 +267,11 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   vehicleDocuments <-
-    case mDL >>= (.vehicleCategory) of
+    case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
       Just vehicleCategory -> do
         documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
-        let vehicleDocumentVerificationConfigs = vehicleDocumentTypes `intersect` ((.documentType) <$> documentVerificationConfigs)
-        if null vehicleDocumentVerificationConfigs
+        let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
+        if null mandatoryVehicleDocumentVerificationConfigs
           then do
             allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
             when allDriverDocsVerified $ do
