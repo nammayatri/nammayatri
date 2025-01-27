@@ -33,7 +33,7 @@ instance JT.JourneyLeg WalkLegRequest m where
           DWalkLeg.WalkLegMultimodal
             { id,
               estimatedDistance = journeyLegData.distance,
-              estimatedDuration = Just journeyLegData.duration,
+              estimatedDuration = journeyLegData.duration,
               fromLocation = fromLocation,
               toLocation = Just toLocation,
               journeyLegInfo = Just journeySearchData,

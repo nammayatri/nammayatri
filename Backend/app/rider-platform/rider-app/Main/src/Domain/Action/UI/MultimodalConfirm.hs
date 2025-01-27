@@ -22,7 +22,7 @@ import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
--- import Domain.Types.SearchRequest
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, sum, whenJust)
 import Kernel.Prelude
@@ -31,12 +31,15 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
+import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.Journey as QJourney
+import Storage.Queries.JourneyLeg as QJourneyLeg
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -171,10 +174,50 @@ postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch = do error "Logic yet to be decided"
+postMultimodalSwitch (_, _) journeyId req = do
+  journeyLegs <- JM.getJourneyLegs journeyId
+  allLegsInfo <- JM.getAllLegsInfo journeyId
+  remainingLegs <- JM.getRemainingLegs journeyId
+  let journeyLegData = find (\leg -> leg.sequenceNumber == req.legOrder) journeyLegs
+  let legInfo = find (\leg -> leg.order == req.legOrder) allLegsInfo
+  _ <- case legInfo of
+    Just legData -> do
+      case journeyLegData of
+        Just journeyLeg -> do
+          canSwitch <- JM.canBeSwitched legData req.newMode
+          isCancellable <- JM.checkIfCancellable legData -- TODO : to be change
+          if isCancellable && canSwitch
+            then do
+              isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
+              if not isExtendLeg
+                then do
+                  JM.cancelLeg legData ""
+                  newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode
+                  journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (InternalError ("Journey not found" <> show journeyId))
+                  parentSearchReq <- QSearchRequest.findById (journey.searchRequestId) >>= fromMaybeM (SearchRequestNotFound legData.searchId)
+                  QJourneyLeg.create newJourneyLeg
+                  case req.newMode of
+                    DTrip.Walk -> do
+                      searchResp <- JM.addWalkLeg parentSearchReq newJourneyLeg req.originAddress req.destinationAddress
+                      QJourneyLeg.updateLegSearchId (Just searchResp.id) newJourneyLeg.id
+                      return searchResp
+                    DTrip.Taxi -> do
+                      searchResp <- JM.addTaxiLeg parentSearchReq newJourneyLeg req.originAddress req.destinationAddress
+                      QJourneyLeg.updateLegSearchId (Just searchResp.id) newJourneyLeg.id
+                      now <- getCurrentTime
+                      let fiveMinutes = secondsToNominalDiffTime 300
+                      when (diffUTCTime legData.startTime now <= fiveMinutes && legData.status /= JL.InPlan) $ do
+                        void $ JLI.confirm legData
+                      return searchResp
+                    _ -> throwError $ InvalidRequest ("Mode not supported: " <> show req.newMode)
+                else throwError $ InvalidRequest "Call the Extend Leg" ------------------------ TODO : Call the Extend Leg API ---------------------------
+            else throwError $ InvalidRequest "Leg can not be Cancelled or Switched"
+        Nothing -> throwError $ InvalidRequest "Leg not Present"
+    Nothing -> throwError $ InvalidRequest "Leg not Present"
+  pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

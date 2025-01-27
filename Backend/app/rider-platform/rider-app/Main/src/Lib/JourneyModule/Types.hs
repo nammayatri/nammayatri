@@ -449,7 +449,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         estimatedDuration = estimatedDuration,
         estimatedMinFare = Nothing,
         estimatedMaxFare = Nothing,
-        estimatedDistance = Just estimatedDistance,
+        estimatedDistance = estimatedDistance,
         merchantId = merchantId,
         merchantOperatingCityId,
         personId = riderId,
@@ -671,8 +671,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
   return $
     DJL.JourneyLeg
       { agency = leg.agency,
-        distance = leg.distance,
-        duration = leg.duration,
+        distance = Just leg.distance,
+        duration = Just leg.duration,
         endLocation = leg.endLocation.latLng,
         fromArrivalTime = leg.fromArrivalTime,
         fromDepartureTime = leg.fromDepartureTime,

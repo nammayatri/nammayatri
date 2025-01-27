@@ -7,6 +7,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
+import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -22,7 +23,9 @@ import Tools.Auth
 data ExtendLegReq = ExtendLegReq
   { endLeg :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    legId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg
+    legId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
+    startLeg :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
+    startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -62,7 +65,13 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SwitchLegReq = SwitchLegReq {currLocation :: Kernel.External.Maps.Types.LatLong, newMode :: Domain.Types.Trip.MultimodalTravelMode}
+data SwitchLegReq = SwitchLegReq
+  { destinationAddress :: Domain.Types.LocationAddress.LocationAddress,
+    legOrder :: Kernel.Prelude.Int,
+    newMode :: Domain.Types.Trip.MultimodalTravelMode,
+    originAddress :: Domain.Types.LocationAddress.LocationAddress,
+    startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

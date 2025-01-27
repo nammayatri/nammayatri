@@ -225,8 +225,8 @@ data JourneyLeg = JourneyLeg
     toStationCode :: Maybe Text,
     color :: Maybe Text,
     colorCode :: Maybe Text,
-    duration :: Seconds,
-    distance :: Distance
+    duration :: Maybe Seconds,
+    distance :: Maybe Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
