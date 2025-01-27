@@ -37,9 +37,9 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             startedNearStopCode = startedNearStopCode,
             status = status,
             tripCode = tripCode,
-            tripEndSource = tripEndSource,
             tripEndTime = tripEndTime,
             tripStartTime = tripStartTime,
+            tripTerminationSource = tripTerminationSource,
             updatedAt = updatedAt,
             vehicleNumber = vehicleNumber,
             vehicleServiceTierType = vehicleServiceTierType
@@ -68,9 +68,9 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.startedNearStopCode = startedNearStopCode,
         Beam.status = status,
         Beam.tripCode = tripCode,
-        Beam.tripEndSource = tripEndSource,
         Beam.tripEndTime = tripEndTime,
         Beam.tripStartTime = tripStartTime,
+        Beam.tripTerminationSource = tripTerminationSource,
         Beam.updatedAt = updatedAt,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleServiceTierType = vehicleServiceTierType

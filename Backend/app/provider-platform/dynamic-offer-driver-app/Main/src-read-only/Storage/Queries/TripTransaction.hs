@@ -42,14 +42,14 @@ updateEndRideApprovalRequestId endRideApprovalRequestId id = do
 updateOnEnd ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
-updateOnEnd status endLocation tripEndTime tripEndSource id = do
+updateOnEnd status endLocation tripEndTime tripTerminationSource id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
       Se.Set Beam.tripEndTime tripEndTime,
-      Se.Set Beam.tripEndSource tripEndSource,
+      Se.Set Beam.tripTerminationSource tripTerminationSource,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -99,9 +99,9 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.startedNearStopCode startedNearStopCode,
       Se.Set Beam.status status,
       Se.Set Beam.tripCode tripCode,
-      Se.Set Beam.tripEndSource tripEndSource,
       Se.Set Beam.tripEndTime tripEndTime,
       Se.Set Beam.tripStartTime tripStartTime,
+      Se.Set Beam.tripTerminationSource tripTerminationSource,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleServiceTierType vehicleServiceTierType
