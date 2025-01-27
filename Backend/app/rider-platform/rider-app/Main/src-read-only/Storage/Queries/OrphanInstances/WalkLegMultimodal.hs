@@ -22,7 +22,7 @@ instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLe
     pure $
       Just
         Domain.Types.WalkLegMultimodal.WalkLegMultimodal
-          { estimatedDistance = Kernel.Types.Common.Distance estimatedDistance distanceUnit,
+          { estimatedDistance = Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit,
             estimatedDuration = estimatedDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
@@ -40,8 +40,8 @@ instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLe
 instance ToTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegMultimodal where
   toTType' (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
     Beam.WalkLegMultimodalT
-      { Beam.distanceUnit = (.unit) estimatedDistance,
-        Beam.estimatedDistance = (.value) estimatedDistance,
+      { Beam.distanceUnit = (.unit) <$> estimatedDistance,
+        Beam.estimatedDistance = (.value) <$> estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
         Beam.id = Kernel.Types.Id.getId id,

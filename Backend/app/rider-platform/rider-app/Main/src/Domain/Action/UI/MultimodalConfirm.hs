@@ -17,11 +17,12 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 -- import Domain.Types.Estimate
+
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
--- import Domain.Types.SearchRequest
 import Environment
 import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, sum, whenJust)
 import Kernel.Prelude
@@ -30,12 +31,14 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
+import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.JourneyLeg as QJourneyLeg
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -170,10 +173,34 @@ postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch = do error "Logic yet to be decided"
+postMultimodalSwitch (_, _) journeyId req = do
+  journeyLegs <- JM.getJourneyLegs journeyId
+  remainingLegs <- JM.getRemainingLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == req.legOrder) journeyLegs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show req.legOrder))
+  legData <- find (\leg -> leg.order == req.legOrder) remainingLegs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show req.legOrder))
+  canSwitch <- JM.canBeSwitched legData req.newMode
+  isCancellable <- JM.checkIfCancellable legData
+  if isCancellable
+    then do
+      if canSwitch
+        then do
+          isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
+          if not isExtendLeg
+            then do
+              JM.cancelLeg legData (SCR.CancellationReasonCode "")
+              newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
+              QJourneyLeg.create newJourneyLeg
+              resp <- addAllLegs journeyId
+              when (legData.status /= JL.InPlan) $
+                startJourney journeyId
+              return resp
+            else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
+        else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
+    else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId
+  pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

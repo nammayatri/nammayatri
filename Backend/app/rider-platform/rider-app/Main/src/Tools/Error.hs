@@ -762,3 +762,25 @@ instance IsHTTPError DiscountError where
     DiscountsIneligible -> E400
 
 instance IsAPIError DiscountError
+
+data CancelAndSwitchLegError
+  = JourneyLegCannotBeSwitched Text
+  | JourneyLegCannotBeCancelled Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CancelAndSwitchLegError
+
+instance IsBaseError CancelAndSwitchLegError where
+  toMessage = \case
+    JourneyLegCannotBeSwitched journeyLegId -> Just ("JourneyLeg with id: " <> journeyLegId <> " can not be switched.")
+    JourneyLegCannotBeCancelled journeyLegId -> Just ("Request data for journey leg number: " <> journeyLegId <> " can not be cancelled!")
+
+instance IsHTTPError CancelAndSwitchLegError where
+  toErrorCode = \case
+    JourneyLegCannotBeSwitched _ -> "JOURNEY_LEG_CANNOT_SWITCH"
+    JourneyLegCannotBeCancelled _ -> "JOURNEY_LEG_CANNOT_CANCELLED"
+  toHttpCode = \case
+    JourneyLegCannotBeSwitched _ -> E400
+    JourneyLegCannotBeCancelled _ -> E400
+
+instance IsAPIError CancelAndSwitchLegError

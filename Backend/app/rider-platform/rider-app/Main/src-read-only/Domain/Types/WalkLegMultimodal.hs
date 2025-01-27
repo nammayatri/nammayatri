@@ -15,7 +15,7 @@ import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data WalkLegMultimodal = WalkLegMultimodal
-  { estimatedDistance :: Kernel.Types.Common.Distance,
+  { estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal,
