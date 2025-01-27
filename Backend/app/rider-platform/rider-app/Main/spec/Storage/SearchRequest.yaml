@@ -146,6 +146,7 @@ SearchRequest:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
     driverIdentifier:
       driverIdentifierType: Maybe DriverIdentifierType
       driverIdentifierValue: Maybe Text
@@ -178,6 +179,7 @@ SearchRequest:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted:  (journeyLegInfo >>= (.isDeleted))|E
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E

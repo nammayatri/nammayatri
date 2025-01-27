@@ -20,3 +20,9 @@ ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN to_location_id character va
 ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.walk_leg_multimodal ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN is_deleted boolean ;

@@ -23,6 +23,7 @@ module Domain.Action.UI.Cancel
     cancelSearch,
     getCancellationDuesDetails,
     makeCustomerBlockingKey,
+    isBookingCancellable,
   )
 where
 

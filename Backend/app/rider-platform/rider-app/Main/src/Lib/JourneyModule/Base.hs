@@ -1,18 +1,23 @@
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortBy)
 import Data.Ord (comparing)
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.LocationAddress as LA
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
+import Environment
 import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
+import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
@@ -70,7 +75,8 @@ getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs journeyId = do
   legs <- QJourneyLeg.findAllByJourneyId journeyId
-  return $ sortBy (comparing (.sequenceNumber)) legs
+  let filteredLegs = filter (\leg -> leg.isDeleted == Just False || leg.isDeleted == Nothing) legs
+  return $ sortBy (comparing (.sequenceNumber)) filteredLegs
 
 getAllLegsInfo ::
   JL.GetStateFlow m r c =>
@@ -357,35 +363,64 @@ cancelLeg ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   JL.LegInfo ->
+  Text ->
   m ()
-cancelLeg journeyLeg = do
+cancelLeg journeyLeg cancellationReasonCode = do
   unless (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show journeyLeg.status
   case journeyLeg.travelMode of
-    DTrip.Taxi -> JL.cancel $ TaxiLegRequestCancel TaxiLegRequestCancelData
-    DTrip.Walk -> JL.cancel $ WalkLegRequestCancel WalkLegRequestCancelData
-    DTrip.Metro -> JL.cancel $ MetroLegRequestCancel MetroLegRequestCancelData
+    DTrip.Taxi ->
+      JL.cancel $
+        TaxiLegRequestCancel
+          TaxiLegRequestCancelData
+            { searchRequestId = (Id journeyLeg.searchId),
+              reasonCode = (SCR.CancellationReasonCode cancellationReasonCode),
+              additionalInfo = Nothing,
+              reallocate = Nothing,
+              blockOnCancellationRate = Nothing,
+              cancellationSource = SBCR.ByUser
+            }
+    DTrip.Walk ->
+      JL.cancel $
+        WalkLegRequestCancel
+          WalkLegRequestCancelData
+            { walkLegId = (Id journeyLeg.searchId)
+            }
+    DTrip.Metro ->
+      JL.cancel $
+        MetroLegRequestCancel
+          MetroLegRequestCancelData
+            { searchId = (Id journeyLeg.searchId),
+              cancellationType = Spec.CONFIRM_CANCEL
+            }
     DTrip.Subway -> JL.cancel $ SubwayLegRequestCancel SubwayLegRequestCancelData
-    DTrip.Bus -> JL.cancel $ BusLegRequestCancel BusLegRequestCancelData
+    DTrip.Bus ->
+      JL.cancel $
+        BusLegRequestCancel
+          BusLegRequestCancelData
+            { searchId = (Id journeyLeg.searchId),
+              cancellationType = Spec.CONFIRM_CANCEL
+            }
   return ()
 
 cancelRemainingLegs ::
-  JL.GetStateFlow m r c =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
   m ()
 cancelRemainingLegs journeyId = do
   remainingLegs <- getRemainingLegs journeyId
-  results <- forM remainingLegs $ \leg -> try @_ @SomeException (cancelLeg leg)
+  results <- forM remainingLegs $ \leg -> try @_ @SomeException (cancelLeg leg "")
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InternalError $ "Failed to cancel some legs: " <> show failures
   return ()
 
 skipLeg ::
-  JL.GetStateFlow m r c =>
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
   Id DJourneyLeg.JourneyLeg ->
   m ()
@@ -400,7 +435,7 @@ skipLeg journeyId legId = do
   unless (skippingLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
-  cancelLeg skippingLeg
+  cancelLeg skippingLeg ""
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()
 -- deleteLeg leg = do

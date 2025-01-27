@@ -191,4 +191,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_order integer ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.booking ADD COLUMN is_deleted boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.booking ADD COLUMN config_in_experiment_versions json ;

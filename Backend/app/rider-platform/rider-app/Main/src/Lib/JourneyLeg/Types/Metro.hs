@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Types.Metro where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -33,8 +34,13 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
   }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    cancellationType :: Spec.CancellationType
+  }
 
 data MetroLegRequestIsCancellableData = MetroLegRequestIsCancellableData
+  { searchId :: Id FRFSSearch.FRFSSearch
+  }
 
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,

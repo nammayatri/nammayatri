@@ -340,3 +340,9 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
 
 findAllByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Booking]
 findAllByTransactionId transactionId = findAllWithKVAndConditionalDB [Se.Is BeamB.riderTransactionId $ Se.Eq transactionId] (Just (Se.Desc BeamB.createdAt))
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set BeamB.isDeleted isDeleted]
+    [Se.Is BeamB.id (Se.Eq reqId)]

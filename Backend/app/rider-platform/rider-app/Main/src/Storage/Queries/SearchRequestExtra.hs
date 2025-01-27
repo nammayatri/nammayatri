@@ -106,3 +106,9 @@ updateDisability (Id searchRequestId) disability = do
   updateOneWithKV
     [Se.Set BeamSR.disabilityTag disability]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Bool -> m ()
+updateIsCancelled (Id searchRequestId) isDeleted = do
+  updateOneWithKV
+    [Se.Set BeamSR.isDeleted isDeleted]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
