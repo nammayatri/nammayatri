@@ -3,7 +3,6 @@
 module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -15,10 +14,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm req) = do
-    when (not req.skipBooking && req.bookingAllowed) $ do
-      quoteId <- req.quoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
-      void $ FRFSTicketService.postFrfsQuoteConfirm (Just req.personId, req.merchantId) quoteId
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId skipBooking bookingAllowed
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do

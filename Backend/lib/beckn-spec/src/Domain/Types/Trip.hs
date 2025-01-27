@@ -33,7 +33,7 @@ import Kernel.Utils.GenericPretty
 import Servant
 import qualified Text.Show
 
-data MultimodalTravelMode = Metro | Bus | Walk | Taxi
+data MultimodalTravelMode = Metro | Bus | Walk | Taxi | Subway
   deriving (Generic, FromJSON, ToJSON, Read, ToSchema, Show, Eq, Ord)
 
 data TripCategory

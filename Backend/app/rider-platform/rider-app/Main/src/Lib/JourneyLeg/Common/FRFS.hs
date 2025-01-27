@@ -5,6 +5,7 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import Domain.Types.FRFSQuote
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -127,3 +128,9 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
               createdAt = now,
               updatedAt = now
             }
+
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> m ()
+confirm personId merchantId mbQuoteId skipBooking bookingAllowed = do
+  when (not skipBooking && bookingAllowed) $ do
+    quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
+    void $ FRFSTicketService.postFrfsQuoteConfirm (Just personId, merchantId) quoteId

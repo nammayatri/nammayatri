@@ -41,6 +41,7 @@ mapWithIndex f = go 0
 convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.MultimodalTravelMode
 convertMultiModalModeToTripMode input distance maximumWalkDistance = case input of
   MultiModal.MetroRail -> DTrip.Metro
+  MultiModal.Subway -> DTrip.Metro
   MultiModal.Walk -> if distance > maximumWalkDistance then DTrip.Taxi else DTrip.Walk
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi

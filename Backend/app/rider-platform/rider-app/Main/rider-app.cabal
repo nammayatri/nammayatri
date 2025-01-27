@@ -284,10 +284,12 @@ library
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
       Lib.JourneyLeg.Metro
+      Lib.JourneyLeg.Subway
       Lib.JourneyLeg.Taxi
       Lib.JourneyLeg.Types
       Lib.JourneyLeg.Types.Bus
       Lib.JourneyLeg.Types.Metro
+      Lib.JourneyLeg.Types.Subway
       Lib.JourneyLeg.Types.Taxi
       Lib.JourneyLeg.Types.Walk
       Lib.JourneyLeg.Walk

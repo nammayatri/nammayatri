@@ -11,9 +11,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import Lib.JourneyLeg.Metro ()
+import Lib.JourneyLeg.Subway ()
 import Lib.JourneyLeg.Taxi ()
 import Lib.JourneyLeg.Types.Bus
 import Lib.JourneyLeg.Types.Metro
+import Lib.JourneyLeg.Types.Subway
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
@@ -37,6 +39,9 @@ getFare merchantId merchantOperatingCityId leg = \case
     JL.getFare getFareReq
   DTrip.Metro -> do
     getFareReq :: MetroLegRequest <- mkMetroGetFareReq
+    JL.getFare getFareReq
+  DTrip.Subway -> do
+    getFareReq :: SubwayLegRequest <- mkSubwayGetFareReq
     JL.getFare getFareReq
   DTrip.Walk -> do
     getFareReq :: WalkLegRequest <- mkWalkGetFareReq
@@ -75,6 +80,15 @@ getFare merchantId merchantOperatingCityId leg = \case
               endLocation = leg.endLocation.latLng
             }
 
+    mkSubwayGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg SubwayLegRequest m) => m SubwayLegRequest
+    mkSubwayGetFareReq = do
+      return $
+        SubwayLegRequestGetFare $
+          SubwayLegRequestGetFareData
+            { startLocation = leg.startLocation.latLng,
+              endLocation = leg.endLocation.latLng
+            }
+
     mkWalkGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg WalkLegRequest m) => m WalkLegRequest
     mkWalkGetFareReq = do
       return $
@@ -91,6 +105,9 @@ confirm JL.LegInfo {..} =
       JL.confirm confirmReq
     DTrip.Metro -> do
       confirmReq :: MetroLegRequest <- mkMetroLegConfirmReq
+      JL.confirm confirmReq
+    DTrip.Subway -> do
+      confirmReq :: SubwayLegRequest <- mkSubwayLegConfirmReq
       JL.confirm confirmReq
     DTrip.Walk -> do
       let confirmReq :: WalkLegRequest = WalkLegRequestConfirm WalkLegRequestConfirmData
@@ -119,6 +136,18 @@ confirm JL.LegInfo {..} =
               merchantId,
               merchantOperatingCityId
             }
+    mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
+    mkSubwayLegConfirmReq = do
+      return $
+        SubwayLegRequestConfirm $
+          SubwayLegRequestConfirmData
+            { skipBooking,
+              bookingAllowed,
+              quoteId = Id <$> pricingId,
+              personId,
+              merchantId,
+              merchantOperatingCityId
+            }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
       return $
@@ -131,10 +160,3 @@ confirm JL.LegInfo {..} =
               merchantId,
               merchantOperatingCityId
             }
-
--- -- mkCancelReq :: (Monad m, JL.JourneyLeg JLRequest m) => JL.LegInfo -> m JLRequest
--- mkCancelReq :: JL.JourneyLeg a m => JL.LegInfo -> m a
--- mkCancelReq legInfo =
---   case legInfo.travelMode of
---     DTrip.Taxi -> return $ TaxiLegRequestCancel TaxiLegRequestCancelData
---     _ -> return $ MetroLegRequestCancel MetroLegRequestCancelData

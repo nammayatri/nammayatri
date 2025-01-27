@@ -18,10 +18,12 @@ import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
 import Lib.JourneyLeg.Metro ()
+import Lib.JourneyLeg.Subway ()
 import Lib.JourneyLeg.Taxi ()
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Bus
 import Lib.JourneyLeg.Types.Metro
+import Lib.JourneyLeg.Types.Subway
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
@@ -37,12 +39,7 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
 init ::
-  ( JL.GetFareFlow m r,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.GetFareFlow m r =>
   JL.JourneyInitData ->
   m (Maybe DJourney.Journey)
 init journeyReq = do
@@ -79,10 +76,6 @@ getAllLegsInfo ::
   ( EsqDBFlow m r,
     Monad m,
     CacheFlow m r,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m,
     EncFlow m r
   ) =>
   Id DJourney.Journey ->
@@ -98,6 +91,7 @@ getAllLegsInfo journeyId = do
             DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
             DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
             DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
+            DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
             DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare}
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
   return $ allLegsInfo
@@ -106,10 +100,6 @@ getAllLegsStatus ::
   ( EsqDBFlow m r,
     Monad m,
     CacheFlow m r,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m,
     EncFlow m r
   ) =>
   Id DJourney.Journey ->
@@ -124,10 +114,6 @@ getAllLegsStatus journeyId = do
       ( EsqDBFlow m r,
         Monad m,
         CacheFlow m r,
-        JL.JourneyLeg TaxiLegRequest m,
-        JL.JourneyLeg BusLegRequest m,
-        JL.JourneyLeg MetroLegRequest m,
-        JL.JourneyLeg WalkLegRequest m,
         EncFlow m r
       ) =>
       [APITypes.RiderLocationReq] ->
@@ -143,17 +129,13 @@ getAllLegsStatus journeyId = do
               DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
               DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId, riderLastPoints, isLastJustCompleted}
               DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
+              DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
               DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastJustCompleted}
           return (legState.statusChanged && legState.status == JL.Completed, legsState <> [legState])
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
 
 startJourney ::
-  ( JL.ConfirmFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.ConfirmFlow m r c =>
   Id DJourney.Journey ->
   m ()
 startJourney journeyId = do
@@ -161,11 +143,7 @@ startJourney journeyId = do
   mapM_ JLI.confirm allLegs
 
 addAllLegs ::
-  ( JL.SearchRequestFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+  ( JL.SearchRequestFlow m r c
   ) =>
   Id DJourney.Journey ->
   m ()
@@ -185,6 +163,8 @@ addAllLegs journeyId = do
             addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress
           DTrip.Metro -> do
             addMetroLeg parentSearchReq journeyLeg
+          DTrip.Subway -> do
+            addSubwayLeg parentSearchReq journeyLeg
           DTrip.Walk -> do
             let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
@@ -222,12 +202,7 @@ addAllLegs journeyId = do
         }
 
 addTaxiLeg ::
-  ( JL.SearchRequestFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.SearchRequestFlow m r c =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
@@ -248,12 +223,7 @@ addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress = do
           }
 
 addWalkLeg ::
-  ( JL.SearchRequestFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.SearchRequestFlow m r c =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
@@ -274,12 +244,7 @@ addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress = do
           }
 
 addMetroLeg ::
-  ( JL.SearchRequestFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.SearchRequestFlow m r c =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
@@ -298,13 +263,28 @@ addMetroLeg parentSearchReq journeyLeg = do
             journeyLeg
           }
 
+addSubwayLeg ::
+  JL.SearchRequestFlow m r c =>
+  SearchRequest.SearchRequest ->
+  DJourneyLeg.JourneyLeg ->
+  m JL.SearchResponse
+addSubwayLeg parentSearchReq journeyLeg = do
+  merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+  let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
+  JL.search subwaySearchReq
+  where
+    mkSubwayLegReq city = do
+      SubwayLegRequestSearch $
+        SubwayLegRequestSearchData
+          { quantity = 1,
+            personId = parentSearchReq.riderId,
+            merchantId = parentSearchReq.merchantId,
+            city,
+            journeyLeg
+          }
+
 addBusLeg ::
-  ( JL.SearchRequestFlow m r c,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
-  ) =>
+  JL.SearchRequestFlow m r c =>
   SearchRequest.SearchRequest ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
@@ -329,11 +309,7 @@ getCurrentLeg ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    MonadTime m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    MonadTime m
   ) =>
   Id DJourney.Journey ->
   m (Maybe JL.LegInfo)
@@ -347,11 +323,7 @@ getRemainingLegs ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   Id DJourney.Journey ->
   m [JL.LegInfo]
@@ -408,11 +380,7 @@ cancelLeg ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   JL.LegInfo ->
   m ()
@@ -423,6 +391,7 @@ cancelLeg journeyLeg = do
     DTrip.Taxi -> JL.cancel $ TaxiLegRequestCancel TaxiLegRequestCancelData
     DTrip.Walk -> JL.cancel $ WalkLegRequestCancel WalkLegRequestCancelData
     DTrip.Metro -> JL.cancel $ MetroLegRequestCancel MetroLegRequestCancelData
+    DTrip.Subway -> JL.cancel $ SubwayLegRequestCancel SubwayLegRequestCancelData
     DTrip.Bus -> JL.cancel $ BusLegRequestCancel BusLegRequestCancelData
   return ()
 
@@ -431,11 +400,7 @@ cancelRemainingLegs ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   Id DJourney.Journey ->
   m ()
@@ -452,11 +417,7 @@ skipLeg ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   Id DJourney.Journey ->
   Id DJourneyLeg.JourneyLeg ->
