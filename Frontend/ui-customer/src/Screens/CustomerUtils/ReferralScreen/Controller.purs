@@ -23,7 +23,7 @@ import Data.String as DS
 import JBridge (hideKeyboardOnNavigation, shareTextMessage, showKeyboard, copyToClipboard)
 import Engineering.Helpers.Utils as EHU
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, not, pure, void, ($), (==), unit, (<>), (&&))
+import Prelude (class Show, bind, discard, not, pure, void, ($), (==), unit, (<>), (&&),(>=), (<))
 import PrestoDOM (class Loggable, Eval, update, continue, continueWithCmd, exit)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ReferralScreenState, ReferralStage(..))
@@ -141,7 +141,7 @@ eval ReferredUserInfoAction state = continue state{ referralComponentProps{ show
 eval (ReferralComponentAction componentAction) state =
   case componentAction of
     ReferralComponent.OnClickDone referralCode ->
-      if DS.length referralCode == 6 then 
+      if DS.length referralCode >= 6 && DS.length referralCode < 10 then 
         continue state{ referralCode = referralCode, referralComponentProps{ applyButtonActive = true } }
       else
         continue state{ referralComponentProps{ applyButtonActive = false } }
