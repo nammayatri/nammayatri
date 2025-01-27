@@ -34,9 +34,9 @@ data TripTransactionT f = TripTransactionT
     startedNearStopCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     status :: B.C f Domain.Types.TripTransaction.TripStatus,
     tripCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    tripEndSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     tripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     tripStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    tripTerminationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleNumber :: B.C f Data.Text.Text,
     vehicleServiceTierType :: B.C f Domain.Types.Common.ServiceTierType
