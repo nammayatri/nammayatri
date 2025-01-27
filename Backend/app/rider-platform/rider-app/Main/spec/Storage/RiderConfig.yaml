@@ -8,6 +8,7 @@ imports:
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
   CxAgentDetails: IssueManagement.Common
+  GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
 
 RiderConfig:
   tableName: rider_config
@@ -56,6 +57,9 @@ RiderConfig:
     payoutBatchDelay: NominalDiffTime
     makeMultiModalSearch: Bool
     maximumWalkDistance: Meters
+    minimumWalkDistance: Meters
+    permissibleModes: "Maybe [GeneralVehicleType]"
+    maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
     dynamicLogicUpdatePassword: Text
     feedbackAlertRatingThreshold: Int
@@ -81,6 +85,8 @@ RiderConfig:
     cancellationPaymentDelay: Maybe Seconds
     makeMultiModalSearch: Maybe Bool
     maximumWalkDistance: Maybe Meters
+    minimumWalkDistance: Maybe Meters
+    maxAllowedPublicTransportLegs: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
@@ -108,6 +114,8 @@ RiderConfig:
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
     maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
+    minimumWalkDistance: fromMaybe (100) minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
@@ -128,6 +136,8 @@ RiderConfig:
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     makeMultiModalSearch: Just makeMultiModalSearch|E
     maximumWalkDistance: Just maximumWalkDistance|E
+    minimumWalkDistance: Just minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
     postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -155,6 +165,9 @@ RiderConfig:
     avgSpeedInKmPerHr: "20"
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
+    minimumWalkDistance: "100"
+    permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
+    maxAllowedPublicTransportLegs: "2"
     postRideSafetyNotificationDelay : "60"
     useUserSettingsForSafetyIVR: "false"
     payoutReferralProgram: "false"
@@ -180,6 +193,7 @@ RiderConfig:
     cxAgentDetails: text []
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
+    permissibleModes: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
