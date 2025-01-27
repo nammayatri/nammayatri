@@ -145,20 +145,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN has_multimodal_search boolean  d
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN is_deleted boolean ;
 
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
 
 
 
@@ -171,7 +159,6 @@ ALTER TABLE atlas_app.search_request ADD COLUMN has_multimodal_search boolean  d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN config_in_experiment_versions json ;
-ALTER TABLE atlas_app.search_request ADD COLUMN is_deleted boolean ;
 
 
 ------- SQL updates -------

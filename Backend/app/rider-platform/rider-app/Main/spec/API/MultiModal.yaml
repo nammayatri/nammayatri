@@ -10,6 +10,7 @@ imports:
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
   LatLong: Kernel.External.Maps.Types
+  LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   Price: Kernel.Types.Common
   JourneyLegStatus : Lib.JourneyLeg.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
@@ -37,7 +38,9 @@ types:
 
   ExtendLegReq:
     legId: Id JourneyLeg
+    startLeg : Id JourneyLeg
     endLeg: Id JourneyLeg
+    startLocation: Maybe LatLong
     endLocation: Maybe LatLong                          # if some other dest outside of journey
 
   RiderLocationReq:
@@ -46,7 +49,9 @@ types:
 
   SwitchLegReq:
     newMode: MultimodalTravelMode
-    currLocation: LatLong
+    legOrder : Int
+    startLocation : Maybe LatLngV2
+    originAddress: Maybe LocationAddress
 
   SwitchTaxiReq:
     estimateId: Id Estimate
@@ -86,9 +91,9 @@ apis:
         type: JourneyBookingPaymentStatus
 
   - POST:
-      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
+      endpoint: /multimodal/{journeyId}/switch                          # combine with other legs if they match
       params:
-        legId: Text
+        journeyId: Id Journey
       request:
         type: SwitchLegReq
       response:
