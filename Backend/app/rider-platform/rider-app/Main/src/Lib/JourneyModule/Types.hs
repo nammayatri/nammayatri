@@ -172,7 +172,7 @@ data LegInfo = LegInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroLegExtraInfo | Bus BusLegExtraInfo
+data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroLegExtraInfo | Bus BusLegExtraInfo | Subway SubwayLegExtraInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -198,6 +198,18 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     destinationStop :: FRFSStationAPI,
     lineColor :: Maybe Text,
     lineColorCode :: Maybe Text,
+    tickets :: Maybe [Text],
+    providerName :: Maybe Text,
+    frequency :: Maybe Int -- make it Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SubwayLegExtraInfo = SubwayLegExtraInfo
+  { originStop :: FRFSStationAPI,
+    destinationStop :: FRFSStationAPI,
+    platformNumber :: Maybe Text,
+    trainNumber :: Maybe Text,
     tickets :: Maybe [Text],
     providerName :: Maybe Text,
     frequency :: Maybe Int -- make it Seconds
@@ -426,7 +438,7 @@ mkLegInfoFromFrfsBooking booking = do
         bookingAllowed = True,
         searchId = booking.searchId.getId,
         pricingId = Just booking.id.getId,
-        travelMode = if booking.vehicleType == Spec.METRO then DTrip.Metro else DTrip.Bus,
+        travelMode = castCategoryToMode booking.vehicleType,
         startTime = startTime,
         order = legOrder,
         estimatedDuration = Nothing, -------------- TODO : Should be changed
@@ -441,8 +453,8 @@ mkLegInfoFromFrfsBooking booking = do
       }
   where
     mkLegExtraInfo fromStation toStation qrDataList = do
-      if booking.vehicleType == Spec.METRO
-        then do
+      case booking.vehicleType of
+        Spec.METRO -> do
           Metro $
             MetroLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -453,7 +465,7 @@ mkLegInfoFromFrfsBooking booking = do
                 providerName = Just booking.providerName,
                 frequency = booking.frequency
               }
-        else do
+        Spec.BUS -> do
           Bus $
             BusLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -461,6 +473,17 @@ mkLegInfoFromFrfsBooking booking = do
                 tickets = Just qrDataList,
                 providerName = Nothing,
                 routeName = booking.lineColor
+              }
+        Spec.SUBWAY -> do
+          Subway $
+            SubwayLegExtraInfo
+              { originStop = stationToStationAPI fromStation,
+                destinationStop = stationToStationAPI toStation,
+                platformNumber = Nothing,
+                trainNumber = Nothing,
+                tickets = Just qrDataList,
+                providerName = Just booking.providerName,
+                frequency = booking.frequency
               }
 
     stationToStationAPI station =
@@ -471,6 +494,11 @@ mkLegInfoFromFrfsBooking booking = do
           lon = station.lon,
           address = station.address
         }
+
+castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
+castCategoryToMode Spec.METRO = DTrip.Metro
+castCategoryToMode Spec.SUBWAY = DTrip.Subway
+castCategoryToMode Spec.BUS = DTrip.Bus
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
@@ -495,7 +523,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         bookingAllowed,
         searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
-        travelMode = if vehicleType == Spec.METRO then DTrip.Metro else DTrip.Bus,
+        travelMode = castCategoryToMode vehicleType,
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
         estimatedDuration = Nothing, -- check with hemant if we can store estimatedDuration in frfsSearch table  --journeyLeg.duration,
@@ -510,8 +538,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
       }
   where
     mkLegExtraInfo fromStation toStation = do
-      if vehicleType == Spec.METRO
-        then
+      case vehicleType of
+        Spec.METRO -> do
           Metro $
             MetroLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -522,7 +550,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
                 providerName = Nothing,
                 frequency = frequency
               }
-        else
+        Spec.BUS -> do
           Bus $
             BusLegExtraInfo
               { originStop = stationToStationAPI fromStation,
@@ -530,6 +558,17 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
                 tickets = Nothing,
                 providerName = Nothing,
                 routeName = lineColor
+              }
+        Spec.SUBWAY -> do
+          Subway $
+            SubwayLegExtraInfo
+              { originStop = stationToStationAPI fromStation,
+                destinationStop = stationToStationAPI toStation,
+                platformNumber = Nothing,
+                trainNumber = Nothing,
+                tickets = Nothing,
+                providerName = Nothing,
+                frequency = frequency
               }
 
     stationToStationAPI station =

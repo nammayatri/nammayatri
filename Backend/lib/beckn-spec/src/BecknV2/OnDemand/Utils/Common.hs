@@ -96,6 +96,7 @@ castVehicleCategoryToDomain = \case
   Enums.AMBULANCE -> DVC.AMBULANCE
   Enums.MOTORCYCLE -> DVC.MOTORCYCLE
   Enums.METRO -> DVC.TRAIN
+  Enums.SUBWAY -> DVC.TRAIN
   _ -> DVC.CAR -- not used
 
 mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
@@ -133,6 +134,7 @@ getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE, DVST.DELIVERY_BIKE]
 getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE]
 getListOfServiceTireTypes Enums.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
 getListOfServiceTireTypes Enums.METRO = []
+getListOfServiceTireTypes Enums.SUBWAY = []
 getListOfServiceTireTypes Enums.BUS = [DVST.BUS_NON_AC, DVST.BUS_AC]
 getListOfServiceTireTypes Enums.TRUCK = [DVST.DELIVERY_LIGHT_GOODS_VEHICLE]
 

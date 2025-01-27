@@ -115,6 +115,7 @@ onInit onInitReq merchant booking_ = do
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
+      Spec.SUBWAY -> Payment.FRFSBooking
 
     key journeyId = "initJourney-" <> journeyId.getId
 

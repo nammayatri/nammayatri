@@ -751,6 +751,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
 
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
+      Spec.SUBWAY -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
 
     createOrderCall merchantOperatingCityId booking = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)

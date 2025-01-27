@@ -11,7 +11,7 @@ import Lib.JourneyLeg.Types.Subway
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg SubwayLegRequest m where
-  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg
+  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
   confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId skipBooking bookingAllowed
