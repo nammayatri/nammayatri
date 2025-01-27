@@ -3097,7 +3097,7 @@ eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue st
 eval (ReferralComponentAction componentAction) state =
   case componentAction of
     ReferralComponent.OnClickDone referralCode ->
-      if STR.length referralCode == 6 then
+      if  STR.length referralCode >= 6 && STR.length referralCode < 10 then
         continue state{ props{ referralComponentProps{ applyButtonActive = true, referralCode = Just referralCode } } }
       else
         continue state{ props{ referralComponentProps{ applyButtonActive = false } } }

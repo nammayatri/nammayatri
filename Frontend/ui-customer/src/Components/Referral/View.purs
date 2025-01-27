@@ -115,6 +115,7 @@ enterReferralCodeView push state =
           , width WRAP_CONTENT
           , color Color.black700
           , margin $ MarginTop 5
+          , visibility GONE
           , text $ getString ENTER_6_DIGIT_REFERRAL_CODE_BELOW
           ] <> FontStyle.body1 TypoGraphy
         , editText $
@@ -129,7 +130,7 @@ enterReferralCodeView push state =
           , cornerRadius 8.0
           , hint $ getString ENTER_REFERRAL_CODE_
           , hintColor Color.black600
-          , pattern "[a-zA-Z0-9]*,6"
+          , pattern "[a-zA-Z0-9]*,9"
           , id $ EHC.getNewIDWithTag "RefferalCode"
           , stroke $ "1," <> (if state.isInvalidCode then Color.red900 else Color.grey900)
           , afterRender (\_ -> 
