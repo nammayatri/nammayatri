@@ -23,6 +23,16 @@ import qualified Kernel.Types.TimeBound
 import Servant
 import Servant.Client
 
+data FRFSDashboardRouteAPI = FRFSDashboardRouteAPI
+  { code :: Data.Text.Text,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    longName :: Data.Text.Text,
+    shortName :: Data.Text.Text,
+    startPoint :: Kernel.External.Maps.Types.LatLong
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSEndStopsFareAPI = FRFSEndStopsFareAPI
   { amount :: Kernel.Types.Common.HighPrecMoney,
     code :: Data.Text.Text,
@@ -31,10 +41,6 @@ data FRFSEndStopsFareAPI = FRFSEndStopsFareAPI
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FRFSRouteAPI = FRFSRouteAPI {code :: Data.Text.Text, endPoint :: Kernel.External.Maps.Types.LatLong, longName :: Data.Text.Text, shortName :: Data.Text.Text, startPoint :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -107,7 +113,7 @@ type GetFRFSTicketFrfsRoutes =
            "offset"
            Kernel.Prelude.Int
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
-      :> Get '[JSON] [FRFSRouteAPI]
+      :> Get '[JSON] [FRFSDashboardRouteAPI]
   )
 
 type PostFRFSTicketFrfsRouteAdd =
@@ -171,7 +177,7 @@ type PostFRFSTicketFrfsStationDelete =
   )
 
 data FRFSTicketAPIs = FRFSTicketAPIs
-  { getFRFSTicketFrfsRoutes :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSRouteAPI],
+  { getFRFSTicketFrfsRoutes :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSDashboardRouteAPI],
     postFRFSTicketFrfsRouteAdd :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> FRFSRouteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postFRFSTicketFrfsRouteDelete :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI,

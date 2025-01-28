@@ -46,7 +46,7 @@ import Storage.Queries.RouteStopFare as QRSF
 import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.Station as QStation
 
-getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI])
+getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
@@ -57,7 +57,7 @@ getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleTyp
 
   frfsRoutes <- forM routes $ \rte -> do
     pure $
-      API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI
+      API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI
         { code = rte.code,
           shortName = rte.shortName,
           longName = rte.longName,
