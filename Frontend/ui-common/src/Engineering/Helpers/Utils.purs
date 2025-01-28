@@ -518,3 +518,5 @@ checkConditionToShowInternetScreen lazy =
     else 
       let _ = setKeyInWindow "noInternetCount" count
       in false
+
+foreign import getAndRemoveLatestNotificationType :: Unit -> String

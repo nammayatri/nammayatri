@@ -594,11 +594,6 @@ export const getMockFollowerName = function() {
   return currentMockName;
 }
 
-export const getAndRemoveLatestNotificationType = function() {
-  const notificationType = window.notificationType;
-  window.notificationType = null;
-  return notificationType;
-}
 
 export const decodeErrorCode = function (a) {
   try {

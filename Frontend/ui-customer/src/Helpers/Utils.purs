@@ -227,8 +227,6 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
-foreign import getAndRemoveLatestNotificationType :: Unit -> String
-
 foreign import decodeErrorCode :: String -> String
 
 foreign import releaseBackpress :: Unit -> Unit
