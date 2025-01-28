@@ -148,12 +148,6 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_on_init_done boolea
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN line_color_code text ;
 
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_status text ;
-
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text ;
