@@ -66,6 +66,7 @@ type RemoteConfig a
     , bhubaneshwar :: Maybe a
     , bhubaneswar :: Maybe a
     , cuttack :: Maybe a
+    , nalgonda :: Maybe a
     , bidar :: Maybe a
     , puri :: Maybe a
     , pudukkottai :: Maybe a

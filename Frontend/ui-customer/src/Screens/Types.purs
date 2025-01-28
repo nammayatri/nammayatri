@@ -1209,6 +1209,7 @@ data City
   | Odisha
   | Bhubaneswar
   | Cuttack
+  | Nalgonda
   | Puri
   | Pudukkottai
   | Bidar

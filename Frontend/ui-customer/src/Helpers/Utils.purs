@@ -835,6 +835,7 @@ cityCodeMap =
   , Tuple (Just "std:08200") Udupi
   , Tuple (Just "std:0674") Bhubaneswar
   , Tuple (Just "std:0671") Cuttack
+  , Tuple (Just "std:08682") Nalgonda
   , Tuple (Just "std:06752") Puri
   , Tuple (Just "std:04322") Pudukkottai
   , Tuple (Just "std:8482") Bidar
@@ -924,6 +925,7 @@ getCityFromString cityString =
     "Trichy" -> Trichy
     "Bhubaneswar" -> Bhubaneswar
     "Cuttack" -> Cuttack
+    "Nalgonda" -> Nalgonda
     "Puri" -> Puri
     "Pudukkottai" -> Pudukkottai
     "Bidar" -> Bidar
@@ -1309,6 +1311,7 @@ getLanguageBasedCityName cityName =
     Odisha -> getString ODISHA
     Bhubaneswar -> getString BHUBANESWAR
     Cuttack -> "Cuttack"
+    Nalgonda -> "Nalgonda"
     Puri -> "Puri"
     Pudukkottai -> "Pudukkottai"
     Bidar -> "Bidar"
