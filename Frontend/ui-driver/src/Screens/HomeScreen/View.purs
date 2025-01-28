@@ -68,7 +68,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow, getFutureDate, convertUTCtoISC)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader,getAndRemoveLatestNotificationType)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -148,6 +148,8 @@ screen initialState (GlobalState globalState) =
                   liftFlow $ push $ ProfileDataAPIResponseAction resp
                 Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
             pure unit
+          let isRideListTry = getAndRemoveLatestNotificationType unit == "DRIVER_ASSIGNMENT"
+          if isRideListTry then do push $ UpdateRetryRideList true else pure unit
 
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -162,7 +164,7 @@ screen initialState (GlobalState globalState) =
           else pure unit
 
           -- Polling to get the active ride details
-          if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
+          if (initialState.props.retryRideList || isRideListTry) && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
           
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
