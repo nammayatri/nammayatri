@@ -103,7 +103,7 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" --out-link /var/lib/github-runner/nammayatri -- -v
+          om ci run --systems "${{ matrix.system }}" --out-link /var/lib/github-runner/gcroots/nammayatri -- -v
 
       - name: Build And Push Docker image
         id: docker
