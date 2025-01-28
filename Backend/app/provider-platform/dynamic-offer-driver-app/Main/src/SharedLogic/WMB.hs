@@ -124,7 +124,6 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         QTT.create tripTransaction
         assignTripTransaction tripTransaction route False currentLocation destinationStopInfo.point False
         startTripTransaction tripTransaction route closestStop currentLocation destinationStopInfo.point True
-        return tripTransaction
     )
     >>= \case
       Right tripTransaction -> return tripTransaction
@@ -141,7 +140,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           isCurrentlyDeviated = False,
           routeCode = route.code,
           roundRouteCode = route.roundRouteCode,
-          status = IN_PROGRESS,
+          status = TRIP_ASSIGNED,
           startLocation = (Just currentLocation),
           startedNearStopCode = (Just closestStop.stopCode),
           tripCode = (Just closestStop.tripCode),
@@ -163,6 +162,7 @@ endTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSo
     (tripTransactionKey tripTransaction.driverId COMPLETED)
     60
     ( do
+        unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         now <- getCurrentTime
         void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing
         QTT.updateOnEnd COMPLETED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
@@ -196,6 +196,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
     (tripTransactionKey tripTransaction.driverId CANCELLED)
     60
     ( do
+        unless (tripTransaction.status `elem` [IN_PROGRESS, TRIP_ASSIGNED]) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         findNextActiveTripTransaction tripTransaction.driverId
           >>= \case
             Nothing -> pure ()
@@ -240,6 +241,7 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation des
     (tripTransactionKey tripTransaction.driverId TRIP_ASSIGNED)
     60
     ( do
+        unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination
         void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just busTripInfo)
         QDI.updateOnRide True tripTransaction.driverId
@@ -251,22 +253,25 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation des
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Assignment is Already Ongoing, Please try again!")
 
-startTripTransaction :: TripTransaction -> Route -> StopData -> LatLong -> LatLong -> Bool -> Flow ()
+startTripTransaction :: TripTransaction -> Route -> StopData -> LatLong -> LatLong -> Bool -> Flow TripTransaction
 startTripTransaction tripTransaction _route closestStop currentLocation destination notify = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId IN_PROGRESS)
     60
     ( do
+        unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         let busTripInfo = buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode destination
         void $ LF.rideStart (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
         now <- getCurrentTime
         QDI.updateOnRide True tripTransaction.driverId
-        QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just currentLocation) IN_PROGRESS (Just now) tripTransaction.id
+        let tripStartTransaction = tripTransaction {tripCode = Just closestStop.tripCode, startedNearStopCode = Just closestStop.stopCode, startLocation = Just currentLocation, status = IN_PROGRESS, tripStartTime = Just now}
+        QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime tripStartTransaction.id
         when notify $ do
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+        return tripStartTransaction
     )
     >>= \case
-      Right _ -> return ()
+      Right tripStartTransaction -> return tripStartTransaction
       Left _ -> throwError (InternalError "Process for Trip Start is Already Ongoing, Please try again!")
 
 linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow VehicleRegistrationCertificate

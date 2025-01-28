@@ -215,12 +215,11 @@ postWmbTripStart ::
   )
 postWmbTripStart (_, _, _) tripTransactionId req = do
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (_, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  WMB.startTripTransaction tripTransaction route closestStop (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
+  void $ WMB.startTripTransaction tripTransaction route closestStop (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
   pure Success
 
 postWmbTripEnd ::
@@ -236,8 +235,6 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-  when (tripTransaction.status == COMPLETED) $ throwError (InvalidTripStatus "COMPLETED")
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
   let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
@@ -264,8 +261,16 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
                 }
           requestTitle = "Your trip has ended!"
           requestBody = "You reached your end stop of this route."
-      driverReq <- createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
-      pure $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
+      Redis.whenWithLockRedisAndReturnValue
+        (WMB.tripTransactionKey driverId COMPLETED)
+        60
+        ( do
+            unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
+            createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
+        )
+        >>= \case
+          Right driverReq -> return $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
+          Left _ -> throwError (InternalError "Process for Trip End is Already Ongoing, Please try again!")
     else do
       void $ endTripTransaction fleetConfig tripTransaction req.location DriverDirect
       pure $ TripEndResp {requestId = Nothing, result = SUCCESS}
