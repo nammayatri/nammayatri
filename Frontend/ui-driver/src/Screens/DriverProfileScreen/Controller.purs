@@ -25,10 +25,10 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all)
+import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all, null)
 import Data.Int (fromString)
 import Data.Lens.Getter ((^.))
-import Data.Maybe (fromMaybe, Maybe(..), isJust)
+import Data.Maybe (fromMaybe, Maybe(..), isJust, isNothing)
 import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
@@ -65,6 +65,7 @@ import Services.API (DriverProfileDataRes(..))
 import Data.Array as DA
 import Types.App
 import Engineering.Helpers.Commons as EHC
+import Mobility.Prelude(boolToInt)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -267,12 +268,17 @@ data Action = BackPressed
             | OpenCancellationRateScreen
             | ShowDrvierBlockedPopup
             | DriverBLockedPopupAction PopUpModal.Action
+            | ProfileDataAPIResponseAction DriverProfileDataRes
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
 eval AfterRender state = continue state
 
 eval CompleteProfile state = exit $ GoToCompletingProfile state
+
+eval (ProfileDataAPIResponseAction res) state = do 
+  let DriverProfileDataRes resp = res 
+  continue state{data{profileCompletedModules = getValueBtwRange ((boolToInt $ not null resp.pledges) + (boolToInt $ not null resp.aspirations) + (boolToInt $ not isNothing resp.drivingSince) + (boolToInt $ not isNothing resp.hometown) + (boolToInt $ not null resp.vehicleTags) + (boolToInt $ not null resp.otherImageIds)) 0 6 0 4}}
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of
