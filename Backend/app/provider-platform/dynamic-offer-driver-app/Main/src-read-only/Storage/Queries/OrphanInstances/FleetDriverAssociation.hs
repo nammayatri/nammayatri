@@ -24,6 +24,7 @@ instance FromTType' Beam.FleetDriverAssociation Domain.Types.FleetDriverAssociat
             fleetOwnerId = fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
+            onboardingVehicleCategory = onboardingVehicleCategory,
             updatedAt = updatedAt
           }
 
@@ -37,5 +38,6 @@ instance ToTType' Beam.FleetDriverAssociation Domain.Types.FleetDriverAssociatio
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
+        Beam.onboardingVehicleCategory = onboardingVehicleCategory,
         Beam.updatedAt = updatedAt
       }

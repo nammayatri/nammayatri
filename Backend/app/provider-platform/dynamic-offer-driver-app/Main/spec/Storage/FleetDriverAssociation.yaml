@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
 
 FleetDriverAssociation:
   tableName: fleet_driver_association
@@ -13,6 +14,7 @@ FleetDriverAssociation:
     fleetOwnerId: Text
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
+    onboardingVehicleCategory: Maybe VehicleCategory
     createdAt: UTCTime
     updatedAt: UTCTime
 
