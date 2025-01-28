@@ -72,6 +72,7 @@ defaultCityRemoteConfig defaultValue =
   , bhubaneshwar : Just defaultValue
   , bhubaneswar : Just defaultValue
   , cuttack : Just defaultValue
+  , nalgonda : Just defaultValue
   , puri : Just defaultValue
   , pudukkottai : Just defaultValue
   , bidar : Just defaultValue
@@ -193,6 +194,7 @@ getCityBasedConfig config city = case city of
   "bhubaneshwar" -> fromMaybe config.default config.bhubaneswar
   "bhubaneswar" -> fromMaybe config.default config.bhubaneswar
   "cuttack" -> fromMaybe config.default config.cuttack
+  "nalgonda" -> fromMaybe config.default config.nalgonda
   "puri" -> fromMaybe config.default config.puri
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
   "bidar" -> fromMaybe config.default config.bidar
