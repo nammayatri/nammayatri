@@ -23,11 +23,38 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Rollout.Rollout] -> m ())
 createMany = traverse_ create
 
+deleteByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Rollout.Rollout -> m ())
+deleteByVersionId id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findAllByMerchantOperatingCityAndVehicleType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Rollout.Rollout])
+findAllByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+
 findByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m (Maybe Domain.Types.Rollout.Rollout))
 findByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
   findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+
+updateByMerchantOperatingCityAndVehicleType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m ())
+updateByMerchantOperatingCityAndVehicleType percentage merchantOperatingCityId vehicleType = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.percentage percentage, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType

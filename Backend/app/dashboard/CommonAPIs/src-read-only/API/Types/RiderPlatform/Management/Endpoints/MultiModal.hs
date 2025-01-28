@@ -20,7 +20,7 @@ data ApplyVersionReq = ApplyVersionReq
   { cityId :: Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     versionId :: Kernel.Prelude.Text,
-    versionTag :: Kernel.Prelude.Text,
+    versionTag :: Kernel.Prelude.Int,
     rolloutPercent :: Kernel.Prelude.Int
   }
   deriving stock (Generic)

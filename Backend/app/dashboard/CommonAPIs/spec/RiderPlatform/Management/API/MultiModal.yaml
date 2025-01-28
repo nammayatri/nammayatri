@@ -42,7 +42,7 @@ types:
     - cityId: Text
     - vehicleType: VehicleCategory
     - versionId: Text
-    - versionTag: Text
+    - versionTag: Int
     - rolloutPercent: Int
     - derive: "'HideSecrets"
 

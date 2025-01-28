@@ -15,13 +15,23 @@ Rollout:
     versionTag: Int
     percentage: Int
 
-
-
   queries:
     findByMerchantOperatingCityAndVehicleType:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
+    findAllByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    updateByMerchantOperatingCityAndVehicleType:
+      kvFunction: updateWithKV
+      params: [percentage]
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    deleteByVersionId:
+      kvFunction: deleteWithKV
+      where: id
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
