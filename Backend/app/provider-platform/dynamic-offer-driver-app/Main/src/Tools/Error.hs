@@ -1547,12 +1547,9 @@ data WMBErrors
   | RouteTripStopMappingNotFound Text
   | VehicleRouteMappingBlocked
   | AlreadyOnActiveTripWithAnotherVehicle Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instance IsBecknAPIError WMBErrors
-
-instance Exception WMBErrors where
-  displayException = show
+instanceExceptionWithParent 'HTTPException ''WMBErrors
 
 instance IsBaseError WMBErrors where
   toMessage = \case
@@ -1657,3 +1654,5 @@ instance IsHTTPError WMBErrors where
     StopNotFound -> E400
     RouteTripStopMappingNotFound _ -> E400
     VehicleRouteMappingBlocked -> E400
+
+instance IsAPIError WMBErrors
