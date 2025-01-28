@@ -111,7 +111,6 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
@@ -246,6 +245,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
           DTR.EndRide DTR.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
+            unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
             void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval
           _ -> pure ()
       _ -> pure ()
@@ -1558,12 +1558,11 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
-      QDriverInfoInternal.updateOnboardingVehicleCategory (Just req_.driverOnboardingVehicleCategory) person.id
       WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
             fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) False
+            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) req_.driverOnboardingVehicleCategory False
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     readCsv csvFile = do

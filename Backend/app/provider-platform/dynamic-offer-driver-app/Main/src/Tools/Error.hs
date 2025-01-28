@@ -1216,6 +1216,7 @@ data DriverOnboardingError
   | DocumentAlreadyInSync
   | NotValidatedUisngFrontendSDK
   | InvalidDocumentType Text
+  | DriverOnboardingVehicleCategoryNotFound
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1265,6 +1266,7 @@ instance IsBaseError DriverOnboardingError where
     DocumentAlreadyInSync -> Just "Document already in sync"
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
+    DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1313,6 +1315,7 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
+    DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1359,6 +1362,7 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> E400
     NotValidatedUisngFrontendSDK -> E400
     InvalidDocumentType _ -> E400
+    DriverOnboardingVehicleCategoryNotFound -> E500
 
 instance IsAPIError DriverOnboardingError
 
