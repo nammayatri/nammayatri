@@ -141,13 +141,13 @@ screen initialState (GlobalState globalState) =
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-          void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-            driverProfileResp <- Remote.fetchDriverProfile false
-            case driverProfileResp of
-                Right resp -> do
-                  liftFlow $ push $ ProfileDataAPIResponseAction resp
-                Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-            pure unit
+          -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+          --   driverProfileResp <- Remote.fetchDriverProfile false
+          --   case driverProfileResp of
+          --       Right resp -> do
+          --         liftFlow $ push $ ProfileDataAPIResponseAction resp
+          --       Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          --   pure unit
           let isRideListTry = getAndRemoveLatestNotificationType unit == "DRIVER_ASSIGNMENT"
           if isRideListTry then do push $ UpdateRetryRideList true else pure unit
 
@@ -485,9 +485,9 @@ view push state =
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.data.favPopUp.visibility then favPopUpView push state else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
-      , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
-          completeYourProfile push state 
-        else dummyTextView
+      -- , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
+      --     completeYourProfile push state 
+      --   else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
   ]
   where 

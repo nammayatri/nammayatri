@@ -102,6 +102,13 @@ screen initialState =
                 $ do
                     driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                driverProfileResp <- Remote.fetchDriverProfile false
+                case driverProfileResp of
+                    Right resp -> do
+                      liftFlow $ push $ ProfileDataAPIResponseAction resp
+                    Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+                pure unit
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
