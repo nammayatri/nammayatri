@@ -18,6 +18,7 @@ makeFleetDriverAssociation driverId fleetOwnerId end = do
         fleetOwnerId = fleetOwnerId,
         associatedOn = Just now,
         associatedTill = end,
+        onboardingVehicleCategory = Nothing,
         createdAt = now,
         updatedAt = now
       }
