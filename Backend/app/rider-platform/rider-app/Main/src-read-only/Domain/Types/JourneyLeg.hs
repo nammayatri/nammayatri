@@ -17,8 +17,8 @@ import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
   { agency :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalAgency,
-    distance :: Kernel.Types.Common.Distance,
-    duration :: Kernel.Types.Common.Seconds,
+    distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
+    duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     endLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
     estimatedMaxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

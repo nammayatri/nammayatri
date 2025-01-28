@@ -45,6 +45,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
         parentSearchReq.device
         False
         (Just journeySearchData)
+    case dSearchRes.distance of
+      Just dist -> QJourneyLeg.updateDistanceAndDuration (Just (convertMetersToDistance Meter dist)) dSearchRes.duration journeyLegData.id
+      Nothing -> QJourneyLeg.updateDistanceAndDuration Nothing dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       let generatedJson = encode becknTaxiReqV2

@@ -32,6 +32,19 @@ findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (K
 updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateIsDeleted isDeleted legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
+updateDistanceAndDuration ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Distance -> Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateDistanceAndDuration distance duration id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.distance ((.value) <$> distance),
+      Se.Set Beam.distanceUnit ((.unit) <$> distance),
+      Se.Set Beam.duration duration,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -47,8 +60,8 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   updateWithKV
     [ Se.Set Beam.agencyGtfsId (routeDetails >>= (.gtfsId)),
       Se.Set Beam.agencyName (routeDetails >>= (.longName)),
-      Se.Set Beam.distance ((.value) distance),
-      Se.Set Beam.distanceUnit ((.unit) distance),
+      Se.Set Beam.distance ((.value) <$> distance),
+      Se.Set Beam.distanceUnit ((.unit) <$> distance),
       Se.Set Beam.duration duration,
       Se.Set Beam.endLocationLat (endLocation & (.latitude)),
       Se.Set Beam.endLocationLon (endLocation & (.longitude)),
@@ -92,7 +105,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
-            distance = Kernel.Types.Common.Distance distance distanceUnit,
+            distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
             endLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon,
             estimatedMaxFare = estimatedMaxFare,
@@ -122,8 +135,8 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     Beam.JourneyLegT
       { Beam.agencyGtfsId = routeDetails >>= (.gtfsId),
         Beam.agencyName = routeDetails >>= (.longName),
-        Beam.distance = (.value) distance,
-        Beam.distanceUnit = (.unit) distance,
+        Beam.distance = (.value) <$> distance,
+        Beam.distanceUnit = (.unit) <$> distance,
         Beam.duration = duration,
         Beam.endLocationLat = endLocation & (.latitude),
         Beam.endLocationLon = endLocation & (.longitude),

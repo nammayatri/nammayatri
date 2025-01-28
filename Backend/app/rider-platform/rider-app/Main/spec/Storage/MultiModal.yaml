@@ -124,7 +124,7 @@ WalkLegMultimodal:
     riderId: Id Person
     fromLocation: Location
     toLocation: Maybe Location
-    estimatedDistance: Distance
+    estimatedDistance: Maybe Distance
     estimatedDuration: Maybe Seconds
     status: WalkLegStatus
     merchantId: Id Merchant
@@ -147,8 +147,8 @@ WalkLegMultimodal:
 
   beamFields:
     estimatedDistance:
-      estimatedDistance: HighPrecDistance
-      distanceUnit: DistanceUnit
+      estimatedDistance: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
     fromLocation:
       fromLocationId: Maybe Text
     toLocation:
@@ -163,14 +163,14 @@ WalkLegMultimodal:
       isDeleted: Maybe Bool
 
   fromTType:
-    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+    estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
     fromLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
     toLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
     journeyLegInfo: Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo
 
   toTType:
-    estimatedDistance: ((.value))|I
-    distanceUnit: ((.unit))|I
+    estimatedDistance: (.value) <$> |I
+    distanceUnit: (.unit) <$> |I
     fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
     toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -187,9 +187,9 @@ WalkLegMultimodal:
 JourneyLeg:
   fields:
     id: Id JourneyLeg
-    distance: Distance
     journeyId: Id Journey
-    duration: Seconds
+    duration: Maybe Seconds
+    distance: Maybe Distance
     # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
     mode: MultimodalTravelMode
     startLocation: LatLngV2 #LocationV2     #Location.latLng
@@ -210,8 +210,8 @@ JourneyLeg:
 
   beamFields:
     distance:
-      distance: HighPrecDistance
-      distanceUnit: DistanceUnit
+      distance: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
     fromStopDetails:
       fromStopCode: Maybe Text
       fromStopName: Maybe Text
@@ -257,10 +257,15 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [isDeleted]
       where: legSearchId
+    updateDistanceAndDuration:
+      kvFunction: updateWithKV
+      params: [distance, duration]
+      where: id
+
 
 
   fromTType:
-    distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
+    distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId fromStopPlatformCode)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId toStopPlatformCode)|E
     routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
@@ -270,8 +275,8 @@ JourneyLeg:
     legSearchId: legId|E
 
   toTType:
-    distance: ((.value))|I
-    distanceUnit: ((.unit))|I
+    distance: (.value) <$> |I
+    distanceUnit: (.unit) <$> |I
     fromStopCode:  (fromStopDetails >>= (.stopCode))|E
     fromStopName:  (fromStopDetails >>= (.name))|E
     fromStopPlatformCode: (fromStopDetails >>= (.platformCode))|E

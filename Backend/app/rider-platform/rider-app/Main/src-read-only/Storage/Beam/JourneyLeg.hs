@@ -15,9 +15,9 @@ import Tools.Beam.UtilsTH
 data JourneyLegT f = JourneyLegT
   { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    distance :: B.C f Kernel.Types.Common.HighPrecDistance,
-    distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
-    duration :: B.C f Kernel.Types.Common.Seconds,
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

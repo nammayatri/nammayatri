@@ -13,8 +13,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data WalkLegMultimodalT f = WalkLegMultimodalT
-  { distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
-    estimatedDistance :: B.C f Kernel.Types.Common.HighPrecDistance,
+  { distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

@@ -37,7 +37,9 @@ types:
 
   ExtendLegReq:
     legId: Id JourneyLeg
+    startLeg : Id JourneyLeg
     endLeg: Id JourneyLeg
+    startLocation: Maybe LatLong
     endLocation: Maybe LatLong                          # if some other dest outside of journey
 
   RiderLocationReq:
@@ -46,7 +48,10 @@ types:
 
   SwitchLegReq:
     newMode: MultimodalTravelMode
-    currLocation: LatLong
+    legOrder : Int
+    startLocation : Maybe LatLong
+    originAddress: LocationAddress
+    destinationAddress: LocationAddress
 
   SwitchTaxiReq:
     estimateId: Id Estimate
@@ -86,9 +91,9 @@ apis:
         type: JourneyBookingPaymentStatus
 
   - POST:
-      endpoint: /multimodal/{legId}/switch                          # combine with other legs if they match
+      endpoint: /multimodal/{journeyId}/switch                          # combine with other legs if they match
       params:
-        legId: Text
+        journeyId: Id Journey
       request:
         type: SwitchLegReq
       response:

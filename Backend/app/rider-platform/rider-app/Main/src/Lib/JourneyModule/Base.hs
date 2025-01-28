@@ -16,6 +16,7 @@ import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Common as Common
+import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
@@ -436,6 +437,148 @@ skipLeg journeyId legId = do
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
   cancelLeg skippingLeg ""
+
+checkIfCancellable ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  ) =>
+  JL.LegInfo ->
+  m Bool
+checkIfCancellable journeyLeg = do
+  isCancellableResult <- case journeyLeg.travelMode of
+    DTrip.Taxi ->
+      JL.isCancellable $
+        TaxiLegRequestIsCancellable
+          TaxiLegRequestIsCancellableData
+            { searchId = (Id journeyLeg.searchId)
+            }
+    DTrip.Walk ->
+      JL.isCancellable $
+        WalkLegRequestIsCancellable
+          WalkLegRequestIsCancellableData
+            { walkLegId = (Id journeyLeg.searchId)
+            }
+    DTrip.Metro ->
+      JL.isCancellable $
+        MetroLegRequestIsCancellable
+          MetroLegRequestIsCancellableData
+            { searchId = (Id journeyLeg.searchId)
+            }
+    DTrip.Subway -> JL.isCancellable $ SubwayLegRequestIsCancellable SubwayLegRequestIsCancellableData
+    DTrip.Bus ->
+      JL.isCancellable $
+        BusLegRequestIsCancellable
+          BusLegRequestIsCancellableData
+            { searchId = (Id journeyLeg.searchId)
+            }
+  return isCancellableResult.canCancel
+
+canBeSwitched ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  JL.LegInfo ->
+  DTrip.MultimodalTravelMode ->
+  m Bool
+canBeSwitched legToBeSwitched newMode = do
+  let currentMode = legToBeSwitched.travelMode
+  case (currentMode, newMode) of
+    (_, DTrip.Metro) -> return False
+    (_, DTrip.Bus) -> return False
+    (DTrip.Bus, DTrip.Taxi) -> return $ legToBeSwitched.status /= JL.Ongoing
+    (DTrip.Metro, DTrip.Taxi) -> return $ legToBeSwitched.status /= JL.Ongoing
+    (DTrip.Walk, DTrip.Taxi) -> return True
+    (DTrip.Taxi, DTrip.Walk) -> do
+      case legToBeSwitched.estimatedDistance of
+        Just distance ->
+          return $ getMeters (distanceToMeters distance) <= 1000
+        Nothing ->
+          throwError $ InvalidRequest "Leg Data NotPresent"
+    _ -> return False
+
+isExtendable ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  [JL.LegInfo] ->
+  JL.LegInfo ->
+  DTrip.MultimodalTravelMode ->
+  m Bool
+isExtendable allLegs currentLegInfo newMode = do
+  let previousLegInfo = find (\leg -> leg.order == (currentLegInfo.order - 1)) allLegs
+      nextLegInfo = find (\leg -> leg.order == (currentLegInfo.order + 1)) allLegs
+  let startLeg =
+        case previousLegInfo of
+          Just prevLeg | prevLeg.travelMode == newMode -> prevLeg
+          _ -> currentLegInfo
+      endLeg =
+        case nextLegInfo of
+          Just nextLeg | nextLeg.travelMode == newMode -> nextLeg
+          _ -> currentLegInfo
+   in return (startLeg.order /= currentLegInfo.order || endLeg.order /= currentLegInfo.order)
+
+createJourneyLegFromCancelledLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    JL.JourneyLeg TaxiLegRequest m,
+    JL.JourneyLeg BusLegRequest m,
+    JL.JourneyLeg MetroLegRequest m,
+    JL.JourneyLeg WalkLegRequest m
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  DTrip.MultimodalTravelMode ->
+  m DJourneyLeg.JourneyLeg
+createJourneyLegFromCancelledLeg journeyLeg newMode = do
+  now <- getCurrentTime
+  journeyLegId <- generateGUID
+  return $
+    DJourneyLeg.JourneyLeg
+      { agency = Nothing,
+        distance = journeyLeg.distance, -- TODO : to be changed
+        duration = journeyLeg.duration, -- TODO : to be changed
+        endLocation = journeyLeg.endLocation,
+        fromArrivalTime = Nothing, -- TODO
+        fromDepartureTime = Nothing, -- TODO
+        fromStopDetails = Nothing,
+        id = journeyLegId,
+        journeyId = journeyLeg.journeyId,
+        mode = newMode,
+        routeDetails = Nothing,
+        sequenceNumber = journeyLeg.sequenceNumber,
+        startLocation = journeyLeg.startLocation, -- TODO : to be change pass as a request
+        toArrivalTime = Nothing,
+        toDepartureTime = journeyLeg.toDepartureTime,
+        toStopDetails = journeyLeg.toStopDetails,
+        estimatedMinFare = Nothing, -- TODO : to be change
+        estimatedMaxFare = Nothing, -- TODO : to be change
+        merchantId = journeyLeg.merchantId,
+        merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now,
+        isDeleted = Just False,
+        legSearchId = Nothing --- Update
+      }
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()
 -- deleteLeg leg = do
