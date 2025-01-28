@@ -41,6 +41,7 @@ import Domain.Types.Route
 import Domain.Types.RouteTripStopMapping
 import Domain.Types.TripTransaction
 import Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory as DVehCategory
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
 import qualified EulerHS.Prelude as EHS
@@ -67,6 +68,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
@@ -154,7 +156,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId True
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
   tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo req.location
   pure $
     TripTransactionDetails
@@ -213,6 +215,7 @@ postWmbTripStart ::
   )
 postWmbTripStart (_, _, _) tripTransactionId req = do
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+  unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
@@ -233,6 +236,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+  unless (tripTransaction.status == TRIP_ASSIGNED) $ throwError (InvalidTripStatus $ show tripTransaction.status)
   when (tripTransaction.status == COMPLETED) $ throwError (InvalidTripStatus "COMPLETED")
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
@@ -352,11 +356,11 @@ postFleetConsent ::
 postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
+  onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-
+  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
   QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language
   whenJust mbMerchantPN $ \merchantPN -> do

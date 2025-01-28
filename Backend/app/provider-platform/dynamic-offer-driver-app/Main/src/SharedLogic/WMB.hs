@@ -261,8 +261,8 @@ startTripTransaction tripTransaction _route closestStop currentLocation destinat
         void $ LF.rideStart (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just busTripInfo)
         now <- getCurrentTime
         QDI.updateOnRide True tripTransaction.driverId
+        QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just currentLocation) IN_PROGRESS (Just now) tripTransaction.id
         when notify $ do
-          QTT.updateOnStart (Just closestStop.tripCode) (Just closestStop.stopCode) (Just currentLocation) IN_PROGRESS (Just now) tripTransaction.id
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
     )
     >>= \case

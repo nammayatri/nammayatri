@@ -5,6 +5,7 @@ module Domain.Types.FleetDriverAssociation where
 
 import Data.Aeson
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -17,6 +18,7 @@ data FleetDriverAssociation = FleetDriverAssociation
     fleetOwnerId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation,
     isActive :: Kernel.Prelude.Bool,
+    onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
