@@ -9,7 +9,7 @@ imports:
 
 module: FRFSTicket
 types:
-  FRFSRouteAPI:
+  FRFSDashboardRouteAPI:
     code: Text
     shortName: Text
     longName: Text
@@ -86,7 +86,7 @@ apis:
       query:
         searchStr: Text
       response:
-        type: "[FRFSRouteAPI]"
+        type: "[FRFSDashboardRouteAPI]"
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTES
   - POST: # Add new route
