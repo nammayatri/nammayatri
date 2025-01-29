@@ -14,3 +14,18 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD PRIMARY KEY ( d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN modified_by character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN experiment_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN is_base_version boolean ;
+
+
+------- SQL updates -------
+

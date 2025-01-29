@@ -24,10 +24,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagQueryUpdate merchantId city :<|> deleteNammaTagQueryDelete merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city :<|> getNammaTagAppDynamicLogicVersions merchantId city :<|> getNammaTagAppDynamicLogicDomains merchantId city :<|> getNammaTagQueryAll merchantId city :<|> postNammaTagUpdateCustomerTag merchantId city
+handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagQueryUpdate merchantId city :<|> deleteNammaTagQueryDelete merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city :<|> getNammaTagAppDynamicLogicVersions merchantId city :<|> getNammaTagAppDynamicLogicDomains merchantId city :<|> getNammaTagQueryAll merchantId city :<|> postNammaTagUpdateCustomerTag merchantId city :<|> getNammaTagConfigPilotAllConfigs merchantId city :<|> getNammaTagConfigPilotConfigDetails merchantId city :<|> getNammaTagConfigPilotGetTableData merchantId city
 
 type PostNammaTagTagCreate =
   ( ApiAuth
@@ -173,6 +173,30 @@ type PostNammaTagUpdateCustomerTag =
       :> API.Types.RiderPlatform.Management.NammaTag.PostNammaTagUpdateCustomerTag
   )
 
+type GetNammaTagConfigPilotAllConfigs =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagConfigPilotAllConfigs
+  )
+
+type GetNammaTagConfigPilotConfigDetails =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagConfigPilotConfigDetails
+  )
+
+type GetNammaTagConfigPilotGetTableData =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NAMMA_TAG / 'API.Types.RiderPlatform.Management.NammaTag.GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA)
+      :> API.Types.RiderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetTableData
+  )
+
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.postNammaTagTagCreate merchantShortId opCity apiTokenInfo req
 
@@ -226,3 +250,12 @@ getNammaTagQueryAll merchantShortId opCity apiTokenInfo chakra = withFlowHandler
 
 postNammaTagUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.User -> Lib.Yudhishthira.Types.UpdateTagReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postNammaTagUpdateCustomerTag merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.postNammaTagUpdateCustomerTag merchantShortId opCity apiTokenInfo customerId req
+
+getNammaTagConfigPilotAllConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigType])
+getNammaTagConfigPilotAllConfigs merchantShortId opCity apiTokenInfo underExperiment = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.getNammaTagConfigPilotAllConfigs merchantShortId opCity apiTokenInfo underExperiment
+
+getNammaTagConfigPilotConfigDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigDetailsResp])
+getNammaTagConfigPilotConfigDetails merchantShortId opCity apiTokenInfo tableName = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.getNammaTagConfigPilotConfigDetails merchantShortId opCity apiTokenInfo tableName
+
+getNammaTagConfigPilotGetTableData :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.FlowHandler Lib.Yudhishthira.Types.TableDataResp)
+getNammaTagConfigPilotGetTableData merchantShortId opCity apiTokenInfo tableName = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.NammaTag.getNammaTagConfigPilotGetTableData merchantShortId opCity apiTokenInfo tableName

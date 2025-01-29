@@ -59,4 +59,4 @@ data DriverPoolConfig = DriverPoolConfig
     useOneToOneOsrmMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

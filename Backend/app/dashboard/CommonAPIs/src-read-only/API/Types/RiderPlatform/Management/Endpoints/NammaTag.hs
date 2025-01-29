@@ -16,7 +16,7 @@ import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData))
 
 type PostNammaTagTagCreate = ("tag" :> "create" :> ReqBody '[JSON] Lib.Yudhishthira.Types.CreateNammaTagRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -86,6 +86,17 @@ type PostNammaTagUpdateCustomerTag =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type GetNammaTagConfigPilotAllConfigs = ("configPilot" :> "allConfigs" :> QueryParam "underExperiment" Kernel.Prelude.Bool :> Get '[JSON] [Lib.Yudhishthira.Types.ConfigType])
+
+type GetNammaTagConfigPilotConfigDetails =
+  ( "configPilot" :> "configDetails" :> MandatoryQueryParam "tableName" Lib.Yudhishthira.Types.ConfigType
+      :> Get
+           '[JSON]
+           [Lib.Yudhishthira.Types.ConfigDetailsResp]
+  )
+
+type GetNammaTagConfigPilotGetTableData = ("configPilot" :> "getTableData" :> MandatoryQueryParam "tableName" Lib.Yudhishthira.Types.ConfigType :> Get '[JSON] Lib.Yudhishthira.Types.TableDataResp)
+
 data NammaTagAPIs = NammaTagAPIs
   { postNammaTagTagCreate :: Lib.Yudhishthira.Types.CreateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postNammaTagTagUpdate :: Lib.Yudhishthira.Types.UpdateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -104,13 +115,16 @@ data NammaTagAPIs = NammaTagAPIs
     getNammaTagAppDynamicLogicVersions :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicVersionResp,
     getNammaTagAppDynamicLogicDomains :: EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicDomainResp,
     getNammaTagQueryAll :: Lib.Yudhishthira.Types.Chakra -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.ChakraQueryResp,
-    postNammaTagUpdateCustomerTag :: Kernel.Types.Id.Id Dashboard.Common.User -> Lib.Yudhishthira.Types.UpdateTagReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postNammaTagUpdateCustomerTag :: Kernel.Types.Id.Id Dashboard.Common.User -> Lib.Yudhishthira.Types.UpdateTagReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getNammaTagConfigPilotAllConfigs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.ConfigType],
+    getNammaTagConfigPilotConfigDetails :: Lib.Yudhishthira.Types.ConfigType -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.ConfigDetailsResp],
+    getNammaTagConfigPilotGetTableData :: Lib.Yudhishthira.Types.ConfigType -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.TableDataResp
   }
 
 mkNammaTagAPIs :: (Client EulerHS.Types.EulerClient API -> NammaTagAPIs)
 mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
-    postNammaTagTagCreate :<|> postNammaTagTagUpdate :<|> deleteNammaTagTagDelete :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagQueryAll :<|> postNammaTagUpdateCustomerTag = nammaTagClient
+    postNammaTagTagCreate :<|> postNammaTagTagUpdate :<|> deleteNammaTagTagDelete :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagQueryAll :<|> postNammaTagUpdateCustomerTag :<|> getNammaTagConfigPilotAllConfigs :<|> getNammaTagConfigPilotConfigDetails :<|> getNammaTagConfigPilotGetTableData = nammaTagClient
 
 data NammaTagUserActionType
   = POST_NAMMA_TAG_TAG_CREATE
@@ -131,6 +145,9 @@ data NammaTagUserActionType
   | GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS
   | GET_NAMMA_TAG_QUERY_ALL
   | POST_NAMMA_TAG_UPDATE_CUSTOMER_TAG
+  | GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS
+  | GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS
+  | GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

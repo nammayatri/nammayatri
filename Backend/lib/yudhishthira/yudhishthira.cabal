@@ -37,6 +37,7 @@ library
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
       Lib.Yudhishthira.Storage.Queries.TimeBoundConfigExtra
@@ -47,6 +48,7 @@ library
       Lib.Yudhishthira.Types
       Lib.Yudhishthira.Types.Application
       Lib.Yudhishthira.Types.Common
+      Lib.Yudhishthira.Types.ConfigPilot
       Lib.Yudhishthira.Types.KaalChakra
       Lib.Yudhishthira.Types.Manual
       Lib.Yudhishthira.Types.Tag
@@ -62,6 +64,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.NammaTag
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.TimeBoundConfig

@@ -63,3 +63,31 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostNammaTagTagVerify","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_VERIFY' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'CREATE_NAMMA_TAG' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetNammaTagConfigPilotAllConfigs","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetNammaTagConfigPilotConfigDetails","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetNammaTagConfigPilotGetTableData","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagConfigPilotConcludeOrAbortOrRevert","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CONCLUDE_OR_ABORT_OR_REVERT'
+  WHERE endpoint = 'NammaTagAPI PostNammaTagConfigPilotConcludeOrAbortOrRevertEndpoint';
+
+-- {"api":"PostNammaTagConfigPilotConcludeOrAbortOrRevert","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CONCLUDE_OR_ABORT_OR_REVERT' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagConfigPilotActionChange","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE'
+  WHERE endpoint = 'NammaTagAPI PostNammaTagConfigPilotActionChangeEndpoint';
+
+-- {"api":"PostNammaTagConfigPilotActionChange","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;

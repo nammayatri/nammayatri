@@ -4,6 +4,8 @@ imports:
   Merchant: Lib.Yudhishthira.Types
   MerchantOperatingCity: Lib.Yudhishthira.Types
   LogicDomain: Lib.Yudhishthira.Types
+  ExperimentStatus: Lib.Yudhishthira.Types
+  Person: Lib.Yudhishthira.Types
 
 AppDynamicLogicElement:
   tableName: app_dynamic_logic_element
@@ -48,6 +50,9 @@ AppDynamicLogicElement:
   fromTType:
     logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
 
@@ -63,6 +68,9 @@ AppDynamicLogicRollout:
     versionDescription: Maybe Text
     percentageRollout: Int
     merchantId: Maybe (Id Merchant)
+    modifiedBy: Maybe (Id Person)
+    experimentStatus: Maybe ExperimentStatus
+    isBaseVersion: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey

@@ -53,6 +53,7 @@ getFieldDefaultValues fieldTypeName = do
       | fieldTypeName == ''BaseUrl = ListE [AppE (AppE (AppE (AppE (ConE 'BaseUrl) (ConE 'Servant.Client.Core.Https)) (LitE (StringL "example.com"))) (LitE (IntegerL 443))) (LitE (StringL "/this"))]
       | fieldTypeName == ''Kernel.Types.Id.Id = ListE [LitE (StringL "random-1000-4000-8000-uuid")]
       | fieldTypeName == ''Kernel.Types.Id.ShortId = ListE [LitE (StringL "randomShortId")]
+      | fieldTypeName == ''NominalDiffTime = ListE [AppE (VarE 'fromInteger) (LitE (IntegerL 1))]
       | otherwise = ListE []
 
 -- below just to ease the process a little
