@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -15,6 +16,8 @@ import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Language.Haskell.TH
+import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
@@ -80,3 +83,5 @@ data RiderConfig = RiderConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+-- $(YTH.generateGenericDefault ''RiderConfig) -- TODO add defaults

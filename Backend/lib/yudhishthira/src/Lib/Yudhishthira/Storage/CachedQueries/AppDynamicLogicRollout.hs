@@ -30,7 +30,8 @@ fetchAllConfigsByMerchantOpCityId merchantOperatingCityId = do
     isConfig :: Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout -> Bool
     isConfig rollout =
       case rollout.domain of
-        Lib.Yudhishthira.Types.CONFIG _ -> True
+        Lib.Yudhishthira.Types.DRIVER_CONFIG _ -> True
+        Lib.Yudhishthira.Types.RIDER_CONFIG _ -> True
         _ -> False
 
 findByMerchantOpCityAndDomain ::

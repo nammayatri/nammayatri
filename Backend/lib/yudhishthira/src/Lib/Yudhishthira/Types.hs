@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Lib.Yudhishthira.Types
   ( module Reexport,
@@ -49,8 +50,16 @@ module Lib.Yudhishthira.Types
     ChakraQueryResp,
     UpdateTagReq (..),
     TagNameValue (..),
+    ExperimentStatus (..),
+    TableDataResp (..),
+    ConfigDetailsResp (..),
     ConfigVersionMap (..),
     Config (..),
+    Action (..),
+    ActionChangeRequest (..),
+    ConcludeReq (..),
+    AbortReq (..),
+    RevertReq (..),
     TagNameValueExpiry (..),
     TagObject (..),
   )
@@ -70,6 +79,7 @@ import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Scheduler.Types (AnyJob)
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
+import Lib.Yudhishthira.Types.ConfigPilot as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
 import Lib.Yudhishthira.Types.Manual as Reexport
 import Lib.Yudhishthira.Types.Tag as Reexport
@@ -82,13 +92,38 @@ data ConfigType
   = DriverPoolConfig
   | TransporterConfig
   | RiderConfig
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+  | FRFSConfig
+  | PayoutConfig
+  | MerchantServiceUsageConfig
+  | HotSpotConfig
+  | MerchantConfig
+  | BecknConfig
+  | PartnerOrgConfig
+  | RideRelatedNotificationConfig
+  | VehicleConfig
+  | MerchantMessage
+  | MerchantPushNotification
+  | Sos
+  | Station
+  | DriverIntelligentPoolConfig
+  | LeaderBoardConfig
+  | CoinsConfig
+  | DocumentVerificationConfig
+  | FleetOwnerDocumentVerificationConfig
+  | GoHomeConfig
+  | SubscriptionConfig
+  | Overlay
+  | FarePolicy
+  | FareProduct
+  | Plan
+  | PlanTranslation
+  | Toll
+  | CancellationFarePolicy
+  | SurgePricing
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
-data ConfigVersionMap = ConfigVersionMap
-  { config :: ConfigType,
-    version :: Int
-  }
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+$(mkHttpInstancesForEnum ''ConfigType)
+$(mkBeamInstancesForEnum ''ConfigType)
 
 data Source
   = Application ApplicationEvent
@@ -183,6 +218,9 @@ data LogicDomain
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
   | CONFIG ConfigType
+  | RIDER_CONFIG ConfigType
+  | DRIVER_CONFIG ConfigType
+  | RIDER_CONFIG_OVERRIDES ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -193,6 +231,9 @@ instance Enumerable LogicDomain where
       FRFS_DISCOUNTS
     ]
       ++ map CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG [minBound .. maxBound]
+      ++ map DRIVER_CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -201,6 +242,9 @@ generateLogicDomainShowInstances =
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show FRFS_DISCOUNTS]
     ++ [show (CONFIG configType) | configType <- configTypes]
+    ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
+    ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
+    ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
   where
     configTypes = [minBound .. maxBound]
 
@@ -218,8 +262,12 @@ instance Show LogicDomain where
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
   show (CONFIG configType) = "CONFIG_" ++ show configType
+  show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
+  show (DRIVER_CONFIG configType) = "DRIVER-CONFIG_" ++ show configType
+  show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
 
 instance Read LogicDomain where
+  readsPrec :: Int -> ReadS LogicDomain
   readsPrec _ s =
     let (prefx, rest) = break (== '_') s
      in case prefx of
@@ -236,10 +284,89 @@ instance Read LogicDomain where
              in case readMaybe configType' of
                   Just configType -> [(CONFIG configType, rest1)]
                   Nothing -> []
+          "RIDER-CONFIG" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType -> [(RIDER_CONFIG configType, rest1)]
+                  Nothing -> []
+          "DRIVER-CONFIG" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType -> [(DRIVER_CONFIG configType, rest1)]
+                  Nothing -> []
+          "RIDER-CONFIG-OVERRIDES" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType -> [(RIDER_CONFIG_OVERRIDES configType, rest1)]
+                  Nothing -> []
           _ -> []
 
 $(mkBeamInstancesForEnumAndList ''LogicDomain)
 $(mkHttpInstancesForEnum ''LogicDomain)
+
+data ExperimentStatus
+  = DISCARDED
+  | CONCLUDED
+  | RUNNING
+  | REVERTED
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
+
+$(mkBeamInstancesForEnumAndList ''ExperimentStatus)
+$(mkHttpInstancesForEnum ''ExperimentStatus)
+
+data Action
+  = CONCLUDE
+  | ABORT
+  | REVERT
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
+
+data ActionChangeRequest
+  = Conclude ConcludeReq
+  | Abort AbortReq
+  | Revert RevertReq
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+instance HideSecrets ActionChangeRequest where
+  hideSecrets = identity
+
+data ConcludeReq = ConcludeReq
+  { action :: Action,
+    version :: Int,
+    domain :: LogicDomain
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+data AbortReq = AbortReq
+  { action :: Action,
+    version :: Int,
+    domain :: LogicDomain
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+data RevertReq = RevertReq
+  { action :: Action,
+    domain :: LogicDomain
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+data ConfigVersionMap = ConfigVersionMap
+  { config :: LogicDomain,
+    version :: Int
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data TableDataResp = TableDataResp
+  { configs :: [Value]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data ConfigDetailsResp = ConfigDetailsResp
+  { modifiedBy :: Maybe (Id Person),
+    percentageRollout :: Int,
+    version :: Int,
+    configPatch :: [Value]
+  }
+  deriving (Show, Read, Generic, ToSchema, ToJSON, FromJSON)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
@@ -340,7 +467,9 @@ instance HideSecrets LogicRolloutReq where
 data LogicRolloutObject = LogicRolloutObject
   { domain :: LogicDomain,
     timeBounds :: Text,
-    rollout :: [RolloutVersion]
+    rollout :: [RolloutVersion],
+    modifiedBy :: Maybe (Id Person),
+    experimentStatus :: Maybe ExperimentStatus
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -496,9 +625,3 @@ instance HideSecrets RunKaalChakraJobReq where
 
 instance HideSecrets RunKaalChakraJobRes where
   hideSecrets = identity
-
-data Config a = Config
-  { config :: a,
-    extraDimensions :: Maybe Value
-  }
-  deriving (Generic, ToJSON, FromJSON, Show)

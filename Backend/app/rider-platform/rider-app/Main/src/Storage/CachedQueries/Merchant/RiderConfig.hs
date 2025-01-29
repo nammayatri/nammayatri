@@ -51,19 +51,19 @@ findByMerchantOperatingCityId ::
   Maybe [LYT.ConfigVersionMap] ->
   m (Maybe RiderConfig)
 findByMerchantOperatingCityId id mbConfigInExperimentVersions = do
-  version <- DynamicLogic.getConfigVersion (cast id) mbConfigInExperimentVersions LYT.RiderConfig
+  version <- DynamicLogic.getConfigVersion (cast id) mbConfigInExperimentVersions (LYT.RIDER_CONFIG LYT.RiderConfig)
   cachedConfig <- Hedis.safeGet (makeMerchantOperatingCityIdKey id version)
   case cachedConfig of
     Just riderConfig -> return (Just riderConfig)
     Nothing -> fetchAndCacheConfig version
   where
     fetchAndCacheConfig version = do
-      allLogics <- DynamicLogic.getConfigLogic (cast id) version LYT.RiderConfig
+      allLogics <- DynamicLogic.getConfigLogic (cast id) version (LYT.RIDER_CONFIG LYT.RiderConfig)
       mbConfig <- Queries.findByMerchantOperatingCityId id
       maybe (return Nothing) (processConfig allLogics version) mbConfig
 
     processConfig allLogics version cfg = do
-      let configWrapper = LYT.Config cfg Nothing
+      let configWrapper = LYT.Config cfg Nothing 0
       response <- try @_ @SomeException $ LYTU.runLogics allLogics configWrapper
       case response of
         Left e -> do

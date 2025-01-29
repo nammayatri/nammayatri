@@ -19,8 +19,11 @@ instance FromTType' Beam.AppDynamicLogicRollout Lib.Yudhishthira.Types.AppDynami
       Just
         Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout
           { domain = domain,
+            experimentStatus = experimentStatus,
+            isBaseVersion = isBaseVersion,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            modifiedBy = Kernel.Types.Id.Id <$> modifiedBy,
             percentageRollout = percentageRollout,
             timeBounds = timeBounds,
             version = version,
@@ -33,8 +36,11 @@ instance ToTType' Beam.AppDynamicLogicRollout Lib.Yudhishthira.Types.AppDynamicL
   toTType' (Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout {..}) = do
     Beam.AppDynamicLogicRolloutT
       { Beam.domain = domain,
+        Beam.experimentStatus = experimentStatus,
+        Beam.isBaseVersion = isBaseVersion,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.modifiedBy = Kernel.Types.Id.getId <$> modifiedBy,
         Beam.percentageRollout = percentageRollout,
         Beam.timeBounds = timeBounds,
         Beam.version = version,
