@@ -176,7 +176,6 @@ initData =
       , homeScreenBannerTimer : 0
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
-      , voipDialerSwitch : true -- keep false until Full development is done for Voip
       , scheduleRideCount : Nothing
       , favPopUp : defaultFavPopUpData
       , blockExpiryTime : ""

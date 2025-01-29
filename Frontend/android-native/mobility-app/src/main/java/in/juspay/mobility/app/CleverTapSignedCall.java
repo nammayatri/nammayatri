@@ -285,7 +285,7 @@ public class CleverTapSignedCall {
         if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
         }
-        
+        if(isSignedCallInitialized()) return;
         System.out.println("Signedcall cuid" + cuid);
         JSONObject initOptions = new JSONObject();
         rideId = cuid;

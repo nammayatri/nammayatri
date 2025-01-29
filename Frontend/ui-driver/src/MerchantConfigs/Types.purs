@@ -50,8 +50,7 @@ type AppConfigDriver a =
     showMonthlyLeaderBoard :: Boolean,
     hotspotConfig :: HotspotConfig,
     rentalRideVideoConfig :: RentalRideVideoConfig,
-    scheduledRideConfig :: ScheduledRideConfig,
-    voipDialerSwitch :: Boolean
+    scheduledRideConfig :: ScheduledRideConfig
     | a
   } 
 
