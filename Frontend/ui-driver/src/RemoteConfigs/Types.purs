@@ -155,3 +155,15 @@ type MetroWarriorConfigEntity = {
   defaultSecondaryStations :: Array String,
   defaultPrimaryStation :: String
 }
+
+type VoipConfig = {
+  customer :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  },
+  driver :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  }
+}
+

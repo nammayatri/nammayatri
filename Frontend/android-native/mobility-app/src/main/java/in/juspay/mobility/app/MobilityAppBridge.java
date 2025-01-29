@@ -393,10 +393,10 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed) {
+    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed, String callback) {
         System.out.println("signedcall voipdialer came here");
         cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
-        cleverTapSignedCall.voipDialer(cuid,isDriver,phoneNum,isMissed);
+        cleverTapSignedCall.voipDialer(cuid,isDriver,phoneNum,isMissed,callback, bridgeComponents);
     }
 
     @JavascriptInterface
@@ -404,6 +404,12 @@ public class MobilityAppBridge extends HyperBridge {
         System.out.println("signedcall init came here");
         cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         cleverTapSignedCall.initSignedCall(cuid,isDriver);
+    }
+    
+    @JavascriptInterface
+    public boolean isSignedCallInitialized(){
+        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
+        return cleverTapSignedCall.isSignedCallInitialized();
     }
 
     @JavascriptInterface

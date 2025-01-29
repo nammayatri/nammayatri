@@ -13,6 +13,7 @@ import Presto.Core.Utils.Encoding (defaultDecode)
 import Control.Monad.Except (runExcept)
 import Data.Function (on)
 import Data.String as DS
+import Data.String (null, toLower)
 import Common.Types.App
 import RemoteConfig.Types
 import Data.Array as DA
@@ -287,3 +288,21 @@ customerAppInfoConfig appName = do
   let config = fetchRemoteConfigString "app_configs_customer"
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig {website : ""}
   getAppBasedConfig value appName
+
+defaultVoipConfig :: VoipConfig
+defaultVoipConfig = {
+  customer : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  },
+  driver : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  }
+}
+
+getCustomerVoipConfig :: String -> VoipConfig
+getCustomerVoipConfig city = do
+    let config = fetchRemoteConfigString "voip_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig
+    getCityBasedConfig value $ toLower city

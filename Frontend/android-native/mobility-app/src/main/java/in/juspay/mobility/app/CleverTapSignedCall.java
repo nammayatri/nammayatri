@@ -4,33 +4,28 @@ import static android.Manifest.permission.BLUETOOTH_CONNECT;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.RECORD_AUDIO;
 
-import android.Manifest;
-import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.JavascriptInterface;
 import android.widget.Button;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+
 
 import com.clevertap.android.sdk.CleverTapAPI;
-import com.clevertap.android.sdk.inapp.CTLocalInApp;
 import com.clevertap.android.signedcall.enums.VoIPCallStatus;
 import com.clevertap.android.signedcall.exception.CallException;
 import com.clevertap.android.signedcall.exception.InitException;
@@ -43,7 +38,6 @@ import com.clevertap.android.signedcall.models.CallDetails;
 import com.clevertap.android.signedcall.models.MissedCallAction;
 import com.clevertap.android.signedcall.models.SCCallStatusDetails;
 import com.clevertap.android.signedcall.models.SignedCallScreenBranding;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
@@ -52,34 +46,50 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+
+import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 
 public class CleverTapSignedCall {
 
-    private final Context context;
-    private final Activity activity;
-
+    private Context context ;
+    private Activity activity ;
     public static String phone;
-    private BottomSheetDialog bottomSheetDialog;
-
+    public static String rideId;
+    public static String merchantId;
+    public static String callback;
     public static final int REQUEST_CALL = 8;
     public static final int REQUEST_MICROPHONE = 9;
     public static final int REQUEST_BLUETOOTH = 11;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
 
+    private BottomSheetDialog bottomSheetDialog;
+    private static SharedPreferences sharedPrefs;
+    private static BridgeComponents bridgeComponent;
+    private MobilityRemoteConfigs remoteConfig;
+    
     public CleverTapSignedCall(Context cxt, Activity act){
-        this.context = cxt;
-        this.activity = act;
-    }
-    public CleverTapSignedCall(Context cxt, Activity act, boolean listenerOn){
-        this.context = cxt;
-        this.activity = act;
-        if(listenerOn)signedCallListener();
+        context = cxt;
+        activity = act;
+        sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        remoteConfig = new MobilityRemoteConfigs(true, false);
+        merchantId = context.getResources().getString(R.string.merchant_id);
     }
 
-    public static int useFallbackDialer = 0;
+    public CleverTapSignedCall(Context cxt, Activity act, boolean isListenerOn){
+        context = cxt;
+        activity = act;
+        if(isListenerOn)signedCallListener();
+        sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        remoteConfig = new MobilityRemoteConfigs(true, false);
+        merchantId = context.getResources().getString(R.string.merchant_id);
+    }
+
+    public static int useFallbackDialer;
     public static int callAttempts = 0;
-
+    private boolean isDriver;
 
     public void showDialer(String phoneNum) {
        Intent intent = new Intent(Intent.ACTION_DIAL);
@@ -89,12 +99,7 @@ public class CleverTapSignedCall {
     }
 
     protected boolean checkAudioPermission (){
-        // if (Build.VERSION.SDK_INT < 30) {
-        if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return false;
-        } else {
-            return true;
-        }
+        return activity == null || ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
     protected boolean checkAndAskBluetoothPermission (){
@@ -109,25 +114,74 @@ public class CleverTapSignedCall {
         return true;
     }
 
-    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed) {
+    public boolean isSignedCallInitialized(){
+        return sharedPrefs.getBoolean("SIGNED_CALL_INITIALIZED", false);
+    }
+
+    private String getNetworkType() {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            if (capabilities != null) {
+                if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    return "Wi-Fi";
+                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    return "Cellular";
+                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                    return "Ethernet";
+                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) {
+                    return "Bluetooth";
+                }
+            }
+        }
+        return "No Connection";
+    }
+
+    private String getNetworkQuality() {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            if (capabilities != null) {
+                if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                    int downSpeed = capabilities.getLinkDownstreamBandwidthKbps();
+                    if (downSpeed > 5000) {
+                        return "Good";
+                    } else if (downSpeed > 1000) {
+                        return "Moderate";
+                    } else {
+                        return "Poor";
+                    }
+                }
+            }
+        }
+        return "Unknown";
+    }
+
+    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed, String callback, BridgeComponents bridgeComponents) {
         phone = phoneNum;
-        System.out.println("Signedcall useFallbackDialer " + useFallbackDialer + " callattempts " + callAttempts);
-        System.out.println("Signedcall voip" + useFallbackDialer + "phone" + phoneNum);   
-        if(useFallbackDialer > 1 || callAttempts > 3){
+        this.isDriver = isDriver;
+        CleverTapSignedCall.callback = callback;
+        this.bridgeComponent = bridgeComponents;
+        useFallbackDialer = sharedPrefs.getInt("USE_FALLBACK_DIALER", 0);
+        callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
+        System.out.println("signedcall : useFallbackDialer " + useFallbackDialer);
+        System.out.println("signedcall : callAttempts " + callAttempts);
+        if(useFallbackDialer > 1 || callAttempts > 3 ){
             showDialer(phone);
             return;
         }
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        String receiverCuid, callContext, remoteContext;
+        String receiverCuid, callContext, remoteContext, rideId = cuid;
         String ny_customer = context.getString(R.string.namma_yatri_customer);
         String ny_driver = context.getString(R.string.namma_yatri_driver);
         JSONObject callOptions = new JSONObject();
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         Bundle bundle = new Bundle();
-        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", cuid);
+        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", rideId);
         
         if (!isMissed) {
             cuid = cuid.replace("-", "");
+            if(cuid.length() > 10) cuid = cuid.substring(0, 10);
             receiverCuid = (isDriver ? "customer" : "driver") + cuid;
         } else receiverCuid = cuid;
         
@@ -149,7 +203,11 @@ public class CleverTapSignedCall {
             @Override
             public void onSuccess() {
                 mFirebaseAnalytics.logEvent("voip_call_success",bundle);
-                System.out.println("signedcall success me");
+                String finalNetworkType = getNetworkType();
+                String finalNetworkQuality = getNetworkQuality();
+                String timestamp = String.valueOf(System.currentTimeMillis());
+                sendJavaScriptCallback(callback, "CALL_INITIATED_SUCCESSFULLY", rideId, -1, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                Log.d("SignedCall", "Signed call initiation success");
             }
             @Override
             public void onFailure(CallException callException) {
@@ -157,35 +215,46 @@ public class CleverTapSignedCall {
                 Log.d("SignedCall: ", "error code: " + callException.getErrorCode()
                     + "\n error message: " + callException.getMessage()
                     + "\n error explanation: " + callException.getExplanation());
-
+                String callbackResult;
+                String finalNetworkType = getNetworkType();
+                String finalNetworkQuality = getNetworkQuality();
                 if(callException.getErrorCode() == CallException.CanNotProcessCallRequest.getErrorCode()){
                     // Do nothing (user trying to spam call button, sdk still processing first click)
+                    return;
                 } else if(callException.getErrorCode() == CallException.MicrophonePermissionNotGrantedException.getErrorCode()) {
-                    useFallbackDialer++;
                     if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                         ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
                     }
                     mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
-                    // Toast.makeText(context, "Enable Microphone Permission for Internet Calling.", Toast.LENGTH_LONG).show();
-                } else if(callException.getErrorCode() == CallException.BadNetworkException.getErrorCode() || callException.getErrorCode() == CallException.NoInternetException.getErrorCode() || callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode() || callException.getErrorCode() == CallException.CallFeatureNotAvailable.getErrorCode()){
-                    System.out.println("Signed call: " + "Failed signed call " + tempPhone);
-                    // Toast.makeText(context, "Bad Network going ahead with direct call.", Toast.LENGTH_LONG).show();
+                    callbackResult = "MIC_PERMISSION_DENIED";
+                } else if(callException.getErrorCode() == CallException.BadNetworkException.getErrorCode() || callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode()){
+                    showDialer(tempPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_BAD_NETWORK_CALLER",bundle);
-                    useFallbackDialer += 2;
+                    callbackResult = "NETWORK_ERROR";
+                    System.out.println("signedcall : bad network");
+
+                } else if(callException.getErrorCode() == CallException.NoInternetException.getErrorCode()){
                     showDialer(tempPhone);
+                    mFirebaseAnalytics.logEvent("voip_call_failed_NO_INTERNET_CALLER",bundle);
+                    callbackResult = "NO_INTERNET";
+                    System.out.println("signedcall : no network");
+
                 } else if(callException.getErrorCode() == CallException.CallFeatureNotAvailable.getErrorCode()) {
+                    showDialer(tempPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_INIT_NOT_DONE",bundle);
-                    showDialer(tempPhone);
+                    callbackResult = "SDK_NOT_INIT";
                 } else {
-                    useFallbackDialer+=2;
                     showDialer(tempPhone);
-                    // Toast.makeText(context, "Call failed. Please try again later.", Toast.LENGTH_LONG).show();
                     mFirebaseAnalytics.logEvent("voip_call_failed_CALLER",bundle);
+                    callbackResult = "UNKNOWN_ERROR";
+                    System.out.println("signedcall : no unknown");
                 }
-            };
+                updateFallbackDialer();
+                sendJavaScriptCallback(callback, callbackResult, rideId, callException.getErrorCode(), isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+            }
         };
 
-        if(activity != null && checkAudioPermission()){
+        if(checkAudioPermission()){
             if((bluetoothAdapter == null || !bluetoothAdapter.isEnabled())){
                 SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
             } else if(checkAndAskBluetoothPermission()){
@@ -194,93 +263,40 @@ public class CleverTapSignedCall {
                 Log.e("signed call error :", "Bluetooth Permission not given" );
             }
         } else {
+            boolean hasAskedMicPermission = sharedPrefs.getBoolean("MIC_PERMISSION_ASKED", false);
             mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
             if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
+                if (!hasAskedMicPermission) {
+                    ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
+                    sharedPrefs.edit().putBoolean("MIC_PERMISSION_ASKED", true).apply();
+                } else {
+                    showCustomBottomSheet(isDriver);
+                }
             }
-            String permissionStatus = getPermissionStatus(RECORD_AUDIO);
-            if(permissionStatus == "DISABLED" || "DENIED" == permissionStatus)
-                showCustomBottomSheet(isDriver);
+            String finalNetworkType = getNetworkType();
+            String finalNetworkQuality = getNetworkQuality();
+            sendJavaScriptCallback(callback, "MIC_PERMISSION_DENIED", rideId, CallException.MicrophonePermissionNotGrantedException.getErrorCode(), isDriver, finalNetworkType, finalNetworkQuality, merchantId);
             Log.e("signed call error :", "Signed call Audio Permission not given" );
-             // NotificationUtils.firebaseLogEventWithParams(context, "voip_call_success", "ride_id", cuid);
         }
-    }
-
-    public String getPermissionStatus(String permission) {
-        if (activity != null && ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_DENIED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
-                return "DISABLED";
-            } else {
-                return "DENIED";
-            }
-        } else return "ENABLED";
-    }
-
-    public void showAlertForMicrophonePermission() {
-    System.out.println("inside showAlertForMicrophonePermission");
-    if (context == null || activity == null) {
-        Log.e("PermissionDialog", "Context or Activity is null, cannot show dialog");
-        return;
-    }
-    // Create an AlertDialog Builder
-    AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-    builder.setCancelable(false); // Prevent dismissing the dialog by touching outside
-
-    // Inflate the custom layout
-    LayoutInflater inflater = activity.getLayoutInflater();
-
-    ConstraintLayout constraintLayout = (ConstraintLayout) inflater.inflate(
-        in.juspay.mobility.app.R.layout.microphone_permission_dialog_2, null
-    );
-
-    // Customize the layout's views (optional)
-    CardView cardView = constraintLayout.findViewById(in.juspay.mobility.app.R.id.dialogCardView2);
-    if (cardView != null) {
-        cardView.setCardElevation(8); // Example customization
-        cardView.setRadius(16);
-    }
-
-    // Set layout params if needed
-    ViewGroup.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(
-        ConstraintLayout.LayoutParams.MATCH_PARENT,
-        ConstraintLayout.LayoutParams.WRAP_CONTENT
-    );
-    constraintLayout.setLayoutParams(layoutParams);
-
-    // Set the inflated layout as the dialog view
-    builder.setView(constraintLayout);
-
-    // Handle positive button click
-    builder.setPositiveButton("Go to Settings", (dialog, which) -> {
-        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        Uri uri = Uri.fromParts("package", activity.getPackageName(), null);
-        intent.setData(uri);
-        activity.startActivity(intent);
-    });
-
-    // Handle negative button click
-    builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
-    // Run the dialog creation on the UI thread
-    activity.runOnUiThread(() -> {
-        AlertDialog alertDialog = builder.create();
-        alertDialog.show();
-    });
     }
 
     public void initSignedCall(String cuid, boolean isDriver){
-        // We are initialising only at the time of ride booking 
-        useFallbackDialer = 0;
+
         if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
-            // showCustomBottomSheet(isDriver);
         }
+        
+        System.out.println("Signedcall cuid" + cuid);
         JSONObject initOptions = new JSONObject();
-        String Cuid = (isDriver) ? "driver" + cuid : "customer" + cuid;
+        rideId = cuid;
+        String Cuid = cuid.replace("-", "");
+        if (Cuid.length() > 10) {
+            Cuid = Cuid.substring(0, 10);
+        }
+        Cuid = (isDriver) ? "driver" + Cuid : "customer" + Cuid;
         Bundle bundle = new Bundle();
         bundle.putString("ride_id",cuid);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        Cuid = Cuid.replace("-", "");
         try {
             initOptions.put("accountId", "6715f01d5b143458ec1c1200");
             initOptions.put("apiKey", "C82XhWtydCwnmFPRicYXcs9q6FUINbEiBCJBsUxhyB0fW1i5JOjkm2nTUwmGWV7j");
@@ -288,23 +304,18 @@ public class CleverTapSignedCall {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        final boolean[] onetry = {true};
-        JSONObject jsonObjectConfig = CTLocalInApp.builder()
-        .setInAppType(CTLocalInApp.InAppType.ALERT)
-        .setTitleText("Get Notified")
-        .setMessageText("Enable Notification permission")
-        .followDeviceOrientation(true)
-        .setPositiveBtnText("Allow")
-        .setNegativeBtnText("Cancel")
-        .build();
+
         SignedCallInitResponse signedCallInitListener = new SignedCallInitResponse() {
             @Override
             public void onSuccess() {
                 Log.d("SignedCallIntitation: ", "Successfully initiated Signed Call (voip)");
                 System.out.println("Signed call " + "Successfully initiated Signed Call (voip)");
+
+                SharedPreferences.Editor editor = sharedPrefs.edit();
+                editor.putBoolean("SIGNED_CALL_INITIALIZED", true);
+                editor.apply();
                 SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
                 mFirebaseAnalytics.logEvent("voip_init_success",bundle);
-
             }
             @Override
             public void onFailure(@NonNull InitException initException) {
@@ -314,7 +325,10 @@ public class CleverTapSignedCall {
                         + "\n error explanation: " + initException.getExplanation());
                 System.out.println("failed signed call init");
                 mFirebaseAnalytics.logEvent("voip_init_failed",bundle);
-                useFallbackDialer += 2;
+                SharedPreferences.Editor editor = sharedPrefs.edit();
+                editor.putBoolean("SIGNED_CALL_INITIALIZED", false);
+                editor.putInt("USE_FALLBACK_DIALER", 2);
+                editor.apply();
             }
         };
         List<MissedCallAction> missedCallActionsList = new ArrayList<>();
@@ -322,64 +336,76 @@ public class CleverTapSignedCall {
         missedCallActionsList.add(new MissedCallAction("dismiss", "Dismiss"));
         SignedCallScreenBranding callScreenBranding = new SignedCallScreenBranding(
             context.getString(R.string.voip_background), "#ffffff", context.getString(R.string.voip_logo), SignedCallScreenBranding.ButtonTheme.LIGHT, "#FF453A");
-        callScreenBranding.setShowPoweredBySignedCall(false); //set false to hide the label from VoIP call screens. Default value is true. 
+        callScreenBranding.setShowPoweredBySignedCall(false);
 
         SignedCallInitConfiguration initConfiguration = new SignedCallInitConfiguration.Builder(initOptions, false)
                                                             .setSwipeOffBehaviourInForegroundService(SignedCallInitConfiguration.SCSwipeOffBehaviour.PERSIST_CALL)
                                                             .overrideDefaultBranding(callScreenBranding)
-                                                            .networkCheckBeforeOutgoingCallScreen(true)
                                                             .setMissedCallActions(missedCallActionsList)
-                                                            .promptPushPrimer(jsonObjectConfig)
                                                             .setNotificationPermissionRequired(false)
+                                                            // .callScreenOnSignalling(true)
                                                             .build();
         CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
         SignedCallAPI.getInstance().init(context, initConfiguration, cleverTapAPI, signedCallInitListener);
     }
 
     public void destroySignedCall() {
-        useFallbackDialer = 0;
+        SharedPreferences.Editor editor = sharedPrefs.edit();
+        editor.putBoolean("SIGNED_CALL_INITIALIZED", false);
+        editor.putInt("USE_FALLBACK_DIALER", 0);
+        editor.putInt("VOIP_CALL_ATTEMPTS", 0);
+        editor.apply();
         SignedCallAPI.getInstance().disconnectSignallingSocket(context);
         SignedCallAPI.getInstance().logout(context);
     }
 
     public void showCustomBottomSheet(boolean isDriver) {
-        
-    activity.runOnUiThread(() -> {
-
-            if (activity == null || context == null) return;
-
-            if (bottomSheetDialog != null && bottomSheetDialog.isShowing()) {
-                return; 
-            }
-            // LayoutInflater inflater = LayoutInflater.from(activity);
-            LayoutInflater inflater = activity.getLayoutInflater();
-
-            int resourceValue = isDriver ? R.layout.bottom_sheet_permission_callmiss_driver : in.juspay.mobility.app.R.layout.bottom_sheet_permission;
-            ConstraintLayout constraintLayout = (ConstraintLayout) inflater.inflate(resourceValue, null);
-        
-            bottomSheetDialog = new BottomSheetDialog(activity);
-            bottomSheetDialog.setContentView(constraintLayout);
-            bottomSheetDialog.setCancelable(false);
-        
-            Button btnGoToSettings = constraintLayout.findViewById(R.id.btn_go_to_settings);
-            Button btnCancel = constraintLayout.findViewById(R.id.btn_cancel);
-        
-            btnGoToSettings.setOnClickListener(v -> {
-                bottomSheetDialog.dismiss();
-                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                Uri uri = Uri.fromParts("package", activity.getPackageName(), null);
-                intent.setData(uri);
-                activity.startActivity(intent);
-            });
-        
-            btnCancel.setOnClickListener(v -> bottomSheetDialog.dismiss());
-            bottomSheetDialog.show();
+        if (activity == null || context == null) return;
+        activity.runOnUiThread(() -> {
+                if (bottomSheetDialog != null && bottomSheetDialog.isShowing()) {
+                    return; 
+                }
+                LayoutInflater inflater = activity.getLayoutInflater();
+                int resourceValue = isDriver ? R.layout.bottom_sheet_permission_callmiss_driver : R.layout.bottom_sheet_permission;
+                ConstraintLayout constraintLayout = (ConstraintLayout) inflater.inflate(resourceValue, null);
+                bottomSheetDialog = new BottomSheetDialog(activity);
+                bottomSheetDialog.setContentView(constraintLayout);
+                bottomSheetDialog.setCancelable(false);
+                Button btnGoToSettings = constraintLayout.findViewById(R.id.btn_go_to_settings);
+                Button btnCancel = constraintLayout.findViewById(R.id.btn_cancel);
+                btnGoToSettings.setOnClickListener(v -> {
+                    bottomSheetDialog.dismiss();
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    Uri uri = Uri.fromParts("package", activity.getPackageName(), null);
+                    intent.setData(uri);
+                    activity.startActivity(intent);
+                });
+                btnCancel.setOnClickListener(v -> bottomSheetDialog.dismiss());
+                bottomSheetDialog.show();
         });
 
     }
-        
+    private void updateCallAttempts(int increment) {
+        int callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 4);
+        sharedPrefs.edit().putInt("VOIP_CALL_ATTEMPTS", callAttempts + increment).apply();
+        Log.d("signedcall", "Updated callAttempts: " + (callAttempts + increment));
+    }
     
+    private void updateFallbackDialer() {
+        sharedPrefs.edit().putInt("USE_FALLBACK_DIALER", 2).apply();
+        Log.d("signedcall", "Fallback dialer updated");
+    }
 
+    private void sendJavaScriptCallback(String callback, String status, String rideId, int errorCode, boolean isDriver, String networkType, String networkQuality, String merchantId) {
+        String javascript = String.format(Locale.ENGLISH,
+                "window.callUICallback('%s', '%s', '%s', %d, %d, '%s', '%s', '%s');",
+                callback, status, rideId, errorCode, isDriver ? 1 : 0, networkType, networkQuality, merchantId);
+        if (bridgeComponent != null) {
+            bridgeComponent.getJsCallback().addJsToWebView(javascript);
+        }
+        Log.d("signedcall", "JavaScript callback sent: " + javascript);
+    }
+    
     public void signedCallListener(){
         SignedCallAPI.getInstance().registerVoIPCallStatusListener(new SCVoIPCallStatusListener() {
             @Override
@@ -391,83 +417,57 @@ public class CleverTapSignedCall {
                 VoIPCallStatus callStatus = callStatusDetails.getCallStatus();
                 CallDetails callDetails = callStatusDetails.getCallDetails();
                 boolean isDriver = callDetails.calleeCuid.contains("driver");
+                String finalNetworkType = getNetworkType();
+                String finalNetworkQuality = getNetworkQuality();
+
                 if (direction.equals(SCCallStatusDetails.CallDirection.OUTGOING)) {
                     //Handle events for initiator of the call
-                    if (callStatus == VoIPCallStatus.CALL_IS_PLACED) {
-                        // When the call is successfully placed
-                    }  else if (callStatus == VoIPCallStatus.CALL_RINGING) {
-                        // When the call starts ringing on the receiver's device
-                    } else if (callStatus == VoIPCallStatus.CALL_CANCELLED) {
-                        callAttempts++;
-                        // When the call is cancelled from the initiator's end
+                    if (callStatus == VoIPCallStatus.CALL_CANCELLED) {
+                        updateCallAttempts(1);
                     } else if (callStatus == VoIPCallStatus.CALL_CANCELLED_DUE_TO_RING_TIMEOUT) {
-                        callAttempts+=2;
-                        // When the call is call is cancelled due to a ring timeout. 
-                        // This event is reported when the SDK fails to establish communication with the receiver, often due to an offline device or a device with low bandwidth.
+                        sendJavaScriptCallback(callback, "CALL_CANCELLED_DUE_TO_RING_TIMEOUT", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                        updateCallAttempts(3);
                     } else if (callStatus == VoIPCallStatus.CALL_DECLINED) {
-                        callAttempts++;
-                        // When the call is declined from the receiver's end
+                        sendJavaScriptCallback(callback, "CALL_DECLINED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                        updateCallAttempts(2);
                     } else if (callStatus == VoIPCallStatus.CALL_MISSED) {
-                        callAttempts++;
-                        // When the call is missed at the receiver's end
-                    } else if (callStatus == VoIPCallStatus.CALL_ANSWERED) {
-                        // When the call is picked up by the receiver
-                    } else if (callStatus == VoIPCallStatus.CALL_IN_PROGRESS) {
-                        // When the connection to the receiver is established
+                        updateCallAttempts(2);
                     } else if (callStatus == VoIPCallStatus.CALL_OVER) {
-                        // When the call has been disconnected
-                    } else if (callStatus == VoIPCallStatus.CALLEE_BUSY_ON_ANOTHER_CALL) {
-                        // When the receiver is busy on another call(includes both VoIP or PSTN)
-                    }  else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_BUSY_ON_VOIP) {
-                        // When the receiver is busy in a VoIP call
-                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_BUSY_ON_PSTN) {
-                        // When the receiver is busy in a PSTN call
+                        sendJavaScriptCallback(callback, "CALL_OVER", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
                     } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_LOGGED_OUT_CUID) {
-                        useFallbackDialer+=2;
+                        updateFallbackDialer();
                         showDialer(phone);
-                        // When the receiver's cuid is logged out and logged in with different cuid  
                     } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED) {
-                        useFallbackDialer+=2;
+                        updateFallbackDialer();
+                        sendJavaScriptCallback(callback, "CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
                         showDialer(phone);
-
-                        // When the receiver's Notifications Settings are disabled from application settings
-                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
-                        //fALLBACK TO EXOTEL - better would be next time call should go through exotel not this one
-                       useFallbackDialer+=2;
+                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED || callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
+                        updateFallbackDialer();
+                        sendJavaScriptCallback(callback, "CALLEE_MICROPHONE_PERMISSION_BLOCKED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
                         showDialer(phone);
-                        // When the Microphone permission is denied or blocked while receiver answers the call
-                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
-                        //fALLBACK TO EXOTEL
-                       useFallbackDialer+=2;
-                        showDialer(phone);
-                        // When the microphone permission is blocked at the receiver's end.
                     } else if (callStatus == VoIPCallStatus.CALL_FAILED_DUE_TO_INTERNAL_ERROR) {
-                        useFallbackDialer+=2;
+                        updateFallbackDialer();
                         showDialer(phone);
-
-                        // if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                        //     showCustomBottomSheet();
-                        // }
-                        // When the call fails after signalling. Possible reasons could include low internet connectivity, low RAM available on device, SDK fails to set up the voice channel within the time limit
                     }
                 } else if (direction.equals(SCCallStatusDetails.CallDirection.INCOMING)) {
                         //Handle events for receiver of the call
-                        if (callStatus == VoIPCallStatus.CALL_MISSED) {
-                            // When the call is missed at the receiver's end
-                            if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                showCustomBottomSheet(isDriver);
-                            }
-                        } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
-                            // When the Microphone permission is denied or blocked while receiver answers the call
-                            if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                showCustomBottomSheet(isDriver);
-                            }
-                        } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
-                            // When the microphone permission is blocked at the receiver's end.
-                            if (context != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                showCustomBottomSheet(isDriver);
-                            }
-                        } 
+                    if (callStatus == VoIPCallStatus.CALL_MISSED) {
+                        if (context != null && (ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+                            showCustomBottomSheet(isDriver);
+                        }
+                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
+                        if (context != null && (ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+                            showCustomBottomSheet(isDriver);
+                        }
+                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
+                        if (context != null && (ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+                            showCustomBottomSheet(isDriver);
+                        }
+                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED) {
+                        if (context != null && (ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)) {
+                            showCustomBottomSheet(isDriver);
+                        }
+                    }
                 }
              }
         });

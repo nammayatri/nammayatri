@@ -244,8 +244,9 @@ foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
-foreign import voipDialer :: String -> Boolean -> String -> Boolean -> Unit
+foreign import voipDialer :: forall action. String -> Boolean -> String -> Boolean -> (action -> Effect Unit) -> (String -> String -> String -> Int -> Int -> String -> String -> String -> action) -> Effect Unit
 foreign import initSignedCall :: String -> Boolean -> Unit
+foreign import isSignedCallInitialized :: Boolean
 foreign import destroySignedCall :: Unit -> Unit
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit

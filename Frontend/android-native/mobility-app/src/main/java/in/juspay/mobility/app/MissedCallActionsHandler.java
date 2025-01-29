@@ -27,6 +27,8 @@ import com.clevertap.android.signedcall.models.MissedCallNotificationOpenResult;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import in.juspay.hyper.core.BridgeComponents;
+
 
 public class MissedCallActionsHandler implements MissedCallNotificationOpenedHandler {
     private Context context;
@@ -45,7 +47,7 @@ public class MissedCallActionsHandler implements MissedCallNotificationOpenedHan
 
         switch (actionId) {
             case "callback":
-                cleverTapSignedCall.voipDialer(result.callDetails.callerCuid,isDriver,CleverTapSignedCall.phone,true);
+                cleverTapSignedCall.voipDialer(result.callDetails.callerCuid,isDriver,CleverTapSignedCall.phone,true, "push",null);
 //                makeSignedCall(context,result);
                 break;
             case "dismiss":

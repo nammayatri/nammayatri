@@ -78,6 +78,7 @@ import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessa
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
+import Debug (spy)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
@@ -2334,11 +2335,12 @@ currentRideFlow activeRideResp isActiveRide = do
             lastStopAddressMod <- maybe (pure Nothing) (\decodedLastStopAddress' -> do 
               lastStopMod <- translateString decodedLastStopAddress' 500
               pure $ Just lastStopMod)  decodeLastStopAddress
-
-            setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
-            when state.data.config.voipDialerSwitch do
+            let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+            if (voipConfig.driver.enableVoipFeature) then do
               void $ pure $ JB.initSignedCall activeRide.id true
-            
+            else pure unit
+            setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
+          
             -- Night Ride Safety PopUp 
             when (activeRide.disabilityTag == Just ST.SAFETY) $ do 
               let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"

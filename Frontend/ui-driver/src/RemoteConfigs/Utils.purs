@@ -231,6 +231,18 @@ defaultCoinsConfig = {
   coinsValidTill : 150
 }
 
+defaultVoipConfig :: VoipConfig
+defaultVoipConfig = {
+  customer : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  },
+  driver : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  }
+}
+
 defaultLocationUpdateServiceConfig :: LocationUpdateServiceConfig
 defaultLocationUpdateServiceConfig = {
   minDisplacement : "25.0",
@@ -244,6 +256,12 @@ getCoinsConfigData :: String -> CoinsConfig
 getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
+    getCityBasedConfig value $ toLower city
+
+getDriverVoipConfig :: String -> VoipConfig
+getDriverVoipConfig city = do
+    let config = fetchRemoteConfigString "voip_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig
     getCityBasedConfig value $ toLower city
 
 getLocationUpdateServiceConfig :: String -> LocationUpdateServiceConfig

@@ -135,6 +135,7 @@ import PrestoDOM.List
 import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
+import RemoteConfig.Utils (getCustomerVoipConfig)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache, setValueToCache, getFromCache, setInCache, removeValueFromCache)
@@ -1526,6 +1527,24 @@ eval (DriverReachedDestinationAction driverReachedDestinationTime) state =
         continue state { data { driverInfoCardState { destinationReached = true } } }
     else continue state
 
+eval (VOIPCallBack cb status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+  let req = {
+      callStatus : status,
+      rideId : rideId,
+      errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,
+      userType : if (driverFlag == 0) then "DRIVER" else "RIDER",
+      networkType : networkType,
+      networkQuality : networkStrength,
+      merchantId : merchantId,
+      merchantOperatingCity : getValueToLocalStore CUSTOMER_LOCATION
+    }
+  continueWithCmd state [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+      resp :: (Either ErrorResponse API.APISuccessResp) <-  HelpersAPI.callApi $ API.VoipCallReq req
+      pure unit
+    pure NoAction
+  ]
+
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
                 then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
@@ -2086,11 +2105,20 @@ eval (ShowCallDialer item) state = do
               if state.data.driverInfoCardState.bppRideId /= "" 
               then state.data.driverInfoCardState.bppRideId 
               else ""
-        if driverCuid /= "" 
-          then do
-            void $ pure $ JB.voipDialer driverCuid false (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber) false
-            continue state
-        else callDriver state "ANONYMOUS" 
+        let phoneNum = 
+              if state.data.driverInfoCardState.merchantExoPhone == "" 
+              then fromMaybe "" state.data.driverInfoCardState.driverNumber
+              else if STR.take 1 state.data.driverInfoCardState.merchantExoPhone == "0" 
+                   then state.data.driverInfoCardState.merchantExoPhone 
+                   else "0" <> state.data.driverInfoCardState.merchantExoPhone
+        let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+        if ((driverCuid /= "" && voipConfig.customer.enableVoipCalling))
+          then continueWithCmd state [ do
+            push <- getPushFn Nothing "HomeScreen"
+            JB.voipDialer driverCuid false phoneNum false push $ VOIPCallBack
+            pure CloseShowCallDialer
+          ]
+        else callDriver state "ANONYMOUS"
     DIRECT_CALLER -> callDriver state "DIRECT"
 
 eval (DriverInfoCardActionController (DriverInfoCardController.StartLocationTracking item)) state = continueWithCmd state [do pure $ StartLocationTracking item]

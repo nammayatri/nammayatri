@@ -178,6 +178,7 @@ import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller as SafetyEducati
 import Screens.NammaSafetyFlow.Components.SafetyUtils
 -- import Screens.NammaSafetyFlow.Controller as NammaSafetyFlow
 import RemoteConfig as RC
+import RemoteConfig.Utils (getCustomerVoipConfig)
 import Engineering.Helpers.RippleCircles (clearMap)
 import Data.Array (groupBy, fromFoldable, singleton, sort)
 import Data.Foldable (maximumBy)
@@ -2033,6 +2034,10 @@ homeScreenFlow = do
         homeScreenFlow
       else do
         lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+        let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+        if (voipConfig.customer.enableVoipFeature) then do 
+          void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
+        else pure unit
         homeScreenFlow
     CANCEL_RIDE_REQUEST state cancelType -> do
       let
