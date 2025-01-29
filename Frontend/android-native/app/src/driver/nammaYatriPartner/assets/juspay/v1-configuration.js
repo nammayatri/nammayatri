@@ -279,11 +279,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724900",
         "languageKey" : "TE_IN",
         "showScheduledRides" : false,
-        "showDriverReferral" : false,
+        "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image",
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,
@@ -291,8 +291,8 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList": ["AutoCategory", "BikeCategory"],
-          "enableCabsSubscriptionView" : false,
+          "variantList" : [],
+          "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
         "showEarningSection" : true,
@@ -301,11 +301,24 @@ window.getMerchantConfig = function () {
           , "customerAppId" : "in.mobility.manayatri"
           , "driverAppId" : "in.mobility.manayatripartner"
         },
-        "waitingCharges" : 1,
-        "waitingChargesConfig" : defWaitingChargesConfig,
+        "waitingCharges" : 2.00,
+        "waitingChargesConfig" : {
+          "cab" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          },
+          "auto" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 2.0
+          },
+          "bike" : {
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
+          }
+        },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage" : "18",
+        "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
