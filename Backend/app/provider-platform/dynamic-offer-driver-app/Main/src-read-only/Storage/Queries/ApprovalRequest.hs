@@ -6,7 +6,6 @@ module Storage.Queries.ApprovalRequest (module Storage.Queries.ApprovalRequest, 
 
 import qualified Data.Text
 import qualified Domain.Types.ApprovalRequest
-import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,11 +22,6 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ApprovalRequest.ApprovalRequest] -> m ())
 createMany = traverse_ create
-
-findByStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.ApprovalRequest.RequestStatus -> m ([Domain.Types.ApprovalRequest.ApprovalRequest]))
-findByStatus requestorId status = do findAllWithKV [Se.And [Se.Is Beam.requestorId $ Se.Eq (Kernel.Types.Id.getId requestorId), Se.Is Beam.status $ Se.Eq status]]
 
 updateStatusWithReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

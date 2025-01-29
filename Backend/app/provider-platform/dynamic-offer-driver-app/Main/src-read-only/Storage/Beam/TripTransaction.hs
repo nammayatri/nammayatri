@@ -49,6 +49,6 @@ instance B.Table TripTransactionT where
 
 type TripTransaction = TripTransactionT Identity
 
-$(enableKVPG ''TripTransactionT ['id] [])
+$(enableKVPG ''TripTransactionT ['id] [['driverId]])
 
 $(mkTableInstances ''TripTransactionT "trip_transaction")

@@ -72,6 +72,7 @@ TripTransaction:
 
   constraints:
     id: PrimaryKey
+    driverId: SecondaryKey
 
   beamFields:
     startLocation:
@@ -164,17 +165,13 @@ ApprovalRequest:
 
   constraints:
     id: PrimaryKey
+    requesteeId: "!SecondaryKey"
 
   queries:
     updateStatusWithReason:
       kvFunction: updateOneWithKV
       params: [status, reason]
       where: id
-
-    findByStatus:
-      kvFunction: findAllWithKV
-      where:
-        and: [requestorId, status]
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
