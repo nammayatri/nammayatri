@@ -2036,7 +2036,7 @@ homeScreenFlow = do
         lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
         if (voipConfig.customer.enableVoipFeature) then do 
-          void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
+          void $ pure $ JB.initSignedCall state.data.driverInfoCardState.rideId false
         else pure unit
         homeScreenFlow
     CANCEL_RIDE_REQUEST state cancelType -> do
