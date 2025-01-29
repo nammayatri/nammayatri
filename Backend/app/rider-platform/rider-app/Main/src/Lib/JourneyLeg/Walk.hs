@@ -11,6 +11,7 @@ import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
 import SharedLogic.Search
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 
 instance JT.JourneyLeg WalkLegRequest m where
@@ -57,6 +58,7 @@ instance JT.JourneyLeg WalkLegRequest m where
 
   cancel (WalkLegRequestCancel legData) = do
     QWalkLeg.updateIsCancelled legData.walkLegId (Just True)
+    QJourneyLeg.updateIsDeleted (Just True) (Just legData.walkLegId.getId)
   cancel _ = throwError (InternalError "Not supported")
 
   isCancellable ((WalkLegRequestIsCancellable legData)) = do
