@@ -174,6 +174,12 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
+        ksDriver {
+            applicationId "in.mobility.keralasavaari"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KL\""
+            dimension "app"
+        }
         nyDriver {
             applicationId "in.juspay.nammayatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
@@ -246,6 +252,7 @@ android {
         nyDriver.setRoot('src/driver/nammaYatriPartner')
         myDriver.setRoot('src/driver/manaYatriPartner')
         oyDriver.setRoot('src/driver/odishaYatriPartner')
+        ksDriver.setRoot('src/driver/keralaSavaariPartner')
         bridgeDriver.setRoot('src/driver/bridgeDriver')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
@@ -265,6 +272,7 @@ android {
         passCulturePartner.res.srcDir('src/driver/common/res')
         oyUser.res.srcDir('src/user/common/res')
         oyDriver.res.srcDir('src/driver/common/res')
+        ksDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -327,6 +335,7 @@ dependencies {
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')
     oyDriverImplementation project(path: ':mobility-driver')
+    ksDriverImplementation project(path: ':mobility-driver')
     bridgeDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
