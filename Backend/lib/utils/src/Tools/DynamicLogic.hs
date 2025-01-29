@@ -19,15 +19,15 @@ getConfigVersion ::
   BeamFlow m r =>
   Id MerchantOperatingCity ->
   Maybe [LYT.ConfigVersionMap] ->
-  LYT.ConfigType ->
+  LYT.LogicDomain ->
   m Int
-getConfigVersion merchantOpCityId mbConfigInExperimentVersions configType = do
+getConfigVersion merchantOpCityId mbConfigInExperimentVersions domain = do
   case mbConfigInExperimentVersions of
     Nothing -> do
-      mbVersion <- selectVersionForUnboundedConfigs merchantOpCityId (LYT.CONFIG configType)
+      mbVersion <- selectVersionForUnboundedConfigs merchantOpCityId domain
       return $ fromMaybe 1 mbVersion
     Just configInExperimentVersions -> do
-      let configVersionMap = find (\a -> a.config == configType) configInExperimentVersions
+      let configVersionMap = find (\a -> a.config == domain) configInExperimentVersions
       case configVersionMap of
         Nothing -> return 1
         Just versionMap -> return versionMap.version
@@ -36,16 +36,16 @@ getConfigLogic ::
   BeamFlow m r =>
   Id MerchantOperatingCity ->
   Int ->
-  LYT.ConfigType ->
+  LYT.LogicDomain ->
   m [A.Value]
-getConfigLogic merchantOpCityId version configType = do
-  baseLogics <- DALE.findByDomainAndVersion (LYT.CONFIG configType) 1
-  when (null baseLogics) $ logError $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configType: " <> show configType <> " and version: 1"
+getConfigLogic merchantOpCityId version domain = do
+  baseLogics <- DALE.findByDomainAndVersion domain 1
+  when (null baseLogics) $ logError $ "Base logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain <> " and version: 1"
   case version of
     1 -> return $ baseLogics <&> (.logic)
     _ -> do
-      experimentLogic <- DALE.findByDomainAndVersion (LYT.CONFIG configType) version
-      when (null experimentLogic) $ logError $ "Experiment logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and configType: " <> show configType <> " and version: " <> show version
+      experimentLogic <- DALE.findByDomainAndVersion domain version
+      when (null experimentLogic) $ logError $ "Experiment logic not found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain <> " and version: " <> show version
       let logics = baseLogics <> experimentLogic
       return $ logics <&> (.logic)
 
@@ -136,5 +136,6 @@ getConfigVersionMapForStickiness merchantOpCityId = do
     getVersion now domain = do
       mbVersion <- selectAppDynamicLogicVersion merchantOpCityId domain now
       case (mbVersion, domain) of
-        (Just version, CONFIG cfgType) -> return $ Just $ ConfigVersionMap cfgType version
+        (Just version, DRIVER_CONFIG cfg) -> return $ Just $ ConfigVersionMap (DRIVER_CONFIG cfg) version
+        (Just version, RIDER_CONFIG cfg) -> return $ Just $ ConfigVersionMap (RIDER_CONFIG cfg) version
         _ -> return Nothing

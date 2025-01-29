@@ -11,6 +11,7 @@ import qualified Data.Text.Encoding as DTE
 import qualified Data.Text.Lazy as DTE
 import qualified Data.Text.Lazy.Encoding as DTLE
 import qualified Data.Time.Format as Time
+import qualified Data.Vector as V
 import qualified Data.Vector as Vector
 import JsonLogic
 import Kernel.Prelude
@@ -29,6 +30,28 @@ userIdField = "userId"
 
 getUserIdsQueryName :: Text
 getUserIdsQueryName = "getUserIds"
+
+baseElementPatch :: A.Value
+baseElementPatch =
+  A.object
+    [ "cat"
+        A..= A.Array
+          ( V.fromList
+              [ A.object
+                  [ "config"
+                      A..= A.object
+                        [ "var" A..= A.String "config"
+                        ]
+                  ],
+                A.object
+                  [ "identifier"
+                      A..= A.object
+                        [ "var" A..= A.String "identifier"
+                        ]
+                  ]
+              ]
+          )
+    ]
 
 decodeTextToValue :: Text -> Either String Value
 decodeTextToValue text =
