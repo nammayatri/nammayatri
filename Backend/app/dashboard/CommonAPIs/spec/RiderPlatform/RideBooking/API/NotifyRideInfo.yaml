@@ -1,0 +1,34 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Ride: "rider-app"
+
+module: NotifyRideInfo
+
+types:
+  NotificationType:
+    - enum: "WHATSAPP,SMS"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+  NotifyRideInfoRequest:
+    - notificationType: NotificationType
+    - rideId: Id Ride
+    - derive: "'HideSecrets"
+
+
+
+apis:
+  - POST:  # NotifyRideInfoAPI
+      endpoint: /notifyRideInfo/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: NotifyRideInfoRequest
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: NotifyRideInfo NotifyRideInfoEndpoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS NOTIFYRIDEINFO
