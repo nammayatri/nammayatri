@@ -2,6 +2,7 @@
 
 module Lib.JourneyLeg.Walk where
 
+import Domain.Types.Trip as DTrip
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -74,7 +75,7 @@ instance JT.JourneyLeg WalkLegRequest m where
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
     toLocation <- legData.toLocation & fromMaybeM (InvalidRequest "ToLocation of walkleg journey data is missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
-    let (statusChanged, newStatus) = updateJourneyLegStatus req.riderLastPoints (locationToLatLng toLocation) status req.isLastJustCompleted
+    let (statusChanged, newStatus) = updateJourneyLegStatus DTrip.Walk req.riderLastPoints (locationToLatLng toLocation) status req.isLastCompleted
     when statusChanged $ do
       let walkLegStatus = JT.castWalkLegStatusFromLegStatus newStatus
       QWalkLeg.updateStatus walkLegStatus req.walkLegId

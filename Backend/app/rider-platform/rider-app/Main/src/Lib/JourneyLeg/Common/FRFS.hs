@@ -13,6 +13,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.Station
+import Domain.Types.Trip as DTrip
 import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -34,8 +35,8 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Station as QStation
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
-getState searchId riderLastPoints isLastJustCompleted = do
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
+getState mode searchId riderLastPoints isLastCompleted = do
   mbBooking <- QTBooking.findBySearchId searchId
   case mbBooking of
     Just booking -> do
@@ -68,8 +69,8 @@ getState searchId riderLastPoints isLastJustCompleted = do
     processOldStatus mbOldStatus toStationId = do
       mbToStation <- QStation.findById toStationId
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
-      let oldStatus = fromMaybe (if isLastJustCompleted then JPT.Ongoing else JPT.InPlan) mbOldStatus
-      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus riderLastPoints latLong oldStatus isLastJustCompleted) mbToLatLong
+      let oldStatus = fromMaybe (if isLastCompleted then JPT.Ongoing else JPT.InPlan) mbOldStatus
+      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted) mbToLatLong
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> m JT.LegInfo
 getInfo searchId fallbackFare = do

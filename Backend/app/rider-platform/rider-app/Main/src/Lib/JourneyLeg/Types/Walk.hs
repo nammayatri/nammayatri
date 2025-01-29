@@ -18,7 +18,7 @@ data WalkLegRequestSearchData = WalkLegRequestSearchData
 data WalkLegRequestGetStateData = WalkLegRequestGetStateData
   { walkLegId :: Id DWalkLeg.WalkLegMultimodal,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastJustCompleted :: Bool
+    isLastCompleted :: Bool
   }
 
 newtype WalkLegRequestGetInfoData = WalkLegRequestGetInfoData

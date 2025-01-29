@@ -3,6 +3,7 @@
 module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -32,7 +33,7 @@ instance JT.JourneyLeg BusLegRequest m where
   isCancellable (BusLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (BusLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
+  getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare

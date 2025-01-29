@@ -4,6 +4,7 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.Journey
 import Domain.Types.Location
+import Domain.Types.Trip
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
@@ -41,14 +42,19 @@ getLastThreePoints journeyId = do
   let thirtySecondsAgo = 30
   return (take 3 $ filter (\ApiTypes.RiderLocationReq {..} -> diffUTCTime currentTime currTime <= intToNominalDiffTime thirtySecondsAgo) points)
 
-updateJourneyLegStatus :: [ApiTypes.RiderLocationReq] -> LatLong -> JLT.JourneyLegStatus -> Bool -> (Bool, JLT.JourneyLegStatus)
-updateJourneyLegStatus recentLocations endLatLang currentStatus isLastJustCompleted = do
-  let arrivedThreshold = 50
-  let finishingThreshold = 100
+updateJourneyLegStatus :: MultimodalTravelMode -> [ApiTypes.RiderLocationReq] -> LatLong -> JLT.JourneyLegStatus -> Bool -> (Bool, JLT.JourneyLegStatus)
+updateJourneyLegStatus travelMode recentLocations endLatLang currentStatus isLastCompleted = do
+  let (arrivedThreshold, finishingThreshold) =
+        case travelMode of
+          Walk -> (50, 100)
+          Subway -> (150, 400)
+          Metro -> (150, 400)
+          Bus -> (100, 300)
+          Taxi -> (50, 100)
   case currentStatus of
     JLT.Ongoing -> checkThreshold finishingThreshold JLT.Finishing
     JLT.Finishing -> checkThreshold arrivedThreshold JLT.Completed
-    JLT.InPlan -> if isLastJustCompleted then (True, JLT.Ongoing) else (False, currentStatus)
+    JLT.InPlan -> if isLastCompleted then (True, JLT.Ongoing) else (False, currentStatus)
     JLT.Completed -> (False, currentStatus) -- No change once the leg is completed
     _ -> (False, currentStatus)
   where

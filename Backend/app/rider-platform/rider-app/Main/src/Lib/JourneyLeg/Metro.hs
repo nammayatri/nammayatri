@@ -3,6 +3,7 @@
 module Lib.JourneyLeg.Metro where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -26,7 +27,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   isCancellable (MetroLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (MetroLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
+  getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare

@@ -68,7 +68,7 @@ newtype TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
   { searchId :: Id DSR.SearchRequest,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastJustCompleted :: Bool
+    isLastCompleted :: Bool
   }
 
 data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData

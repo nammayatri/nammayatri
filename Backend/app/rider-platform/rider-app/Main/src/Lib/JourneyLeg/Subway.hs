@@ -3,6 +3,7 @@
 module Lib.JourneyLeg.Subway where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -26,7 +27,7 @@ instance JT.JourneyLeg SubwayLegRequest m where
   isCancellable ((SubwayLegRequestIsCancellable _legData)) = return $ JT.IsCancellableResponse {canCancel = False}
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (SubwayLegRequestGetState req) = CFRFS.getState req.searchId req.riderLastPoints req.isLastJustCompleted
+  getState (SubwayLegRequestGetState req) = CFRFS.getState DTrip.Subway req.searchId req.riderLastPoints req.isLastCompleted
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (SubwayLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare
