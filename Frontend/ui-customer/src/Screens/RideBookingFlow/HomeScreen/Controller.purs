@@ -509,7 +509,9 @@ eval (EditLocation isEditingPickup) state = do
         continue state
       else do
         void $ pure $ updateLocalStage EditPickUpLocation
-        exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
+        if state.data.fareProductType == FPT.DELIVERY then
+          exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation, isSource = Just true}}
+        else exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
     ST.Destination -> do
       void $ pure $ deleteValueFromLocalStore TRACKING_ID
       continue state {props {currentStage = EditingDestinationLoc, isSource = Just false, isSearchLocation = SearchLocation}}

@@ -3521,7 +3521,7 @@ deliveryPickupAndDropLocationView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY
+    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && state.props.currentStage /= EditPickUpLocation
     ]
     [ currentLocationView push state $ deliveryPickupLocationConfig state
     , currentLocationView push state $ deliveryDropLocationConfig state
@@ -5404,7 +5404,7 @@ intercityWebView push state  =
 
 pickupLocationConfig :: HomeScreenState -> CurrentLocationConfig
 pickupLocationConfig state =
-  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint && state.data.fareProductType /= FPT.DELIVERY
+  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint && (state.data.fareProductType /= FPT.DELIVERY || state.props.currentStage == EditPickUpLocation)
   in {
         isClickable: state.props.currentStage /= EditPickUpLocation,
         click: GoBackToSearchLocationModal,
