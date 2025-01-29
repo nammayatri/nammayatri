@@ -211,11 +211,11 @@ endTripPopUp state =
       endTripPopUp' = 
         config' {
             primaryText {text = (getString END_RIDE)},
-            secondaryText {text = if checkGovtBus then StringsV2.getStringV2 LT2.send_end_ride_request_to_your_depot else StringsV2.getStringV2 LT2.ending_your_ride_will_stop_tracking},
+            secondaryText {text = if checkPrivateBus then StringsV2.getStringV2 LT2.ending_your_ride_will_stop_tracking else StringsV2.getStringV2 LT2.send_end_ride_request_to_your_depot},
             optionButtonOrientation = "VERTICAL",
             backgroundClickable = false,
             option1 {
-              text = if checkGovtBus then StringsV2.getStringV2 LT2.send_request else StringsV2.getStringV2 LT2.yes_end_ride,
+              text = if checkPrivateBus then StringsV2.getStringV2 LT2.yes_end_ride else StringsV2.getStringV2 LT2.send_request,
               enableRipple = true, 
               width = MATCH_PARENT, 
               margin = Margin 16 0 16 4,
@@ -230,12 +230,12 @@ endTripPopUp state =
               margin = MarginHorizontal 16 16,
               background = Color.white900,
               color = Color.black650,
-              strokeColor = Color.white900
+              strokeColor = if checkPrivateBus then Color.black600 else Color.white900
             }
           }
   in endTripPopUp'
   where
-    checkGovtBus = maybe false (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig
+    checkPrivateBus = maybe false (\(API.BusFleetConfigResp fleetConfig) -> fleetConfig.allowStartRideFromQR) state.data.whereIsMyBusData.fleetConfig
 
 ---------------------------------------- waitingForDepoRespPopUp -----------------------------------------
 waitingForDepoRespPopUp :: ST.HomeScreenState -> PopUpModal.Config
@@ -306,6 +306,40 @@ wmbEndRideRejectedPopUp state =
             }
           }
   in wmbEndRideRejectedPopUp'
+
+---------------------------------------- wmbEndRideSuccessfullPopUp -----------------------------------------
+wmbEndRideSuccessfullPopUp :: ST.HomeScreenState -> PopUpModal.Config
+wmbEndRideSuccessfullPopUp state =
+  let config' = PopUpModal.config
+      wmbEndRideSuccessfullPopUp' = 
+        config' {
+            primaryText {text =  "End Ride!"}, 
+            secondaryText {text = "Your ride has been ended successfully."},
+            option1 {
+              text = StringsV2.getStringV2 LT2.okay, 
+              enableRipple = true, 
+              width = MATCH_PARENT,
+              gravity = CENTER,
+              margin = Margin 16 12 16 4,
+              background = Color.black900,
+              color = Color.yellow900,
+              strokeColor = Color.black900
+              -- layoutGravity = Just "center"
+            },
+            option2 {visibility = false},
+            popUpHeaderConfig = config'.popUpHeaderConfig {
+              visibility= VISIBLE,
+              imageConfig = {
+                visibility: VISIBLE
+              , imageUrl: fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick" 
+              , height : (V 88)
+              , width : (V 88)
+              , margin : (MarginVertical 16 8)
+              , padding : (Padding 0 0 0 0)
+              } 
+            }
+          }
+  in wmbEndRideSuccessfullPopUp'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
 cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config

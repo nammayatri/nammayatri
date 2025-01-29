@@ -340,6 +340,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | WMBEndTrip ST.HomeScreenState
                     | WMBCancelEndTrip ST.HomeScreenState
                     | GoToWMBActiveRide ST.HomeScreenState API.TripTransactionDetails
+                    | WMBTripRefresh ST.HomeScreenState 
 
 data Action = NoAction
             | BackPressed
@@ -1291,8 +1292,10 @@ eval (WMBEndTripModalAC action) state = do
       case endTripStatus of
         _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS 
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID 
           continue state {props{endRidePopUp = false}}
         "AWAITING_APPROVAL" -> exit $ WMBCancelEndTrip state
+        _ | endTripStatus `Array.elem` ["SUCCESS", "ACCEPTED"] -> exit $ WMBTripRefresh state
         _ -> exit $ WMBEndTrip state
     PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
     _ -> continue state
@@ -1303,6 +1306,10 @@ eval (WMBEndTripAC endTripStatus) state =
       void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
       void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
       void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
+      continue state
+    _ | endTripStatus `Array.elem` ["SUCCESS", "ACCEPTED"] -> do
+      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
+      void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
       continue state
     _ -> exit $ WMBEndTrip state
   
