@@ -48,6 +48,7 @@ module Lib.Yudhishthira.Types
     UpdateTagReq (..),
     TagNameValue (..),
     ConfigVersionMap (..),
+    Config (..),
   )
 where
 
@@ -448,3 +449,9 @@ instance HideSecrets RunKaalChakraJobReq where
 
 instance HideSecrets RunKaalChakraJobRes where
   hideSecrets = identity
+
+data Config a = Config
+  { config :: a,
+    extraDimensions :: Maybe Value
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
