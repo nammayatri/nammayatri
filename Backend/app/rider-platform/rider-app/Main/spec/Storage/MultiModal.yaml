@@ -228,7 +228,7 @@ JourneyLeg:
       routeShortName: Maybe Text
       routeColorName : Maybe Text
       routeColorCode : Maybe Text
-      frequency : Maybe Int
+      frequency : Maybe Seconds
     agency:
       agencyGtfsId: Maybe Text
       agencyName: Maybe Text
@@ -263,7 +263,7 @@ JourneyLeg:
     distance: (Kernel.Types.Common.Distance distance distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId fromStopPlatformCode)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId toStopPlatformCode)|E
-    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
+    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode frequency)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E

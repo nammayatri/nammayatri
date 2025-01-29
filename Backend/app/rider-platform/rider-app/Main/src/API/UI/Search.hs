@@ -101,7 +101,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $
       case req of
-        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
+        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance riderConfig.minimumWalkDistance (fromMaybe [] riderConfig.permissibleModes) riderConfig.maxAllowedPublicTransportLegs
         _ -> pure ()
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
 
@@ -110,8 +110,11 @@ multiModalSearch ::
   SearchRequest.SearchRequest ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
+  Meters ->
+  [GeneralVehicleType] ->
+  Int ->
   Flow ()
-multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance = do
+multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs = do
   let transitRoutesReq =
         GetTransitRoutesReq
           { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.origin.gps.lat, longitude = searchReq.origin.gps.lon}}},
@@ -120,7 +123,10 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
             departureTime = searchReq.startTime,
             mode = Nothing,
             transitPreferences = Nothing,
-            transportModes = Nothing
+            transportModes = Nothing,
+            minimumWalkDistance = minimumWalkDistance,
+            permissibleModes = permissibleModes,
+            maxAllowedPublicTransportLegs = maxAllowedPublicTransportLegs
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")

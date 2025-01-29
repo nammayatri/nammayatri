@@ -184,3 +184,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_show_cancellation_rat
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_whatsapp boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN permissible_modes text []  default '{Walk, Bus, MetroRail, Subway}';
+ALTER TABLE atlas_app.rider_config ADD COLUMN minimum_walk_distance integer  default 100;
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_allowed_public_transport_legs integer  default 2;
