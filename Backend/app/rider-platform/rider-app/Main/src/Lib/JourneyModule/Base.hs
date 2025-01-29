@@ -312,7 +312,7 @@ getRemainingLegs ::
   m [JL.LegInfo]
 getRemainingLegs journeyId = do
   journeyLegs <- getAllLegsInfo journeyId
-  let remainingLegs = dropWhile (\leg -> leg.status `notElem` JL.completedStatus) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
+  let remainingLegs = filter (\leg -> if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
 getUnifiedQR :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [JL.LegInfo] -> m JL.UnifiedTicketQR
@@ -370,7 +370,7 @@ cancelLeg ::
   Text ->
   m ()
 cancelLeg journeyLeg cancellationReasonCode = do
-  unless (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
+  when (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show journeyLeg.status
   case journeyLeg.travelMode of
     DTrip.Taxi ->
@@ -413,7 +413,19 @@ cancelRemainingLegs ::
   m ()
 cancelRemainingLegs journeyId = do
   remainingLegs <- getRemainingLegs journeyId
-  results <- forM remainingLegs $ \leg -> try @_ @SomeException (cancelLeg leg "")
+  forM_ remainingLegs $ \leg -> do
+    isCancellable <-
+      case leg.travelMode of
+        DTrip.Taxi -> JL.isCancellable $ TaxiLegRequestIsCancellable TaxiLegRequestIsCancellableData {searchId = (Id leg.searchId)}
+        DTrip.Walk -> JL.isCancellable $ WalkLegRequestIsCancellable WalkLegRequestIsCancellableData {walkLegId = (Id leg.searchId)}
+        DTrip.Metro -> JL.isCancellable $ MetroLegRequestIsCancellable MetroLegRequestIsCancellableData {searchId = (Id leg.searchId)}
+        DTrip.Subway -> JL.isCancellable $ SubwayLegRequestIsCancellable SubwayLegRequestIsCancellableData
+        DTrip.Bus -> JL.isCancellable $ BusLegRequestIsCancellable BusLegRequestIsCancellableData {searchId = (Id leg.searchId)}
+    when (not isCancellable.canCancel) $
+      throwError $ InvalidRequest $ "Cannot cancel leg for leg order: " <> show leg.order
+  results <-
+    forM remainingLegs $ \leg -> do
+      try @_ @SomeException (cancelLeg leg "")
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InternalError $ "Failed to cancel some legs: " <> show failures

@@ -155,9 +155,11 @@ instance JT.JourneyLeg TaxiLegRequest m where
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
-        pricingId <- journeySearchData.pricingId & fromMaybeM (InvalidRequest $ "EstimateId not found for search id: " <> searchReq.id.getId)
-        cancelReq <- mkDomainCancelSearch searchReq.riderId (Id pricingId)
-        DCancel.cancelSearch searchReq.riderId cancelReq
+        case journeySearchData.pricingId of
+          Just pricingId -> do
+            cancelReq <- mkDomainCancelSearch searchReq.riderId (Id pricingId)
+            DCancel.cancelSearch searchReq.riderId cancelReq
+          Nothing -> return ()
         QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
     QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")

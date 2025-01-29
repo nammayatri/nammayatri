@@ -166,6 +166,13 @@ isCancellable searchId = do
   case mbMetroBooking of
     Just metroBooking -> do
       frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId metroBooking.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
-      return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
+      case metroBooking.journeyLegStatus of
+        Just journeyLegStatus -> do
+          let isBookingCancellable = journeyLegStatus `elem` JT.cannotCancelStatus
+          case isBookingCancellable of
+            True -> return $ JT.IsCancellableResponse {canCancel = False}
+            False -> return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
+        Nothing -> do
+          return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
     Nothing -> do
       return $ JT.IsCancellableResponse {canCancel = True}
