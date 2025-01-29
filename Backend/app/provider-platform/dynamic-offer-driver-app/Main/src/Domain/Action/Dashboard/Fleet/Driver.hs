@@ -245,7 +245,6 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
           DTR.EndRide DTR.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
-            unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
             void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval
           _ -> pure ()
       _ -> pure ()
