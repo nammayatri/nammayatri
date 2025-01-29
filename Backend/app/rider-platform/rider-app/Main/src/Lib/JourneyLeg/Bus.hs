@@ -14,7 +14,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId skipBooking bookingAllowed
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId skipBooking bookingAllowed
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do

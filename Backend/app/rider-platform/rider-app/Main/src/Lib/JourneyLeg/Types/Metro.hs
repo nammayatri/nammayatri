@@ -26,6 +26,7 @@ data MetroLegRequestUpdateData = MetroLegRequestUpdateData
 
 data MetroLegRequestConfirmData = MetroLegRequestConfirmData
   { quoteId :: Maybe (Id FRFSQuote),
+    searchId :: Id FRFSSearch.FRFSSearch,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,

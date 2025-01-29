@@ -422,19 +422,13 @@ cancelRemainingLegs journeyId = do
 skipLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
-  Id DJourneyLeg.JourneyLeg ->
+  Int ->
   m ()
-skipLeg journeyId legId = do
+skipLeg journeyId legOrder = do
   allLegs <- getAllLegsInfo journeyId
-  skippingLeg <-
-    find
-      (\leg -> maybe False (\id -> Kernel.Types.Id.Id id == legId) leg.pricingId)
-      allLegs
-      & fromMaybeM (InvalidRequest $ "Leg not found: " <> legId.getId)
-
-  unless (skippingLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
+  skippingLeg <- find (\leg -> leg.order == legOrder) allLegs & fromMaybeM (InvalidRequest $ "Leg not found: " <> show legOrder)
+  when (skippingLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
-
   cancelLeg skippingLeg ""
 
 -- deleteLeg :: JourneyLeg leg m => leg -> m ()

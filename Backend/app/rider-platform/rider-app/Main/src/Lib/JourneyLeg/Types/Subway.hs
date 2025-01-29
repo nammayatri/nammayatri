@@ -25,6 +25,7 @@ data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData
 
 data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
   { quoteId :: Maybe (Id FRFSQuote),
+    searchId :: Id FRFSSearch.FRFSSearch,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,

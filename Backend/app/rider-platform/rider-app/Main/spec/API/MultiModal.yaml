@@ -95,10 +95,10 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess                    # send new leg
 
   - POST:
-      endpoint: multimodal/journey/{journeyId}/leg/{legId}/skip
+      endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/skip
       params:
         journeyId: Id Journey
-        legId: Id JourneyLeg
+        legOrder: Int
       response:
         type: Kernel.Types.APISuccess.APISuccess
 

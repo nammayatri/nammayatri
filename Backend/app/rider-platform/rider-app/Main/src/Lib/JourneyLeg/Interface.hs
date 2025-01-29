@@ -131,6 +131,7 @@ confirm JL.LegInfo {..} =
           MetroLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
+              searchId = Id searchId,
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
@@ -142,6 +143,7 @@ confirm JL.LegInfo {..} =
         SubwayLegRequestConfirm $
           SubwayLegRequestConfirmData
             { skipBooking,
+              searchId = Id searchId,
               bookingAllowed,
               quoteId = Id <$> pricingId,
               personId,
@@ -155,6 +157,7 @@ confirm JL.LegInfo {..} =
           BusLegRequestConfirmData
             { skipBooking,
               bookingAllowed,
+              searchId = Id searchId,
               quoteId = Id <$> pricingId,
               personId,
               merchantId,

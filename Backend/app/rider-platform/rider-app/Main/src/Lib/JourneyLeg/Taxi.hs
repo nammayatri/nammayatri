@@ -11,6 +11,7 @@ import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.ServiceTierType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -92,20 +93,22 @@ instance JT.JourneyLeg TaxiLegRequest m where
     now <- getCurrentTime
     let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 -- 5 minutes buffer
     unless shouldSkipBooking $ do
-      estimateId <- req.estimateId & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")
-      let selectReq =
-            DSelect.DSelectReq
-              { customerExtraFee = Nothing,
-                customerExtraFeeWithCurrency = Nothing,
-                autoAssignEnabled = True,
-                autoAssignEnabledV2 = Just True,
-                paymentMethodId = Nothing,
-                otherSelectedEstimates = Nothing,
-                isAdvancedBookingEnabled = Nothing,
-                deliveryDetails = Nothing,
-                disabilityDisable = Nothing
-              }
-      void $ DSelect.select2' (req.personId, req.merchantId) estimateId selectReq
+      mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
+      estimate <- mbEstimate & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")
+      when (estimate.status == DEstimate.NEW) $ do
+        let selectReq =
+              DSelect.DSelectReq
+                { customerExtraFee = Nothing,
+                  customerExtraFeeWithCurrency = Nothing,
+                  autoAssignEnabled = True,
+                  autoAssignEnabledV2 = Just True,
+                  paymentMethodId = Nothing,
+                  otherSelectedEstimates = Nothing,
+                  isAdvancedBookingEnabled = Nothing,
+                  deliveryDetails = Nothing,
+                  disabilityDisable = Nothing
+                }
+        void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
   confirm _ = throwError (InternalError "Not Supported")
 
   update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()

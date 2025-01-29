@@ -24,6 +24,7 @@ data BusLegRequestSearchData = BusLegRequestSearchData
 
 data BusLegRequestConfirmData = BusLegRequestConfirmData
   { quoteId :: Maybe (Id FRFSQuote),
+    searchId :: Id FRFSSearch.FRFSSearch,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,

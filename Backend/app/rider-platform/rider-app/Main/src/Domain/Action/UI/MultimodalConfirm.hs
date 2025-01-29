@@ -19,7 +19,6 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 -- import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 -- import Domain.Types.SearchRequest
@@ -211,11 +210,11 @@ postMultimodalJourneyLegSkip ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+    Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip (_, _) journeyId journeyLegId = do
-  _ <- JM.skipLeg journeyId journeyLegId
+postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
+  JM.skipLeg journeyId legOrder
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::

@@ -11,7 +11,6 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified Control.Lens
 import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -78,8 +77,8 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "leg"
       :> Capture
-           "legId"
-           (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg)
+           "legOrder"
+           Kernel.Prelude.Int
       :> "skip"
       :> Post
            '[JSON]
@@ -202,7 +201,7 @@ postMultimodalJourneyLegSkip ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg ->
+    Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyLegSkip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegSkip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
