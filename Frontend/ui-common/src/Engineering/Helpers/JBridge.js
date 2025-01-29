@@ -2379,10 +2379,36 @@ export const voipDialer = function (cuid) {
   return function (isDriver) {
     return function (phoneNum) {
       return function (isMissed) {
-        window.JBridge.voipDialer(cuid,isDriver,phoneNum,isMissed);
-      }
-    }
-  }
+        return function (cb) {
+          return function (action) {
+            return function () {
+              const callback = callbackMapper.map(function (result, status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
+                cb(action({
+                  result,  
+                  status,       
+                  rideId,       
+                  errorCode,   
+                  isDriver: driverFlag,
+                  networkType,
+                  networkQuality,
+                  merchantId
+                }))();
+              });
+              if(JBridge.voipDialer) {
+                window.JBridge.voipDialer(cuid, isDriver, phoneNum, isMissed, callback);
+              }
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+export const isSignedCallInitialized = function () {
+  if (JBridge.isSignedCallInitialized) {
+    return JBridge.isSignedCallInitialized();
+  } 
 };
 
 export const initSignedCall = function (cuid) {
