@@ -173,7 +173,7 @@ screen initialState (GlobalState globalState) =
           if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
 
           -- Polling for WMB Active Trip Details at DRIVER ON DUTY and no TRIP_ASSIGNED or TRIP_ACTIVE
-          if (getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isNothing initialState.data.whereIsMyBusData.trip && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "AWAITING_APPROVAL")) 
+          if ((maybe true (\(API.BusFleetConfigResp fleetConfig) -> not $ fleetConfig.allowStartRideFromQR) initialState.data.whereIsMyBusData.fleetConfig) && getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isNothing initialState.data.whereIsMyBusData.trip && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "AWAITING_APPROVAL")) 
             then pollingConfigAndRun push "getActiveWMBTripDetails" getActiveWMBTripDetails
             else pure unit
 
@@ -336,7 +336,7 @@ screen initialState (GlobalState globalState) =
                                   _ -> pure unit
                                 
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideTrackingModalAction (RideTrackingModal.NoAction) else pure unit
-                                if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
+                                if (not initialState.props.routeVisible) && initialState.props.mapRendered && (getValueToLocalStore WMB_END_TRIP_STATUS /= "ACCEPTED") then do
                                   void $ JB.getCurrentPosition push $ ModifyRoute
                                   pure $ JB.removeMarker "ic_vehicle_side"
                                   pure unit
@@ -2607,7 +2607,7 @@ endRidePopView push state =
         if (not $ HU.specialVariantsForTracking FunctionCall) then PopUpModal.view (push <<< PopUpModalAction) $ endRidePopUp state 
         else do
           case endTripStatus of 
-            _ | endTripStatus `DA.elem` ["SUCCESS", "ACCEPTED"] -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
+            _ | endTripStatus `DA.elem` ["SUCCESS", "ACCEPTED"] -> PopUpModal.view (push <<< WMBEndTripModalAC) $ wmbEndRideSuccessfullPopUp state
             "AWAITING_APPROVAL" -> PopUpModal.view (push <<< WMBEndTripModalAC) $ waitingForDepoRespPopUp state
             _ | endTripStatus `DA.elem` ["REVOKED", "REJECTED"] -> PopUpModal.view (push <<< WMBEndTripModalAC) $ wmbEndRideRejectedPopUp state
             _ -> PopUpModal.view (push <<< WMBEndTripModalAC) $ endTripPopUp state
@@ -3666,7 +3666,7 @@ recentBusRideView push state =
         Nothing -> linearLayout[][]
   where
     startBusTripView tripDetails mbSelectedRoute isAssigned = 
-      let title = if isAssigned then StringsV2.getStringV2 LT2.assigned_rides else StringsV2.getStringV2 LT2.recent_ride
+      let title = if isAssigned then StringsV2.getStringV2 LT2.assigned_rides else "Suggested Ride"
           busNumber = tripDetails.vehicleNumber
           busType = tripDetails.vehicleType
           routeNumber = fromMaybe "" $ ((\route -> route ^. _routeInfo ^. _routeCode) <$> mbSelectedRoute)  <|> (Just $ tripDetails.routeInfo ^. _routeCode)

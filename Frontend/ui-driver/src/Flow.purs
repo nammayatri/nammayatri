@@ -138,7 +138,7 @@ import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDri
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Timers (clearTimerWithId)
 import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..))
 import Types.App as TA
@@ -687,7 +687,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide isBusRideActive = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
-            "wmb_fleet_consent " -> void $ pure $ giveFleetConsent
+            "wmb_fleet_consent" -> void $ pure $ giveFleetConsent
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
@@ -2494,7 +2494,9 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
         else (pure unit)
     noActiveBusRidePatch = do
       -- deleteValueFromLocalStore WMB_END_TRIP_STATUS -- TODO@max-keviv: this is creating issue at app reload
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { currentStage = ST.HomeScreen}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { endRidePopUp = false, currentStage = ST.HomeScreen}})
+      void $ pure $ updateLocalStage ST.HomeScreen
+      homeScreenFlow
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -2975,10 +2977,10 @@ homeScreenFlow = do
           void $ pure $ JB.exitLocateOnMap ""   
           currentRideFlow Nothing Nothing Nothing Nothing
         "WMB_TRIP_FINISHED" -> do
-          void $ pure $ removeAllMarkers ""
-          void $ pure $ removeAllPolylines ""
-          void $ updateStage $ HomeScreenStage HomeScreen   
-          currentRideFlow Nothing Nothing Nothing Nothing
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
+          modifyScreenState $ HomeScreenStateType (\state -> state {props {endRidePopUp = true}})
+          homeScreenFlow
         "DRIVER_REQUEST_REJECTED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
@@ -3334,9 +3336,11 @@ homeScreenFlow = do
                                 Just (ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)) -> tripDetails.tripTransactionId
                                 _ -> ""
       (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
+      void $ lift $ lift $ toggleLoader true
       endTripRespOrError <- lift $ lift $ Remote.endTrip tripTransactionId (fromMaybe 0.0 $ Number.fromString lat) (fromMaybe 0.0 $ Number.fromString lon)
       case endTripRespOrError of
-        Left errorPayload ->
+        Left errorPayload -> do
+          void $ lift $ lift $ toggleLoader false
           if(DS.contains (DS.Pattern "already present") errorPayload.response.errorMessage) 
             then do
               setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
@@ -3347,15 +3351,14 @@ homeScreenFlow = do
             deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
             deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
             pure unit
-        Right (API.TripEndResp tripEndResp) ->
+        Right (API.TripEndResp tripEndResp) -> do
+          void $ lift $ lift $ toggleLoader false
           case tripEndResp.result of  
             "SUCCESS" -> do
-              deleteValueFromLocalStore WMB_END_TRIP_STATUS
+              setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
               deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-              -- void $ pure $ removeMarker "ny_ic_bus_nav_on_map"
-              void $ pure $ removeAllMarkers ""
-              void $ pure $ removeAllPolylines ""
-              currentRideFlow Nothing Nothing Nothing Nothing
+              modifyScreenState $ HomeScreenStateType (\state -> state{props{endRidePopUp = true}})
+              homeScreenFlow
             "WAITING_FOR_ADMIN_APPROVAL" -> do 
               setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
               setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
@@ -3387,6 +3390,12 @@ homeScreenFlow = do
           updateStage $ HomeScreenStage ST.RideTracking
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
         else (pure unit)
+    WMB_TRIP_REFRESH _ -> do
+      deleteValueFromLocalStore WMB_END_TRIP_STATUS
+      deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+      void $ pure $ removeAllMarkers ""
+      void $ pure $ removeAllPolylines ""
+      currentRideFlow Nothing Nothing Nothing Nothing
   homeScreenFlow
 
 
@@ -4998,18 +5007,20 @@ startPrivateBusTrip state = do
           RouteInfo routeInfo = route.routeInfo
           vehicleNumberHash = getValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH
       location <- getBusDriverCurrentLocation
+      void $ lift $ lift $ toggleLoader true
       response <- lift $ lift $ Remote.startPrivateBusTrip vehicleNumberHash routeInfo.code (fromMaybe 0.0 $ Number.fromString location.lat) (fromMaybe 0.0 $ Number.fromString location.lon)
       case response of
-        Right _ -> do
+        Right tripDetails -> do
           logBusRideStart
           updateScreenForBusRideStart
-          currentRideFlow Nothing Nothing Nothing Nothing
+          currentRideFlow Nothing Nothing (Just tripDetails) Nothing
         Left error -> handleStartRideError error
     Nothing -> pure unit
 
 startBusRide :: HomeScreenState -> Maybe API.TripTransactionDetails -> FlowBT String Unit
 startBusRide state (Just (TripTransactionDetails trip)) = do
   location <- getBusDriverCurrentLocation
+  void $ lift $ lift $ toggleLoader true
   response <- lift $ lift $ Remote.startTrip 
     trip.tripTransactionId 
     (fromMaybe 0.0 $ Number.fromString location.lat) 
@@ -5037,6 +5048,7 @@ updateScreenForBusRideStart = do
   void $ pure $ hideKeyboardOnNavigation true
   void $ pure $ JB.exitLocateOnMap ""
   void $ updateStage $ HomeScreenStage RideTracking
+  void $ lift $ lift $ toggleLoader false
 
 
 handleStartRideError :: ErrorResponse -> FlowBT String Unit
