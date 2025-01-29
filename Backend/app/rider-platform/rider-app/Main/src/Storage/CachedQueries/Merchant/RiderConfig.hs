@@ -63,14 +63,20 @@ findByMerchantOperatingCityId id mbConfigInExperimentVersions = do
       maybe (return Nothing) (processConfig allLogics version) mbConfig
 
     processConfig allLogics version cfg = do
-      resp <- LYTU.runLogics allLogics cfg
-      case fromJSON resp.result of
-        Success riderConfig -> do
-          cacheRiderConfig version riderConfig
-          return $ Just riderConfig
-        A.Error err -> do
-          logError $ "Error in running logics for rider config: " <> show err
+      let configWrapper = LYT.Config cfg Nothing
+      response <- try @_ @SomeException $ LYTU.runLogics allLogics configWrapper
+      case response of
+        Left e -> do
+          logError $ "Error in running logics for rider config: " <> show e
           return $ Just cfg
+        Right resp -> do
+          case (fromJSON resp.result :: Result (LYT.Config RiderConfig)) of
+            Success result -> do
+              cacheRiderConfig version result.config
+              return $ Just result.config
+            A.Error err -> do
+              logError $ "Error in running logics for rider config: " <> show err
+              return $ Just cfg
 
 cacheRiderConfig :: (CacheFlow m r) => Int -> RiderConfig -> m ()
 cacheRiderConfig version riderConfig = do
