@@ -732,6 +732,7 @@ types:
     - trips: [TripDetails]
     - derive: "'HideSecrets"
   TripTransactionDetail:
+    - tripTransactionId: Id TripTransaction
     - routeCode: Text
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
