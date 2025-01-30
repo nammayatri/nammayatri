@@ -255,6 +255,7 @@ library
       Domain.Types.Extra.TicketBooking
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
+      Domain.Types.GTFS
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
@@ -1002,6 +1003,7 @@ library
     , amazonka
     , amazonka-core
     , amazonka-ses
+    , attoparsec ==0.14.4
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core
@@ -1139,6 +1141,7 @@ executable rider-app-exe
     , amazonka
     , amazonka-core
     , amazonka-ses
+    , attoparsec ==0.14.4
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core

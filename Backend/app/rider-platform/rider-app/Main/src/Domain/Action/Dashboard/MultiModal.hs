@@ -4,9 +4,12 @@ module Domain.Action.Dashboard.MultiModal (postMultiModalMultimodalFrfsDataPrepr
 
 import qualified API.Types.RiderPlatform.Management.MultiModal
 import Domain.Types.Extra.Rollout
-import qualified Domain.Types.Merchant
 -- import qualified Domain.Types.Stage as DTS
 -- import qualified Storage.Queries.Stage as QS
+
+-- import qualified AWS.S3 as S3
+import Domain.Types.GTFS
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Rollout
 import qualified Domain.Types.Version
 import Domain.Types.VersionStageMapping
@@ -69,9 +72,25 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
   now <- getCurrentTime
   rolloutVersions <- QR.findAllByMerchantOperatingCityAndVehicleType (Just $ Kernel.Types.Id.Id req.cityId) req.vehicleType
   oldRolloutVersion <- maybe (throwError $ InternalError $ "No rollout version found for city: " <> show req.cityId <> " and vehicleType: " <> show req.vehicleType) return (listToMaybe <$> filter (\v -> v.versionTag /= req.versionTag) $ rolloutVersions)
-  let updatedOldVersion = Domain.Types.Rollout.Rollout {id = oldRolloutVersion.id, inputDataType = oldRolloutVersion.inputDataType, vehicleType = oldRolloutVersion.vehicleType, versionTag = oldRolloutVersion.versionTag, merchantId = oldRolloutVersion.merchantId, merchantOperatingCityId = oldRolloutVersion.merchantOperatingCityId, createdAt = oldRolloutVersion.createdAt, percentage = 100 - req.rolloutPercent, updatedAt = now}
-  id <- generateGUID
-  let newVersion = Domain.Types.Rollout.Rollout {id, inputDataType = version.inputDataType, vehicleType = req.vehicleType, versionTag = req.versionTag, merchantId = version.merchantId, merchantOperatingCityId = version.merchantOperatingCityId, createdAt = now, percentage = req.rolloutPercent, updatedAt = now}
+  let mbNewRolloutVersion = listToMaybe <$> filter (\v -> v.versionTag == req.versionTag) $ rolloutVersions
+      updatedOldVersion = oldRolloutVersion {Domain.Types.Rollout.percentage = 100 - req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
+  case mbNewRolloutVersion of
+    Nothing -> do
+      id <- generateGUID
+      let newVersion = Domain.Types.Rollout.Rollout {id, inputDataType = version.inputDataType, vehicleType = req.vehicleType, versionTag = req.versionTag, merchantId = version.merchantId, merchantOperatingCityId = version.merchantOperatingCityId, createdAt = now, percentage = req.rolloutPercent, updatedAt = now}
+      void $ QR.create newVersion
+    Just newRolloutVersion -> do
+      let newVersion = newRolloutVersion {Domain.Types.Rollout.percentage = req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
+      void $ QR.updateByPrimaryKey newVersion
   void $ if updatedOldVersion.percentage == 0 then QR.deleteByVersionId updatedOldVersion.id else QR.updateByPrimaryKey updatedOldVersion
-  void $ QR.create newVersion
   return Kernel.Types.APISuccess.Success
+
+-- _validateGTFSData ::
+-- _uploadGTFSData ::
+
+_convertBusGTFSToQueries :: BusGTFS -> m ()
+_convertBusGTFSToQueries _gtfs = do error "Logic yet to be decided"
+
+_convertMetroGTFSToQueries :: MetroGTFS -> m ()
+_convertMetroGTFSToQueries _gtfs = do
+  error "Logic yet to be decided"

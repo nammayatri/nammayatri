@@ -135,6 +135,7 @@ dependencies:
   - jwt
   - insert-ordered-containers
   - mtl
+  - attoparsec ==0.14.4
 
 ghc-options:
   - -fwrite-ide-info
@@ -178,6 +179,7 @@ library:
     - shared-services
     - utils
     - external
+    - attoparsec ==0.14.4
 
 executables:
   rider-app-exe:
