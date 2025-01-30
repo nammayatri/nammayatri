@@ -18,6 +18,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.EmptyDynamicParam

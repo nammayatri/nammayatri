@@ -76,7 +76,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     requestId :: B.C f Kernel.Prelude.Text,
     respondedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse),
+    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse),
     rideFrequencyScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rideRequestPopupDelayDuration :: B.C f Kernel.Types.Common.Seconds,
     searchRequestValidTill :: B.C f Data.Time.LocalTime,

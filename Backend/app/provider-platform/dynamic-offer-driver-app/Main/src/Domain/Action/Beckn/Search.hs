@@ -702,6 +702,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         eligibleForUpgrade = False,
         supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
         supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
+        mbActualQARFromLocGeohash = fullFarePolicy.mbActualQARFromLocGeohash,
+        mbActualQARCity = fullFarePolicy.mbActualQARCity,
         smartTipSuggestion = fullFarePolicy.smartTipSuggestion,
         smartTipReason = fullFarePolicy.smartTipReason,
         merchantId = Just merchantId,
