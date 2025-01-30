@@ -54,17 +54,8 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
     addAllLegs journeyId
     journey <- JM.getJourney journeyId
     legs <- JM.getAllLegsInfo journeyId
-    let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
-    let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-    let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-    return $
-      ApiTypes.JourneyInfoResp
-        { estimatedDuration = journey.estimatedDuration,
-          estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-          estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-          estimatedDistance = journey.estimatedDistance,
-          legs
-        }
+    now <- getCurrentTime
+    return $ generateJourneyInfoResponse journey legs now
   where
     lockKey = "infoLock-" <> journeyId.getId
 
@@ -90,17 +81,8 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
-  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-  return $
-    ApiTypes.JourneyInfoResp
-      { estimatedDuration = journey.estimatedDuration,
-        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-        estimatedDistance = journey.estimatedDistance,
-        legs
-      }
+  now <- getCurrentTime
+  return $ generateJourneyInfoResponse journey legs now
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -143,6 +125,7 @@ postMultimodalOrderSwitchTaxi ::
 postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
+  now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let mbPricingId = Id <$> journeyLegInfo.pricingId
   let legSearchId = Id journeyLegInfo.searchId
@@ -154,20 +137,22 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
-  generateResponse journey updatedLegs
-  where
-    generateResponse journey updatedLegs = do
-      let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) updatedLegs
-      let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) updatedLegs
-      let mbCurrency = listToMaybe updatedLegs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-      return $
-        ApiTypes.JourneyInfoResp
-          { estimatedDuration = journey.estimatedDuration,
-            estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-            estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-            estimatedDistance = journey.estimatedDistance,
-            legs = updatedLegs
-          }
+  return $ generateJourneyInfoResponse journey updatedLegs now
+
+generateJourneyInfoResponse :: Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> ApiTypes.JourneyInfoResp
+generateJourneyInfoResponse journey legs now = do
+  let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
+  let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
+  let unifiedQR = getUnifiedQR legs now
+  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  ApiTypes.JourneyInfoResp
+    { estimatedDuration = journey.estimatedDuration,
+      estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+      estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
+      estimatedDistance = journey.estimatedDistance,
+      legs,
+      unifiedQR
+    }
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

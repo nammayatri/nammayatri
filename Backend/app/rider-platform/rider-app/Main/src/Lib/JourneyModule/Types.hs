@@ -278,6 +278,8 @@ data BookingData = BookingData
     isRoundTrip :: Bool,
     ticketData :: [Text]
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
@@ -286,6 +288,8 @@ data UnifiedTicketQR = UnifiedTicketQR
     cmrl :: [BookingData],
     mtc :: [BookingData]
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data Provider = CMRL | MTC
   deriving (Eq, Show)

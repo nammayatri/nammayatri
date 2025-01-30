@@ -40,7 +40,8 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
-    legs :: [Lib.JourneyModule.Types.LegInfo]
+    legs :: [Lib.JourneyModule.Types.LegInfo],
+    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

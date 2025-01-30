@@ -317,40 +317,42 @@ getRemainingLegs journeyId = do
   let remainingLegs = filter (\leg -> if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
-getUnifiedQR :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [JL.LegInfo] -> m JL.UnifiedTicketQR
-getUnifiedQR legs = do
-  bookings <- mapM getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus]) legs)
+getUnifiedQR :: [JL.LegInfo] -> UTCTime -> Maybe JL.UnifiedTicketQR
+getUnifiedQR legs now = do
+  let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
   let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
   let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
-  now <- getCurrentTime
-  return
-    JL.UnifiedTicketQR
-      { version = "1.0",
-        txnId = "nammayatri-test-N62dNNcFc8-1",
-        createdAt = now,
-        cmrl = cmrlBookings,
-        mtc = mtcBookings
-      }
+  if null cmrlBookings && null mtcBookings
+    then Nothing
+    else
+      Just $
+        JL.UnifiedTicketQR
+          { version = "1.0",
+            txnId = "nammayatri-test-N62dNNcFc8-1",
+            createdAt = now,
+            cmrl = cmrlBookings,
+            mtc = mtcBookings
+          }
 
 providerToText :: JL.Provider -> Text
 providerToText JL.CMRL = "Chennai Metro Rail Limited"
 providerToText JL.MTC = "Buses"
 
-getTickets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.LegInfo -> m (Text, JL.BookingData)
-getTickets leg = do
-  bookingId <- leg.pricingId & fromMaybeM (InvalidRequest $ "Booking pending for: " <> show leg.travelMode)
-  case leg.legExtraInfo of
-    JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName bookingId
-    JL.Bus info -> processTickets JL.MTC info.tickets info.providerName bookingId
-    _ -> throwError (InvalidRequest $ "Tickets not generated yet for: " <> show leg.travelMode)
+getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
+getTickets leg =
+  leg.pricingId >>= \bookingId -> do
+    case leg.legExtraInfo of
+      JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName bookingId
+      JL.Bus info -> processTickets JL.MTC info.tickets info.providerName bookingId
+      _ -> Nothing
   where
-    processTickets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.Provider -> Maybe [Text] -> Maybe Text -> Text -> m (Text, JL.BookingData)
+    processTickets :: JL.Provider -> Maybe [Text] -> Maybe Text -> Text -> Maybe (Text, JL.BookingData)
     processTickets expectedProvider mbTickets mbProviderName bookingId = do
-      tickets <- fromMaybeM (InvalidRequest "Tickets not found") mbTickets
-      provider <- fromMaybeM (InvalidRequest "Provider not found") mbProviderName
+      tickets <- mbTickets
+      provider <- mbProviderName
       if provider == providerToText expectedProvider
         then
-          return
+          Just
             ( provider,
               JL.BookingData
                 { bookingId = bookingId,
@@ -358,7 +360,7 @@ getTickets leg = do
                   ticketData = tickets
                 }
             )
-        else throwError (InvalidRequest $ "Unknown provider: " <> provider)
+        else Nothing
 
 cancelLeg ::
   ( CacheFlow m r,

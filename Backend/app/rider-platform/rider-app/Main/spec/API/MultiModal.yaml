@@ -13,6 +13,7 @@ imports:
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   Price: Kernel.Types.Common
   JourneyLegStatus : Lib.JourneyLeg.Types
+  UnifiedTicketQR: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
 
@@ -24,6 +25,7 @@ types:
     estimatedMinFare: PriceAPIEntity
     estimatedMaxFare: PriceAPIEntity
     estimatedDistance: Distance
+    unifiedQR: Maybe UnifiedTicketQR
     legs: [LegInfo]
 
   LegStatus:
