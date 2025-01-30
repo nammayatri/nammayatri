@@ -1502,13 +1502,13 @@ replaceEmpty = \case
 ---------------------------------------------------------------------
 data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
-    driverMobileNumber :: Text,
+    driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Text
   }
 
 data DriverDetails = DriverDetails
   { driverName :: Text,
-    driverMobileNumber :: Text,
+    driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: DVC.VehicleCategory
   }
 
@@ -1516,7 +1516,7 @@ instance FromNamedRecord CreateDriversCSVRow where
   parseNamedRecord r =
     CreateDriversCSVRow
       <$> r .: "driver_name"
-      <*> r .: "driver_mobile_number"
+      <*> r .: "driver_phone_number"
       <*> r .: "driver_onboarding_vehicle_category"
 
 postDriverFleetAddDrivers ::
@@ -1538,7 +1538,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
           try @_ @SomeException
             (processDriver merchantOpCity fleetOwnerId driverDetail)
             >>= \case
-              Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverMobileNumber <> ") to the Fleet: " <> (T.pack $ displayException err)]
+              Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
       )
       []
@@ -1547,10 +1547,10 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
   where
     processDriver :: DMOC.MerchantOperatingCity -> Text -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriver moc fleetOwnerId req_ = do
-      let driverMobile = req_.driverMobileNumber
+      let driverMobile = req_.driverPhoneNumber
           authData =
             DReg.AuthReq
-              { mobileNumber = Just req_.driverMobileNumber,
+              { mobileNumber = Just req_.driverPhoneNumber,
                 mobileCountryCode = Just "+91",
                 merchantId = moc.merchantId.getId,
                 merchantOperatingCity = Just opCity,
@@ -1560,7 +1560,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
                 registrationLat = Nothing,
                 registrationLon = Nothing
               }
-      mobileNumberHash <- getDbHash req_.driverMobileNumber
+      mobileNumberHash <- getDbHash req_.driverPhoneNumber
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
@@ -1581,9 +1581,9 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
     parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
     parseDriverInfo idx row = do
       driverName <- cleanCSVField idx row.driverName "Driver name"
-      driverMobileNumber <- cleanCSVField idx row.driverMobileNumber "Mobile number"
+      driverPhoneNumber <- cleanCSVField idx row.driverPhoneNumber "Mobile number"
       driverOnboardingVehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
-      pure $ DriverDetails driverName driverMobileNumber driverOnboardingVehicleCategory
+      pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
