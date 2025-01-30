@@ -345,6 +345,10 @@ createRC ::
   VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
   let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
+      airConditioned = input.airConditioned
+      updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
+        Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
+        _ -> variant
   VehicleRegistrationCertificate
     { id,
       documentImageId = input.documentImageId,
@@ -353,7 +357,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       permitExpiry = input.permitValidityUpto,
       pucExpiry = input.pucValidityUpto,
       vehicleClass = input.vehicleClass,
-      vehicleVariant = variant,
+      vehicleVariant = updVariant,
       vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
       vehicleCapacity = input.seatingCapacity,
       vehicleModel = mbVehicleModel,
@@ -371,7 +375,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
       userPassedVehicleCategory = input.vehicleCategory,
-      airConditioned = input.airConditioned,
+      airConditioned = airConditioned,
       oxygen = input.oxygen,
       ventilator = input.ventilator,
       luggageCapacity = Nothing,
