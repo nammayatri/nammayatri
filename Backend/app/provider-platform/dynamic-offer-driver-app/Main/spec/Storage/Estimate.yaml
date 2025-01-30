@@ -28,6 +28,8 @@ Estimate:
       estimatedDistance: Maybe Meters
       supplyDemandRatioFromLoc : Maybe Double
       supplyDemandRatioToLoc : Maybe Double
+      mbActualQARFromLocGeohash : Maybe Double
+      mbActualQARCity : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
       distanceUnit: DistanceUnit

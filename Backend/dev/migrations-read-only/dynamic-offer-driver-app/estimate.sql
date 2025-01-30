@@ -85,3 +85,10 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN tip_options integer[] ;
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city double precision ;

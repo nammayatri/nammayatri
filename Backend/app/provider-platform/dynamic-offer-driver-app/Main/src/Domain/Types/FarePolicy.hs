@@ -169,7 +169,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     disableRecompute :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    mbActualQARFromLocGeohash :: Maybe Double,
+    mbActualQARCity :: Maybe Double
   }
   deriving (Generic, Show)
 
@@ -181,7 +183,9 @@ data CongestionChargeDetails = CongestionChargeDetails
     mbSupplyDemandRatioFromLoc :: Maybe Double,
     congestionChargePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    mbActualQARFromLocGeohash :: Maybe Double,
+    mbActualQARCity :: Maybe Double
   }
   deriving (Generic, Show)
 

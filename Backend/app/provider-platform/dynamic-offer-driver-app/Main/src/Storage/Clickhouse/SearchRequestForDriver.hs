@@ -14,6 +14,7 @@
 
 module Storage.Clickhouse.SearchRequestForDriver where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Common as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -31,6 +32,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     fromLocGeohash :: C f (Maybe Text),
     merchantOperatingCityId :: C f (Id DMOC.MerchantOperatingCity),
     mode :: C f (Maybe DI.DriverMode),
+    response :: C f (Maybe DI.SearchRequestForDriverResponse),
     vehicleServiceTier :: C f DServiceTierType.ServiceTierType,
     requestId :: C f (Id DSR.SearchRequest),
     createdAt :: C f CH.DateTime --,
@@ -47,6 +49,7 @@ searchRequestForDriverTTable =
       fromLocGeohash = "from_loc_geohash",
       merchantOperatingCityId = "merchant_operating_city_id",
       mode = "mode",
+      response = "response",
       vehicleServiceTier = "vehicle_service_tier",
       requestId = "search_request_id",
       createdAt = "created_at"
@@ -76,6 +79,105 @@ calulateSupplyDemandByGeohashAndServiceTier from to = do
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. srfd.mode CH.==. Just DI.ONLINE
               CH.&&. CH.isNotNull srfd.fromLocGeohash
-              --   CH.&&. CH.not_ (srfd.vehicleServiceTier `in_` [DServiceTierType.AUTO_RICKSHAW, DServiceTierType.BIKE, DServiceTierType.AMBULANCE_TAXI, DServiceTierType.AMBULANCE_TAXI_OXY, DServiceTierType.AMBULANCE_AC, DServiceTierType.AMBULANCE_AC_OXY, DServiceTierType.AMBULANCE_VENTILATOR, DServiceTierType.DELIVERY_BIKE])
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+calulateAcceptanceCountByGeohashAndServiceTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  UTCTime ->
+  UTCTime ->
+  m [(Maybe Text, Int, DServiceTierType.ServiceTierType)]
+calulateAcceptanceCountByGeohashAndServiceTier from to = do
+  CH.findAll $
+    CH.select_
+      ( \srfd -> do
+          let acceptanceCount = CH.count_ (CH.distinct srfd.requestId)
+          CH.groupBy (srfd.fromLocGeohash, srfd.vehicleServiceTier) $ \(fromLocGeohash, vehicleServiceTier) -> do
+            (fromLocGeohash, acceptanceCount, vehicleServiceTier)
+      )
+      $ CH.filter_
+        ( \srfd _ ->
+            srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
+              CH.&&. CH.isNotNull srfd.fromLocGeohash
+              CH.&&. (srfd.response CH.==. Just DI.Accept)
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+calulateDemandByCityAndServiceTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  UTCTime ->
+  UTCTime ->
+  m [(Id DMOC.MerchantOperatingCity, Int, DServiceTierType.ServiceTierType)]
+calulateDemandByCityAndServiceTier from to = do
+  CH.findAll $
+    CH.select_
+      ( \srfd -> do
+          let demandCount = CH.count_ (CH.distinct srfd.requestId)
+          CH.groupBy (srfd.merchantOperatingCityId, srfd.vehicleServiceTier) $ \(merchantOperatingCityId, vehicleServiceTier) -> do
+            (merchantOperatingCityId, demandCount, vehicleServiceTier)
+      )
+      $ CH.filter_
+        ( \srfd _ ->
+            srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+calulateAcceptanceCountByCityAndServiceTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  UTCTime ->
+  UTCTime ->
+  m [(Id DMOC.MerchantOperatingCity, Int, DServiceTierType.ServiceTierType)]
+calulateAcceptanceCountByCityAndServiceTier from to = do
+  CH.findAll $
+    CH.select_
+      ( \srfd -> do
+          let acceptanceCount = CH.count_ (CH.distinct srfd.requestId)
+          CH.groupBy (srfd.merchantOperatingCityId, srfd.vehicleServiceTier) $ \(merchantOperatingCityId, vehicleServiceTier) -> do
+            (merchantOperatingCityId, acceptanceCount, vehicleServiceTier)
+      )
+      $ CH.filter_
+        ( \srfd _ ->
+            srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
+              CH.&&. (srfd.response CH.==. Just DI.Accept)
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+concatFun :: [(Maybe Text, Int, Int, DServiceTierType.ServiceTierType)] -> [(Maybe Text, Int, DServiceTierType.ServiceTierType)] -> [(Maybe Text, Int, Int, Int, DServiceTierType.ServiceTierType)]
+concatFun [] _ = []
+concatFun _ [] = []
+concatFun xs ys =
+  let acceptanceMap =
+        HM.fromListWith
+          (+)
+          [ ((fromLocGeohash, vehicleServiceTier), acceptanceCount)
+            | (fromLocGeohash, acceptanceCount, vehicleServiceTier) <- ys
+          ]
+
+      result = [(fromLocGeohash, HM.findWithDefault 0 (fromLocGeohash, vehicleServiceTier) acceptanceMap, supplyCount, demandCount, vehicleServiceTier) | (fromLocGeohash, supplyCount, demandCount, vehicleServiceTier) <- xs, HM.member (fromLocGeohash, vehicleServiceTier) acceptanceMap]
+   in result
+
+concatFun' ::
+  [(Id DMOC.MerchantOperatingCity, Int, DServiceTierType.ServiceTierType)] ->
+  [(Id DMOC.MerchantOperatingCity, Int, DServiceTierType.ServiceTierType)] ->
+  [(Id DMOC.MerchantOperatingCity, Int, Int, DServiceTierType.ServiceTierType)]
+concatFun' xs ys =
+  let demandMap =
+        HM.fromListWith
+          (+)
+          [ ((cityId, vehicleServiceTier), demandCount)
+            | (cityId, demandCount, vehicleServiceTier) <- ys
+          ]
+
+      result =
+        [ ( cityId,
+            acceptanceCount,
+            HM.findWithDefault 0 (cityId, vehicleServiceTier) demandMap,
+            vehicleServiceTier
+          )
+          | (cityId, acceptanceCount, vehicleServiceTier) <- xs,
+            HM.member (cityId, vehicleServiceTier) demandMap
+        ]
+   in result
