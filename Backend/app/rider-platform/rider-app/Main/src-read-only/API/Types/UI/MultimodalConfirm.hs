@@ -6,7 +6,7 @@ import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
+import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
@@ -21,12 +21,16 @@ import qualified Lib.JourneyModule.Types
 import Servant
 import Tools.Auth
 
+data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ExtendLegReq = ExtendLegReq
-  { endLeg :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
-    endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    legId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
-    startLeg :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
-    startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
+  { distance :: Kernel.Types.Common.Distance,
+    duration :: Kernel.Types.Common.Seconds,
+    endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    fare :: Lib.JourneyModule.Types.GetFareResponse,
+    startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

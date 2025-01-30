@@ -13,6 +13,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Location
+import qualified Domain.Types.Location as DLocation
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -712,3 +713,7 @@ cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]
 
 cannotCancelWalkStatus :: [JourneyLegStatus]
 cannotCancelWalkStatus = [Skipped, Finishing, Completed, Cancelled]
+
+data ExtendLegStartPoint = StartLocation DLocation.Location | StartLegOrder Int
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
