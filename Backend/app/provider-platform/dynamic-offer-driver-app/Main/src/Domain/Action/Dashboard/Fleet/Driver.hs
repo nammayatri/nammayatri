@@ -543,7 +543,7 @@ postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
     rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just fleetOwnerId
-    when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
+    when (isJust rc && assoc.isRcActive) $ throwError (InvalidRequest "Driver is actively linked to fleet Vehicle, first unlink then try")
   FDV.endFleetDriverAssociation fleetOwnerId personId
   pure Success
 
@@ -843,7 +843,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
             earnings <- CQRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
             pure (rides, earnings)
           _ -> pure (0, 0)
-        let driverStatus = if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
+        let driverStatus = Just $ castDriverStatus driverInfo'.mode -- if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
         let isRcAssociated = isJust vehicleNo
         let isDriverActive = fda.isActive
         let driverId = Just $ driver.id.getId
@@ -1367,7 +1367,8 @@ getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbV
   where
     buildTripTransactionDetails tripTransaction =
       Common.TripTransactionDetail
-        { routeCode = tripTransaction.routeCode,
+        { tripTransactionId = cast tripTransaction.id,
+          routeCode = tripTransaction.routeCode,
           tripStartTime = tripTransaction.tripStartTime,
           tripEndTime = tripTransaction.tripEndTime,
           tripStatus = castTripStatus tripTransaction.status
