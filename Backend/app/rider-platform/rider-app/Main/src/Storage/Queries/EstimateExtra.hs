@@ -1,6 +1,7 @@
 module Storage.Queries.EstimateExtra where
 
 import Domain.Types.Estimate as DE
+import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -28,3 +29,6 @@ createMany = traverse_ create
 
 getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
+
+findBySRIdAndStatusesInKV :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Id SearchRequest -> [EstimateStatus] -> m (Maybe Estimate))
+findBySRIdAndStatusesInKV requestId status = do findOneWithKVRedis [Se.And [Se.Is BeamE.requestId $ Se.Eq requestId.getId, Se.Is BeamE.status $ Se.In status]]

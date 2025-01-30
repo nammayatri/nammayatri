@@ -37,6 +37,7 @@ data MerchantT f = MerchantT
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     editPickupDistanceThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     editPickupDistanceThresholdValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+    enableForMultipleSearchIssue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fallbackShortId :: B.C f Kernel.Prelude.Text,
