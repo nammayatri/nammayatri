@@ -97,6 +97,5 @@
     <string name="round_trip">Round Trip</string>
     <string name="namma_yatri_customer">Namma Yatri Customer</string>
     <string name="namma_yatri_driver">Namma Yatri Driver</string>
-    <string name="voip_background">#14171F</string>
     <string name="voip_logo" translatable="false">https://raw.githubusercontent.com/nammayatri/asset-store/865e27035399a315dbeda13eabba9a2a851fae29/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
 </resources>

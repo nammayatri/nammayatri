@@ -38,4 +38,5 @@
     <color name="turquoise10">#1a42b8ba</color>
     <color name="yellow800">#FEEBB9</color>
     <color name="orange">#FFA500</color>
+    <color name="colorVoipBackground">#14171F</color>
 </resources>

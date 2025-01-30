@@ -500,7 +500,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
-            | VOIPCallBack String String String Int Int String String String
+            | VOIPCallBack String String Int Int String String String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1108,14 +1108,14 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails else state.data.activeRide.exoPhone
     let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
     let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-    if (true || voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = if state.data.activeRide.id /= "" then state.data.activeRide.id else ""
+    if (voipConfig.driver.enableVoipCalling) then do
+      let customerCuid = if not (DS.null state.data.activeRide.id) then state.data.activeRide.id else ""
       
       continueWithCmd state [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-          when (customerCuid /= "") do
+          when (not (DS.null customerCuid)) do
             push <- liftFlow $ getPushFn Nothing "HomeScreen"
-            void $ liftFlow $ JB.voipDialer customerCuid true exophoneNumber false push $ VOIPCallBack
+            void $ liftFlow $ JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
             pure unit
         pure NoAction
       ]
@@ -1225,12 +1225,12 @@ eval (ChatViewActionController (ChatView.Call)) state = do
   let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
   let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
   if (voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = if state.data.activeRide.id /= "" then state.data.activeRide.id else ""
+      let customerCuid = if not (DS.null state.data.activeRide.id) then state.data.activeRide.id else ""
       continueWithCmd state [ do
       
-        when (customerCuid /= "") do
+        when (not (DS.null customerCuid)) do
           push <-  getPushFn Nothing "HomeScreen"
-          JB.voipDialer customerCuid true exophoneNumber false push $ VOIPCallBack
+          JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
         pure NoAction
       ]
   else
@@ -1823,18 +1823,17 @@ eval (BusNumber val) state = do
   let newState = state {data = state.data { bus_number = DS.toUpper val }}
   continue newState
 
-eval (VOIPCallBack cb status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+eval (VOIPCallBack status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
   let req = {
       callStatus : status,
       rideId : rideId,
       errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,
-      userType : if (driverFlag == 0) then "DRIVER" else "RIDER",
+      userType : if (driverFlag == 1) then "DRIVER" else "RIDER",
       networkType : networkType,
       networkQuality : networkStrength,
       merchantId : merchantId,
       merchantOperatingCity : getValueToLocalStore DRIVER_LOCATION
     }
-  let z = spy "signedcall :: " req
   continueWithCmd state [ do
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
       resp :: (Either ErrorResponse API.ApiSuccessResult) <-  HelpersAPI.callApi $ API.VoipCallReq req

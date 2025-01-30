@@ -354,7 +354,7 @@ data Action = NoAction
   | ConfirmDeliveryRide
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
-  | VOIPCallBack String String String Int Int String String String
+  | VOIPCallBack String String Int Int String String String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

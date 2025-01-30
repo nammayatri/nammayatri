@@ -7276,6 +7276,7 @@ fcmHandler notification state notificationBody= do
         void $ pure $ JB.exitLocateOnMap ""
         void $ pure $ removeAllPolylines ""
         void $ updateLocalStage HomeScreen
+        void $ pure $ JB.destroySignedCall
         modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = "" } })
         setValueToLocalStore IS_SOS_ACTIVE "false"
         removeChatService ""
@@ -7332,6 +7333,7 @@ fcmHandler notification state notificationBody= do
         void $ pure $ spy "after scheduled checks" notificationBody
         void $ pure $ JB.exitLocateOnMap ""
         void $ pure $ removeAllPolylines ""
+        void $ pure $ JB.destroySignedCall
         removeChatService ""
         setValueToLocalStore PICKUP_DISTANCE "0"
         (GlobalState updatedState) <- getState
@@ -7545,6 +7547,7 @@ rideSummaryScreenFlow = do
               state = newState.homeScreen
             updateScheduledRides true true
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
+            void $ pure $ JB.destroySignedCall
             if(fromScreen == Screen.getScreen Screen.RIDE_SUMMARY_SCREEN) then do
               updateLocalStage HomeScreen
               updateUserInfoToState state

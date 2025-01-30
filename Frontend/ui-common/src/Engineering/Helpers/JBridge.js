@@ -2382,17 +2382,16 @@ export const voipDialer = function (cuid) {
         return function (cb) {
           return function (action) {
             return function () {
-              const callback = callbackMapper.map(function (result, status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
-                cb(action({
-                  result,  
-                  status,       
-                  rideId,       
-                  errorCode,   
-                  isDriver: driverFlag,
-                  networkType,
-                  networkQuality,
-                  merchantId
-                }))();
+              const callback = callbackMapper.map(function (status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
+                console.log("voipDialer callback", status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId);
+                cb(action
+                  (status)       
+                  (rideId)       
+                  (errorCode)
+                  (driverFlag)
+                  (networkType)
+                  (networkQuality)
+                  (merchantId))();
               });
               if(JBridge.voipDialer) {
                 window.JBridge.voipDialer(cuid, isDriver, phoneNum, isMissed, callback);

@@ -1527,12 +1527,12 @@ eval (DriverReachedDestinationAction driverReachedDestinationTime) state =
         continue state { data { driverInfoCardState { destinationReached = true } } }
     else continue state
 
-eval (VOIPCallBack cb status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+eval (VOIPCallBack status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
   let req = {
       callStatus : status,
       rideId : rideId,
       errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,
-      userType : if (driverFlag == 0) then "DRIVER" else "RIDER",
+      userType : if (driverFlag == 1) then "DRIVER" else "RIDER",
       networkType : networkType,
       networkQuality : networkStrength,
       merchantId : merchantId,
@@ -2102,20 +2102,20 @@ eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
         let driverCuid = 
-              if state.data.driverInfoCardState.bppRideId /= "" 
+              if not (STR.null state.data.driverInfoCardState.bppRideId)
               then state.data.driverInfoCardState.bppRideId 
               else ""
         let phoneNum = 
-              if state.data.driverInfoCardState.merchantExoPhone == "" 
+              if STR.null state.data.driverInfoCardState.merchantExoPhone
               then fromMaybe "" state.data.driverInfoCardState.driverNumber
               else if STR.take 1 state.data.driverInfoCardState.merchantExoPhone == "0" 
                    then state.data.driverInfoCardState.merchantExoPhone 
                    else "0" <> state.data.driverInfoCardState.merchantExoPhone
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        if ((driverCuid /= "" && voipConfig.customer.enableVoipCalling))
+        if (not (STR.null driverCuid) && voipConfig.customer.enableVoipCalling)
           then continueWithCmd state [ do
             push <- getPushFn Nothing "HomeScreen"
-            JB.voipDialer driverCuid false phoneNum false push $ VOIPCallBack
+            JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
             pure CloseShowCallDialer
           ]
         else callDriver state "ANONYMOUS"

@@ -6,6 +6,5 @@
     <string name="dev_port" translatable="false">8083</string>
     <string name="fileProviderPath" translatable="false">in.juspay.nammayatriprovider.provider</string>
     <string name="merchant_id" translatable="false">nammayatri</string>
-    <string name="voip_background" translatable="false">#14171F</string>
     <string name="voip_logo" translatable="false">https://raw.githubusercontent.com/nammayatri/asset-store/865e27035399a315dbeda13eabba9a2a851fae29/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
 </resources>
