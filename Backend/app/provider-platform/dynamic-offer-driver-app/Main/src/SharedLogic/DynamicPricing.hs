@@ -24,6 +24,12 @@ import Kernel.Utils.Common
 mkSupplyDemandRatioKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
 mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier = "S_D_ratio_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
 
+mkActualQARKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
+mkActualQARKeyWithGeohash geohash vehicleServiceTier = "A_QAR_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
+
+mkActualQARKeyWithCity :: Text -> DServiceTierType.ServiceTierType -> Text
+mkActualQARKeyWithCity city vehicleServiceTier = "A_QAR_city" <> city <> "_serviceTier_" <> show vehicleServiceTier
+
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
@@ -36,6 +42,7 @@ data DynamicPricingResult = DynamicPricingResult
 data DynamicPricingData = DynamicPricingData
   { speedKmh :: Double,
     distanceInKm :: Double,
+    actualQAR :: Double,
     supplyDemandRatioFromLoc :: Double,
     supplyDemandRatioToLoc :: Double,
     serviceTier :: DServiceTierType.ServiceTierType,
@@ -52,5 +59,6 @@ instance Default DynamicPricingData where
         supplyDemandRatioFromLoc = 1.1,
         supplyDemandRatioToLoc = 1.1,
         serviceTier = DServiceTierType.TAXI,
+        actualQAR = 0.0,
         toss = 1 --,
       }

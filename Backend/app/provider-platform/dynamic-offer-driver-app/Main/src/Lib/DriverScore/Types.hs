@@ -20,13 +20,13 @@ where
 
 import Data.Time
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis

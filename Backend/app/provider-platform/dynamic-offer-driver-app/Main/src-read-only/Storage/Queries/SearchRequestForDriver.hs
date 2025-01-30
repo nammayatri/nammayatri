@@ -5,6 +5,7 @@
 module Storage.Queries.SearchRequestForDriver (module Storage.Queries.SearchRequestForDriver, module ReExport) where
 
 import qualified Data.Time
+import qualified Domain.Types.Common
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry
@@ -33,7 +34,7 @@ findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.se
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+  (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateDriverResponse response status notificationSource renderedAt respondedAt id = do
   _now <- getCurrentTime
   updateOneWithKV

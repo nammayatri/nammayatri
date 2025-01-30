@@ -19,6 +19,7 @@ where
 
 import Control.Applicative (liftA2)
 import Data.Time (utctDay)
+import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverStats as DS
@@ -27,7 +28,6 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
-import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.VehicleVariant as DVV
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude

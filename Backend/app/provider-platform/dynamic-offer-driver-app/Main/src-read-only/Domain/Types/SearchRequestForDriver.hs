@@ -69,7 +69,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     renderedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     respondedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    response :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse,
+    response :: Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse,
     rideFrequencyScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     rideRequestPopupDelayDuration :: Kernel.Types.Common.Seconds,
     searchRequestValidTill :: Kernel.Prelude.UTCTime,
@@ -91,10 +91,6 @@ data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read
 
 data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SearchRequestForDriverResponse = Accept | Reject | Pulled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)
