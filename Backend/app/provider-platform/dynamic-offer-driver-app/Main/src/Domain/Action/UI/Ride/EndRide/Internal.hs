@@ -140,6 +140,7 @@ endRideTransaction ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r
   ) =>
   Id DP.Driver ->
