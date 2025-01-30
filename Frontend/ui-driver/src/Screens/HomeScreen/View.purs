@@ -69,7 +69,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow, getFutureDate, convertUTCtoISC)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader, whenJust, whenRight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -95,7 +95,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
-import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _routeInfo, _source, _destination)
+import Services.Accessor (_lat, _lon, _routeCode, _stopName, _stopCode, _routeCode, _stopLat, _stopLong, _routeInfo, _source, _destination, _allowStartRideFromQR)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -126,7 +126,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Components.PopUpModal.View as PopUpModal
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
-import DecodeUtil (getFromWindowString)
+import DecodeUtil (getFromWindowString, decodeForeignAny, stringifyJSON, parseJSON)
 import Screens.HomeScreen.ScreenData
 import LocalStorage.Cache (getValueFromCache)
 import Resource.Localizable.StringsV2 as StringsV2
@@ -173,7 +173,7 @@ screen initialState (GlobalState globalState) =
           if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
 
           -- Polling for WMB Active Trip Details at DRIVER ON DUTY and no TRIP_ASSIGNED or TRIP_ACTIVE
-          if ((maybe true (\(API.BusFleetConfigResp fleetConfig) -> not $ fleetConfig.allowStartRideFromQR) initialState.data.whereIsMyBusData.fleetConfig) && getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isNothing initialState.data.whereIsMyBusData.trip && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "AWAITING_APPROVAL")) 
+          if ((maybe true (\(API.BusFleetConfigResp fleetConfig) -> not $ fleetConfig.allowStartRideFromQR) initialState.data.whereIsMyBusData.fleetConfig) && getValueToLocalStore DRIVER_STATUS == "true" && initialState.props.currentStage == ST.HomeScreen && (isNothing initialState.data.whereIsMyBusData.trip && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) && (getValueToLocalStore WMB_END_TRIP_STATUS /= "AWAITING_APPROVAL") && (HU.specialVariantsForTracking FunctionCall)) 
             then pollingConfigAndRun push "getActiveWMBTripDetails" getActiveWMBTripDetails
             else pure unit
 
@@ -355,7 +355,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker true
-                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
+                                when (not $ HU.specialVariantsForTracking FunctionCall) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pushPlayEndRideAudio <- runEffectFn1 EHC.getValueFromIdMap "PlayEndRideAudio"
                                 when (pushPlayEndRideAudio.shouldPush && initialState.props.currentStage == RideCompleted) $ do
@@ -367,6 +367,14 @@ screen initialState (GlobalState globalState) =
                                   void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "false"
                                   void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
+
+                                when (HU.specialVariantsForTracking FunctionCall && (not $ initialState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes) && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) do
+                                    let _ = spy "initialState-codex" "shouldUpdateRecentBus"
+                                    void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRecentBusView push 
+                                  -- let tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
+                                  --     (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
+                                  --     _ = spy "recentTrip" recentTrip 
+
           runEffectFn1 consumeBP unit
           pure $ pure unit
         )
@@ -386,6 +394,25 @@ screen initialState (GlobalState globalState) =
       when (not config.disable) do
         void $ pure $ setValueToLocalStore TRACKING_ID trackingId
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ action push trackingId intervalInMilliSecond retryCount intervalDelayMultiplier
+  
+    updateRecentBusView push = do
+      let allowQRStartRide = maybe true (\fleetConfig -> 
+              fleetConfig ^. _allowStartRideFromQR
+            ) initialState.data.whereIsMyBusData.fleetConfig
+      when (allowQRStartRide) do
+        let _ = spy "shouldUpdateRecentBus" "true"
+        processRecentBusTrip push
+
+    processRecentBusTrip push = do
+      let _ = spy "recentTrip" "1"
+          tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
+          _ = spy "recentTrip" "2" 
+          (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
+          _ = spy "recentTrip" recentTrip 
+      whenJust recentTrip \tripDetails -> do
+        availableRoutes <- Remote.getAvailableRoutes $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
+        whenRight availableRoutes \routes ->
+          doAff do liftEffect $ push $ UpdateSuggestedRoute routes tripDetails
 
 getActiveRideDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
 getActiveRideDetails push delayTime retryCount = do 
@@ -755,7 +782,7 @@ driverMapsHeaderView push state =
                 onRideScreenBannerView state push 
                 ]
             <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes then [ recentBusRideView push state ] else []
+            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes && state.props.currentStage == HomeScreen then [ recentBusRideView push state ] else []
         , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT

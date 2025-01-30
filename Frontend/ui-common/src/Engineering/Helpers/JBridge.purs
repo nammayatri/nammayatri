@@ -44,6 +44,8 @@ import Presto.Core.Types.Language.Flow
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Eq.Generic (genericEq)
 import Data.Array (head, (!!))
+import Debug (spy)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON)
 
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -1118,17 +1120,14 @@ type RecentBusTrip = {
   vehicleNumber :: String
 }
 
-cacheKeyRecentTrips = "RECENT_BUS_TRIPS"
+-- saveRecentBusTrip :: RecentBusTrip -> Effect Unit
+-- saveRecentBusTrip newTrip = setValueToCache (show RECENT_BUS_TRIPS) (encodeJSON newTrip)
 
-removeRecentBusTrip :: Unit
-removeRecentBusTrip = removeKeysInSharedPrefs cacheKeyRecentTrips
-
-saveRecentBusTrip :: RecentBusTrip -> Effect Unit
-saveRecentBusTrip newTrip = setEnvInNativeSharedPrefKeysImpl cacheKeyRecentTrips (encodeJSON newTrip)
-
-getRecentBusTrip :: Maybe RecentBusTrip
-getRecentBusTrip = do
-  let tripsStr = getKeyInSharedPrefKeys cacheKeyRecentTrips
-  case runExcept $ decodeJSON tripsStr of
-    Right trip -> Just trip
-    Left _ -> Nothing
+-- getRecentBusTrip :: Maybe RecentBusTrip
+-- getRecentBusTrip =
+--   let tripsStr = getKeyInSharedPrefKeys cacheKeyRecentTrips
+--   in (decodeForeignAny (parseJSON ) Nothing)
+--   --     _ = spy "getRecentBusTrip" tripsStr
+--   -- case runExcept $ decodeJSON tripsStr of
+--   --   Right trip -> Just trip
+--   --   Left _ -> Nothing

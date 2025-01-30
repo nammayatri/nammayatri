@@ -1279,7 +1279,7 @@ getSrcDestConfig state =
             srcLon : state.data.currentDriverLon,
             destLat : (trip.routeInfo ^. _routeEndPoint) ^. _stopLat,
             destLon : (trip.routeInfo ^. _routeEndPoint) ^. _lon,
-            source : trip.source ^. _stopName,
+            source : "",
             destination : trip.destination ^. _stopName
           }
         _ -> {
@@ -1312,6 +1312,7 @@ isGovtBusDriver = false
 getCategorySpecificSrcMarkerIcon :: LazyCheck -> String
 getCategorySpecificSrcMarkerIcon _ = do
   case (getValueToLocalStore VEHICLE_CATEGORY) of
+    "BusCategory" -> ""
     _ -> "ny_ic_src_marker"
 
 tripDetailsToRecentTrip :: API.TripTransactionDetails -> RecentBusTrip

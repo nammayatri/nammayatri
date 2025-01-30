@@ -17,13 +17,14 @@ module Types.ModifyScreenState where
 
 import Debug (spy)
 import Engineering.Helpers.BackTrack (modifyState)
-import Helpers.Utils (generateUniqueId)
+import Helpers.Utils (generateUniqueId, specialVariantsForTracking)
 import JBridge (removeAllPolylines, enableMyLocation)
 import Prelude (Unit, ($), show, discard, unit, pure, bind)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.Types (HomeScreenStage(..))
 import Storage (KeyStore(..), setValueToLocalStore, updateLocalStage)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
+import Common.Types.App (LazyCheck(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
@@ -163,7 +164,7 @@ updateStage stage = do
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
           _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
-          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData { props { showParcelIntroductionPopup = state.props.showParcelIntroductionPopup } })
+          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData { props { showParcelIntroductionPopup = if specialVariantsForTracking FunctionCall then false else state.props.showParcelIntroductionPopup } })
         ChatWithCustomer -> do
           pure unit
         _ -> modifyScreenState $ HomeScreenStateType (\state -> state { props { currentStage = stage'} })

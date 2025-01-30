@@ -41,6 +41,8 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _routeCode, _routeInfo, _busNumber, _routeInfo, _busNumber, _allowStartRideFromQR)
+import Debug (spy)
+import DecodeUtil (decodeForeignAny, getAnyFromWindow, parseJSON, setAnyInWindow, stringifyJSON, getFromWindowString)
 
 
 getBusDriverCurrentLocation :: FlowBT String { lat :: String, lon :: String }
@@ -65,33 +67,45 @@ logBusRideStart = do
   void $ lift $ lift $ toggleLoader false
 
 updateRecentBusRide :: API.TripTransactionDetails -> FlowBT String Unit
-updateRecentBusRide tripDetails = lift $ lift $ liftFlow $ JB.saveRecentBusTrip (HU.tripDetailsToRecentTrip tripDetails)
+updateRecentBusRide tripDetails = do
+  let _ = spy "updateRecentBusRide:tripDetails" tripDetails
+  void $ pure $ setValueToCache (show RECENT_BUS_TRIPS) (HU.tripDetailsToRecentTrip tripDetails) (stringifyJSON <<< encode)
 
 updateRecentBusView :: FlowBT String Unit
 updateRecentBusView = do
   (GlobalState globalState) <- getState
+  let _ = spy "updateRecentBusView" globalState.homeScreen
   when (shouldUpdateRecentBus globalState.homeScreen) do
+    let _ = spy "shouldUpdateRecentBus" "true"
     processRecentBusTrip
 
 shouldUpdateRecentBus :: HomeScreenState ->  Boolean
 shouldUpdateRecentBus state = 
   let noActiveTrip = isNothing state.data.whereIsMyBusData.trip
+      _ = spy "shouldUpdateRecentBus:state" state
+      _ = spy "shouldUpdateRecentBus:localStage" $ getValueToLocalStore LOCAL_STAGE
       allowQRStartRide = maybe true (\fleetConfig -> 
           fleetConfig ^. _allowStartRideFromQR
         ) state.data.whereIsMyBusData.fleetConfig
-    in noActiveTrip && allowQRStartRide
+    in (getValueToLocalStore LOCAL_STAGE == "HomeScreen") && allowQRStartRide
 
 processRecentBusTrip :: FlowBT String Unit
 processRecentBusTrip = do
-  let (recentTrip :: Maybe RecentBusTrip) = JB.getRecentBusTrip
+  let _ = spy "recentTrip" "1"
+      tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
+      _ = spy "recentTrip" "2" 
+      (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
+      _ = spy "recentTrip" recentTrip 
   whenJust recentTrip \tripDetails -> do
-    availableRoutes <- fetchAvailableRoutes
+    availableRoutes <- fetchAvailableRoutes tripDetails
     whenRight availableRoutes \routes -> do
       updateStateWithRoutes routes tripDetails
 
 updateStateWithRoutes :: API.AvailableRoutesList -> JB.RecentBusTrip -> FlowBT String Unit
 updateStateWithRoutes (AvailableRoutesList availableRoutesList) tripDetails = do
   let selectedRoute = findMatchingRoute tripDetails availableRoutesList
+      _ = spy "updateStateWithRoutes:availableRoutesList" availableRoutesList
+      _ = spy "updateStateWithRoutes:selectedRoute" selectedRoute
   
   modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
     { data {
@@ -106,10 +120,9 @@ updateStateWithRoutes (AvailableRoutesList availableRoutesList) tripDetails = do
         }
       }
       }
-fetchAvailableRoutes :: FlowBT String (Either ErrorResponse API.AvailableRoutesList)
-fetchAvailableRoutes = do
-  let busVehicleNumberHash = getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
-  lift $ lift $ Remote.getAvailableRoutes busVehicleNumberHash
+fetchAvailableRoutes :: JB.RecentBusTrip -> FlowBT String (Either ErrorResponse API.AvailableRoutesList)
+fetchAvailableRoutes tripDetails = do
+  lift $ lift $ Remote.getAvailableRoutes $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
   
 findMatchingRoute :: JB.RecentBusTrip -> Array API.AvailableRoutes -> Maybe AvailableRoutes
 findMatchingRoute tripDetails availableRoutesList = 
