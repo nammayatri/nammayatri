@@ -11,6 +11,7 @@ imports:
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
   DriverMode: Domain.Types.Common
+  SearchRequestForDriverResponse: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
@@ -25,8 +26,6 @@ SearchRequestForDriver:
   types:
     DriverSearchRequestStatus:
      enum: "Active, Inactive"
-    SearchRequestForDriverResponse:
-      enum: "Accept, Reject, Pulled"
     NotificationSource:
       enum: "FCM, GRPC"
 

@@ -27,6 +27,8 @@ data EstimateT f = EstimateT
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFare :: B.C f Kernel.Types.Common.Money,
     maxFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    mbActualQARCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    mbActualQARFromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     minFare :: B.C f Kernel.Types.Common.Money,
