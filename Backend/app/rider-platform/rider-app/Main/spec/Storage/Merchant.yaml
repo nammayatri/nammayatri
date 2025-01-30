@@ -80,6 +80,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    enableForMultipleSearchIssue: Bool
 
   excludedFields:
     - merchantId
@@ -110,6 +111,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: Maybe Seconds
     arrivingPickupThreshold: HighPrecDistance
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
+    enableForMultipleSearchIssue: Maybe Bool
 
   toTType:
     city: defaultCity|E
@@ -130,6 +132,7 @@ Merchant:
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
     arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
+    enableForMultipleSearchIssue: Just enableForMultipleSearchIssue|E
 
   fromTType:
     defaultCity: city|E
@@ -145,6 +148,7 @@ Merchant:
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
+    enableForMultipleSearchIssue: fromMaybe False enableForMultipleSearchIssue|E
 
   sqlType:
     editPickupDistanceThreshold: double precision
@@ -213,6 +217,7 @@ Merchant:
     city: "'Kochi'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: "'{\"NY\"}'"
+    enableForMultipleSearchIssue: "true"
 
   constraints:
     shortId: SecondaryKey
