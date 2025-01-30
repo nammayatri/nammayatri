@@ -616,7 +616,9 @@ library
       Domain.Types.Issue
       Domain.Types.Journey
       Domain.Types.JourneyBooking
+      Domain.Types.JourneyFeedback
       Domain.Types.JourneyLeg
+      Domain.Types.JourneyLegsFeedbacks
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -725,7 +727,9 @@ library
       Storage.Beam.Issue
       Storage.Beam.Journey
       Storage.Beam.JourneyBooking
+      Storage.Beam.JourneyFeedback
       Storage.Beam.JourneyLeg
+      Storage.Beam.JourneyLegsFeedbacks
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -835,7 +839,9 @@ library
       Storage.Queries.Issue
       Storage.Queries.Journey
       Storage.Queries.JourneyBooking
+      Storage.Queries.JourneyFeedback
       Storage.Queries.JourneyLeg
+      Storage.Queries.JourneyLegsFeedbacks
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant

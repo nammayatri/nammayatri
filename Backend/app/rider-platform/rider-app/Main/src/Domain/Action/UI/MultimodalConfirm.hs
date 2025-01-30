@@ -10,6 +10,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalExtendLeg,
     postMultimodalJourneyLegSkip,
     getMultimodalJourneyStatus,
+    postMultimodalJourneyFeedback,
   )
 where
 
@@ -21,6 +22,10 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
+-- import Domain.Types.SearchRequest
+
+import qualified Domain.Types.JourneyFeedback as JFB
+import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Environment
@@ -38,7 +43,9 @@ import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.JourneyFeedback as SQJFB
 import Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -247,3 +254,35 @@ getMultimodalJourneyStatus (_, _) journeyId = do
           userPosition = legState.userPosition,
           vehiclePosition = legState.vehiclePosition
         }
+
+postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedbackForm = do
+  journey <- JM.getJourney journeyId
+  riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  now <- getCurrentTime
+  let mkJourneyfeedbackForm =
+        JFB.JourneyFeedback
+          { additionalFeedBack = journeyFeedbackForm.additionalFeedBack,
+            journeyId = journeyId,
+            rating = journeyFeedbackForm.rating,
+            riderId = riderId,
+            merchantId = Just mbMerchantId,
+            merchantOperatingCityId = journey.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+      mkJourneyLegsFeedback feedbackEntry =
+        JLFB.JourneyLegsFeedbacks
+          { isExperienceGood = feedbackEntry.isExperienceGood,
+            journeyId = journeyId,
+            legOrder = feedbackEntry.legOrder,
+            merchantId = Just mbMerchantId,
+            merchantOperatingCityId = journey.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  SQJFB.create mkJourneyfeedbackForm
+  SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
+  pure Kernel.Types.APISuccess.Success
