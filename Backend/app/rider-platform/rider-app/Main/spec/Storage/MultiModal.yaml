@@ -302,3 +302,38 @@ JourneyLeg:
   constraints:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
+
+JourneyFeedback:
+  fields:
+    journeyId: Id Journey
+    riderId: Id Person
+    rating: Maybe Int
+    additionalFeedBack: Maybe Text
+
+  queries:
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+
+  constraints:
+    journeyId: PrimaryKey
+    riderId: SecondaryKey
+
+JourneyLegsFeedbacks:
+  fields:
+    journeyId : Id Journey
+    legOrder: Int
+    isExperienceGood: Maybe Bool
+
+  queries:
+    findAllByJourneyIdAndLegOrder:
+      kvFunction: findAllWithKV
+      where:
+        and: [journeyId, legOrder]
+
+  constraints:
+    journeyId : PrimaryKey
+    legOrder : PrimaryKey

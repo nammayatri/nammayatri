@@ -66,6 +66,16 @@ types:
     sdkPayload: Maybe CreateOrderResp
     status: FRFSBookingPaymentStatusAPI
 
+  JourneyFeedBackForm:
+    rating: Maybe Int
+    rateTravelMode: [RateMultiModelTravelModes]
+    additionalFeedBack: Maybe Text
+
+  RateMultiModelTravelModes:
+    travelMode: MultimodalTravelMode
+    isExperienceGood: Maybe Bool
+    legOrder: Int
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -151,3 +161,12 @@ apis:
         type: SwitchTaxiReq
       response:
         type: JourneyInfoResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/journeyFeedback
+      params:
+        journeyId: Id Journey
+      request:
+        type: JourneyFeedBackForm
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
