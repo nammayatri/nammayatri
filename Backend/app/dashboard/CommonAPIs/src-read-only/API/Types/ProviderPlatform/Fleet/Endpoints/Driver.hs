@@ -345,7 +345,8 @@ data TripStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data TripTransactionDetail = TripTransactionDetail
-  { routeCode :: Kernel.Prelude.Text,
+  { tripTransactionId :: Kernel.Types.Id.Id Dashboard.Common.TripTransaction,
+    routeCode :: Kernel.Prelude.Text,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStatus :: TripStatus
