@@ -1719,4 +1719,12 @@ getEn = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes : (\s -> "Experience our Pilot launch for bus ticketing in " <> s <> " prime routes. More coming soon!")
 , note_your_ticket_is_only_valid_for : (\s -> "Note: Ticket is valid for " <> s <> ". Bus times may vary due to local conditions, so be at the stop when booking")
 , here_is_bus_ticket : "Here is your bus ticket"
+,a_c : "Agree & Continue" 
+,no_oxygen :  "No Oxygen"
+,oxygen  : "Oxygen"
+,ventilator : "Ventilator"
+,ambulance_ : "Ambulance"
+,uncomfortable_ambulance : "Uncomfortable Ambulance"
+,clean_ambulance : "Clean Ambulance"
+,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 }

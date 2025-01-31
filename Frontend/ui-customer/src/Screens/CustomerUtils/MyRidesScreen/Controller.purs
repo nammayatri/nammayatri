@@ -285,11 +285,14 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
     bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
+    ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
       else if any (_ == rideDetails.vehicleVariant) ["BIKE", "DELVIERY_BIKE"] then 
           bikeWaitingCharges
+      else if HU.isAmbulance rideDetails.vehicleVariant  then
+          ambulanceWaitingCharges
       else 
          cabsWaitingCharges
      in {
@@ -350,6 +353,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
   , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unkown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
+  , isAirConditioned : ride.isAirConditioned
   , providerName : ride.agencyName
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP
   , rideCreatedAt : ride.createdAt

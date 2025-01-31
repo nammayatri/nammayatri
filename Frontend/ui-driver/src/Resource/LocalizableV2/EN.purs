@@ -1809,4 +1809,6 @@ getEn =
     , your_duty_has_started_please_start_the_ride : "Your duty has started, please start the ride" 
     , ending_your_ride_will_stop_tracking: "Ending your ride will stop tracking. Only \n End if emergency"
     , yes_end_ride: "Yes, End Ride"
+    , canceling_this_booking_may_affect_the_emergency_medical : "Canceling this booking may affect the emergency medical services for the patient"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "Drivers are permitted to cancel only for their medical reasons or vehicle breakdowns"
     }

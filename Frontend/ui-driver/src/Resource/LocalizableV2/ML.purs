@@ -1809,4 +1809,6 @@ getMl =
     , your_duty_has_started_please_start_the_ride : "നിങ്ങളുടെ ഡ്യൂട്ടി ആരംഭിച്ചു, ദയവായി യാത്ര ആരംഭിക്കുക"
     , ending_your_ride_will_stop_tracking: "നിങ്ങളുടെ യാത്ര അവസാനിപ്പിക്കുന്നത് ട്രാക്കിംഗ് നിര്‍ത്തും. അടിയന്തരാവസ്ഥയാണെങ്കില്‍ മാത്രം അവസാനിപ്പിക്കുക"
     , yes_end_ride: "അവശ്യം, യാത്ര അവസാനിപ്പിക്കുക"
+    , canceling_this_booking_may_affect_the_emergency_medical : "ഈ ബുക്കിംഗ്キャンസル ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ veículo തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"
     }

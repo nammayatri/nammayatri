@@ -1809,4 +1809,6 @@ getOd =
     , your_duty_has_started_please_start_the_ride : "ଆପଣଙ୍କ ଡିଉଟି ଆରମ୍ଭ ହୋଇଛି, ଦୟାକରି ଯାତ୍ରା ଆରମ୍ଭ କରନ୍ତୁ"
     , ending_your_ride_will_stop_tracking: "ଆପଣଙ୍କ ଯାତ୍ରା ଶେଷ କଲେ ଟ୍ରାକିଂ ବନ୍ଦ ହେବ। କେବଳ ଆପତ୍ତିକାଳୀନ ପରିସ୍ଥିତିରେ ଶେଷ କରନ୍ତୁ"
     , yes_end_ride: "ହଁ, ଯାତ୍ରା ଶେଷ କରନ୍ତୁ"
+    , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
   }

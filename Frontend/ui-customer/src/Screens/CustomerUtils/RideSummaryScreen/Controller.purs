@@ -189,7 +189,7 @@ fetchRideDetails state apiResp =
       isScheduled : resp.isScheduled,
       returnTime : resp.returnTime,
       roundTrip : Just roundTrip, 
-      isAirConditioned: resp.airConditioned,
+      isAirConditioned: resp.isAirConditioned,
       startTime : startTimeUTC,
       toLocation : Just (LocationInformation{
               address : {
