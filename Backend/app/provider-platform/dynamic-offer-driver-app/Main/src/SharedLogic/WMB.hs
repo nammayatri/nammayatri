@@ -315,6 +315,10 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
             isActivate = False
           }
   void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
+  RCQuery.findLastVehicleRCWrapper vehicleNumber
+    >>= \case
+      Just rc -> DAQuery.endAssociationForRC driverId rc.id
+      Nothing -> pure ()
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do
