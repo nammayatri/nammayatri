@@ -485,7 +485,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
           mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.routeCodes "Route Codes"
-      vehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
+      vehicleCategory :: VehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
       vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
