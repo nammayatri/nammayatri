@@ -1352,6 +1352,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
+      void $ validateFarePolicyType farePolicyType tripCategory
       let platformFeeChargeFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeChargeFarePolicyLevel "Platform Fee Charge"
       let platformFeeCgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeCgstFarePolicyLevel "Platform Fee CGST Amount"
       let platformFeeSgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeSgstFarePolicyLevel "Platform Fee SGST Amount"
@@ -1546,6 +1547,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
       return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
+
+    validateFarePolicyType farePolicyType = \case
+      InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
+      Rental _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
+      _ -> pure ()
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
