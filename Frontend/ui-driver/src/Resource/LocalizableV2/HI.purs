@@ -1764,4 +1764,6 @@ getHi =
     , parcel_is_inappropriate : "पार्सल अनुचित है"
     , sender_asking_different_location : "प्रेषक ने किसी अन्य स्थान पर आने के लिए कहा है"
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
+    , canceling_this_booking_may_affect_the_emergency_medical : "इस बुकिंग को रद्द करने से मरीज के आपातकालीन चिकित्सा सेवाओं पर प्रभाव पड़ सकता है"
+    , drivers_are_permitted_to_cancel_ambulance_bookings :"ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"
     }

@@ -1764,4 +1764,6 @@ getTe =
     , warning : "హెచ్చరిక!"
     , you_have_been_blocked_for_n_days: "అదనపు చార్జీ పై పలు కస్టమర్ ఫిర్యాదుల కారణంగా మీరు రోజులకు బ్లాక్ చేయబడ్డారు."
     , do_not_ask_customers_for_extra_payment: "కస్టమర్ దగ్గర అదనపు డబ్బు అడగవద్దు. ఇలా కొనసాగితే మీరు బ్లాక్ అవుతారు."
+    , canceling_this_booking_may_affect_the_emergency_medical : "ఈ బుకింగ్‌ను రద్దు చేస్తే, రోగికి అత్యవసర వైద్య సేవలు ప్రభావితం కావచ్చు"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "డ్రైవర్లు తమ వైద్య కారణాలు లేదా వాహన విఫలమై ఉన్న కారణాల వల్ల మాత్రమే రద్దు చేయడానికి అనుమతించబడతారు"
     }

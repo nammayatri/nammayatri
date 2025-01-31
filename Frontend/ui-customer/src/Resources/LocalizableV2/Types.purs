@@ -1726,6 +1726,14 @@ newtype Keymap = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help :: String
 , driver_asked_extra_money :: String
 , driver_is_asking_for_extra_fare :: String
+, a_c :: String
+, no_oxygen :: String
+, oxygen :: String
+, ventilator :: String
+, ambulance_ :: String
+, uncomfortable_ambulance :: String
+, clean_ambulance :: String
+, ambulance_booking_disclaimer :: String
 }
 
 
@@ -6875,3 +6883,27 @@ driver_asked_extra_money = a
 
 driver_is_asking_for_extra_fare :: Proxy "driver_is_asking_for_extra_fare"
 driver_is_asking_for_extra_fare = a
+a_c :: Proxy "a_c"
+a_c = a
+
+no_oxygen :: Proxy "no_oxygen"
+no_oxygen = a
+
+oxygen :: Proxy "oxygen"
+oxygen = a
+
+ventilator :: Proxy "ventilator"
+ventilator = a
+
+ambulance_ :: Proxy "ambulance_"
+ambulance_ = a
+
+uncomfortable_ambulance :: Proxy "uncomfortable_ambulance"
+uncomfortable_ambulance = a
+
+clean_ambulance :: Proxy "clean_ambulance"
+clean_ambulance = a
+
+ambulance_booking_disclaimer :: Proxy "ambulance_booking_disclaimer"
+ambulance_booking_disclaimer = a
+

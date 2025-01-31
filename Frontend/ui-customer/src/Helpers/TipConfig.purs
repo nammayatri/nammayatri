@@ -41,13 +41,19 @@ getTipConfig variant = do
   let city = getValueToLocalStore CUSTOMER_LOCATION
       tipsConfig = getTipConfigRC $ DS.toLower city
   case variant of
-    "SEDAN" -> mkTipConfig tipsConfig.sedan 
+    "SEDAN" -> mkTipConfig tipsConfig.sedan
     "SUV" -> mkTipConfig tipsConfig.suv
     "HATCHBACK" -> mkTipConfig tipsConfig.hatchback
     "AUTO_RICKSHAW" -> mkTipConfig tipsConfig.autoRickshaw
     "TAXI" -> mkTipConfig tipsConfig.taxi
     "TAXI_PLUS" -> mkTipConfig tipsConfig.taxiPlus
     "BOOK_ANY" -> mkTipConfig tipsConfig.bookAny
+    "AMBULANCE_TAXI" -> mkTipConfig tipsConfig.ambulanceTaxi
+    "AMBULANCE_TAXI_OXY" -> mkTipConfig tipsConfig.ambulanceTaxiOxy
+    "AMBULANCE_AC_OXY" -> mkTipConfig tipsConfig.ambulanceAcOxy
+    "AMBULANCE_AC" -> mkTipConfig tipsConfig.ambulanceAc
+    "AMBULANCE_VENTILATOR" -> mkTipConfig tipsConfig.ambulanceVentilator
+    "BIKE" -> mkTipConfig tipsConfig.bike
     _ -> mkTipConfig tipsConfig.default
 
 mkTipConfig :: Array Int -> TipConfig
@@ -67,6 +73,7 @@ yatriSathiConfig variant =
   case variant of
     "BIKE" -> mkTipConfig [0, 10, 20, 30]
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    _ | HU.isAmbulance variant -> mkTipConfig []
     _ -> mkTipConfig [0, 20, 30, 50]
 
 getTipViewProps :: TipViewProps -> String -> TipViewProps

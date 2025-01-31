@@ -1764,4 +1764,6 @@ getEn =
     , parcel_is_inappropriate : "Parcel is inappropriate"
     , sender_asking_different_location : "Sender asking to come to different location"
     , sender_unavailable_unreachable : "Sender unavailable / unreachable"
+    , canceling_this_booking_may_affect_the_emergency_medical : "Canceling this booking may affect the emergency medical services for the patient"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "Drivers are permitted to cancel only for their medical reasons or vehicle breakdowns"
     }

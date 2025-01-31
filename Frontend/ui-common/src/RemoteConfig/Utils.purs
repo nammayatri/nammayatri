@@ -203,6 +203,11 @@ tipConfigData city variant = do
         "BOOK_ANY" -> config.bookAny
         "SUV_PLUS" -> config.suv
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -216,6 +221,11 @@ defaultTipsConfig =
   , bike : Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
   , default: Nothing
   }
 
@@ -230,6 +240,11 @@ defaultSubscriptionsConfigVariantLevel =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
   , default: Nothing
   }
 
@@ -321,6 +336,11 @@ subscriptionsConfigVariantLevel city variant = do
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig

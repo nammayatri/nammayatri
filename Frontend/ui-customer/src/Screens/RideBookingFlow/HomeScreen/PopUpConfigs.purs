@@ -11,6 +11,9 @@ import Helpers.Utils
 import Engineering.Helpers.Commons 
 import Language.Strings
 import Language.Types
+import Resources.LocalizableV2.Strings (getStringV2)
+import Helpers.Utils as HU
+import Resources.LocalizableV2.Types
 
 finalFareExcludesToll :: HomeScreenState -> PopUpModal.Config
 finalFareExcludesToll lazyCheck = PopUpModal.config{
@@ -110,3 +113,53 @@ intercityBusPhoneNumberPermission state = PopUpModal.config{
   , width = V $ (screenWidth unit)/2 - 60
   }
 }
+bookAmbulanceModalConfig :: HomeScreenState -> PopUpModal.Config
+bookAmbulanceModalConfig state = let
+    config = PopUpModal.config
+    popUpConf' = config {
+      cornerRadius = Corners 15.0 true true true true,
+      margin = Margin 16 16 16 16 ,
+      gravity = CENTER,
+      optionButtonOrientation = "VERTICAL",
+      padding = Padding 16 0 16 16,
+      buttonLayoutMargin = Margin 0 0 0 0,
+
+     primaryText {
+         text = getStringV2 ambulance_booking_disclaimer
+        , margin = Margin 16 0 16 0
+        , visibility = VISIBLE
+        , gravity = CENTER
+      },
+      secondaryText {
+        visibility = GONE
+      },
+      option1 {
+        text = getStringV2 a_c
+      , color = Color.yellow900
+      , strokeColor = Color.white900
+      , padding = Padding 15 10 15 10
+      , visibility = true
+      , margin = MarginTop 12
+      , background = Color.black900
+      , width = MATCH_PARENT
+      , gravity = CENTER
+      },
+      option2 {
+        text = getString CANCEL_BOOKING
+      , color = Color.black900
+      , strokeColor = Color.white900
+      , padding = Padding 15 10 15 10
+      , margin = MarginTop 0
+      , width = MATCH_PARENT
+      , background = Color.white900
+      , gravity = CENTER
+      },
+      coverImageConfig {
+           imageUrl =  HU.fetchImage HU.FF_ASSET "ny_ic_ambulance_agree"
+          , visibility = VISIBLE
+          , height = V 250
+          , width = MATCH_PARENT
+      }
+
+    }
+  in popUpConf'

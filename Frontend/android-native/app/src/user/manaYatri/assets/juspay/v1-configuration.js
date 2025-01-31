@@ -221,8 +221,8 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
     , "estimateAndQuoteConfig" : 
-      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
+      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"],["AMBULANCE_VENTILATOR"],["AMBULANCE_AC_OXY"],[ "AMBULANCE_AC"],["AMBULANCE_TAXI_OXY"] ,["AMBULANCE_TAXI"] ]
+      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY", "DELIVERY_BIKE" ,"AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -268,7 +268,37 @@ window.getMerchantConfig = function () {
           "name" : "XL Plus",
           "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
-        }
+        },
+        "deliveryBike" : {
+            "name" : "2 Wheeler",
+            "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,"
+          },
+          "ambulanceTaxi" : {
+            "name" : "Ambulance Taxi",
+            "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+          },
+          "ambulanceTaxiOxy" : {
+            "name" : "Ambulance Taxi with Oxygen",
+            "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+          },
+          "ambulanceAc" : {
+            "name" : "Ambulance AC",
+            "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+          },
+          "ambulanceAcOxy" : {
+            "name" : "Ambulance AC with Oxygen",
+            "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+          },
+          "ambulanceVentilator" : {
+            "name" : "Ambulance with Ventilator",
+            "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+            "leftViewImage" : "ny_ic_ambulance_ventilator,"
+          }
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false

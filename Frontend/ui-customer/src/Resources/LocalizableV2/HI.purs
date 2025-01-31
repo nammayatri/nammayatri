@@ -1712,4 +1712,12 @@ getHi = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help : "हम असुविधा के लिए हार्दिक माफी चाहते हैं"
 , driver_asked_extra_money : "ड्राइवर ने अतिरिक्त पैसे मांगे"
 , driver_is_asking_for_extra_fare : "ड्राइवर अतिरिक्त किराया मांग रहा है"
+,a_c : "सहमत और जारी रखें"
+,no_oxygen :  "कोई ऑक्सीजन नहीं"
+,oxygen  : "ऑक्सीजन"
+,ventilator : "वेंटीलेटर"
+,ambulance_ : "एम्बुलेंस"
+,uncomfortable_ambulance : "असुविधाजनक एम्बुलेंस"
+,clean_ambulance : "स्वच्छ एम्बुलेंस"
+,ambulance_booking_disclaimer : "यात्री साथी केवल एक प्लेटफ़ॉर्म है जो एम्बुलेंस सेवा प्रदाताओं को ग्राहकों से जोड़ता है। हम एम्बुलेंस पार्टी द्वारा प्रदान की गई जानकारी के लिए जिम्मेदार नहीं हैं।"
 }
